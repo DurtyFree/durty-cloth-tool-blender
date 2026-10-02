@@ -1,0 +1,4 @@
+# Test dependencies (the add-on needs nothing outside Blender; Blender bundles numpy).
+# numpy is pinned per Python version in CI to match Blender: 1.26.4 with Python 3.11 (Blender 4.2 to 4.5) and
+# 2.3.4 with Python 3.13 (Blender 5.x). Locally: python -m pip install -r requirements-dev.txt "numpy==2.3.4"
+pytest==9.1.1

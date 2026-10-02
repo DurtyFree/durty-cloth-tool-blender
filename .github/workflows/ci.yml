@@ -1,0 +1,53 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    # Python and numpy as Blender bundles them: 3.11 with numpy 1.26 (Blender 4.2 to 4.5) and 3.13 with numpy 2.3
+    # (Blender 5.x). Windows runs the DPAPI store, the file lock and the process checks for real.
+    name: Tests (${{ matrix.os }}, Python ${{ matrix.python }}, numpy ${{ matrix.numpy }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+        python: ["3.11", "3.13"]
+        include:
+          - python: "3.11"
+            numpy: "1.26.4"
+          - python: "3.13"
+            numpy: "2.3.4"
+    steps:
+      - name: Check out
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check --no-input -r requirements-dev.txt "numpy==${{ matrix.numpy }}"
+
+      - name: Check the extension manifest
+        run: python tools/check_manifest.py
+
+      - name: Check the vendored dct_link
+        run: python tools/sync_dct_link.py --check
+
+      - name: Run the tests
+        run: python -m pytest -q
