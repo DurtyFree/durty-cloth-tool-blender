@@ -142,7 +142,7 @@ TEXT = {
         "Esta roupa usa uma paleta de cores: o canal alfa escolhe as cores da paleta, então pinte o alfa com cuidado."
     ),
     "finding.cutout-alpha": "Esta roupa usa o alfa como recorte: pixels transparentes ficam ocultos no ped.",
-    "finding.hair-ramp": "Isto é cabelo: os canais vermelho e verde escolhem as cores do cabelo.",
+    "finding.hair-ramp": "Isto é cabelo: o jogo o colore com a cor de cabelo que o jogador escolhe.",
     "finding.bc1-alpha": "A textura salva mantém só alfa totalmente transparente ou totalmente opaco.",
     "finding-fix.non-power-of-two": "Redimensione para uma potência de dois, por exemplo 1024 x 1024, antes de salvar.",
     "finding-fix.not-multiple-of-four": (
@@ -155,7 +155,7 @@ TEXT = {
     ),
     "finding-fix.palette-alpha": "Mantenha os valores alfa como estão, a não ser que queira mudar as cores da paleta.",
     "finding-fix.cutout-alpha": "Pinte transparência só onde a roupa deve ficar oculta.",
-    "finding-fix.hair-ramp": "Pinte os canais vermelho e verde como máscaras de cor do cabelo, não como cor visível.",
+    "finding-fix.hair-ramp": "Pinte o sombreamento no canal verde e as mechas no canal vermelho, não a cor final.",
     "finding-fix.bc1-alpha": (
         "Use alfa totalmente transparente ou totalmente opaco; bordas suaves se perdem ao salvar."
     ),

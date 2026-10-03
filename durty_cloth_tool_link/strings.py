@@ -165,7 +165,7 @@ EN: Dict[str, str] = {
         "This cloth uses a colour palette: its alpha channel picks palette colours, so paint alpha with care."
     ),
     "finding.cutout-alpha": "This cloth uses alpha as a cut-out: transparent pixels are hidden on the ped.",
-    "finding.hair-ramp": "This is hair: the red and green channels pick the hair colours.",
+    "finding.hair-ramp": "This is hair: the game colours it with the hair colour the player picks.",
     "finding.bc1-alpha": "The saved texture keeps only fully transparent or fully opaque alpha.",
     "finding-fix.non-power-of-two": "Resize to a power of two, for example 1024 x 1024, before saving.",
     "finding-fix.not-multiple-of-four": "Resize so that both sides divide by four, for example 1024 x 512.",
@@ -176,7 +176,9 @@ EN: Dict[str, str] = {
     ),
     "finding-fix.palette-alpha": "Keep the alpha values as they are unless you mean to change the palette colours.",
     "finding-fix.cutout-alpha": "Paint transparency only where the cloth should be hidden.",
-    "finding-fix.hair-ramp": "Paint the red and green channels as hair colour masks, not as the visible colour.",
+    "finding-fix.hair-ramp": (
+        "Paint the shading in the green channel and the highlights in the red channel, not the final colour."
+    ),
     "finding-fix.bc1-alpha": "Use fully transparent or fully opaque alpha; soft edges are lost when saving.",
     # ---- model --------------------------------------------------------------------------------------------
     "model.subtext": "Sends the model again a moment after you stop editing.",

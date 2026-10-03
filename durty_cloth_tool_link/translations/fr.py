@@ -155,7 +155,7 @@ TEXT = {
     "finding.cutout-alpha": (
         "Ce vêtement utilise l'alpha comme découpe : les pixels transparents sont masqués sur le ped."
     ),
-    "finding.hair-ramp": "Ce sont des cheveux : les canaux rouge et vert choisissent les couleurs des cheveux.",
+    "finding.hair-ramp": "Ce sont des cheveux : le jeu les colore avec la couleur de cheveux choisie par le joueur.",
     "finding.bc1-alpha": "La texture enregistrée ne garde qu'un alpha entièrement transparent ou entièrement opaque.",
     "finding-fix.non-power-of-two": (
         "Redimensionnez à une puissance de deux, par exemple 1024 x 1024, avant d'enregistrer."
@@ -176,7 +176,7 @@ TEXT = {
     ),
     "finding-fix.cutout-alpha": "Peignez la transparence seulement là où le vêtement doit être masqué.",
     "finding-fix.hair-ramp": (
-        "Peignez les canaux rouge et vert comme masques de couleur des cheveux, pas comme couleur visible."
+        "Peignez l'ombrage dans le canal vert et les mèches dans le canal rouge, pas la couleur finale."
     ),
     "finding-fix.bc1-alpha": (
         "Utilisez un alpha entièrement transparent ou entièrement opaque ; les bords doux sont perdus à "
