@@ -146,7 +146,7 @@ TEXT = {
     "finding.cutout-alpha": (
         "Dieses Kleidungsstück nutzt Alpha zum Ausschneiden: Transparente Pixel sind auf dem Ped unsichtbar."
     ),
-    "finding.hair-ramp": "Das sind Haare: Der Rot- und der Grünkanal wählen die Haarfarben.",
+    "finding.hair-ramp": "Das sind Haare: Das Spiel färbt sie mit der Haarfarbe, die der Spieler wählt.",
     "finding.bc1-alpha": "Die gespeicherte Textur behält nur ganz transparentes oder ganz deckendes Alpha.",
     "finding-fix.non-power-of-two": "Skaliere vor dem Speichern auf eine Zweierpotenz, zum Beispiel 1024 x 1024.",
     "finding-fix.not-multiple-of-four": "Skaliere so, dass beide Seiten durch vier teilbar sind, zum Beispiel 1024 x 512.",
@@ -158,7 +158,9 @@ TEXT = {
     ),
     "finding-fix.palette-alpha": "Lass die Alphawerte, wie sie sind, außer du willst die Palettenfarben ändern.",
     "finding-fix.cutout-alpha": "Male Transparenz nur dort, wo das Kleidungsstück verborgen sein soll.",
-    "finding-fix.hair-ramp": "Male Rot- und Grünkanal als Masken für die Haarfarbe, nicht als sichtbare Farbe.",
+    "finding-fix.hair-ramp": (
+        "Male die Schattierung in den Grünkanal und die Strähnchen in den Rotkanal, nicht die fertige Farbe."
+    ),
     "finding-fix.bc1-alpha": "Nutze ganz transparentes oder ganz deckendes Alpha; weiche Kanten gehen beim Speichern verloren.",
     "model.subtext": "Sendet das Modell erneut, kurz nachdem du aufhörst zu bearbeiten.",
     "model.name": "Modell: {name}",

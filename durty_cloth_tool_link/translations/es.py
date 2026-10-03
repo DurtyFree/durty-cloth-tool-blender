@@ -149,7 +149,7 @@ TEXT = {
         "cuidado."
     ),
     "finding.cutout-alpha": "Esta prenda usa el alfa como recorte: los píxeles transparentes se ocultan en el ped.",
-    "finding.hair-ramp": "Esto es pelo: los canales rojo y verde eligen los colores del pelo.",
+    "finding.hair-ramp": "Esto es pelo: el juego lo colorea con el color de pelo que elige el jugador.",
     "finding.bc1-alpha": "La textura guardada solo conserva alfa totalmente transparente o totalmente opaco.",
     "finding-fix.non-power-of-two": "Redimensiona a una potencia de dos, por ejemplo 1024 x 1024, antes de guardar.",
     "finding-fix.not-multiple-of-four": (
@@ -162,7 +162,7 @@ TEXT = {
     ),
     "finding-fix.palette-alpha": "Deja los valores alfa como están salvo que quieras cambiar los colores de la paleta.",
     "finding-fix.cutout-alpha": "Pinta transparencia solo donde la prenda deba ocultarse.",
-    "finding-fix.hair-ramp": "Pinta los canales rojo y verde como máscaras de color del pelo, no como color visible.",
+    "finding-fix.hair-ramp": "Pinta el sombreado en el canal verde y los reflejos en el canal rojo, no el color final.",
     "finding-fix.bc1-alpha": (
         "Usa alfa totalmente transparente o totalmente opaco; los bordes suaves se pierden al guardar."
     ),
