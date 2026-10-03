@@ -1,0 +1,228 @@
+name: Release
+
+# Pushing the tag v<version> releases the add-on: the tests run, the official Blender pinned below builds and
+# validates durty_cloth_tool_link-<version>.zip, and the publish job creates the GitHub release with that archive
+# and its SHA-256. <version> is the version in blender_manifest.toml (X.Y.Z, or X.Y.Z-experimental.N for an
+# Experimental release); any other tag is refused. Durty Cloth Tool's plugin release pins the published archive by
+# URL, size and SHA-256, so an existing release is never replaced: fix it with a new version.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PYTHONDONTWRITEBYTECODE: "1"
+
+jobs:
+  test:
+    # Python and numpy as Blender bundles them: 3.11 with numpy 1.26 (Blender 4.2 to 4.5), 3.13 with numpy 2.3
+    # (Blender 5.x).
+    name: Tests (Python ${{ matrix.python }})
+    runs-on: windows-2022
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - python: "3.11"
+            numpy: "1.26.4"
+          - python: "3.13"
+            numpy: "2.3.4"
+    steps:
+      - name: Check out
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install test dependencies
+        run: python -m pip install --disable-pip-version-check --no-input -r requirements-dev.txt "numpy==${{ matrix.numpy }}"
+
+      - name: Check the extension manifest
+        run: python tools/check_manifest.py
+
+      - name: Check the vendored dct_link
+        run: python tools/sync_dct_link.py --check
+
+      - name: Run the tests
+        run: python -m pytest -q
+
+  build:
+    # Installs nothing from a package index: only the pinned Blender and the standard library touch the archive.
+    name: Build the extension
+    needs: test
+    runs-on: windows-2022
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.identity.outputs.version }}
+      file: ${{ steps.identity.outputs.file }}
+      prerelease: ${{ steps.identity.outputs.prerelease }}
+      commit: ${{ steps.identity.outputs.commit }}
+      sha256: ${{ steps.archive.outputs.sha256 }}
+      size: ${{ steps.archive.outputs.size }}
+    env:
+      # The official Blender 4.5.9 LTS build for Windows x64, from https://download.blender.org/release/Blender4.5/
+      # (SHA-256 from its checksums file).
+      BLENDER_VERSION: "4.5.9"
+      BLENDER_URL: https://download.blender.org/release/Blender4.5/blender-4.5.9-windows-x64.zip
+      BLENDER_SHA256: 41da973b9bf95bb312cbeff4d1982feb13259b43c821686b9bafea4dfe5477cf
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out
+        uses: actions/checkout@9f698171ed81b15d1823a05fc7211befd50c8ae0 # v6.0.3
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Check the tag
+        id: identity
+        env:
+          TAG: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          $identity = python tools/release_tool.py identity --tag $env:TAG
+          if ($LASTEXITCODE -ne 0) { throw "The tag $env:TAG does not match the add-on version." }
+          $commit = git rev-parse 'HEAD^{commit}'
+          if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the tagged commit.' }
+          git merge-base --is-ancestor $commit "origin/$env:DEFAULT_BRANCH"
+          if ($LASTEXITCODE -ne 0) { throw "The tag $env:TAG is not on $env:DEFAULT_BRANCH; release only commits of the default branch." }
+          $identity + "commit=$commit" | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8
+          $identity
+
+      - name: Download Blender
+        run: |
+          $ProgressPreference = 'SilentlyContinue'
+          $archive = Join-Path $env:RUNNER_TEMP 'blender.zip'
+          Invoke-WebRequest -Uri $env:BLENDER_URL -OutFile $archive -UseBasicParsing -TimeoutSec 900
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($hash -cne $env:BLENDER_SHA256) { throw "The Blender download has SHA-256 $hash, not the pinned $env:BLENDER_SHA256." }
+          & "$env:SystemRoot\System32\tar.exe" -xf $archive -C $env:RUNNER_TEMP
+          if ($LASTEXITCODE -ne 0) { throw 'Could not extract Blender.' }
+          $blender = Join-Path $env:RUNNER_TEMP "blender-$env:BLENDER_VERSION-windows-x64\blender.exe"
+          if (-not (Test-Path -LiteralPath $blender -PathType Leaf)) { throw "Blender is not at $blender." }
+          "BLENDER=$blender" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+          # Blender keeps its user files in the runner's temporary folder, not in a profile.
+          "BLENDER_USER_RESOURCES=$(Join-Path $env:RUNNER_TEMP 'blender-user')" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+
+      - name: Give the files the commit time
+        run: |
+          $time = git log -1 --format=%ct HEAD
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read the commit time.' }
+          python tools/release_tool.py stamp --time $time
+          if ($LASTEXITCODE -ne 0) { throw 'Could not set the file times.' }
+
+      - name: Validate, build and validate the archive
+        env:
+          FILE: ${{ steps.identity.outputs.file }}
+        run: |
+          & $env:BLENDER --command extension validate durty_cloth_tool_link
+          if ($LASTEXITCODE -ne 0) { throw 'Blender refused the extension source.' }
+          New-Item -ItemType Directory -Path dist | Out-Null # Blender does not create the output folder
+          & $env:BLENDER --command extension build --source-dir durty_cloth_tool_link --output-dir dist
+          if ($LASTEXITCODE -ne 0) { throw 'Blender could not build the extension.' }
+          & $env:BLENDER --command extension validate (Join-Path 'dist' $env:FILE)
+          if ($LASTEXITCODE -ne 0) { throw 'Blender refused the built archive.' }
+
+      - name: Check the archive
+        id: archive
+        env:
+          FILE: ${{ steps.identity.outputs.file }}
+          VERSION: ${{ steps.identity.outputs.version }}
+        run: |
+          $built = @(Get-ChildItem -LiteralPath dist -File)
+          if ($built.Count -ne 1 -or $built[0].Name -cne $env:FILE) { throw "dist holds $($built.Name -join ', '), not only $env:FILE." }
+          $facts = python tools/release_tool.py archive (Join-Path 'dist' $env:FILE) --version $env:VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'The archive is not the release archive.' }
+          $facts | Add-Content -LiteralPath $env:GITHUB_OUTPUT -Encoding utf8
+          $facts
+          $changes = @(git status --porcelain --untracked-files=all)
+          if ($LASTEXITCODE -ne 0 -or $changes.Count -ne 0) { throw "The build changed the checkout: $($changes -join '; ')" }
+
+      - name: Write the release notes
+        env:
+          VERSION: ${{ steps.identity.outputs.version }}
+          COMMIT: ${{ steps.identity.outputs.commit }}
+          SHA256: ${{ steps.archive.outputs.sha256 }}
+          SIZE: ${{ steps.archive.outputs.size }}
+        run: |
+          $notes = python tools/release_tool.py notes --version $env:VERSION --sha256 $env:SHA256 --size $env:SIZE --commit $env:COMMIT --blender $env:BLENDER_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Could not write the release notes.' }
+          New-Item -ItemType Directory -Path release-notes -Force | Out-Null
+          $notes | Set-Content -LiteralPath release-notes/notes.md -Encoding utf8
+
+      - name: Keep the archive for the publish job
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release
+          path: |
+            dist/${{ steps.identity.outputs.file }}
+            release-notes/notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    # The only job with write access. It runs no repository code: it checks the archive's hash again and creates
+    # the release as a draft, adds the archive, and then publishes it, so no release is ever public without it.
+    name: Publish the release
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.build.outputs.version }}
+      FILE: ${{ needs.build.outputs.file }}
+      PRERELEASE: ${{ needs.build.outputs.prerelease }}
+      COMMIT: ${{ needs.build.outputs.commit }}
+      SHA256: ${{ needs.build.outputs.sha256 }}
+      SIZE: ${{ needs.build.outputs.size }}
+    steps:
+      - name: Fetch the archive
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release
+          path: release
+
+      - name: Check the archive and the tag again
+        run: |
+          archive="release/dist/$FILE"
+          test "$(stat -c %s "$archive")" = "$SIZE" || { echo "::error::The archive is not $SIZE bytes."; exit 1; }
+          echo "$SHA256  $archive" | sha256sum --check --strict
+          tagged="$(gh api "repos/$GH_REPO/commits/tags/$TAG" --jq .sha)"
+          test "$tagged" = "$COMMIT" || { echo "::error::The tag $TAG now points at $tagged, not the built $COMMIT."; exit 1; }
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::error::A release $TAG already exists. A published archive is never replaced; release a new version."
+            exit 1
+          fi
+
+      - name: Create the release
+        run: |
+          if [ "$PRERELEASE" = "true" ]; then kind=(--prerelease); latest=(); else kind=(); latest=(--latest); fi
+          gh release create "$TAG" "release/dist/$FILE" --verify-tag --draft --title "Durty Cloth Tool Link $VERSION" \
+            --notes-file release/release-notes/notes.md "${kind[@]}"
+          gh release edit "$TAG" --draft=false "${latest[@]}"
+          echo "Published $FILE ($SIZE bytes, SHA-256 $SHA256) as $TAG."

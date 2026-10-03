@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
-"""Where a plugin keeps its secrets: the gta.clothing link tokens and the DCT pairing secret.
+"""Where a plugin keeps its secrets: the gta.clothing link tokens.
 
 Backends, chosen by :func:`default_secret_store`:
 
@@ -11,7 +11,7 @@ Backends, chosen by :func:`default_secret_store`:
 * Anywhere else, or when the backend is unavailable: a file only the user can read (mode 0600), with an
   :class:`InsecureStorageWarning`.
 
-Secrets are never logged. Stores hold bytes; :class:`TokenStore` and :class:`PairingStore` add the formats.
+Secrets are never logged. Stores hold bytes; :class:`TokenStore` adds the format.
 """
 
 from __future__ import annotations
@@ -42,7 +42,6 @@ __all__ = [
     "InsecureStorageWarning",
     "SecretStoreError",
     "TokenStore",
-    "PairingStore",
     "default_secret_store",
     "plugin_data_dir",
     "load_install_id",
@@ -457,7 +456,7 @@ def load_install_id(directory: Union[str, os.PathLike]) -> str:
 def default_secret_store(
     name: str, directory: Union[str, os.PathLike], install_id: str, *, allow_file_fallback: bool = True
 ) -> SecretStore:
-    """The best available store for the secret called ``name`` (for example ``tokens`` or ``pairing``)."""
+    """The best available store for the secret called ``name`` (for example ``tokens``)."""
     if not re.fullmatch(r"[a-z][a-z0-9-]{0,31}", name):
         raise ValueError("invalid secret name")
     folder = pathlib.Path(directory)
@@ -501,42 +500,6 @@ class TokenStore:
 
     def save(self, tokens: Dict[str, Any]) -> None:
         self.store.save(json.dumps(tokens, separators=(",", ":"), sort_keys=True).encode("utf-8"))
-
-    def clear(self) -> None:
-        self.store.clear()
-
-
-class PairingStore:
-    """The DCT pairing (client id and 32-byte secret) in a :class:`SecretStore`."""
-
-    def __init__(self, store: SecretStore) -> None:
-        self.store = store
-
-    def load(self):  # -> Optional[session.Pairing]
-        from .session import Pairing, b64url_decode
-        from .protocol import is_id
-
-        try:
-            raw = self.store.load()
-        except SecretStoreError:
-            _log.warning("the stored pairing could not be read; pairing again")
-            return None
-        if not raw:
-            return None
-        try:
-            value = json.loads(raw.decode("utf-8"))
-            client_id, secret = value["clientId"], b64url_decode(value["secret"])
-        except (UnicodeDecodeError, ValueError, KeyError, TypeError):
-            return None
-        if not is_id(client_id) or len(secret) != 32:
-            return None
-        return Pairing(client_id, secret)
-
-    def save(self, pairing) -> None:
-        from .session import b64url_encode
-
-        payload = {"clientId": pairing.client_id, "secret": b64url_encode(pairing.secret)}
-        self.store.save(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
 
     def clear(self) -> None:
         self.store.clear()

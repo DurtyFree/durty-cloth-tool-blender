@@ -4,7 +4,7 @@
 """Vendors dct_link, the Creator Link client, from a Durty Cloth Tool checkout.
 
     python tools/sync_dct_link.py <path to the Durty Cloth Tool checkout>
-    python tools/sync_dct_link.py --check
+    python tools/sync_dct_link.py --check [<path to the Durty Cloth Tool checkout>]
 
 The first form replaces ``durty_cloth_tool_link/dct_link`` with the modules the add-on uses from
 ``plugins/python/dct_link`` in the checkout: the allowlist in ``ROOT_MODULES`` plus every module they import.
@@ -13,7 +13,9 @@ the add-on itself. The MIT ``LICENSE`` is copied next to them and ``VENDORED.md`
 copied file. Each file is copied byte for byte: never edit the vendored files by hand, change dct_link upstream
 and sync again.
 
-``--check`` verifies the vendored copy against ``VENDORED.md`` (the test suite runs the same check).
+``--check`` verifies the vendored copy against ``VENDORED.md`` (the test suite runs the same check), and also
+against the upstream files when a Durty Cloth Tool checkout is given or sits beside this repository
+(``../durty-cloth-tool``), so a change upstream that was not synced yet is caught.
 
 Standard library only.
 """
@@ -37,6 +39,8 @@ SOURCE_LICENSE = pathlib.PurePosixPath("plugins/python/LICENSE")
 #: The modules the add-on imports; whatever they import from dct_link is added automatically.
 ROOT_MODULES = ("__init__", "protocol", "ws", "session", "auth", "tokens")
 SPDX_MIT = "# SPDX-License-Identifier: MIT"
+#: Where a Durty Cloth Tool checkout usually sits: next to this repository.
+SIBLING_CHECKOUT = REPO_ROOT.parent / "durty-cloth-tool"
 NOT_RECORDED = ("not recorded yet: the sync records the Durty Cloth Tool commit once plugins/python/dct_link is "
                 "committed there unchanged")
 _ROW = re.compile(r"^\| `([^`]+)` \| `([0-9a-f]{64})` \|$")
@@ -142,9 +146,8 @@ def render_record(version: str, revision: str, hashes: List[Tuple[str, str]], le
     ]
     if left_out:
         lines += [
-            "- Left out: " + ", ".join(f"`{name}`" for name in left_out) + ". The package description in",
-            "  `__init__.py` still names them, because it describes the whole dct_link package; nothing in the add-on",
-            "  imports them.",
+            "- Left out: " + ", ".join(f"`{name}`" for name in left_out) + " (the modules for self-updating hosts;",
+            "  Blender updates the add-on, and nothing in the add-on imports them).",
         ]
     lines += [
         "",
@@ -194,6 +197,28 @@ def verify(vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
     return problems
 
 
+def verify_upstream(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
+    """Differences between the vendored copy and the dct_link files in a Durty Cloth Tool checkout (empty when the
+    copy is up to date): changed or missing files, and modules the add-on now needs or no longer needs."""
+    package = checkout / SOURCE_PACKAGE
+    try:
+        wanted = {path.name: path for path in source_files(package)}
+    except SyncError as exc:
+        return [str(exc)]
+    wanted["LICENSE"] = checkout / SOURCE_LICENSE
+    vendored = {path.name: path for path in vendor_dir.iterdir() if path.is_file() and path.name != RECORD_NAME}
+    problems = []
+    for name, upstream in sorted(wanted.items()):
+        copy = vendored.pop(name, None)
+        if copy is None:
+            problems.append(f"{name} is needed upstream but not vendored; sync again")
+        elif not upstream.is_file() or upstream.read_bytes() != copy.read_bytes():
+            problems.append(f"{name} differs from {checkout.name}/{SOURCE_PACKAGE.parent}; sync again")
+    for name in sorted(vendored):
+        problems.append(f"{name} is vendored but no longer needed upstream; sync again")
+    return problems
+
+
 def sync(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[Tuple[str, str]]:
     checkout = checkout.resolve()
     package = checkout / SOURCE_PACKAGE
@@ -223,15 +248,20 @@ def sync(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("checkout", nargs="?", type=pathlib.Path, help="the Durty Cloth Tool checkout")
-    parser.add_argument("--check", action="store_true", help="verify the vendored copy against VENDORED.md")
+    parser.add_argument("--check", action="store_true",
+                        help="verify the vendored copy against VENDORED.md and, when available, the checkout")
     args = parser.parse_args(argv)
     try:
         if args.check:
             problems = verify()
+            checkout = args.checkout or (SIBLING_CHECKOUT if (SIBLING_CHECKOUT / SOURCE_PACKAGE).is_dir() else None)
+            if checkout is not None:
+                problems += verify_upstream(checkout.resolve())
             for problem in problems:
                 print(f"error: {problem}", file=sys.stderr)
             if not problems:
-                print("dct_link matches VENDORED.md")
+                against = f" and {checkout.resolve()}" if checkout is not None else ""
+                print(f"dct_link matches VENDORED.md{against}")
             return 1 if problems else 0
         if args.checkout is None:
             parser.error("pass the Durty Cloth Tool checkout, or --check")

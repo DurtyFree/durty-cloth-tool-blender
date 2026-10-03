@@ -11,8 +11,8 @@ throw-away Blender user folder; by hand:
 (one command line).
 
 It installs the built extension into a temporary local repository, enables it, and drives it through its
-operators against a fake Durty Cloth Tool and a fake gta.clothing on 127.0.0.1: pairing, sign-in approved by
-DCT, texture streaming (checking the vertical flip and dirty rectangles), saving and discarding, a model push
+operators against a fake Durty Cloth Tool and a fake gta.clothing on 127.0.0.1: sign-in approved in DCT, texture
+streaming (checking the vertical flip and dirty rectangles), saving and discarding, a model push
 through Sollumz's export operator (a stand-in by default, the real Sollumz with ``--sollumz``), an automatic
 push after a mesh change, a skinned model whose export switches the armature to its rest pose and back, the
 update repository, sign-out and disabling the add-on. Blender's timers do not run in background mode, so the
@@ -279,6 +279,8 @@ class FakeLayout:
         self.enabled = True
         self.active = True
         self.alert = False
+        self.scale_y = 1.0
+        self.alignment = "EXPAND"
         if FakeLayout.icons is None:
             items = bpy.types.UILayout.bl_rna.functions["label"].parameters["icon"].enum_items
             FakeLayout.icons = {item.identifier for item in items}
@@ -295,7 +297,12 @@ class FakeLayout:
     def separator(self, **_kw):
         pass
 
-    def label(self, text="", icon="NONE", **_kw):
+    def panel(self, idname, default_closed=False, **_kw):
+        if not isinstance(idname, str) or not idname:
+            raise AssertionError("a layout panel needs an id")
+        return FakeLayout(self.log), FakeLayout(self.log)  # drawn open, so its content is checked too
+
+    def label(self, text="", icon="NONE", icon_value=0, **_kw):
         self._icon(icon)
         self.log.append(("label", text))
 
@@ -305,6 +312,24 @@ class FakeLayout:
             raise AssertionError(f"{type(data).__name__} has no property {name}")
         getattr(data, name)  # runs getters, as drawing does
         self.log.append(("prop", name))
+
+    def prop_enum(self, data, name, value, icon="NONE", **_kw):
+        self._icon(icon)
+        items = {item.identifier for item in data.bl_rna.properties[name].enum_items}
+        if value not in items:
+            raise AssertionError(f"{name} has no item {value}")
+        self.log.append(("prop_enum", f"{name}={value}"))
+
+    def popover(self, panel, text="", icon="NONE", **_kw):
+        self._icon(icon)
+        if not hasattr(bpy.types, panel):
+            raise AssertionError(f"unknown panel {panel}")
+        self.log.append(("popover", text))
+
+    def progress(self, factor=0.0, text="", **_kw):
+        if not 0.0 <= factor <= 1.0:
+            raise AssertionError(f"progress {factor} outside 0 to 1")
+        self.log.append(("progress", text))
 
     def operator(self, idname, text=None, icon="NONE", **_kw):
         self._icon(icon)
@@ -338,9 +363,14 @@ class PreferencesProxy:
 def draw_everything(package, state, label):
     ui = sys.modules[package + ".ui"]
     log = []
-    for panel in (ui.DCTLINK_PT_main, ui.DCTLINK_PT_focus, ui.DCTLINK_PT_texture, ui.DCTLINK_PT_model):
+    panels = (ui.DCTLINK_PT_main, ui.DCTLINK_PT_details, ui.DCTLINK_PT_setup, ui.DCTLINK_PT_linked,
+              ui.DCTLINK_PT_live, ui.DCTLINK_PT_model, ui.DCTLINK_PT_settings)
+    for panel in panels:
         if panel.poll(bpy.context) if hasattr(panel, "poll") else True:
-            panel.draw(type("P", (), {"layout": FakeLayout(log)})(), bpy.context)
+            instance = type("P", (), {"layout": FakeLayout(log)})()
+            for method in ("draw_header", "draw_header_preset", "draw"):
+                if hasattr(panel, method):
+                    getattr(panel, method)(instance, bpy.context)
     prefs = state.preferences()
     type(prefs).draw(PreferencesProxy(prefs, FakeLayout(log)), bpy.context)
     check(f"every panel draws ({label})", any(entry[0] == "operator" for entry in log), log[:5])
@@ -384,7 +414,7 @@ def stream_image(addon, ctrl, dct, image, target="diffuse"):
     scene.dct_link.image = image
     scene.dct_link.target = target
     frames = len(dct.frames)
-    check(f"Start Streaming runs ({image.name})", "FINISHED" in bpy.ops.dct_link.stream_start())
+    check(f"Start Live Preview runs ({image.name})", "FINISHED" in bpy.ops.dct_link.live_start())
     pump(addon, lambda: len(dct.frames) > frames and ctrl.stream.live_state == "attached", what="the first frame")
     frame = dct.frames[frames]
     return frame, dct.connections_ready[-1].leases[frame[0]]
@@ -394,29 +424,51 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     import numpy as np
 
     scene = bpy.context.scene
-    wm = bpy.context.window_manager
     host = sys.modules[package + ".host"]
 
     draw_everything(package, state, "before connecting")
-    # Connecting, pairing and signing in (the first timer step connects because Connect Automatically is on).
-    pump(addon, lambda: ctrl.pairing_prompt is not None, what="the pairing code")
-    log = draw_everything(package, state, "pairing")
-    check("the pairing field is shown", ("prop", "dct_link_pairing_code") in log)
+    # Connecting and signing in (the first timer step connects because Connect Automatically is on). Nobody is
+    # signed in yet, so the session asks Durty Cloth Tool to approve a sign-in; the user approves it a moment later.
+    dct.on_assist = lambda code: True
+    pump(addon, lambda: ctrl.sign_in_prompt is not None and bool(dct.assisted_codes), what="the sign-in request")
+    log = draw_everything(package, state, "signing in")
+    check("the sign-in step waits for the approval, with Cancel", ("operator", "dct_link.cancel_sign_in") in log)
     check("the data folder is the extension's user folder",
           pathlib.Path(ctrl.data_dir).resolve() == pathlib.Path(bpy.utils.extension_path_user(package)).resolve())
-    wm.dct_link_pairing_code = dct.pairing_code
-    check("Pair accepts the code", "FINISHED" in bpy.ops.dct_link.pair())
+    api.approve(dct.assisted_codes[-1])
+    dct.on_assist = api.approve
     pump(addon, lambda: ctrl.ready and ctrl.focused is not None, what="the welcome")
     check("signed in through DCT and connected", ctrl.account_name == "Durty" and dct.assisted_codes,
           ctrl.notice)
+    # The interface follows Blender's language (German here) and every panel still draws.
+    strings = sys.modules[package + ".strings"]
+    view = bpy.context.preferences.view
+    languages = [item.identifier for item in view.bl_rna.properties["language"].enum_items]
+    german = next((code for code in languages if code.startswith("de")), None)
+    if bpy.app.build_options.international and german:
+        before = (view.language, view.use_translate_interface, view.use_translate_tooltips)
+        view.language = german
+        view.use_translate_interface = view.use_translate_tooltips = True
+        try:
+            check("the add-on speaks Blender's language", strings.t("panel.live") == "Live-Vorschau"
+                  and strings.tt("op.live-start.desc").startswith("Dieses Bild"), strings.t("panel.live"))
+            check("Blender translates the add-on's labels in its own context",
+                  bpy.app.translations.pgettext_iface("Start Live Preview", strings.CONTEXT) == "Live-Vorschau starten")
+            draw_everything(package, state, "German")
+        finally:
+            view.language, view.use_translate_interface, view.use_translate_tooltips = before
+        check("English is back after switching", strings.t("panel.live") == "Live Preview")
+    else:
+        RESULTS.append({"check": "translations (Blender built without international support)", "ok": True,
+                        "detail": str(german)})
+
     paths = set(api.paths())
     check("only the public sign-in routes were called",
           {"POST /link/api/auth/device", "POST /link/api/assertions"} <= paths <= {
               "POST /link/api/auth/device", "POST /link/api/auth/token", "POST /link/api/assertions"}, paths)
     names = sorted(p.name for p in ctrl.data_dir.iterdir())
-    check("tokens and pairing are stored protected in the user folder",
-          {"install-id", "pairing.dpapi", "tokens.dpapi"} <= set(names) if os.name == "nt" else len(names) >= 1,
-          names)
+    check("the sign-in is stored protected in the user folder",
+          {"install-id", "tokens.dpapi"} <= set(names) if os.name == "nt" else len(names) >= 1, names)
 
     # Texture streaming of a byte image through the operators.
     width, height = 256, 128
@@ -426,7 +478,8 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     image.pixels.foreach_set((top_down[::-1].astype(np.float32) / 255).reshape(-1))
     frame, lease = stream_image(addon, ctrl, dct, image)
     log = draw_everything(package, state, "streaming")
-    check("the save buttons are shown while streaming", ("operator", "dct_link.stream_save") in log)
+    check("the save buttons are shown during the live preview",
+          ("operator", "dct_link.live_save") in log and ("operator", "dct_link.live_save_variation") in log)
     check("the first frame is the whole image, rows top to bottom",
           frame[2] == {"x": 0, "y": 0, "w": width, "h": height} and bytes(lease["canvas"]) == top_down.tobytes())
 
@@ -443,14 +496,22 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
           dct.frames[frames][2] == {"x": 0, "y": 64, "w": 64, "h": 64}, dct.frames[frames][2])
     check("the preview has the painted pixels", bytes(lease["canvas"]) == top_down.tobytes())
 
-    check("Save to Cloth runs", "FINISHED" in bpy.ops.dct_link.stream_save(mode="replace"))
+    check("Pause and Resume run", "FINISHED" in bpy.ops.dct_link.live_pause() and ctrl.stream.paused
+          and "FINISHED" in bpy.ops.dct_link.live_pause() and not ctrl.stream.paused)
+    diagnostics = sys.modules[package + ".ui"].diagnostics(bpy.context)  # background Blender has no clipboard
+    check("Copy Diagnostics runs", "FINISHED" in bpy.ops.dct_link.diagnostics()
+          and diagnostics.startswith("Durty Cloth Tool Creator Link diagnostics") and "sollumz:" in diagnostics)
+    pump(addon, lambda: ctrl.stream.findings is not None, what="the texture checks")
+    log = draw_everything(package, state, "texture checks")
+    check("the texture checks are shown", ("operator", "dct_link.check_again") in log, ctrl.stream.findings)
+    check("Save to Cloth runs", "FINISHED" in bpy.ops.dct_link.live_save())
     pump(addon, lambda: not ctrl.stream.saving, what="the save")
     check("the texture was saved", dct.saves and dct.saves[-1][2] == "replace" and
-          ctrl.stream.status.text == "Saved to the cloth", ctrl.stream.status)
-    check("Save as New Variation runs", "FINISHED" in bpy.ops.dct_link.stream_save(mode="newVariation"))
+          ctrl.stream.status.message.key == "live.saved", ctrl.stream.status)
+    check("Save as New Variation runs", "FINISHED" in bpy.ops.dct_link.live_save_variation())
     pump(addon, lambda: not ctrl.stream.saving, what="the second save")
     check("the variation was saved", dct.saves[-1][2] == "newVariation")
-    check("Discard runs", "FINISHED" in bpy.ops.dct_link.stream_discard())
+    check("Discard Changes runs", "FINISHED" in bpy.ops.dct_link.live_discard())
     pump(addon, lambda: not dct.connections_ready[-1].leases, what="the live texture to close")
     check("discarding drops the changes and closes the live texture", dct.discards and not ctrl.stream.active)
 
@@ -479,7 +540,7 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     check("a half-transparent float image arrives as straight sRGB colour",
           int(np.abs(received.astype(int) - expected.astype(int)).max()) <= 1,
           int(np.abs(received.astype(int) - expected.astype(int)).max()))
-    check("Stop runs", "FINISHED" in bpy.ops.dct_link.stream_stop())
+    check("Stop Live Preview runs", "FINISHED" in bpy.ops.dct_link.live_stop())
     pump(addon, lambda: not dct.connections_ready[-1].leases, what="the float live texture to close")
 
     # Model push through Sollumz's export operator.
@@ -554,7 +615,7 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
 
     check("Save to Cloth (model) runs", "FINISHED" in bpy.ops.dct_link.model_save())
     pump(addon, lambda: ctrl.model.busy is None, what="the model save")
-    check("the model was saved", ctrl.model.status.text == "Saved the model to the project", ctrl.model.status)
+    check("the model was saved", ctrl.model.status.message.key == "model.saved", ctrl.model.status)
     check("Discard (model) runs", "FINISHED" in bpy.ops.dct_link.model_discard())
     pump(addon, lambda: ctrl.model.lease is None, what="model.closed")
 
@@ -638,21 +699,23 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     check("loading a file stops streaming and forgets the pushed model",
           not ctrl.stream.active and state.watcher.root_uid is None and ctrl.model.root_name is None)
 
-    # The update repository.
+    # Updates come from the public repository Blender adds when the install link is dragged onto it; a copy
+    # installed from a file says how to switch.
     check("this test copy counts as installed from a file", not host.installed_from_dct_repository(package))
     log = draw_everything(package, state, "installed from a file")
-    check("the preferences explain how to get updates for a copy installed from a file",
-          "installed from a file" in " ".join(entry[1] for entry in log if entry[0] == "label"))
-    check("the repository is added with its token", preferences.add_repository("release", "smoke-token") is None)
-    repos = preferences.dct_repositories()
-    check("Blender lists the repository with authentication",
-          len(repos) == 1 and repos[0].use_access_token and repos[0].access_token == "smoke-token"
-          and repos[0].remote_url == "https://gta.clothing/link/blender/release/index.json",
-          [(r.name, r.remote_url) for r in repos])
-    preferences.add_repository("experimental", "smoke-token-2")
-    repos = preferences.dct_repositories()
-    check("switching the channel updates the same repository",
-          len(repos) == 1 and repos[0].remote_url.endswith("/experimental/index.json"))
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the settings explain how to get updates for a copy installed from a file",
+          "installed from a file" in labels and ("operator", "dct_link.open_plugins_page") in log)
+
+    # The user disconnects Blender in Durty Cloth Tool: nothing connects again until Connect.
+    dct.connections_ready[-1].kick("disconnected")
+    pump(addon, lambda: ctrl.dct_disconnected and ctrl.state == "stopped", what="the disconnect in DCT")
+    log = draw_everything(package, state, "disconnected in DCT")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("a disconnect in DCT is explained, with Connect",
+          "disconnected in Durty Cloth Tool" in labels and ("operator", "dct_link.connect") in log, labels)
+    check("Connect runs after the disconnect", "FINISHED" in bpy.ops.dct_link.connect())
+    pump(addon, lambda: ctrl.ready, what="connecting again after the disconnect")
 
     # Signing out (the network part runs on a worker thread), then disabling and enabling again.
     check("Sign Out runs", "FINISHED" in bpy.ops.dct_link.sign_out("EXEC_DEFAULT"))

@@ -18,6 +18,7 @@ from typing import List, NamedTuple, Tuple, Union
 
 from .dct_link import protocol
 from .dct_link.session import ModelBundle
+from .strings import UserError, msg
 
 MODEL_SUFFIX = ".ydd.xml"
 TEXTURE_SUFFIX = ".dds"
@@ -25,8 +26,12 @@ OTHER_MODEL_SUFFIXES = (".ydr.xml", ".yft.xml", ".ybn.xml")
 MAX_DEPTH = 3
 
 
-class BundleError(ValueError):
+class BundleError(UserError):
     """The export cannot be pushed; the message is shown to the user."""
+
+
+def _error(key: str, **fields) -> BundleError:
+    return BundleError(msg(key, **fields))
 
 
 class CollectedFiles(NamedTuple):
@@ -40,7 +45,7 @@ def _walk(directory: pathlib.Path, depth: int = 0) -> List[pathlib.Path]:
     try:
         entries = sorted(os.scandir(directory), key=lambda e: e.name.lower())
     except OSError as exc:
-        raise BundleError(f"The export folder could not be read ({exc.strerror or exc}).") from exc
+        raise _error("bundle.unreadable", detail=str(exc.strerror or exc)) from exc
     for entry in entries:
         if entry.is_symlink():
             continue
@@ -66,43 +71,35 @@ def collect(directory: Union[str, os.PathLike]) -> CollectedFiles:
 
     if not models:
         if any(f.name.lower().endswith(OTHER_MODEL_SUFFIXES) for f in others):
-            raise BundleError(
-                "Sollumz exported a drawable or fragment, not a drawable dictionary. Durty Cloth Tool needs a "
-                "Drawable Dictionary: parent your Drawable to one (Sollumz: Create Drawable Dictionary) and push again."
-            )
-        raise BundleError("Sollumz did not export a model. Check Sollumz's Info log for the reason.")
+            raise _error("bundle.not-dictionary")
+        raise _error("bundle.no-model")
     if len(models) > 1:
-        raise BundleError(
-            f"Sollumz exported {len(models)} drawable dictionaries. Select objects of one drawable dictionary only."
-        )
+        raise _error("bundle.several", count=len(models))
 
     seen = {}
     for path in [models[0], *textures]:
         name = path.name
         if not protocol.is_file_name(name):
-            raise BundleError(
-                f"'{name}' cannot be sent: file names may only use letters, digits, '_', '-' and '.', must not start "
-                "with '.' or contain '..', and must be at most 128 characters. Rename the texture or model in Blender."
-            )
+            raise _error("bundle.bad-name", name=name)
         folded = name.lower()
         if folded in seen:
-            raise BundleError(f"Two textures are called '{name}'. Give every texture a different name.")
+            raise _error("bundle.duplicate", name=name)
         seen[folded] = path
 
     if 1 + len(textures) > protocol.MAX_MODEL_FILES:
-        raise BundleError(
-            f"The model uses {len(textures)} textures; at most {protocol.MAX_MODEL_FILES - 1} can be sent."
-        )
+        raise _error("bundle.too-many", count=len(textures), limit=protocol.MAX_MODEL_FILES - 1)
 
     total = 0
     for path in [models[0], *textures]:
-        size = path.stat().st_size
+        try:
+            size = path.stat().st_size
+        except OSError as exc:
+            raise _error("bundle.unreadable", detail=str(exc.strerror or exc)) from exc
         if size == 0:
-            raise BundleError(f"'{path.name}' is empty. Export the model again.")
+            raise _error("bundle.empty-file", name=path.name)
         total += size
     if total > protocol.MAX_BINARY_PAYLOAD_BYTES:
-        mib = protocol.MAX_BINARY_PAYLOAD_BYTES // (1024 * 1024)
-        raise BundleError(f"The model and its textures are larger than {mib} MiB together and cannot be sent.")
+        raise _error("bundle.too-large", size=protocol.MAX_BINARY_PAYLOAD_BYTES // (1024 * 1024))
 
     ignored = sorted(p.relative_to(root).as_posix() for p in others)
     return CollectedFiles(models[0], sorted(textures, key=lambda p: p.name.lower()), ignored)
@@ -110,7 +107,10 @@ def collect(directory: Union[str, os.PathLike]) -> CollectedFiles:
 
 def read_files(collected: CollectedFiles) -> List[Tuple[str, bytes]]:
     """The files as ``(bare name, bytes)``, the model first."""
-    return [(path.name, path.read_bytes()) for path in [collected.model, *collected.textures]]
+    try:
+        return [(path.name, path.read_bytes()) for path in [collected.model, *collected.textures]]
+    except OSError as exc:
+        raise _error("bundle.unreadable", detail=str(exc.strerror or exc)) from exc
 
 
 def build_bundle(directory: Union[str, os.PathLike]) -> Tuple[ModelBundle, CollectedFiles]:
@@ -120,5 +120,5 @@ def build_bundle(directory: Union[str, os.PathLike]) -> Tuple[ModelBundle, Colle
     try:
         bundle = ModelBundle(protocol.MODEL_YDD_XML, files)
     except ValueError as exc:  # the link client applies the same rules; keep its verdict
-        raise BundleError(f"The export cannot be sent: {exc}") from exc
+        raise _error("bundle.invalid", detail=str(exc)) from exc
     return bundle, collected

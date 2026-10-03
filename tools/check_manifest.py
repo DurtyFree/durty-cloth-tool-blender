@@ -40,9 +40,16 @@ EXPECTED: Dict[str, Any] = {
     "permissions": {
         "network": "Durty Cloth Tool on this computer and gta.clothing for sign-in",
         "files": "Reads Durty Cloth Tool's endpoint file, writes temporary exports",
+        "clipboard": "Copies the sign-in code and diagnostics",
     },
 }
 TERSE_LIMIT = 64  # Blender's limit for taglines and permission texts
+#: The Creator Link plugin version grammar (one version for every host): X.Y.Z for Release, X.Y.Z-experimental.N
+#: (N from 1) for Experimental. Blender accepts both as semantic versions.
+VERSION_PATTERN = re.compile(
+    r"(?P<base>(?:0|[1-9][0-9]{0,4})\.(?:0|[1-9][0-9]{0,4})\.(?:0|[1-9][0-9]{0,4}))"
+    r"(?:-experimental\.(?P<ordinal>[1-9][0-9]{0,5}))?"
+)
 
 
 def _terse_problem(field: str, value: Any) -> List[str]:
@@ -74,8 +81,8 @@ def check(manifest_path: pathlib.Path = MANIFEST) -> List[str]:
         if data.get(key) != value:
             problems.append(f"{key} is {data.get(key)!r}, expected {value!r}")
     version = data.get("version")
-    if not isinstance(version, str) or not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+(-experimental\.[0-9]+)?", version):
-        problems.append(f"version {version!r} is not major.minor.patch (optionally -experimental.N)")
+    if not isinstance(version, str) or not VERSION_PATTERN.fullmatch(version):
+        problems.append(f"version {version!r} is not X.Y.Z or X.Y.Z-experimental.N")
     elif version != code_version():
         problems.append(f"version {version} differs from VERSION {code_version()!r} in settings.py")
     problems += _terse_problem("tagline", data.get("tagline"))
@@ -84,8 +91,10 @@ def check(manifest_path: pathlib.Path = MANIFEST) -> List[str]:
     for copyright_text in data.get("copyright", []):
         if not re.fullmatch(r"[0-9]{4}(-[0-9]{4})? \S.*", copyright_text):
             problems.append(f"copyright {copyright_text!r} must be 'YEAR Name'")
-    if (PACKAGE_DIR / "LICENSE").read_bytes() != (REPO_ROOT / "LICENSE").read_bytes():
-        problems.append("durty_cloth_tool_link/LICENSE must equal the repository's LICENSE")
+    for name in ("LICENSE", "NOTICE"):
+        shipped, root = PACKAGE_DIR / name, REPO_ROOT / name
+        if not shipped.is_file() or not root.is_file() or shipped.read_bytes() != root.read_bytes():
+            problems.append(f"durty_cloth_tool_link/{name} must equal the repository's {name}")
     return problems
 
 

@@ -6,9 +6,7 @@ from __future__ import annotations
 import pathlib
 import re
 
-import pytest
-
-from durty_cloth_tool_link import settings
+from durty_cloth_tool_link import settings, strings
 from durty_cloth_tool_link.dct_link import protocol
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -17,7 +15,7 @@ EM_DASH = chr(0x2014)
 # Assembled from pieces so this file does not match itself. The add-on and its vendored dct_link are public: they
 # may name gta.clothing's public routes, nothing behind them and nothing of Durty Cloth Tool's own repository.
 PRIVATE = re.compile("|".join([
-    "api" + "-next", "plebmasters" + r"\.de", "local" + r"host:\d", "DurtyClothTool" + r"\.App",
+    "api" + "-next", r"(?<!discord\.)" + "plebmasters" + r"\.de", "local" + r"host:\d", "DurtyClothTool" + r"\.App",
     "eng" + "/", r"\.ps" + "1", r"\bV" + r"3\b", "link" + r"-api\.md",
 ]), re.IGNORECASE)
 #: In the vendored copy also no paths into the Durty Cloth Tool repository (its VENDORED.md names the source).
@@ -41,12 +39,12 @@ def test_only_gta_clothing_links_are_opened():
     assert not settings.is_gta_clothing_url("https://gta.clothing.example.com/")
     assert not settings.is_gta_clothing_url("https://evil.example/?https://gta.clothing/")
     assert not settings.is_gta_clothing_url(None)
-
-
-@pytest.mark.parametrize("typed,code", [("048213", "048213"), (" 048 213 ", "048213"), ("048-213", "048213"),
-                                        ("48213", None), ("0482134", None), ("abcdef", None), ("", None)])
-def test_pairing_codes(typed, code):
-    assert settings.normalize_pairing_code(typed) == code
+    # The rules dct_link applies to update links: printable ASCII, no spaces, backslash or @, and the exact prefix.
+    for url in ("https://gta.clothing\\@evil.example/", "https://gta.clothing/@evil.example",
+                "https://gta.clothing/a b", "https://gta.clothing/a\tb", "https://gta.clothing/\x00",
+                "https://gta.clothing/\u00e9", "https://gta.clothing", "https://gta.clothing:443/",
+                "https://link.gta.clothing/", "https://gta.clothing/" + "a" * 2048):
+        assert not settings.is_gta_clothing_url(url), url
 
 
 def test_sign_in_codes_show_like_on_gta_clothing():
@@ -57,7 +55,7 @@ def test_sign_in_codes_show_like_on_gta_clothing():
 def test_stream_size_limits():
     assert settings.check_stream_size(4096, 4096) is None
     assert settings.check_stream_size(1, 1) is None
-    assert "4096" in settings.check_stream_size(4097, 16)
+    assert "4096" in strings.english(settings.check_stream_size(4097, 16))
     assert settings.check_stream_size(0, 16) is not None
 
 
@@ -67,24 +65,28 @@ def test_auto_push_delay_is_clamped():
     assert settings.clamp_auto_push_delay(2.5) == 2.5
 
 
-def test_every_protocol_error_code_has_text():
-    missing = [code for code in protocol.ERROR_CODES if code not in settings.ERROR_TEXT]
+#: dct_link's local error codes (LinkError in dct_link/session.py).
+LOCAL_CODES = ("disconnected", "timeout", "superseded", "cancelled", "closed", "assertion-invalid",
+               "untrusted-endpoint", "signed-out", "pixel-source-failed", "callback-failed", "internal-error")
+
+
+def test_every_protocol_and_session_error_code_has_text():
+    missing = [code for code in (*protocol.ERROR_CODES, *LOCAL_CODES) if f"error.{code}" not in strings.EN]
     assert missing == []
 
 
-def test_every_live_state_and_close_reason_has_text():
-    assert set(protocol.LIVE_STATES) <= set(settings.LIVE_STATE_TEXT)
-    assert set(protocol.LIVE_CLOSE_REASONS) <= set(settings.CLOSE_REASON_TEXT)
-    assert set(protocol.MODEL_CLOSE_REASONS) <= set(settings.CLOSE_REASON_TEXT)
-    assert set(protocol.FEATURE_STATES) - {"entitled"} <= set(settings.FEATURE_STATE_TEXT)
+def test_every_close_reason_and_plan_state_has_text():
+    reasons = set(protocol.LIVE_CLOSE_REASONS) | set(protocol.MODEL_CLOSE_REASONS) | {"disconnected"}
+    assert {f"close.{reason}" for reason in reasons} <= set(strings.EN)
+    assert {f"feature.{state}" for state in protocol.FEATURE_STATES if state != "entitled"} <= set(strings.EN)
 
 
 def test_unknown_codes_still_get_a_sentence():
-    assert settings.describe_error("something-new") == "Something went wrong (something-new)."
-    assert settings.describe_error(None, "fallback") == "fallback"
+    assert strings.english(settings.describe_error("something-new")) == "Something went wrong (something-new)."
+    assert strings.english(settings.describe_error(None)) == "Something went wrong."
     assert settings.describe_feature("entitled") is None
     assert settings.describe_feature(None) is None
-    assert settings.describe_feature("needsUltimate") == "Needs Durty Cloth Tool Ultimate"
+    assert strings.english(settings.describe_feature("needsUltimate")) == "This is included in Durty Cloth Tool Ultimate."
 
 
 def test_targets_match_the_protocol():

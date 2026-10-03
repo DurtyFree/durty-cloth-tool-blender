@@ -26,6 +26,8 @@ from typing import Callable, Deque, Dict, List, NamedTuple, Optional, Sequence, 
 
 import numpy as np
 
+from .strings import Msg, msg
+
 Rect = Tuple[int, int, int, int]
 
 #: Tile edge for change detection. Smaller tiles give tighter rectangles but cost more to compare.
@@ -297,6 +299,15 @@ class StreamBuffers:
         return self._cursor is not None or bool(self._pending)
 
     @property
+    def progress(self) -> float:
+        """How far the current capture got, 0 to 1 (1 when none runs)."""
+        if self._cursor is None:
+            return 1.0 if not self._pending else 0.99
+        top, x = self._cursor
+        done = top + min(self.tile, self.height - top) * x / max(1, self.width)
+        return min(0.99, done / max(1, self.height))
+
+    @property
     def unit_pixels(self) -> int:
         """Pixels per unit when looking for changes."""
         return self._units["scan"]
@@ -480,7 +491,7 @@ PREMULTIPLIED_ALPHA_MODES = frozenset({"STRAIGHT", "PREMUL"})
 
 class ColourPlan(NamedTuple):
     conversion: Conversion
-    warning: Optional[str]
+    warning: Optional[Msg]
 
 
 def colour_plan(target: str, channels: int, is_float: bool, colour_space: str, is_data: bool,
@@ -496,14 +507,12 @@ def colour_plan(target: str, channels: int, is_float: bool, colour_space: str, i
     sanitize = is_float
     if target == "diffuse":
         if is_data:
-            return ColourPlan(Conversion(channels, False, False, sanitize),
-                              "The image is set to Non-Color; its values are sent as colour unchanged.")
+            return ColourPlan(Conversion(channels, False, False, sanitize), msg("colour.non-color-diffuse"))
         if is_float or colour_space in LINEAR_SPACES:
             return ColourPlan(Conversion(channels, True, unpremultiply, sanitize), None)
         if colour_space in SRGB_SPACES:
             return ColourPlan(Conversion(channels, False, False, False), None)
-        return ColourPlan(Conversion(channels, False, False, False),
-                          f"The image's colour space {colour_space} is sent unconverted; use sRGB for exact colours.")
+        return ColourPlan(Conversion(channels, False, False, False), msg("colour.unknown-diffuse", space=colour_space))
     # Normal and specular maps.
     if not is_float or is_data:
         return ColourPlan(Conversion(channels, False, False, sanitize), None)
@@ -512,5 +521,4 @@ def colour_plan(target: str, channels: int, is_float: bool, colour_space: str, i
         return ColourPlan(Conversion(channels, True, unpremultiply, sanitize), None)
     if colour_space in LINEAR_SPACES:
         return ColourPlan(Conversion(channels, False, unpremultiply, sanitize), None)
-    return ColourPlan(Conversion(channels, False, unpremultiply, sanitize),
-                      f"Set the map's colour space to Non-Color; {colour_space} values are sent as they are in Blender.")
+    return ColourPlan(Conversion(channels, False, unpremultiply, sanitize), msg("colour.unknown-data", space=colour_space))

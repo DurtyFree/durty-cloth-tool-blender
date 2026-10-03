@@ -12,16 +12,15 @@ Do not edit these files by hand. Change dct_link upstream, then run
 - Source: `plugins/python/dct_link` and `plugins/python/LICENSE` in the Durty Cloth Tool repository
 - dct_link version: 0.1.0
 - Source revision: not recorded yet: the sync records the Durty Cloth Tool commit once plugins/python/dct_link is committed there unchanged
-- Left out: `es256.py`, `keys.json`, `loader.py`, `manifest.py`, `updater.py`. The package description in
-  `__init__.py` still names them, because it describes the whole dct_link package; nothing in the add-on
-  imports them.
+- Left out: `es256.py`, `keys.json`, `loader.py`, `manifest.py`, `updater.py` (the modules for self-updating hosts;
+  Blender updates the add-on, and nothing in the add-on imports them).
 
 | File | SHA-256 |
 |---|---|
 | `LICENSE` | `a2a344cb8f78fc31647efd0e12df7c4f7c7b4b79dab10c2c01418bb229323a75` |
-| `__init__.py` | `287bebcc311ea77b8e558aa1000efe5ed48a1620e1920daa85ddc2455351d8ff` |
-| `auth.py` | `fa68b8f605b57b43996b416cefb3a316ba8bed9a325dd0f64ca5f30d63529151` |
-| `protocol.py` | `ef63a396b479fa5b02aba433fcf559fb3869a803981f0799bd3447cfc697a659` |
-| `session.py` | `79b2f82df62cbe9f3044179ee290fd9100049846d510b6be87ac475f58ec4bb2` |
-| `tokens.py` | `b8bb93cf0668754e33d676677cad30357d5dc6788d17fe74e6592d55a81a7cd7` |
+| `__init__.py` | `bd7438584ad8ef138caf7cb8a7d773bdcea085729aeb7711642a87e95a696ca9` |
+| `auth.py` | `1fc58432729c8cfd8c375ed63f43a13e7844032210f62c7746e5c984cfe604a5` |
+| `protocol.py` | `a572e6c8654f5b06c8f850e958aea9227276c14a464bc590dd70cf1bb7cc1cb1` |
+| `session.py` | `46c427d4586be5599129837b6e63c4dbecd135eab7e7865fd01106afc425fd85` |
+| `tokens.py` | `a8a528af705ea3e342e101d2632da09d801cfde1bc0bae6999d82b90a4749e17` |
 | `ws.py` | `288e1193a82690eb993a629b29152dd955351154c3eeb4ef3ea6847d4fd4be77` |

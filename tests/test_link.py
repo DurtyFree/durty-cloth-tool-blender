@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The add-on's link flows against a fake Durty Cloth Tool and a fake gta.clothing, without Blender: pairing and
-pairing again, both ways of signing in, a remembered sign-out, renewing the sign-in on connect, texture streaming
-(byte and float images, with the vertical flip end to end), capture scheduling, model pushes, automatic pushes,
-signing out and removing the pairing. Everything is driven by polling, as Blender's timer does."""
+"""The add-on's link flows against a fake Durty Cloth Tool and a fake gta.clothing, without Blender: connecting
+and both ways of signing in, a disconnect in Durty Cloth Tool, a remembered sign-out, renewing the sign-in on
+connect, texture streaming (byte and float images, with the vertical flip end to end), capture scheduling, model
+pushes, automatic pushes and signing out. Everything is driven by polling, as Blender's timer does."""
 
 from __future__ import annotations
 
@@ -15,9 +15,9 @@ from typing import Callable, Dict, List, Optional
 import numpy as np
 import pytest
 
-from durty_cloth_tool_link import link, pixels, settings
+from durty_cloth_tool_link import link, pixels, settings, strings
 from durty_cloth_tool_link.dct_link import auth, tokens
-from durty_cloth_tool_link.dct_link.session import PAIRING, READY, STOPPED, LinkError
+from durty_cloth_tool_link.dct_link.session import READY, STOPPED, LinkError
 from tests.support.fake_dct import FakeDct
 from tests.support.fake_link_api import FakeLinkApi
 
@@ -68,27 +68,22 @@ def stores():
     return Stores()
 
 
-def connect_and_pair(ctrl: link.LinkController, dct: FakeDct) -> None:
-    ctrl.connect()
-    drive(ctrl, lambda: ctrl.pairing_prompt is not None)
-    assert ctrl.state == PAIRING
-    ctrl.submit_pairing_code(" 048 213 ")
-
-
 def ready_controller(tmp_path, dct, api, stores) -> link.LinkController:
     dct.on_assist = api.approve  # DCT approves the device sign-in, as the signed-in DCT does
     ctrl = make_controller(tmp_path, dct, api, stores)
-    connect_and_pair(ctrl, dct)
+    ctrl.connect()
     drive(ctrl, lambda: ctrl.ready and ctrl.focused is not None)
     return ctrl
 
 
-def test_pairing_and_sign_in_through_dct(tmp_path, dct, api, stores):
+def test_sign_in_through_dct(tmp_path, dct, api, stores):
     ctrl = ready_controller(tmp_path, dct, api, stores)
-    assert ctrl.paired is True
     assert ctrl.account_name == "Durty" and ctrl.user_name == "Durty"
     assert ctrl.project == {"name": "FS Studio Clothing"}
-    assert link.describe_focus(ctrl.focused) == ["Cloth: jbib_003_u", "Texture: jbib_diff_003_a_uni (2048 x 2048)"]
+    assert ctrl.focus_info() == link.FocusInfo("jbib_003_u", "A", "jbib_diff_003_a_uni", 2048, 2048,
+                                               ("diffuse", "normal", "specular"))
+    assert ctrl.focus_label() == "jbib_003_u A"
+    assert ctrl.chip() == "connected" and not ctrl.setup_needed
     assert len(dct.assisted_codes) == 1 and len(dct.assertions_seen) == 1
     assert "POST /link/api/auth/device" in api.paths() and "POST /link/api/assertions" in api.paths()
     device_request = next(r for r in api.requests if r["path"] == "/link/api/auth/device")
@@ -105,6 +100,8 @@ def test_pairing_and_sign_in_through_dct(tmp_path, dct, api, stores):
     hello = dct.received[0]
     assert hello["plugin"] == {"kind": "blender", "version": settings.VERSION, "channel": settings.CHANNEL}
     assert hello["host"] == {"name": "Blender", "version": "4.5.9"}
+    # The same random installation id gta.clothing sees with the sign-in.
+    assert hello["installId"] == ctrl.install_id == device_request["body"]["installId"]
 
 
 def test_the_reported_channel_is_the_build_channel():
@@ -113,12 +110,12 @@ def test_the_reported_channel_is_the_build_channel():
     assert settings.CHANNEL == settings.channel_of_version(settings.VERSION)
 
 
-def test_a_new_connection_reuses_the_pairing_and_sign_in(tmp_path, dct, api, stores):
+def test_a_new_connection_reuses_the_sign_in(tmp_path, dct, api, stores):
     first = ready_controller(tmp_path, dct, api, stores)
     first.disconnect()
     second = make_controller(tmp_path, dct, api, stores)
     second.prepare()
-    assert second.paired is True and second.user_name == "Durty"
+    assert second.user_name == "Durty"
     second.connect()
     drive(second, lambda: second.ready)
     assert len(dct.assisted_codes) == 1  # no new sign-in
@@ -141,7 +138,7 @@ def test_an_expired_sign_in_is_renewed_when_connecting(tmp_path, dct, api, store
     second.disconnect()
 
 
-def test_sign_in_with_the_browser_before_pairing(tmp_path, dct, api, stores):
+def test_sign_in_with_the_browser_before_connecting(tmp_path, dct, api, stores):
     opened: List[str] = []
     ctrl = make_controller(tmp_path, dct, api, stores, opened=opened)
     ctrl.start_sign_in()
@@ -150,37 +147,68 @@ def test_sign_in_with_the_browser_before_pairing(tmp_path, dct, api, stores):
     assert opened == [link_url] and link_url.startswith(api.base_url + "/account/link/?code=")
     api.approve(code)
     drive(ctrl, lambda: ctrl.user_name == "Durty")
-    connect_and_pair(ctrl, dct)
+    ctrl.connect()
     drive(ctrl, lambda: ctrl.ready)
     assert dct.assisted_codes == []  # already signed in: DCT was not asked
 
 
-def test_pairing_waits_until_it_is_started_in_dct(tmp_path, dct, api, stores):
-    dct.pairing_started = False
+def test_setup_finds_durty_cloth_tool_then_signs_in_there(tmp_path, dct, api, stores):
     ctrl = make_controller(tmp_path, dct, api, stores)
-    ctrl.connect()
-    drive(ctrl, lambda: ctrl.pairing_not_started)
-    assert ctrl.pairing_prompt is None and ctrl.notice.level == "WARNING"
-    assert "Connect an app" in ctrl.notice.text
-    dct.pairing_started = True
-    ctrl.request_pairing()
-    drive(ctrl, lambda: ctrl.pairing_prompt is not None)
-    with pytest.raises(ValueError):
-        ctrl.submit_pairing_code("12345")
+    ctrl.prepare()
+    assert ctrl.setup_steps() == (False, False) and ctrl.setup_needed
+    ctrl.connect()  # not signed in: the session asks Durty Cloth Tool to approve a sign-in
+    drive(ctrl, lambda: ctrl.sign_in_prompt is not None and bool(dct.assisted_codes))
+    assert ctrl.setup_steps() == (True, False) and ctrl.chip() == "action"
+    assert ctrl.sign_in_status.message.key in ("setup.sign-in.asked", "setup.sign-in.approved")
+    api.approve(dct.assisted_codes[0])
+    drive(ctrl, lambda: ctrl.ready)
+    assert ctrl.setup_steps() == (True, True) and not ctrl.setup_needed
 
 
-def test_a_forgotten_pairing_is_only_renewed_when_the_user_agrees(tmp_path, dct, api, stores):
+def test_a_disconnect_in_durty_cloth_tool_waits_for_the_user(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    start(ctrl, ArrayImage(16, 16))
+    drive(ctrl, lambda: len(dct.frames) == 1)
+    dct.connections_ready[-1].kick("disconnected")  # the user disconnected Blender under Connected apps
+    drive(ctrl, lambda: ctrl.dct_disconnected and ctrl.state == STOPPED)
+    assert not ctrl.stream.active and ctrl.notice is None and not ctrl.want_connected
+    assert ctrl.stream.status is None  # the status explains it; no "connection lost" note under Live Preview
+    assert strings.english(ctrl.status()) == "Disconnected in Durty Cloth Tool" and ctrl.chip() == "offline"
+    connections = dct.connections
+    end = time.monotonic() + 1.5
+    while time.monotonic() < end:  # nothing connects again by itself
+        ctrl.poll()
+        time.sleep(0.01)
+    assert dct.connections == connections and ctrl.state == STOPPED
+    ctrl.connect()  # the Connect button
+    drive(ctrl, lambda: ctrl.ready)
+    assert not ctrl.dct_disconnected and ctrl.chip() == "connected"
+
+
+def test_a_disconnect_before_the_welcome_does_not_switch_the_add_on_off(tmp_path, dct, api, stores):
+    """Only a Durty Cloth Tool that welcomed the add-on can disconnect it; before that the answer proves nothing (a
+    program on a link port could send it), so the add-on keeps trying and connects."""
     first = ready_controller(tmp_path, dct, api, stores)
     first.disconnect()
-    dct.clients.clear()  # the user removed Blender in DCT
+    dct.auth_error_codes = ["disconnected"]
     second = make_controller(tmp_path, dct, api, stores)
     second.connect()
-    drive(second, lambda: second.pairing_required is not None and second.state == STOPPED)
-    assert stores.stores["pairing"].load() is not None  # never wiped on DCT's word alone
-    second.request_pairing()  # Pair Again
-    drive(second, lambda: second.pairing_prompt is not None)
-    second.submit_pairing_code("048213")
     drive(second, lambda: second.ready)
+    assert not second.dct_disconnected and "untrusted-endpoint" in second.recent_errors
+
+
+def test_a_browser_sign_in_after_a_sign_out_connects(tmp_path, dct, api, stores):
+    """Signing out ends the connection; signing in again in the browser connects again, as through DCT."""
+    opened: List[str] = []
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    ctrl.open_url = opened.append
+    ctrl.sign_out()
+    drive(ctrl, lambda: api.logouts == 1 and ctrl.state == STOPPED)
+    ctrl.start_sign_in()
+    drive(ctrl, lambda: bool(opened))
+    api.approve(ctrl.active_sign_in()[0])
+    drive(ctrl, lambda: ctrl.ready)
+    assert ctrl.user_name == "Durty" and not ctrl.signed_out
 
 
 def test_a_sign_out_is_remembered_until_the_user_signs_in(tmp_path, dct, api, stores):
@@ -194,7 +222,7 @@ def test_a_sign_out_is_remembered_until_the_user_signs_in(tmp_path, dct, api, st
     assert again.signed_out
     again.connect()  # Connect Automatically at the next start
     drive(again, lambda: again.state == STOPPED)
-    assert again.status_text() == "Signed out"
+    assert strings.english(again.status()) == "Signed out" and again.chip() == "action"
     assert len([r for r in api.requests if r["path"] == "/link/api/auth/device"]) == devices  # nothing started
     dct.on_assist = api.approve
     again.sign_in_with_dct()
@@ -212,8 +240,8 @@ class ArrayImage:
         self.removed = False
         self.reads = 0
 
-    def problem(self) -> Optional[str]:
-        return "The streamed image was removed." if self.removed else None
+    def problem(self) -> Optional[strings.Msg]:
+        return strings.msg("live.image-removed") if self.removed else None
 
     def is_dirty(self) -> bool:
         return self.dirty
@@ -253,13 +281,14 @@ def test_texture_streaming_end_to_end(tmp_path, dct, api, stores):
 
     ctrl.stream.save("replace")
     drive(ctrl, lambda: not ctrl.stream.saving)
-    assert ctrl.stream.status.text == "Saved to the cloth"
+    assert ctrl.stream.status.text == "Saved to jbib_003_u A. You can undo it in History."
+    assert not ctrl.stream.unsaved
     assert dct.saves[-1][2] == "replace" and dct.saves[-1][3] == image.rgba.tobytes()
 
     image.rgba[0, 0] = [1, 2, 3, 4]
     ctrl.stream.save("newVariation")  # sends the newest pixels first
     drive(ctrl, lambda: not ctrl.stream.saving)
-    assert ctrl.stream.status.text == "Saved as a new texture variation"
+    assert ctrl.stream.status.text == "Saved as a new variation of jbib_003_u A."
     assert dct.saves[-1][3] == image.rgba.tobytes()
 
     holder, buffers = ctrl.stream._pixel_source, ctrl.stream.buffers
@@ -380,7 +409,7 @@ class FloatImage:
         self.straight[..., 3] = np.clip(self.straight[..., 3], 0.25, 1.0)
         self.dirty = False
 
-    def problem(self) -> Optional[str]:
+    def problem(self) -> Optional[strings.Msg]:
         return None
 
     def is_dirty(self) -> bool:
@@ -423,11 +452,11 @@ def test_streaming_refuses_what_dct_would_refuse(tmp_path, dct, api, stores):
     image = ArrayImage(8, 8)
     start(ctrl, image, target="normal")
     drive(ctrl, lambda: ctrl.stream.is_open)
-    with pytest.raises(ValueError, match="diffuse"):
+    with pytest.raises(ValueError, match="Diffuse"):
         ctrl.stream.save("newVariation")
     image.removed = True
     drive(ctrl, lambda: not ctrl.stream.active)
-    assert ctrl.stream.status.text == "The streamed image was removed."
+    assert ctrl.stream.status.text == "The image was removed."
 
 
 class Export:
@@ -459,10 +488,10 @@ def test_model_push_save_and_discard(tmp_path, dct, api, stores):
 
     ctrl.model.save()
     drive(ctrl, lambda: ctrl.model.busy is None)
-    assert ctrl.model.status.text == "Saved the model to the project"
+    assert ctrl.model.status.text == "Saved the model to the cloth. You can undo it in History."
     ctrl.model.discard()
     drive(ctrl, lambda: ctrl.model.lease is None)
-    assert ctrl.model.status.text == "Discarded the model in Durty Cloth Tool"
+    assert ctrl.model.status.text == "Discarded the model in Durty Cloth Tool."
 
     with pytest.raises(ValueError, match="did not export a model"):
         ctrl.model.push(lambda folder: None, "nothing")
@@ -478,7 +507,7 @@ def test_saving_waits_for_the_newest_push_and_retries_while_dct_is_busy(tmp_path
         model.save()
     drive(ctrl, lambda: model.lease is not None and not model.pushing)
     model.push(Export(b"DDS 2"), "jbib_003_u")
-    assert "newest push" in model.save_blocker  # saving now would store the model shown before it
+    assert model.save_blocker.key == "model.block.pushing"  # saving now would store the model shown before it
     drive(ctrl, lambda: not model.pushing)
     model.due_at = time.monotonic() + 30  # an automatic push is about to run
     with pytest.raises(ValueError, match="about to be pushed"):
@@ -488,7 +517,7 @@ def test_saving_waits_for_the_newest_push_and_retries_while_dct_is_busy(tmp_path
     dct.save_busy = 2  # DCT is still converting: it answers busy, the add-on asks again
     model.save()
     drive(ctrl, lambda: model.busy is None)
-    assert model.status.text == "Saved the model to the project" and dct.busy_saves == 2 and len(dct.model_saves) == 1
+    assert model.status.text.startswith("Saved the model to the cloth") and dct.busy_saves == 2 and len(dct.model_saves) == 1
 
     model.SAVE_RETRIES = 1
     dct.save_busy = 5
@@ -524,7 +553,7 @@ def test_automatic_push_after_changes_and_its_pause_after_warnings(tmp_path, dct
 
     ctrl.model.schedule(time.monotonic())  # this one logs warnings: automatic pushes pause
     drive(ctrl, lambda: len(dct.pushes) == 3 and not ctrl.model.pushing and ctrl.model.paused)
-    assert "paused" in ctrl.model.status.text
+    assert "paused" in ctrl.model.note.text
     ctrl.model.schedule(time.monotonic())
     assert ctrl.model.due_at is None
     ctrl.model.push(Export(), "jbib_003_u")  # pushing by hand resumes them
@@ -532,14 +561,12 @@ def test_automatic_push_after_changes_and_its_pause_after_warnings(tmp_path, dct
     assert not ctrl.model.paused
 
 
-def test_sign_out_and_remove_pairing(tmp_path, dct, api, stores):
+def test_sign_out(tmp_path, dct, api, stores):
     ctrl = ready_controller(tmp_path, dct, api, stores)
     ctrl.sign_out()
     drive(ctrl, lambda: api.logouts == 1 and ctrl.state == STOPPED and ctrl._logout_task is None)
     assert ctrl.user_name is None and ctrl.notice.text == "Signed out."
     assert json.loads(stores.stores["tokens"].load().decode()) == {"signedOut": True}
-    ctrl.remove_pairing()
-    assert ctrl.paired is False and stores.stores["pairing"].load() is None
 
 
 def test_a_sign_out_gta_clothing_did_not_hear_about_says_so(tmp_path, dct, api, stores):
@@ -557,10 +584,78 @@ def test_nothing_goes_to_gta_clothing_without_online_access(tmp_path, dct, api, 
     with pytest.raises(auth.AuthError) as error:
         ctrl.start_sign_in()
     assert error.value.code == "offline"
-    connect_and_pair(ctrl, dct)
+    ctrl.connect()
     drive(ctrl, lambda: ctrl.state == STOPPED)
-    assert ctrl.notice.text == settings.describe_error("offline")
+    assert ctrl.notice.message == settings.describe_error("offline") and ctrl.chip() == "problem"
     assert api.requests == []
+
+
+def test_pausing_holds_changes_until_resumed(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    image = ArrayImage(64, 64)
+    start(ctrl, image)
+    drive(ctrl, lambda: len(dct.frames) == 1)
+    ctrl.stream.pause()
+    image.rgba[0:4, 0:4] = 5
+    image.dirty = True
+    ctrl.stream.send_now()
+    end = time.monotonic() + 1.0
+    while time.monotonic() < end:
+        ctrl.poll()
+        time.sleep(0.01)
+    assert len(dct.frames) == 1  # nothing is sent while paused
+    ctrl.stream.resume()
+    drive(ctrl, lambda: len(dct.frames) == 2)
+    assert canvas(dct) == image.rgba.tobytes() and ctrl.stream.unsaved
+
+
+def test_stopping_with_unsaved_changes_says_they_were_not_saved(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    image = ArrayImage(32, 32)
+    start(ctrl, image)
+    drive(ctrl, lambda: len(dct.frames) == 1)
+    image.rgba[0:4, 0:4] = 9  # a paint stroke after the first frame
+    image.dirty = True
+    drive(ctrl, lambda: ctrl.stream.unsaved and len(dct.frames) == 2)
+    ctrl.stream.stop()
+    assert ctrl.stream.status.message.key == "live.stopped-unsaved"
+    assert dct.saves == []
+
+
+def test_texture_checks_arrive_with_the_live_preview(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    start(ctrl, ArrayImage(96, 80))
+    drive(ctrl, lambda: ctrl.stream.findings is not None)
+    assert ctrl.stream.findings == [{"code": "non-power-of-two", "severity": "warning"}]
+    ctrl.stream.check_texture()
+    assert ctrl.stream.checking
+    drive(ctrl, lambda: not ctrl.stream.checking)
+    ctrl.stream.stop()
+    assert ctrl.stream.findings is None
+
+
+def test_a_signed_out_durty_cloth_tool_is_shown_and_waited_for(tmp_path, dct, api, stores):
+    first = ready_controller(tmp_path, dct, api, stores)
+    first.disconnect()
+    dct.signed_out_auths = 1  # Durty Cloth Tool answers that it is signed out, once
+    second = make_controller(tmp_path, dct, api, stores)
+    second.connect()
+    drive(second, lambda: second.dct_signed_out)
+    assert second.chip() == "action" and strings.english(second.status()) == "Durty Cloth Tool is signed out"
+    second.connect()  # tries again at once instead of waiting for the next attempt
+    drive(second, lambda: second.ready)
+    assert not second.dct_signed_out and second.chip() == "connected"
+
+
+def test_diagnostics_hold_no_names_codes_or_paths(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    text = ctrl.diagnostics({"sollumz": "2.9.0"})
+    assert text.startswith("Durty Cloth Tool Creator Link diagnostics")
+    assert f"plugin: blender {settings.VERSION}" in text and "sollumz: 2.9.0" in text
+    stored = json.loads(stores.stores["tokens"].load().decode())
+    assert "Durty" not in text.replace("Durty Cloth Tool", "")  # the account name
+    for secret in (str(tmp_path), ctrl.install_id, stored["accessToken"], stored["refreshToken"]):
+        assert secret not in text
 
 
 def test_dct_going_away_closes_the_stream_and_reconnects(tmp_path, dct, api, stores):
@@ -569,22 +664,21 @@ def test_dct_going_away_closes_the_stream_and_reconnects(tmp_path, dct, api, sto
     drive(ctrl, lambda: len(dct.frames) == 1)
     dct.drop_all()
     drive(ctrl, lambda: not ctrl.stream.active)
-    assert ctrl.stream.status.text == settings.describe_close_reason("disconnected")
+    assert ctrl.stream.status.message == settings.describe_close_reason("disconnected")
     drive(ctrl, lambda: ctrl.state == READY, timeout=20)
-    assert ctrl.status_text().startswith("Connected as")
+    assert strings.english(ctrl.status()) == "Signed in as Durty"
 
 
 @pytest.mark.skipif(os.name != "nt", reason="DPAPI exists on Windows only")
-def test_the_windows_secret_store_keeps_sign_in_and_pairing_protected(tmp_path, dct, api):
+def test_the_windows_secret_store_keeps_the_sign_in_protected(tmp_path, dct, api):
     dct.on_assist = api.approve
     ctrl = make_controller(tmp_path, dct, api, tokens.default_secret_store)
-    connect_and_pair(ctrl, dct)
+    ctrl.connect()
     drive(ctrl, lambda: ctrl.ready)
     folder = tmp_path / "user"
-    assert {"install-id", "tokens.dpapi", "pairing.dpapi"} <= {p.name for p in folder.iterdir()}
-    for name in ("tokens.dpapi", "pairing.dpapi"):
-        raw = (folder / name).read_bytes()
-        assert raw.startswith(b"DCTDPAPI1") and b"refreshToken" not in raw and b"clientId" not in raw
+    assert {"install-id", "tokens.dpapi"} <= {p.name for p in folder.iterdir()}
+    raw = (folder / "tokens.dpapi").read_bytes()
+    assert raw.startswith(b"DCTDPAPI1") and b"refreshToken" not in raw
     ctrl.disconnect()
     again = make_controller(tmp_path, dct, api, tokens.default_secret_store)
     again.connect()

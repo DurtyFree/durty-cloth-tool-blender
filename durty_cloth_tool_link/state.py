@@ -11,6 +11,7 @@ from typing import Any, Optional
 import bpy
 
 from . import host, link
+from .strings import UserError, msg
 
 #: The extension's package name (``bl_ext.<repository>.durty_cloth_tool_link``).
 PACKAGE = __package__
@@ -78,7 +79,7 @@ def auto_push() -> None:
     ctrl = get()
     root = watcher.root()
     if root is None:
-        ctrl.model.status = link.Notice("WARNING", "The pushed model is no longer in this file. Push it again.")
+        ctrl.model.status = link.Notice("WARNING", msg("model.gone"))
         ctrl.touch()
         return
     blocker = host.auto_push_blocker(root)
@@ -87,10 +88,10 @@ def auto_push() -> None:
         return
     try:
         push_model(root, automatic=True)
-    except ValueError as exc:
-        ctrl.model.status = link.Notice("ERROR", str(exc))
+    except UserError as exc:
+        ctrl.model.status = link.Notice("ERROR", exc.message)
         ctrl.touch()
     except Exception as exc:  # noqa: BLE001 - an automatic push must never break the timer
         traceback.print_exc()
-        ctrl.model.status = link.Notice("ERROR", f"The automatic push failed: {type(exc).__name__}: {exc}")
+        ctrl.model.status = link.Notice("ERROR", msg("model.failed", detail=f"{type(exc).__name__}: {exc}"))
         ctrl.touch()

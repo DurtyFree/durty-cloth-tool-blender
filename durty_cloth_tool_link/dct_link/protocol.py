@@ -46,7 +46,7 @@ __all__ = [
     "is_bytes32",
     "is_user_code",
     "is_file_name",
-    "is_pairing_code",
+    "is_install_id",
     "is_text",
     "is_semver",
     "is_host_version",
@@ -71,7 +71,7 @@ CONSTANTS: Dict[str, Any] = {
         "path": "/dct/link/v1",
         "defaultPort": 47820,
         "portRangeEnd": 47829,
-        "allowedOrigins": ["https://link.gta.clothing"],
+        "allowedOrigins": ["https://link.gta.clothing", "file://"],
         "keepAliveSeconds": 15,
         "keepAliveTimeoutSeconds": 30,
     },
@@ -92,11 +92,7 @@ CONSTANTS: Dict[str, Any] = {
         "maxConnections": 8,
         "maxLeasesPerConnection": 4,
         "maxLiveStatusPerSecond": 10,
-        "pairingCodeDigits": 6,
-        "maxPairingAttempts": 3,
         "nonceBytes": 32,
-        "proofBytes": 32,
-        "pairingSecretBytes": 32,
         "maxModelFiles": 256,
         "maxFindings": 64,
         "minUvLayoutSize": 256,
@@ -141,11 +137,9 @@ CONSTANTS: Dict[str, Any] = {
         "dct-too-old",
         "not-authenticated",
         "authentication-failed",
-        "pairing-not-started",
-        "pairing-code-invalid",
-        "pairing-locked",
         "account-mismatch",
         "dct-signed-out",
+        "disconnected",
         "token-invalid",
         "needs-license",
         "needs-ultimate",
@@ -166,7 +160,6 @@ CONSTANTS: Dict[str, Any] = {
         "busy",
         "rate-limited",
         "connection-limit",
-        "not-paired",
         "request-denied",
         "model-rejected",
         "internal-error",
@@ -178,7 +171,6 @@ CONSTANTS: Dict[str, Any] = {
         "internalError": 1011,
         "incompatible": 4001,
         "authenticationFailed": 4003,
-        "pairingDenied": 4004,
         "rateLimited": 4008,
     },
 }
@@ -215,11 +207,7 @@ MAX_ACCESS_TOKEN_LENGTH: int = _L["maxAccessTokenLength"]
 MAX_FOCUSED_TEXTURES: int = _L["maxFocusedTextures"]
 MAX_FEATURE_STATES: int = _L["maxFeatureStates"]
 MAX_LEASES_PER_CONNECTION: int = _L["maxLeasesPerConnection"]
-PAIRING_CODE_DIGITS: int = _L["pairingCodeDigits"]
-MAX_PAIRING_ATTEMPTS: int = _L["maxPairingAttempts"]
 NONCE_BYTES: int = _L["nonceBytes"]
-PROOF_BYTES: int = _L["proofBytes"]
-PAIRING_SECRET_BYTES: int = _L["pairingSecretBytes"]
 MAX_MODEL_FILES: int = _L["maxModelFiles"]
 MAX_FINDINGS: int = _L["maxFindings"]
 MIN_UV_LAYOUT_SIZE: int = _L["minUvLayoutSize"]
@@ -232,7 +220,6 @@ MAX_REVISION: int = 9007199254740991  # JavaScript's largest safe integer
 BINARY_LENGTH_PREFIX_BYTES: int = 4
 MAX_UPDATE_URL_LENGTH: int = 512
 MAX_PROTOCOL_MAJOR: int = 255
-MAX_PAIRING_EXPIRY_SECONDS: int = 600
 #: A whole binary frame: the length prefix, the largest header and the largest payload.
 MAX_BINARY_FRAME_BYTES: int = BINARY_LENGTH_PREFIX_BYTES + MAX_BINARY_HEADER_BYTES + MAX_BINARY_PAYLOAD_BYTES
 
@@ -300,7 +287,6 @@ _GUID_RE = re.compile(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]
 _BYTES32_RE = re.compile(r"[A-Za-z0-9_-]{43}")
 _USER_CODE_RE = re.compile(r"[BCDFGHJKLMNPQRSTVWXZ]{8}")
 _FILE_NAME_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}")
-_PAIRING_CODE_RE = re.compile(r"[0-9]{6}")
 _SEMVER_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?")
 _HOST_VERSION_RE = re.compile(r"[0-9A-Za-z._+ -]{1,64}")
 _ACCESS_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
@@ -334,8 +320,9 @@ def is_file_name(value: Any) -> bool:
     return isinstance(value, str) and ".." not in value and _FILE_NAME_RE.fullmatch(value) is not None
 
 
-def is_pairing_code(value: Any) -> bool:
-    return isinstance(value, str) and _PAIRING_CODE_RE.fullmatch(value) is not None
+def is_install_id(value: Any) -> bool:
+    """A plugin installation's random id: a GUID (see :func:`is_guid`)."""
+    return is_guid(value)
 
 
 def _is_printable(value: str, max_code_points: int) -> bool:
@@ -695,7 +682,6 @@ def _image_code(message: Mapping[str, Any]) -> Optional[str]:
 
 def _hello(m: Mapping[str, Any]) -> Optional[str]:
     protocol, plugin, host = m.get("protocol"), m.get("plugin"), m.get("host")
-    client_id = m.get("clientId")
     return _check(
         protocol is not None
         and _in_range(protocol.get("min"), 1, MAX_PROTOCOL_MAJOR)
@@ -708,7 +694,7 @@ def _hello(m: Mapping[str, Any]) -> Optional[str]:
         and host is not None
         and is_text(host.get("name"))
         and is_host_version(host.get("version"))
-        and (client_id is None or is_id(client_id))
+        and is_install_id(m.get("installId"))
         and is_bytes32(m.get("clientNonce"))
     )
 
@@ -823,13 +809,6 @@ def _welcome(m: Mapping[str, Any]) -> Optional[str]:
     )
 
 
-def _challenge(m: Mapping[str, Any]) -> Optional[str]:
-    paired, proof = m.get("paired"), m.get("proof")
-    return _check(
-        is_bytes32(m.get("serverNonce")) and paired is not None and (is_bytes32(proof) if paired else proof is None)
-    )
-
-
 class MessageDef(NamedTuple):
     type: str
     direction: str
@@ -854,23 +833,13 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
             "protocol": _obj({"min": _INT32, "max": _INT32, "minor": _INT32}),
             "plugin": _obj({"kind": _STR, "version": _STR, "channel": _STR}),
             "host": _obj({"name": _STR, "version": _STR}),
-            "clientId": _STR,
+            "installId": _STR,
             "clientNonce": _STR,
         },
         _hello,
     ),
-    "auth": _text(
-        TO_DCT,
-        {"proof": _STR, "assertion": _STR},
-        lambda m: _check(is_bytes32(m.get("proof")) and is_access_token(m.get("assertion"))),
-    ),
-    "pair.request": _text(TO_DCT, {"displayName": _STR}, lambda m: _check(is_text(m.get("displayName")))),
-    "pair.complete": _text(TO_DCT, {"code": _STR}, lambda m: _check(is_pairing_code(m.get("code")))),
-    "account.assist": _text(
-        TO_DCT,
-        {"proof": _STR, "userCode": _STR},
-        lambda m: _check(is_bytes32(m.get("proof")) and is_user_code(m.get("userCode"))),
-    ),
+    "auth": _text(TO_DCT, {"assertion": _STR}, lambda m: _check(is_access_token(m.get("assertion")))),
+    "account.assist": _text(TO_DCT, {"userCode": _STR}, lambda m: _check(is_user_code(m.get("userCode")))),
     "context.get": _text(TO_DCT, {}, lambda m: None),
     "live.open": _text(
         TO_DCT,
@@ -931,7 +900,7 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     "model.discard": _text(TO_DCT, {"lease": _STR}, lambda m: _check(is_id(m.get("lease")))),
     "bye": _text(TO_DCT, {}, lambda m: None),
     # DCT to plugin
-    "challenge": _text(TO_CLIENT, {"serverNonce": _STR, "paired": _BOOL, "proof": _STR}, _challenge),
+    "challenge": _text(TO_CLIENT, {"serverNonce": _STR}, lambda m: _check(is_bytes32(m.get("serverNonce")))),
     "welcome": _text(
         TO_CLIENT,
         {
@@ -952,17 +921,6 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
         },
         _incompatible,
     ),
-    "pair.pending": _text(
-        TO_CLIENT,
-        {"expiresInSeconds": _INT32},
-        lambda m: _check(_in_range(m.get("expiresInSeconds"), 1, MAX_PAIRING_EXPIRY_SECONDS)),
-    ),
-    "pair.granted": _text(
-        TO_CLIENT,
-        {"clientId": _STR, "secret": _STR},
-        lambda m: _check(is_id(m.get("clientId")) and is_bytes32(m.get("secret"))),
-    ),
-    "pair.denied": _text(TO_CLIENT, {"code": _STR}, lambda m: _check(_one_of(m.get("code"), _ERROR_CODE_SET))),
     "account.assistResult": _text(TO_CLIENT, {"ok": _BOOL, "code": _STR}, lambda m: _check(_ok_code_ok(m))),
     "context.snapshot": _text(
         TO_CLIENT,

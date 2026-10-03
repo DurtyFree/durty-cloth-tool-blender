@@ -60,7 +60,7 @@ def test_a_drawable_without_dictionary_is_explained(tmp_path):
 def test_two_dictionaries_are_refused(tmp_path):
     write(tmp_path / "a.ydd.xml")
     write(tmp_path / "b.ydd.xml")
-    with pytest.raises(bundle.BundleError, match="2 drawable dictionaries"):
+    with pytest.raises(bundle.BundleError, match=r"several drawable dictionaries \(2\)"):
         bundle.collect(tmp_path)
 
 

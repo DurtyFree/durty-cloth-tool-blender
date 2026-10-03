@@ -29,6 +29,7 @@ temp/
 .vscode/
 .idea/
 .claude/
+.impeccable/
 *.swp
 *~
 .DS_Store

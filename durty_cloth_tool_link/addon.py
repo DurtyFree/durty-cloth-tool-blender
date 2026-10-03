@@ -1,19 +1,22 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""Registration: classes, the timer that drives the link, and the handlers for file loads, undo and model
-changes."""
+"""Registration: translations, the logo icon, classes, the timer that drives the link, and the handlers for file
+loads, undo and model changes."""
 
 from __future__ import annotations
 
+import pathlib
 import time
 import traceback
 
 import bpy
 from bpy.app.handlers import persistent
 
-from . import host, link, preferences, settings, state, ui
+from . import host, link, preferences, settings, state, strings, translations, ui
+from .strings import msg
 
 _started = False
+_icons = None
 
 
 def tick() -> float:
@@ -30,7 +33,7 @@ def tick() -> float:
         interval = ctrl.poll()
     except Exception as exc:  # noqa: BLE001 - keep the timer alive and show the problem
         traceback.print_exc()
-        ctrl.notice = link.Notice("ERROR", f"The add-on hit an unexpected problem: {type(exc).__name__}: {exc}")
+        ctrl.notice = link.Notice("ERROR", msg("notice.unexpected", detail=f"{type(exc).__name__}: {exc}"))
         ctrl.touch()
         interval = 0.25
     if ctrl.changed:
@@ -50,8 +53,7 @@ def _start(ctrl: link.LinkController) -> None:
         ctrl.prepare()
     except Exception as exc:  # noqa: BLE001 - a damaged secret store must not stop the add-on; signing in fixes it
         traceback.print_exc()
-        ctrl.notice = link.Notice("ERROR", f"The stored sign-in or pairing could not be read ({type(exc).__name__}). "
-                                           "Sign in or pair again.")
+        ctrl.notice = link.Notice("ERROR", msg("notice.secrets-unreadable", detail=type(exc).__name__))
     if prefs is not None and prefs.auto_connect:
         ctrl.connect()
 
@@ -64,6 +66,57 @@ def _device_name():
 def _open_url(url: str) -> None:
     if settings.is_gta_clothing_url(url):
         bpy.ops.wm.url_open(url=url)
+
+
+def logo_icon() -> int:
+    """The icon id of the Durty Cloth Tool mark (0 when it could not be loaded)."""
+    if _icons is None or "dct_mark" not in _icons:
+        return 0
+    return _icons["dct_mark"].icon_id
+
+
+def _load_icons() -> None:
+    global _icons
+    try:
+        import bpy.utils.previews
+
+        _icons = bpy.utils.previews.new()
+        _icons.load("dct_mark", str(pathlib.Path(__file__).parent / "icons" / "dct-mark.png"), "IMAGE")
+    except (OSError, RuntimeError, KeyError) as exc:  # the panels fall back to a Blender icon
+        print(f"Durty Cloth Tool Link: the logo could not be loaded ({exc})")
+        _icons = None
+
+
+def _free_icons() -> None:
+    global _icons
+    if _icons is not None:
+        import bpy.utils.previews
+
+        bpy.utils.previews.remove(_icons)
+    _icons = None
+
+
+def _install_translations() -> None:
+    try:
+        bpy.app.translations.register(state.PACKAGE, translations.blender_tables())
+    except ValueError:  # registered already (a reload); the old tables stay in use
+        pass
+
+    def iface(text: str) -> str:
+        return bpy.app.translations.pgettext_iface(text, strings.CONTEXT)
+
+    def tooltip(text: str) -> str:
+        return bpy.app.translations.pgettext_tip(text, strings.CONTEXT)
+
+    strings.set_translators(iface, tooltip)
+
+
+def _remove_translations() -> None:
+    strings.set_translators(None)
+    try:
+        bpy.app.translations.unregister(state.PACKAGE)
+    except (ValueError, RuntimeError):  # never registered
+        pass
 
 
 @persistent
@@ -103,6 +156,8 @@ _HANDLERS = (
 
 def register() -> None:
     global _started
+    _install_translations()
+    _load_icons()
     preferences.register()
     ui.register()
     ctrl = link.LinkController(
@@ -138,3 +193,5 @@ def unregister() -> None:
     state.watcher.clear()
     ui.unregister()
     preferences.unregister()
+    _free_icons()
+    _remove_translations()

@@ -35,6 +35,22 @@ def test_vendored_dct_link_matches_its_record():
     assert sync_dct_link.verify() == []
 
 
+def test_the_check_catches_upstream_changes_that_were_not_synced(tmp_path):
+    """--check also compares with a Durty Cloth Tool checkout, so a dct_link change upstream is not missed."""
+    package = tmp_path / sync_dct_link.SOURCE_PACKAGE
+    package.mkdir(parents=True)
+    for path in sync_dct_link.VENDOR_DIR.iterdir():
+        if path.suffix == ".py":
+            (package / path.name).write_bytes(path.read_bytes())
+    (tmp_path / sync_dct_link.SOURCE_LICENSE).write_bytes((sync_dct_link.VENDOR_DIR / "LICENSE").read_bytes())
+    assert sync_dct_link.verify_upstream(tmp_path) == []
+
+    session = package / "session.py"
+    session.write_bytes(session.read_bytes() + b"# changed upstream\n")
+    problems = sync_dct_link.verify_upstream(tmp_path)
+    assert len(problems) == 1 and problems[0].startswith("session.py differs")
+
+
 def test_the_vendored_copy_keeps_its_licence_and_headers():
     vendored = sync_dct_link.VENDOR_DIR
     assert b"MIT License" in (vendored / "LICENSE").read_bytes()

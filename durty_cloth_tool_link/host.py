@@ -14,6 +14,7 @@ import bpy
 
 from . import pixels, settings
 from .dct_link import protocol, tokens
+from .strings import Msg, UserError, msg
 
 # --------------------------------------------------------------------------------------------------
 # Environment
@@ -22,7 +23,7 @@ from .dct_link import protocol, tokens
 
 def data_dir(package: str) -> pathlib.Path:
     """The add-on's user folder (Blender keeps it across updates of the same installation). Holds the install
-    id, the protected sign-in and the protected pairing secret."""
+    id and the protected sign-in."""
     try:
         return pathlib.Path(bpy.utils.extension_path_user(package, create=True))
     except (ValueError, AttributeError, OSError):
@@ -143,22 +144,27 @@ def window_for(obj: Any) -> Optional[Any]:
 
 
 def _mode_name(obj: Any) -> str:
+    """Blender's own name of the object's mode, in Blender's language ("Edit Mode")."""
     try:
-        return obj.bl_rna.properties["mode"].enum_items[obj.mode].name
+        name = obj.bl_rna.properties["mode"].enum_items[obj.mode].name
     except (KeyError, AttributeError):
         return obj.mode.replace("_", " ").title()
+    try:
+        return bpy.app.translations.pgettext_iface(name)
+    except (AttributeError, TypeError, ValueError):
+        return name
 
 
-def auto_push_blocker(root: Any) -> Optional[str]:
+def auto_push_blocker(root: Any) -> Optional[Msg]:
     """Why an automatic push of ``root`` has to wait right now, or ``None``: a tool runs, or the view layer that
     holds the model is not in Object Mode (an export then would miss the newest edits)."""
     if modal_operator_running():
-        return "The automatic push waits until the running tool finishes."
+        return msg("model.wait.tool")
     window = window_for(root)
     layer = window.view_layer if window is not None else getattr(bpy.context, "view_layer", None)
     active = layer.objects.active if layer is not None else None
     if active is not None and active.mode != "OBJECT":
-        return f"The automatic push waits until you leave {_mode_name(active)}."
+        return msg("model.wait.mode", mode=_mode_name(active))
     return None
 
 
@@ -167,22 +173,25 @@ def auto_push_blocker(root: Any) -> Optional[str]:
 # --------------------------------------------------------------------------------------------------
 
 
-def image_problem(image: Optional[Any]) -> Optional[str]:
-    """Why an image cannot be streamed, or ``None``."""
+def image_problem(image: Optional[Any], load: bool = True) -> Optional[Msg]:
+    """Why an image cannot be used for the live preview, or ``None``. ``load=False`` (for drawing) skips loading
+    the pixels."""
     if image is None:
-        return "Choose an image to stream."
+        return msg("image.none")
     if image.source == "TILED":
-        return "UDIM (tiled) images cannot be streamed. Use a single image."
+        return msg("image.tiled")
     if image.source not in {"FILE", "GENERATED"}:
-        return "Only image files and generated images can be streamed."
+        return msg("image.source")
+    if not load:
+        return None
     try:
         len(image.pixels)  # loads the pixels when they are not in memory yet
     except (RuntimeError, ReferenceError):
-        return "The image could not be read."
+        return msg("image.unreadable")
     if not image.has_data:
-        return "The image could not be loaded. Check that its file exists."
+        return msg("image.not-loaded")
     if image.channels not in (1, 3, 4):
-        return "Only grey, RGB and RGBA images can be streamed."
+        return msg("image.channels")
     width, height = tuple(image.size)
     return settings.check_stream_size(width, height)
 
@@ -214,12 +223,12 @@ class BlenderImageSource:
                     return candidate
         return None
 
-    def problem(self) -> Optional[str]:
+    def problem(self) -> Optional[Msg]:
         image = self.image()
         if image is None:
-            return "The streamed image was removed."
+            return msg("live.image-removed")
         if tuple(image.size) != (self.width, self.height) or image.channels != self.channels:
-            return "The image size changed. Start streaming again."
+            return msg("live.image-changed")
         return None
 
     def is_dirty(self) -> bool:
@@ -276,8 +285,12 @@ _NOT_COPIED = {"rna_type", "directory", "direct_export", "use_custom_settings", 
 _VERSION_CACHE: Dict[Tuple[str, int], Optional[str]] = {}
 
 
-class ExportError(ValueError):
+class ExportError(UserError):
     """The model could not be exported; the message is shown to the user."""
+
+
+def _export_error(key: str, **fields: Any) -> ExportError:
+    return ExportError(msg(key, **fields))
 
 
 class ExportResult(NamedTuple):
@@ -324,15 +337,19 @@ def sollumz_version() -> Optional[str]:
     return version
 
 
-def sollumz_status() -> Tuple[bool, str]:
+#: Sollumz's export operator properties this add-on needs (Sollumz 2.8.0 and later have them all).
+REQUIRED_PROPERTIES = frozenset({"directory", "direct_export", "use_custom_settings"})
+
+
+def sollumz_status() -> Tuple[bool, Msg]:
     """Whether models can be pushed, and a line for the panel."""
     properties = sollumz_operator_properties()
     if properties is None:
-        return False, "Install and enable Sollumz to push models."
-    if not {"directory", "direct_export"} <= properties:
-        return False, "This Sollumz version cannot export without a file browser. Update Sollumz."
+        return False, msg("sollumz.missing", version=settings.SOLLUMZ_MINIMUM)
+    if not REQUIRED_PROPERTIES <= properties:
+        return False, msg("sollumz.too-old", version=settings.SOLLUMZ_MINIMUM)
     version = sollumz_version()
-    return True, f"Sollumz {version}" if version else "Sollumz"
+    return True, msg("sollumz.ready", version=version) if version else msg("sollumz.ready-unknown")
 
 
 def top_parent(obj: Any) -> Any:
@@ -349,17 +366,16 @@ def drawable_root(objects: Iterable[Any]) -> Any:
         if top not in roots:
             roots.append(top)
     if not roots:
-        raise ExportError("Select the model to push (a Sollumz Drawable Dictionary or an object inside one).")
+        raise _export_error("model.select")
     if len(roots) > 1:
-        raise ExportError("Select objects of one Drawable Dictionary only.")
+        raise _export_error("model.one-root")
     root = roots[0]
     kind = getattr(root, "sollum_type", None)
     if kind == DRAWABLE_DICTIONARY:
         return root
     if kind == DRAWABLE:
-        raise ExportError("Durty Cloth Tool needs a Drawable Dictionary. Parent the Drawable to one "
-                          "(Sollumz: Create Drawable Dictionary) and push again.")
-    raise ExportError("Select a Sollumz Drawable Dictionary, or an object inside one.")
+        raise _export_error("model.needs-dictionary")
+    raise _export_error("model.not-sollumz")
 
 
 def _export_settings(properties: Set[str]) -> Dict[str, Any]:
@@ -400,8 +416,7 @@ def _select_for_export(root: Any) -> Any:
             candidate.select_set(False)
         except RuntimeError:
             pass  # could not be selected in the first place
-    raise ExportError("Unhide the Drawable Dictionary (or an object inside it) and make it selectable, then push "
-                      "again.")
+    raise _export_error("model.unhide")
 
 
 def _info_log_count() -> int:
@@ -459,11 +474,10 @@ def _consume_updates(window: Optional[Any]) -> None:
 def export_with_sollumz(root: Any, folder: str) -> ExportResult:
     """Exports ``root`` with Sollumz into ``folder``, in the window whose view layer holds it. Selects only what
     the export needs and restores the selection afterwards. Reports whether Sollumz logged warnings or errors."""
-    properties = sollumz_operator_properties()
-    if properties is None:
-        raise ExportError("Install and enable Sollumz to push models.")
-    if not {"directory", "direct_export"} <= properties:
-        raise ExportError("This Sollumz version cannot export without a file browser. Update Sollumz.")
+    ready, problem = sollumz_status()
+    if not ready:
+        raise ExportError(problem)
+    properties = sollumz_operator_properties() or set()
     arguments = dict(_export_settings(properties), directory=folder, direct_export=True)
 
     override = {}
@@ -471,13 +485,13 @@ def export_with_sollumz(root: Any, folder: str) -> ExportResult:
     if window is not None:
         override["window"] = window  # also its screen, scene and view layer
     elif windows():
-        raise ExportError("The model is not in a scene shown in a Blender window. Show its scene, then push again.")
+        raise _export_error("model.not-shown")
     use_logger, counter = _sollumz_log_counter()
     windows_before, logs_before = len(windows()), _info_log_count()
     with bpy.context.temp_override(**override):
         layer = bpy.context.view_layer
         if layer.objects.get(root.name) is None:
-            raise ExportError("The model is not in the current view layer. Show it, then push again.")
+            raise _export_error("model.not-in-layer")
         selected = [obj for obj in layer.objects if obj.select_get()]
         active = layer.objects.active
         chosen = None
@@ -493,12 +507,12 @@ def export_with_sollumz(root: Any, folder: str) -> ExportResult:
                 else:
                     result = bpy.ops.sollumz.export_assets("EXEC_DEFAULT", **arguments)
             except (RuntimeError, TypeError, ValueError) as exc:
-                raise ExportError(f"Sollumz could not export the model: {exc}") from exc
+                raise _export_error("model.export-failed", detail=str(exc)) from exc
         finally:
             _restore_selection(layer, chosen, selected, active)
             _consume_updates(window)
     if "FINISHED" not in result:
-        raise ExportError("Sollumz did not export the model. Its Info log has the details.")
+        raise _export_error("model.not-exported")
     if counter is not None:
         return ExportResult(counter.problems > 0)
     return ExportResult(len(windows()) > windows_before or _info_log_count() > logs_before)

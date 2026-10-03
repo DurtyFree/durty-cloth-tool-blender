@@ -58,6 +58,7 @@ __all__ = [
     "ClientInfo",
     "DeviceFlow",
     "LinkAuth",
+    "LogoutResult",
     "AuthTask",
     "FileLock",
     "HttpClient",
@@ -92,6 +93,24 @@ class AuthError(Exception):
         self.retryable = retryable
         self.min_version = min_version
         self.retry_after = retry_after
+
+
+class LogoutResult(NamedTuple):
+    """What :meth:`LinkAuth.logout` achieved. The local sign-out is remembered in every case.
+
+    ``had_session`` is false when nothing was stored (nothing to end on the server). ``reached`` is true when
+    gta.clothing answered the logout request: the session is ended there (or was no longer valid). It is false
+    when the request did not get through (network trouble, a timeout, ``429`` or a server error); the session
+    then ends on its own when it expires, or the user ends it on their gta.clothing account page.
+    """
+
+    had_session: bool
+    reached: bool
+
+    @property
+    def ended_on_server(self) -> bool:
+        """True unless a stored session could not be ended on gta.clothing (show a hint then)."""
+        return self.reached or not self.had_session
 
 
 class SignInRequired(AuthError):
@@ -741,7 +760,12 @@ class AuthTask:
 
 
 class DeviceFlow:
-    """A device sign-in waiting for approval (in the browser or by DCT through ``account.assist``)."""
+    """A device sign-in waiting for approval (in the browser or by DCT through ``account.assist``).
+
+    :attr:`access_token` is set by :meth:`poll` on the thread that polls, in the same call that returns the token.
+    Until then the flow is :attr:`active`, even when a worker already received and stored the approved tokens: a
+    host that checks ``active`` (or ``access_token is None``) keeps polling until it consumed the result.
+    """
 
     def __init__(self, auth: "LinkAuth", body: Dict[str, Any], nonblocking: bool = False) -> None:
         device_code = body.get("deviceCode")
@@ -768,6 +792,12 @@ class DeviceFlow:
         self._task: Optional[AuthTask] = None
         self.cancelled = False
         self.access_token: Optional[str] = None
+
+    @property
+    def active(self) -> bool:
+        """True while the sign-in is still to be finished by :meth:`poll`: not cancelled, not expired, and the
+        token not yet handed over (an approval that a worker stored but :meth:`poll` has not returned counts)."""
+        return not self.cancelled and self.access_token is None and self._auth._clock() < self.expires_at
 
     def cancel(self) -> None:
         """Stops polling. The code expires on the server by itself."""
@@ -800,7 +830,7 @@ class DeviceFlow:
             self._next_poll = now + self.interval
             if not self.nonblocking:
                 try:
-                    return self._auth._run(self._token_steps(now))
+                    return self._hand_over(self._auth._run(self._token_steps(now)))
                 except AuthError as exc:
                     if exc.retryable:
                         return None
@@ -810,11 +840,16 @@ class DeviceFlow:
             return None
         task, self._task = self._task, None
         try:
-            return task.result()
+            return self._hand_over(task.result())
         except AuthError as exc:
             if exc.retryable:
                 return None  # offline for a moment; try again at the next interval
             raise
+
+    def _hand_over(self, token: Optional[str]) -> Optional[str]:
+        if token is not None:
+            self.access_token = token  # set here, on the polling thread, as the token is returned
+        return token
 
     def _handle(self, response: Response, now: float) -> Optional[str]:
         status, headers, payload = response
@@ -822,8 +857,7 @@ class DeviceFlow:
         if status == 200 and data.get("successful", True) is not False:
             tokens = _validate_tokens(data, self._auth._clock())
             self._auth._store(tokens)
-            self.access_token = tokens["accessToken"]
-            return self.access_token
+            return tokens["accessToken"]  # poll() hands it over and only then sets access_token
         error = _failure(status, headers, data)
         if error.code == "authorization_pending":
             return None
@@ -1090,12 +1124,16 @@ class LinkAuth:
         self.store.save({"signedOut": True})  # remembered until the user signs in again
         if locked:
             yield _RELEASE
-        if current and current.get("refreshToken"):
-            try:
-                yield _Call("POST", "/link/api/auth/logout", {"refreshToken": current["refreshToken"]})
-            except AuthError:
-                _log.info("logout did not reach gta.clothing; the session expires by itself")
-        return None
+        if not (current and current.get("refreshToken")):
+            return LogoutResult(had_session=False, reached=False)
+        try:
+            status, _, _ = yield _Call("POST", "/link/api/auth/logout", {"refreshToken": current["refreshToken"]})
+        except AuthError:
+            status = 0
+        reached = 200 <= status < 300 or (400 <= status < 500 and status not in (408, 429))
+        if not reached:
+            _log.info("logout did not reach gta.clothing; the session expires by itself")
+        return LogoutResult(had_session=True, reached=reached)
 
     def _run(self, steps: Steps) -> Any:
         """Runs steps to the end on this thread, blocking for each request, lock and pause."""
@@ -1171,9 +1209,10 @@ class LinkAuth:
         """Starts a device sign-in (an explicit user action: it also clears a remembered sign-out)."""
         return self._run(self._device_start_steps(nonblocking=False))
 
-    def logout(self) -> None:
-        """Ends the session on the server (best effort), forgets it locally and remembers the sign-out."""
-        self._run(self._logout_steps())
+    def logout(self) -> LogoutResult:
+        """Ends the session on gta.clothing, forgets it here and remembers the sign-out. The local part always
+        happens; the result says whether gta.clothing could be told (see :class:`LogoutResult`)."""
+        return self._run(self._logout_steps())
 
     # ---- non-blocking API ------------------------------------------------------------------------------
 
@@ -1189,4 +1228,5 @@ class LinkAuth:
         return self._task(self._device_start_steps(nonblocking=True))
 
     def begin_logout(self) -> AuthTask:
+        """Resolves with a :class:`LogoutResult` (see :meth:`logout`)."""
         return self._task(self._logout_steps())

@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
 """A fake Durty Cloth Tool link server for tests: an independent server-side RFC 6455 implementation on a thread
-per connection, plus enough DCT behaviour (hello, challenge, pairing, auth, account assist, live surfaces, models
-and services) to drive the add-on end to end.
+per connection, plus enough DCT behaviour (hello, challenge, auth, account assist, disconnecting an app, live
+surfaces, models and services) to drive the add-on end to end.
 
 Adapted from the dct_link test suite (MIT, like dct_link itself). Changes: the protocol module is passed in, so the
 same file serves pytest and the Blender smoke (which uses the add-on's vendored copy); a ``glb`` model push is
@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import hmac
 import itertools
 import json
 import os
@@ -74,9 +73,8 @@ class Connection:
         self.send_lock = threading.Lock()
         self.client_nonce = b""
         self.server_nonce = b""
-        self.client_id: Optional[str] = None
+        self.install_id: Optional[str] = None
         self.authenticated = False
-        self.pair_attempts = 0
         self.leases: Dict[str, Dict[str, Any]] = {}
         self.closed = False
         self.close_code: Optional[int] = None
@@ -264,38 +262,12 @@ class Connection:
                 return
             self.client_nonce = unb64u(m["clientNonce"])
             self.server_nonce = os.urandom(32)
-            self.client_id = m.get("clientId")
-            secret = server.clients.get(self.client_id) if self.client_id else None
-            challenge = {"type": "challenge", "serverNonce": b64u(self.server_nonce), "paired": secret is not None}
-            if secret is not None:
-                key = os.urandom(32) if server.wrong_server_proof else secret
-                challenge["proof"] = b64u(hmac.new(key, b"srv" + self.client_nonce + self.server_nonce, hashlib.sha256).digest())
-            self.reply(m, challenge)
-        elif kind == "pair.request":
-            server.pair_requests.append(m["displayName"])
-            if not server.pairing_started:
-                self.reply(m, {"type": "pair.denied", "code": "pairing-not-started"})
-                return
-            self.reply(m, {"type": "pair.pending", "expiresInSeconds": server.pending_expiry})
-        elif kind == "pair.complete":
-            if m["code"] != server.pairing_code:
-                self.pair_attempts += 1
-                if self.pair_attempts >= 3:
-                    self.reply(m, {"type": "pair.denied", "code": "pairing-locked"})
-                    self.close(4004, "pairing denied")
-                else:
-                    self.reply(m, {"type": "error", "code": "pairing-code-invalid"})
-                return
-            self.client_id = "client-" + secrets.token_hex(4)
-            secret = os.urandom(32)
-            server.clients[self.client_id] = secret
-            self.reply(m, {"type": "pair.granted", "clientId": self.client_id, "secret": b64u(secret)})
+            self.install_id = m["installId"]
+            server.install_ids.append(self.install_id)
+            self.reply(m, {"type": "challenge", "serverNonce": b64u(self.server_nonce)})
         elif kind in ("auth", "account.assist"):
-            secret = server.clients.get(self.client_id or "")
-            expected = hmac.new(secret or b"", b"cli" + self.server_nonce + self.client_nonce, hashlib.sha256).digest()
-            if secret is None or not hmac.compare_digest(expected, unb64u(m["proof"])):
-                self.reply(m, {"type": "error", "code": "authentication-failed"})
-                self.close(4003, "authentication failed")
+            if not self.server_nonce:
+                self.reply(m, {"type": "error", "code": "not-authenticated"})
                 return
             if kind == "account.assist":
                 server.assisted_codes.append(m["userCode"])
@@ -305,10 +277,18 @@ class Connection:
                     return
                 result = {"type": "account.assistResult", "ok": bool(ok)}
                 if not ok:
-                    result["code"] = "request-denied"
+                    result["code"] = server.assist_declined_code
                 self.reply(m, result)
                 return
             server.assertions_seen.append(m["assertion"])
+            if server.auth_error_codes:
+                # DCT refuses this sign-in with an error (for example "disconnected": the user disconnected the
+                # app in DCT) and closes the connection.
+                code = server.auth_error_codes.pop(0)
+                self.reply(m, {"type": "error", "code": code})
+                if code != "busy":  # busy: DCT could not reach the account service and keeps the connection
+                    self.close(4003, code)
+                return
             if server.signed_out_auths > 0:
                 # DCT itself is signed out: its account check answers dct-signed-out and closes the connection.
                 server.signed_out_auths -= 1
@@ -402,7 +382,8 @@ class Connection:
             self.close(1000, "bye")
 
     def kick(self, code: str) -> None:
-        """What DCT does when it signs out, switches account or the user removes the pairing."""
+        """What DCT does when it signs out (``dct-signed-out``), switches account (``account-mismatch``) or the user
+        disconnects the app in DCT (``disconnected``)."""
         self.send({"type": "error", "id": "k" + secrets.token_hex(3), "code": code})
         self.close(4003, code)
 
@@ -480,14 +461,11 @@ class FakeDct:
         self.listener.bind(("127.0.0.1", port))
         self.listener.listen(16)
         self.port = self.listener.getsockname()[1]
-        self.clients: Dict[str, bytes] = {}
+        self.install_ids: List[str] = []
         self.used_jti: set = set()
         self.check_assertion: Callable[[str, str], bool] = self._check_assertion
-        self.pairing_started = True
-        self.pairing_code = "048213"
         self.account = "Durty"
         self.incompatible = False
-        self.wrong_server_proof = False
         self.fragment_size = 0
         self.frame_delay = 0.0
         self.handshake_extra_header = ""
@@ -497,7 +475,6 @@ class FakeDct:
         self.hold_types: set = set()
         self.held: List[Any] = []
         self.refuse_assertions = 0
-        self.pending_expiry = 120
         self.message_rate = 1000.0
         self.message_burst = 2000.0
         self.push_delay = 0.0
@@ -505,6 +482,7 @@ class FakeDct:
         self.rate_limited = 0
         self.unknown_lease_frames = 0
         self.signed_out_auths = 0
+        self.auth_error_codes: List[str] = []
         self.handshake_delay = 0.0
         self.all_connections: List[Connection] = []
         self.model_saves: List[str] = []
@@ -517,7 +495,7 @@ class FakeDct:
         self.saves: List[Any] = []
         self.pushes: List[Any] = []
         self.discards: List[str] = []
-        self.pair_requests: List[str] = []
+        self.assist_declined_code = "request-denied"
         self.assisted_codes: List[str] = []
         self.assertions_seen: List[str] = []
         self.raw_frames: List[bytes] = []

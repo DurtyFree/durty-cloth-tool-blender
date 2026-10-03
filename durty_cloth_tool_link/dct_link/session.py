@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
-"""The Creator Link session: finding DCT, the hello/challenge/pairing/auth flow, requests, events, live texture
-streaming and model pushes.
+"""The Creator Link session: finding DCT, the hello/challenge/auth flow (with a device sign-in that DCT can
+approve), requests, events, live texture streaming and model pushes.
 
 A :class:`LinkSession` is driven in one of two ways (the same object supports both):
 
@@ -14,8 +14,8 @@ A :class:`LinkSession` is driven in one of two ways (the same object supports bo
   public method is safe to call from any thread.
 
 Threading contract for hosts: callbacks and ``pixel_source`` functions run on the thread that drives the
-session (:meth:`LiveSurface.save` reads pending pixels on the calling thread). Token source calls and every
-pairing store access run on a short-lived worker thread, never on the thread that drives the session
+session (:meth:`LiveSurface.save` reads pending pixels on the calling thread). Token source calls (and with them
+every secret-store access) run on a short-lived worker thread, never on the thread that drives the session
 (``token_threads=False`` runs them inline instead, for hosts without threads). A host whose own API may only be
 used on its UI thread (GIMP, Krita, Substance 3D Painter) reads its pixels on that thread and hands them over with
 :meth:`LiveSurface.update` or from a snapshot, or passes a ``dispatch`` function for callbacks; it never calls its
@@ -31,8 +31,6 @@ from __future__ import annotations
 
 import base64
 import collections
-import hashlib
-import hmac
 import json
 import logging
 import os
@@ -57,18 +55,13 @@ __all__ = [
     "Request",
     "LiveSurface",
     "ModelBundle",
-    "PairingPrompt",
-    "PairingRequired",
     "SignInPrompt",
-    "Pairing",
     "DiscoveredEndpoint",
     "ASSERTION_AUDIENCE",
     "discovery_file_path",
     "installed_user_data_dir",
     "read_discovery_file",
     "trusted_update_url",
-    "server_proof",
-    "client_proof",
     "b64url_encode",
     "b64url_decode",
 ]
@@ -97,16 +90,6 @@ def b64url_decode(text: str) -> bytes:
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))
 
 
-def server_proof(secret: bytes, client_nonce: bytes, server_nonce: bytes) -> bytes:
-    """DCT's proof: HMAC-SHA256(secret, b"srv" + clientNonce + serverNonce), 67 message bytes."""
-    return hmac.new(secret, b"srv" + client_nonce + server_nonce, hashlib.sha256).digest()
-
-
-def client_proof(secret: bytes, server_nonce: bytes, client_nonce: bytes) -> bytes:
-    """The plugin's proof: HMAC-SHA256(secret, b"cli" + serverNonce + clientNonce), 67 message bytes."""
-    return hmac.new(secret, b"cli" + server_nonce + client_nonce, hashlib.sha256).digest()
-
-
 def trusted_update_url(url: Any) -> Optional[str]:
     """``url`` when it is a link a host may open (``https://gta.clothing/...`` or ``https://link.gta.clothing/...``,
     printable ASCII, no backslash or ``@``), otherwise ``None``."""
@@ -133,9 +116,9 @@ def _assertion_claims(assertion: str) -> Dict[str, Any]:
 
 class LinkError(Exception):
     """A request or session failure. ``code`` is a protocol error code or one of the local codes
-    ``disconnected``, ``timeout``, ``superseded``, ``cancelled``, ``closed``, ``server-proof-invalid``,
-    ``assertion-invalid``, ``untrusted-endpoint``, ``pairing-expired``, ``pairing-not-saved``,
-    ``pairing-store-failed``, ``pixel-source-failed``, ``callback-failed`` and ``internal-error``."""
+    ``disconnected``, ``timeout``, ``superseded``, ``cancelled``, ``closed``, ``assertion-invalid``,
+    ``untrusted-endpoint``, ``signed-out``, ``pixel-source-failed``, ``callback-failed`` and
+    ``internal-error``."""
 
     def __init__(self, code: str, message: str = "") -> None:
         super().__init__(f"{code}: {message}" if message else code)
@@ -144,14 +127,15 @@ class LinkError(Exception):
 
 
 class PluginInfo(NamedTuple):
-    """Who is connecting. ``kind`` is one of :data:`protocol.PLUGIN_KINDS`."""
+    """Who is connecting. ``kind`` is one of :data:`protocol.PLUGIN_KINDS`; ``install_id`` is this installation's
+    random id (:func:`dct_link.tokens.load_install_id`, the same one :class:`dct_link.auth.ClientInfo` carries)."""
 
     kind: str
     version: str
     channel: str
     host_name: str
     host_version: str
-    display_name: Optional[str] = None
+    install_id: str
 
     def check(self) -> None:
         if self.kind not in protocol.PLUGIN_KINDS:
@@ -162,34 +146,8 @@ class PluginInfo(NamedTuple):
             raise ValueError("unknown channel")
         if not protocol.is_text(self.host_name) or not protocol.is_host_version(self.host_version):
             raise ValueError("invalid host name or version")
-
-
-class Pairing(NamedTuple):
-    """What DCT granted when the user paired this plugin. The secret is 32 raw bytes."""
-
-    client_id: str
-    secret: bytes
-
-
-class PairingPrompt(NamedTuple):
-    """Ask the user for the six-digit code DCT shows. ``error`` is set after a wrong code."""
-
-    expires_in: int
-    attempts_left: int
-    error: Optional[str] = None
-
-
-class PairingRequired(NamedTuple):
-    """A DCT did not accept this plugin's stored pairing. ``reason`` is ``not-recognized`` (DCT does not know the
-    plugin), ``refused`` (DCT proved the old secret but refused the plugin) or ``removed`` (the user removed the
-    plugin in DCT). ``endpoint_trusted`` is true for the DCT named by the discovery file (or an explicit ``port``)
-    and false for one found by probing ``port``. Nothing changes until the user agrees: then
-    :meth:`LinkSession.confirm_repair` pairs again with that DCT (the discovery file's DCT when there is one,
-    otherwise the probed ``port`` of this event)."""
-
-    reason: str
-    endpoint_trusted: bool
-    port: int
+        if not protocol.is_install_id(self.install_id):
+            raise ValueError("the install id is a random GUID (tokens.load_install_id)")
 
 
 class SignInPrompt(NamedTuple):
@@ -369,30 +327,56 @@ def _tcp_owner_pid(local: Tuple[Any, ...], remote: Tuple[Any, ...]) -> Optional[
         return None
 
 
-def _session_id(pid: int) -> Optional[int]:
-    """Windows only: the Windows session ``pid`` runs in, or ``None``."""
+def _wts_session_ids() -> Optional[Dict[int, int]]:
+    """Windows only: the Windows session of every process (process id to session id), or ``None``.
+
+    ``WTSEnumerateProcessesW`` lists the session of every process without opening it, so it also answers for a
+    process of another user (``ProcessIdToSessionId`` fails with access denied there).
+    """
     if os.name != "nt":
         return None
     try:
         import ctypes
         from ctypes import wintypes
 
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        kernel32.ProcessIdToSessionId.restype = wintypes.BOOL
-        kernel32.ProcessIdToSessionId.argtypes = (wintypes.DWORD, ctypes.POINTER(wintypes.DWORD))
-        session = wintypes.DWORD()
-        if not kernel32.ProcessIdToSessionId(pid, ctypes.byref(session)):
+        class _ProcessInfo(ctypes.Structure):
+            _fields_ = [("SessionId", wintypes.DWORD), ("ProcessId", wintypes.DWORD),
+                        ("pProcessName", wintypes.LPWSTR), ("pUserSid", ctypes.c_void_p)]
+
+        wtsapi = ctypes.WinDLL("wtsapi32")
+        enumerate_processes = wtsapi.WTSEnumerateProcessesW
+        enumerate_processes.restype = wintypes.BOOL
+        enumerate_processes.argtypes = (wintypes.HANDLE, wintypes.DWORD, wintypes.DWORD,
+                                        ctypes.POINTER(ctypes.POINTER(_ProcessInfo)), ctypes.POINTER(wintypes.DWORD))
+        free_memory = wtsapi.WTSFreeMemory
+        free_memory.restype = None
+        free_memory.argtypes = (ctypes.c_void_p,)
+        table = ctypes.POINTER(_ProcessInfo)()
+        count = wintypes.DWORD()
+        if not enumerate_processes(None, 0, 1, ctypes.byref(table), ctypes.byref(count)):  # this server
             return None
-        return int(session.value)
-    except (OSError, AttributeError, ValueError):
+        try:
+            return {int(table[i].ProcessId): int(table[i].SessionId) for i in range(count.value)}
+        finally:
+            free_memory(table)
+    except (OSError, AttributeError, ValueError, TypeError):
         return None
+
+
+def _session_id(pid: int) -> Optional[int]:
+    """Windows only: the Windows session ``pid`` runs in, or ``None``."""
+    sessions = _wts_session_ids()
+    return None if sessions is None else sessions.get(pid)
 
 
 def _same_session(pid: int) -> Optional[bool]:
     """Whether ``pid`` runs in this process's Windows session (``None`` when that cannot be told)."""
     if pid == os.getpid():
         return True
-    theirs, ours = _session_id(pid), _session_id(os.getpid())
+    sessions = _wts_session_ids()
+    if sessions is None:
+        return None
+    theirs, ours = sessions.get(pid), sessions.get(os.getpid())
     if theirs is None or ours is None:
         return None
     return theirs == ours
@@ -805,26 +789,27 @@ _BACKOFF = (0.5, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0)
 _MAX_RETRY_AFTER = 300.0
 #: How long a request that timed out locally keeps its service slot while DCT has not answered it yet.
 _SLOT_HOLD_SECONDS = 120.0
+#: When DCT answers ``auth`` with ``busy`` (it cannot reach the account service) the connection stays; the session
+#: sends a fresh assertion after these waits, one after another.
+_AUTH_BUSY_WAITS = (2.0, 4.0, 8.0, 15.0)
+#: While DCT answers ``dct-signed-out``, each try mints an assertion with gta.clothing: wait longer each time, up to
+#: about five minutes. start() (a user action) tries at once and starts over.
+_SIGNED_OUT_WAITS = (30.0, 60.0, 120.0, 240.0, 300.0)
 
 # Session states.
 IDLE = "idle"
 CONNECTING = "connecting"
 HELLO = "hello"
-PAIRING = "pairing"
 SIGNING_IN = "signing-in"
 AUTHENTICATING = "authenticating"
 READY = "ready"
 WAITING = "waiting"
 STOPPED = "stopped"
-_HANDSHAKE_STATES = (HELLO, PAIRING, SIGNING_IN, AUTHENTICATING)
+_HANDSHAKE_STATES = (HELLO, SIGNING_IN, AUTHENTICATING)
 
 
 class LinkSession:
     """One plugin's link to DCT. See the module documentation for threading.
-
-    ``pairing_store`` has ``load() -> Pairing | None``, ``save(Pairing)`` and ``clear()``; the session never clears
-    it and replaces it only with a newly granted pairing. It is used on a worker thread (see the module
-    documentation).
 
     ``token_source`` has ``mint_assertion(server_nonce) -> str | None`` (a sign-in assertion bound to this
     connection, or ``None`` when nobody is signed in) and ``start_device_sign_in()`` returning a flow with
@@ -841,21 +826,21 @@ class LinkSession:
     file is read. ``port`` skips discovery and connects to that port only. ``link_ports`` replaces the probed
     port range (tests use it to stay off the real ports).
 
-    Pairing safety: a new pairing (the first one, or one the user agreed to) is requested only from the DCT named
-    by a discovery file when one exists. On Windows the session also checks that the process behind the
-    connection is that DCT (its process id) and runs in the same Windows session; when a discovery file exists and
-    this cannot be confirmed, it does not pair. After DCT answered ``pairing-not-started`` (nobody clicked "Connect
-    an app"), the session asks for a code again only when the user asks (:meth:`retry_pairing`), so an unpaired
-    plugin never takes a code meant for another one.
+    Endpoint safety: an assertion or a sign-in request (``account.assist``) goes only to a DCT the session can
+    accept. When a discovery file exists that is the DCT it names, and on Windows the session also checks that the
+    process behind the connection is that DCT and runs in the same Windows session (it does not sign in when this
+    cannot be confirmed). Without a discovery file (a portable DCT) a probed endpoint is accepted unless it is
+    known to run in another Windows session.
 
-    Events (``session.on(name, handler)``): ``state(state)``, ``ready(welcome)``, ``pairing(PairingPrompt)``,
-    ``pairing-required(PairingRequired)``, ``sign-in(SignInPrompt)``, ``selection(message)``, ``project(message)``,
-    ``entitlement(message)``, ``open-texture(BinaryMessage)``, ``live-status(surface, message)``,
-    ``live-closed(surface, reason)``, ``live-error(surface, LinkError)``, ``model-applied(message)``,
-    ``model-closed(message)``, ``incompatible(message)`` (``updateUrl`` only when it is a trusted link),
-    ``signed-out()`` (the user signed out; call :meth:`sign_in` when they want to sign in again),
-    ``dct-signed-out()`` (DCT itself is signed out; the session keeps trying about every 30 seconds and connects
-    once DCT is signed in again, or at once after :meth:`start`), ``error(LinkError)``,
+    Events (``session.on(name, handler)``): ``state(state)``, ``ready(welcome)``, ``sign-in(SignInPrompt)``,
+    ``selection(message)``, ``project(message)``, ``entitlement(message)``, ``open-texture(BinaryMessage)``,
+    ``live-status(surface, message)``, ``live-closed(surface, reason)``, ``live-error(surface, LinkError)``,
+    ``model-applied(message)``, ``model-closed(message)``, ``incompatible(message)`` (``updateUrl`` only when it
+    is a trusted link), ``signed-out()`` (the user signed out; call :meth:`sign_in` when they want to sign in
+    again), ``dct-signed-out()`` (DCT itself is signed out; the session keeps trying, waiting 30 seconds and then
+    longer, up to about five minutes, and connects once DCT is signed in again, or at once after :meth:`start`),
+    ``dct-disconnected()`` (the user disconnected this app in DCT, said over a connection DCT had welcomed; the
+    session stopped and connects again only after :meth:`start`), ``error(LinkError)``,
     ``disconnected(code, reason)``.
     """
 
@@ -863,7 +848,6 @@ class LinkSession:
         self,
         plugin: PluginInfo,
         *,
-        pairing_store: Any,
         token_source: Any,
         port: Optional[int] = None,
         host: str = "127.0.0.1",
@@ -882,7 +866,6 @@ class LinkSession:
     ) -> None:
         plugin.check()
         self.plugin = plugin
-        self.pairing_store = pairing_store
         self.token_source = token_source
         self.host = host
         self.fixed_port = port
@@ -927,14 +910,7 @@ class LinkSession:
         self._deadline: Optional[float] = None
         self._client_nonce = b""
         self._server_nonce = b""
-        self._pairing: Optional[Pairing] = None
-        self._hello_paired = False
-        self._server_proved = False
         self._handshake_ids: Dict[str, str] = {}
-        self._pair_attempts = 0
-        self._pairing_pending = False
-        self._repair_confirmed = False
-        self._pairing_required_sent = False
         self._token_task: Optional[Tuple[int, str, Any]] = None
         self._sign_in: Any = None
         self._auth_refusals = 0
@@ -945,12 +921,7 @@ class LinkSession:
         self._service_queue: "collections.deque[Tuple[Request, Dict[str, Any]]]" = collections.deque()
         self._service_in_flight: Set[str] = set()
         self._close_hint: Optional[str] = None
-        self._not_started_reported = False
-        self._awaiting_pair_click = False  # DCT said pairing-not-started: only the user asks for a code again
         self._discovered: Optional[DiscoveredEndpoint] = None  # the discovery file read for this connection
-        self._repair_port: Optional[int] = None  # a probed DCT the user agreed to pair with again
-        self._last_required: Optional[PairingRequired] = None
-        self._unsaved_pairing: Optional[Pairing] = None  # granted, but the pairing store could not keep it
         self._sign_in_requested = False  # sign_in() was called; the next sign-in check clears a remembered sign-out
         self._assisted_flow: Any = None  # the device sign-in DCT was already asked to approve
         self._dct_signed_out = False
@@ -958,6 +929,9 @@ class LinkSession:
         self._push_id: Optional[str] = None  # the model push DCT has not answered yet
         self._saves_waiting: List[Request] = []  # model saves waiting for a push in flight
         self._thread_generation = 0
+        self._reauth_at: Optional[float] = None  # DCT answered auth with busy: sign in again then
+        self._busy_auths = 0
+        self._signed_out_tries = 0  # dct-signed-out answers in a row (for the growing wait)
 
     # ---- events and host calls ---------------------------------------------------------------------
 
@@ -1021,14 +995,15 @@ class LinkSession:
     # ---- lifecycle -----------------------------------------------------------------------------------
 
     def start(self) -> None:
-        """Starts connecting (and reconnecting while ``reconnect`` is on). Non-blocking."""
+        """Starts connecting (and reconnecting while ``reconnect`` is on). Non-blocking. This is also how the
+        user connects again after a ``dct-disconnected`` or ``signed-out`` stop."""
         with self._lock:
             self._want = True
-            self._pairing_required_sent = False
-            self._not_started_reported = False
             if self.state in (IDLE, STOPPED, WAITING):
                 self._attempt = 0
                 self._auth_refusals = 0
+                self._signed_out_tries = 0
+                self._dct_signed_out = False  # a fresh start tells the host again when DCT is still signed out
                 self._begin_connect()
         self._run_calls()
 
@@ -1036,6 +1011,7 @@ class LinkSession:
         """Says ``bye`` and closes. Pending requests fail with ``disconnected``."""
         with self._lock:
             self._want = False
+            self._dct_signed_out = False  # the next start reports a signed-out DCT again
             ws, self._ws = self._ws, None
             if ws is not None and ws.is_open:
                 if self.state == READY:
@@ -1075,21 +1051,6 @@ class LinkSession:
         with self._lock:
             self._sign_in_requested = True
             self._assisted_flow = None
-        self.start()
-
-    def confirm_repair(self, required: Optional[PairingRequired] = None) -> None:
-        """The user agreed to pair this plugin again after a ``pairing-required`` event (``required``, by default
-        the latest one). The next connection asks that DCT for a pairing code: the one named by the discovery file
-        when there is one, otherwise the port of the event (a DCT found by probing, for example a portable one).
-        The stored pairing stays until a new one is granted."""
-        with self._lock:
-            event = required if required is not None else self._last_required
-            self._repair_confirmed = True
-            self._awaiting_pair_click = False
-            self._not_started_reported = False
-            self._repair_port = event.port if event is not None and not event.endpoint_trusted and event.port else None
-            self._skip_ports.clear()
-            self._attempt = 0
         self.start()
 
     def start_thread(self, name: str = "dct-link") -> threading.Thread:
@@ -1135,6 +1096,8 @@ class LinkSession:
             waiting = self.state == WAITING
             delay = max(0.0, self._retry_at - self._clock()) if waiting else timeout
             busy = self._has_live_work()
+            if self._reauth_at is not None:
+                timeout = min(timeout, max(0.0, self._reauth_at - self._clock()))
             # Sign-in work polls a socket of its own: come back soon.
             if self._token_task is not None or (self.state == SIGNING_IN and self._sign_in is not None):
                 timeout = min(timeout, 0.02)
@@ -1196,6 +1159,9 @@ class LinkSession:
                     break
         if self._deadline is not None and self._clock() > self._deadline:
             self._on_deadline()
+        if self._reauth_at is not None and self.state == AUTHENTICATING and self._clock() >= self._reauth_at:
+            self._reauth_at = None
+            self._begin_auth()  # a fresh assertion for the same connection
         self._expire_requests(self._clock())
         if self.state == READY:
             self._pump_services()
@@ -1229,12 +1195,8 @@ class LinkSession:
                 if discovered is not None:
                     break
         self._discovered = discovered
-        if discovered is not None and (self._attempt % 2 == 0 or self._repair_confirmed):
+        if discovered is not None and self._attempt % 2 == 0:
             self._probes = [(self._new_ws(discovered.port), "discovery")]
-            return
-        if discovered is None and self._repair_confirmed and self._repair_port is not None and self._attempt % 2 == 0:
-            # The user agreed to pair again with the DCT that a probe found (no discovery file names one).
-            self._probes = [(self._new_ws(self._repair_port), "repair")]
             return
         # Probe the whole range at once: a refused loopback connect can take a second on Windows.
         ports = [p for p in self.link_ports if p not in self._skip_ports]
@@ -1248,6 +1210,8 @@ class LinkSession:
             for event in probe.poll(budget):
                 if event.kind == "open" and self._ws is None:
                     self._ws = probe
+                    if self._discovered is not None and probe.port == self._discovered.port:
+                        source = "discovery"  # a probe that reached the announced port is that endpoint
                     self._endpoint_source = source
                     self.endpoint_port = probe.port
                     for other, _ in self._probes:
@@ -1310,7 +1274,8 @@ class LinkSession:
         self._model_lease = None
         self._deadline = None
         self._handshake_ids = {}
-        self._pairing_pending = False
+        self._reauth_at = None
+        self._busy_auths = 0
         was_connected = self.state in _HANDSHAKE_STATES + (READY,)
         self.welcome = None
         if was_connected:
@@ -1333,9 +1298,7 @@ class LinkSession:
             if code == protocol.CLOSE_CODES["incompatible"] and self._others_to_try():
                 self._untrusted_endpoint(LinkError("incompatible", "a probed endpoint refused this plugin"))
                 return
-            # After pairing-not-started DCT closes the idle connection; only the user asks for a code again.
-            waiting_for_user = self.state == PAIRING and self._awaiting_pair_click and not self._pairing_pending
-            stop = waiting_for_user or code in (protocol.CLOSE_CODES["incompatible"], protocol.CLOSE_CODES["pairingDenied"])
+            stop = code == protocol.CLOSE_CODES["incompatible"]
             self._drop_connection(event.reason or "closed", code)
             if code == protocol.CLOSE_CODES["rateLimited"]:
                 self._attempt = max(self._attempt, len(_BACKOFF) - 2)
@@ -1347,19 +1310,22 @@ class LinkSession:
 
     def _closed_after(self, hint: str, reason: str, code: Optional[int]) -> None:
         """DCT announced why it is closing a ready connection (then closes with 4003)."""
-        trusted = self._endpoint_trusted()
-        port = self.endpoint_port or 0
         self._drop_connection(reason, code)
-        if hint == "not-paired":
-            # The user removed this plugin in DCT, over a connection that proved the pairing. Only the user re-pairs.
-            self._emit_pairing_required(PairingRequired("removed", trusted, port))
-            self._want = False
-            self._set_state(STOPPED)
+        if hint == "disconnected":
+            self._dct_disconnected()
         elif hint == "account-mismatch":
             self._want = False
             self._set_state(STOPPED)
         else:
             self._dct_is_signed_out()  # the error message was reported when it arrived
+
+    def _dct_disconnected(self) -> None:
+        """The user disconnected this app in DCT: stop, and connect again only when the user asks (start())."""
+        if self._ws is not None:
+            self._close_connection(1000, "disconnected in DCT")
+        self._want = False
+        self._set_state(STOPPED)
+        self._emit("dct-disconnected")
 
     def _dct_is_signed_out(self, error: Optional[LinkError] = None) -> None:
         """DCT is signed out (it answered ``dct-signed-out`` and closes). Not a refusal of this plugin: keep the
@@ -1371,8 +1337,10 @@ class LinkSession:
                 self._report(error)
         if self._ws is not None:
             self._close_connection(1000, "dct-signed-out")
+        wait = _SIGNED_OUT_WAITS[min(self._signed_out_tries, len(_SIGNED_OUT_WAITS) - 1)]
+        self._signed_out_tries += 1
         self._attempt = max(self._attempt, len(_BACKOFF) - 1)
-        self._schedule_retry()
+        self._schedule_retry(wait * (1.0 + random.random() * 0.1))
 
     def _send(self, message: Dict[str, Any]) -> None:
         ws = self._ws
@@ -1416,20 +1384,12 @@ class LinkSession:
         return message_id
 
     def _start_hello(self) -> None:
-        """The socket is open: read the stored pairing (on a worker), then say hello."""
+        """The socket is open: say hello."""
         self._set_state(HELLO)
         self._answered = False
-        self._server_proved = False
         self._handshake_ids = {}
         self._close_hint = None
-        self._deadline = None  # the hello deadline starts when the hello is sent
-        store = self.pairing_store
-        self._token_task = (self._epoch, "pairing-load", self._worker(store.load))
-
-    def _send_hello(self, pairing: Optional[Pairing]) -> None:
         self._client_nonce = secrets.token_bytes(protocol.NONCE_BYTES)
-        self._pairing = pairing
-        self._hello_paired = self._pairing is not None
         message: Dict[str, Any] = {
             "protocol": {
                 "min": protocol.MIN_SUPPORTED_MAJOR,
@@ -1438,10 +1398,9 @@ class LinkSession:
             },
             "plugin": {"kind": self.plugin.kind, "version": self.plugin.version, "channel": self.plugin.channel},
             "host": {"name": self.plugin.host_name, "version": self.plugin.host_version},
+            "installId": self.plugin.install_id,
             "clientNonce": b64url_encode(self._client_nonce),
         }
-        if self._pairing is not None:
-            message["clientId"] = self._pairing.client_id
         self._send_handshake("hello", message)
         self._deadline = self._clock() + self.handshake_timeout
 
@@ -1449,18 +1408,18 @@ class LinkSession:
         return self._endpoint_source in ("discovery", "fixed")
 
     def _skip_endpoint(self) -> None:
-        if self._endpoint_source in ("probe", "repair") and self.endpoint_port is not None:
+        if self._endpoint_source == "probe" and self.endpoint_port is not None:
             self._skip_ports.add(self.endpoint_port)
 
     def _others_to_try(self) -> bool:
-        """True on a probed endpoint (one that proved nothing) while other ports of the range are still untried."""
-        if self._endpoint_source not in ("probe", "repair") or self._server_proved:
+        """True on a probed endpoint (one that has not welcomed the plugin) while other ports are still untried."""
+        if self._endpoint_source != "probe" or self.state == READY:
             return False
         current = self.endpoint_port
         return any(port not in self._skip_ports and port != current for port in self.link_ports)
 
     def _untrusted_endpoint(self, error: LinkError) -> None:
-        """The endpoint did not prove our pairing or behaved like something else: leave it, try others first."""
+        """The endpoint behaved like something else, or is not one to sign in with: leave it, try others first."""
         others = self._others_to_try()
         self._skip_endpoint()
         self._fail_handshake(error, 1008, retry=True, delay=0.0 if others else None)
@@ -1477,13 +1436,13 @@ class LinkSession:
             return None
         return _tcp_owner_pid(theirs, ours)
 
-    def _pairing_endpoint_problem(self) -> Optional[str]:
-        """Why this connection must not ask for a pairing code, or ``None``.
+    def _endpoint_problem(self) -> Optional[str]:
+        """Why this connection must not receive an assertion or a sign-in request, or ``None``.
 
-        Loopback ports are shared by every Windows session, so another user's program could listen on a link port
-        and relay a first pairing. When DCT announced itself in a discovery file, pair only there, and on Windows
-        only when the process behind the connection is that DCT in this session (fail closed). Without a discovery
-        file, refuse a peer that is known to run in another session.
+        Loopback ports are shared by every Windows session, so another user's program could listen on a link port.
+        When DCT announced itself in a discovery file, sign in only there. On Windows the process behind the
+        connection must also run in this Windows session (and be the discovery file's process when there is one);
+        when that cannot be determined the endpoint is refused (fail closed).
         """
         discovered = self._discovered
         if discovered is not None and self._endpoint_source != "discovery":
@@ -1491,171 +1450,25 @@ class LinkSession:
         if os.name != "nt":
             return None
         owner = self._peer_owner()
-        if discovered is not None:
-            if owner is None:
-                return "the program behind this endpoint cannot be identified"
-            if discovered.pid is not None and owner != discovered.pid:
-                return "this endpoint is not the Durty Cloth Tool named by its discovery file"
-            if _same_session(owner) is not True:
-                return "this endpoint runs in another Windows session"
-            return None
-        if owner is not None and _same_session(owner) is False:
-            return "this endpoint runs in another Windows session"
+        if owner is None:
+            return "the program behind this endpoint cannot be identified"
+        if discovered is not None and discovered.pid is not None and owner != discovered.pid:
+            return "this endpoint is not the Durty Cloth Tool named by its discovery file"
+        if _same_session(owner) is not True:
+            return "this endpoint does not run in this Windows session"
         return None
 
     def _on_challenge(self, message: Dict[str, Any]) -> None:
         self._server_nonce = b64url_decode(message["serverNonce"])
-        if self._hello_paired:
-            assert self._pairing is not None
-            if message["paired"]:
-                expected = server_proof(self._pairing.secret, self._client_nonce, self._server_nonce)
-                if not hmac.compare_digest(expected, b64url_decode(message["proof"])):
-                    # Not the DCT this plugin paired with: say nothing more, and never send a token.
-                    self._untrusted_endpoint(LinkError("server-proof-invalid", "DCT did not prove the pairing"))
-                    return
-                self._server_proved = True
-                self._begin_auth()
-            elif self._repair_confirmed and self._is_repair_target():
-                self._begin_pairing()  # the user agreed; the stored pairing stays until a new one is granted
-            else:
-                self._pairing_required("not-recognized")
-        else:
-            if message["paired"]:
-                self._untrusted_endpoint(LinkError("server-proof-invalid", "unexpected pairing claim"))
-                return
-            self._begin_pairing()
-
-    def _is_repair_target(self) -> bool:
-        """The DCT the user agreed to pair with again: the trusted one, or the probed port of the event."""
-        if self._endpoint_trusted():
-            return True
-        return self._repair_port is not None and self.endpoint_port == self._repair_port
-
-    def _begin_pairing(self) -> None:
-        """Asks this DCT for a pairing code when that is safe and wanted."""
-        problem = self._pairing_endpoint_problem()
+        problem = self._endpoint_problem()
         if problem is not None:
             self._untrusted_endpoint(LinkError("untrusted-endpoint", problem))
             return
-        if self._awaiting_pair_click:  # cleared only by retry_pairing() and confirm_repair(), both user actions
-            # DCT said nobody clicked "Connect an app": ask again only when the user does (retry_pairing), so this
-            # plugin never takes a code meant for another one.
-            self._report_not_started()
-            self._close_connection(1000, "waiting for the user")
-            self._want = False
-            self._set_state(STOPPED)
-            return
-        self._request_pairing()
-
-    def _report_not_started(self) -> None:
-        if not self._not_started_reported:
-            self._not_started_reported = True
-            self._report(LinkError("pairing-not-started", 'click "Connect an app" in DCT, then request a code'))
-
-    def _emit_pairing_required(self, required: PairingRequired) -> None:
-        self._last_required = required
-        self._emit("pairing-required", required)
-
-    def _pairing_required(self, reason: str) -> None:
-        """A DCT does not accept the stored pairing. Never re-pair on our own: tell the host, and either stop (the
-        trusted DCT, until the user confirms) or try the other endpoints first."""
-        trusted = self._endpoint_trusted()
-        port = self.endpoint_port or 0
-        if trusted or not self._pairing_required_sent:
-            self._pairing_required_sent = True
-            self._emit_pairing_required(PairingRequired(reason, trusted, port))
-        error = LinkError("not-paired", "DCT does not accept this plugin's pairing")
-        if trusted:
-            self._fail_handshake(error, 1000, retry=False)
-        else:
-            self._untrusted_endpoint(error)
-
-    def _request_pairing(self) -> None:
-        self._set_state(PAIRING)
-        self._pair_attempts = 0
-        self._pairing_pending = False
-        name = self.plugin.display_name or f"{self.plugin.host_name} on {socket.gethostname()}"
-        self._send_handshake("pair.request", {"displayName": _sanitize_text(name)})
-        self._deadline = self._clock() + self.handshake_timeout
-
-    def retry_pairing(self) -> None:
-        """The user asks for a pairing code (for example after clicking "Connect an app" in DCT). Connects first
-        when needed. Does nothing while a code is already waiting to be entered."""
-        with self._lock:
-            self._not_started_reported = False
-            self._awaiting_pair_click = False
-            if self.state == PAIRING and self._pairing_pending:
-                pass  # a code is waiting; asking again would replace it
-            elif self.state == PAIRING and self._ws is not None and self._ws.is_open:
-                self._request_pairing()
-            elif self.state in (STOPPED, WAITING, IDLE):
-                self._want = True
-                self._attempt = 0
-                self._begin_connect()
-        self._run_calls()
-
-    def submit_pairing_code(self, code: str) -> None:
-        """Sends the six-digit code the user read in DCT."""
-        code = (code or "").strip().replace(" ", "")
-        if not protocol.is_pairing_code(code):
-            raise ValueError("the pairing code has six digits")
-        with self._lock:
-            if self.state != PAIRING or not self._pairing_pending:
-                raise LinkError("pairing-not-started", "DCT is not waiting for a pairing code")
-            self._send_handshake("pair.complete", {"code": code})
-        self._run_calls()
-
-    def cancel_pairing(self) -> None:
-        with self._lock:
-            if self.state == PAIRING:
-                self._fail_handshake(LinkError("cancelled", "pairing cancelled"), 1000, retry=False)
-        self._run_calls()
-
-    def _on_pair_pending(self, message: Dict[str, Any]) -> None:
-        self._pairing_pending = True
-        expires = message["expiresInSeconds"]
-        self._deadline = self._clock() + expires + 2.0  # bounded by the pairing lifetime
-        self._emit("pairing", PairingPrompt(expires, protocol.MAX_PAIRING_ATTEMPTS - self._pair_attempts))
-
-    def _on_pair_granted(self, message: Dict[str, Any]) -> None:
-        pairing = Pairing(message["clientId"], b64url_decode(message["secret"]))
-        self._pairing = pairing
-        self._pairing_pending = False
-        self._repair_confirmed = False
-        self._repair_port = None
-        self._last_required = None
-        self._server_proved = False  # this connection has not proved the new secret
-        self._deadline = None
-        store = self.pairing_store
-        # The only place a stored pairing is ever replaced; written on a worker, then sign-in goes on.
-        self._token_task = (self._epoch, "pairing-save", self._worker(lambda: store.save(pairing)))
-
-    def _on_pair_denied(self, code: str) -> None:
-        if code == "pairing-code-invalid":
-            self._pair_attempts += 1
-            left = protocol.MAX_PAIRING_ATTEMPTS - self._pair_attempts
-            if left > 0:
-                self._emit("pairing", PairingPrompt(0, left, code))
-                return
-        if code == "pairing-not-started":
-            # DCT shows a code only after the user clicked "Connect an app". Keep the connection, so a click in DCT
-            # and then retry_pairing() pairs at once; DCT closes an idle unauthenticated connection after about a
-            # minute, and the session then waits for the user instead of asking again on its own.
-            self._pairing_pending = False
-            self._awaiting_pair_click = True
-            self._deadline = None
-            self._report_not_started()
-            return
-        retry = code not in ("pairing-locked", "request-denied", "pairing-code-invalid")
-        self._fail_handshake(LinkError(code, "pairing failed"), protocol.CLOSE_CODES["pairingDenied"], retry=retry)
+        self._begin_auth()
 
     def _on_deadline(self) -> None:
         state = self.state
         self._deadline = None
-        if state == PAIRING and self._pairing_pending:
-            self._pairing_pending = False
-            self._report(LinkError("pairing-expired", "the pairing code expired; start pairing in DCT again"))
-            return
         if state == HELLO:
             self._skip_endpoint()
         if state in _HANDSHAKE_STATES:
@@ -1664,7 +1477,7 @@ class LinkSession:
     # ---- sign-in (assertions and device sign-in) -------------------------------------------------------
 
     def _worker(self, call: Callable[[], Any]) -> Any:
-        """Runs a blocking call (token source, pairing store) on a worker thread, or inline without threads."""
+        """Runs a blocking call (token source, secret store) on a worker thread, or inline without threads."""
         return _ThreadTask(call) if self.token_threads else _CallTask(call)
 
     def _make_task(self, kind: str) -> Any:
@@ -1678,7 +1491,6 @@ class LinkSession:
         return begin() if begin is not None else wrap(source.start_device_sign_in)
 
     def _begin_auth(self) -> None:
-        assert self._pairing is not None
         self._set_state(AUTHENTICATING)
         self._deadline = None  # the sign-in work has its own network timeouts
         self._token_task = (self._epoch, "mint", self._make_task("mint"))
@@ -1741,27 +1553,6 @@ class LinkSession:
             self._set_state(STOPPED)
 
     def _on_token_done(self, kind: str, task: Any) -> None:
-        if kind == "pairing-load":
-            try:
-                pairing = task.result()
-            except Exception as exc:
-                self._log.warning("reading the stored pairing failed", exc_info=True)
-                self._fail_handshake(LinkError("pairing-store-failed", f"{type(exc).__name__}: {exc}"), 1000, retry=True)
-                return
-            if self._unsaved_pairing is not None:
-                pairing = self._unsaved_pairing  # granted in this session but not stored: still the newest one
-            self._send_hello(pairing)
-            return
-        if kind == "pairing-save":
-            try:
-                task.result()
-                self._unsaved_pairing = None
-            except Exception as exc:  # kept in memory for this session; the user pairs again after a restart
-                self._log.warning("storing the new pairing failed", exc_info=True)
-                self._unsaved_pairing = self._pairing
-                self._report(LinkError("pairing-not-saved", f"{type(exc).__name__}: {exc}"))
-            self._begin_auth()
-            return
         try:
             value = task.result()
         except Exception as exc:  # network trouble, account locked, update required, rate limited ...
@@ -1788,11 +1579,6 @@ class LinkSession:
             self._assist(value)
 
     def _sign_in_without_session(self) -> None:
-        if not self._server_proved:
-            # A fresh pairing: reconnect so DCT proves the new secret before it is asked to approve a sign-in.
-            self._close_connection(1000, "checking the new pairing")
-            self._schedule_retry(0.0)
-            return
         flow = self._sign_in
         if flow is not None and getattr(flow, "expires_at", None) is not None and not getattr(flow, "cancelled", False):
             self._assist(flow)  # a sign-in started on an earlier connection is still running
@@ -1800,25 +1586,17 @@ class LinkSession:
         self._token_task = (self._epoch, "device", self._make_task("device"))
 
     def _assist(self, flow: Any) -> None:
-        if not self._server_proved:  # never ask an endpoint that did not prove the pairing
-            self._close_connection(1000, "checking the pairing")
-            self._schedule_retry(0.0)
-            return
         self._sign_in = flow
         self._set_state(SIGNING_IN)
         if self._assisted_flow is not flow:
             # DCT is asked once per device sign-in (until the user asks again with sign_in()): a user who declined
             # in DCT is not asked again on every reconnect.
             self._assisted_flow = flow
-            self._send_handshake("account.assist", {"proof": self._proof(), "userCode": flow.user_code})
+            self._send_handshake("account.assist", {"userCode": flow.user_code})
         self._emit(
             "sign-in",
             SignInPrompt(flow.user_code, flow.verification_uri, getattr(flow, "verification_uri_complete", None)),
         )
-
-    def _proof(self) -> str:
-        assert self._pairing is not None
-        return b64url_encode(client_proof(self._pairing.secret, self._server_nonce, self._client_nonce))
 
     def _send_auth(self, assertion: str) -> None:
         claims = _assertion_claims(assertion)
@@ -1827,7 +1605,7 @@ class LinkSession:
                                  retry=not self._count_refusal(close=False))
             return
         self._set_state(AUTHENTICATING)
-        self._send_handshake("auth", {"proof": self._proof(), "assertion": assertion})
+        self._send_handshake("auth", {"assertion": assertion})
         self._deadline = self._clock() + self.handshake_timeout
 
     def _count_refusal(self, close: bool = True) -> bool:
@@ -1846,9 +1624,9 @@ class LinkSession:
     def _on_welcome(self, message: Dict[str, Any]) -> None:
         self._deadline = None
         self._auth_refusals = 0
+        self._signed_out_tries = 0
         self._dct_signed_out = False
         self._sign_in_requested = False
-        self._awaiting_pair_click = False
         if self.endpoint_port is not None:
             self._skip_ports.discard(self.endpoint_port)
         self.welcome = message
@@ -1861,8 +1639,11 @@ class LinkSession:
     def _on_handshake_error(self, answered: Optional[str], message: Dict[str, Any]) -> None:
         code = message["code"]
         error = LinkError(code, message.get("message") or "")
-        if answered in ("pair.request", "pair.complete"):
-            self._on_pair_denied(code)
+        if code == "disconnected":
+            # DCT sends "disconnected" only to a connection it welcomed (handled in _closed_after), never during the
+            # handshake. Here it proves nothing (a program squatting on a link port could say it to stop the plugin
+            # for good): leave this endpoint like any other unproven refusal, try the others, keep the session.
+            self._untrusted_endpoint(LinkError("untrusted-endpoint", "an endpoint sent disconnected before welcome"))
             return
         if answered == "account.assist":
             # DCT could not prompt now (busy, rate-limited, another prompt open). The device sign-in goes on; the
@@ -1872,21 +1653,25 @@ class LinkSession:
                 self._emit("sign-in", SignInPrompt(flow.user_code, flow.verification_uri,
                                                    getattr(flow, "verification_uri_complete", None), False))
             return
-        if answered == "auth" and code == "token-invalid":
+        if answered == "auth" and code == "busy":
+            # DCT cannot reach the account service right now and keeps the connection: sign in again a little later.
+            self._reauth_at = self._clock() + _AUTH_BUSY_WAITS[min(self._busy_auths, len(_AUTH_BUSY_WAITS) - 1)]
+            self._busy_auths += 1
+            self._deadline = None
+            return
+        if answered == "auth" and code in ("token-invalid", "authentication-failed"):
             # A refused assertion ends this connection; the next one mints a fresh assertion.
             if not self._count_refusal():
                 self._fail_handshake(error, 1000, retry=True)
-            return
-        if code in ("not-paired", "authentication-failed"):
-            if self._server_proved:
-                self._pairing_required("refused")  # DCT knows the secret yet refuses: only the user can fix it
-            else:
-                self._untrusted_endpoint(error)
             return
         if code == "dct-signed-out":
             self._dct_is_signed_out(error)  # not a refusal of this plugin: keep trying now and then
             return
         stop = code in ("account-mismatch", "plugin-too-old", "dct-too-old", "unsupported-protocol")
+        if stop and self._others_to_try():
+            # A probed endpoint proved nothing: leave it and try the others before giving up.
+            self._untrusted_endpoint(error)
+            return
         if code == "rate-limited":
             self._attempt = max(self._attempt, len(_BACKOFF) - 2)
         self._fail_handshake(error, 1000, retry=not stop)
@@ -1916,7 +1701,7 @@ class LinkSession:
                 self._pending.pop(re_id, None)
                 self._finish_request(request, error=LinkError(message["code"], message.get("message") or ""))
             else:
-                if message["code"] in ("dct-signed-out", "account-mismatch", "not-paired"):
+                if message["code"] in ("dct-signed-out", "account-mismatch", "disconnected"):
                     self._close_hint = message["code"]  # DCT closes with 4003 next
                 self._report(LinkError(message["code"], message.get("message") or ""))
             return
@@ -1960,12 +1745,6 @@ class LinkSession:
         elif answered == "hello" and kind == "challenge" and self.state == HELLO:
             self._deadline = None
             self._on_challenge(message)
-        elif answered == "pair.request" and kind == "pair.pending" and self.state == PAIRING:
-            self._on_pair_pending(message)
-        elif answered in ("pair.request", "pair.complete") and kind == "pair.denied" and self.state == PAIRING:
-            self._on_pair_denied(message["code"])
-        elif answered == "pair.complete" and kind == "pair.granted" and self.state == PAIRING:
-            self._on_pair_granted(message)
         elif answered == "account.assist" and kind == "account.assistResult":
             flow = self._sign_in
             if flow is not None and self.state == SIGNING_IN:
