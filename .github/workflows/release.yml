@@ -212,7 +212,7 @@ jobs:
           archive="release/dist/$FILE"
           test "$(stat -c %s "$archive")" = "$SIZE" || { echo "::error::The archive is not $SIZE bytes."; exit 1; }
           echo "$SHA256  $archive" | sha256sum --check --strict
-          tagged="$(gh api "repos/$GH_REPO/commits/tags/$TAG" --jq .sha)"
+          tagged="$(gh api "repos/$GH_REPO/commits/refs/tags/$TAG" --jq .sha)"
           test "$tagged" = "$COMMIT" || { echo "::error::The tag $TAG now points at $tagged, not the built $COMMIT."; exit 1; }
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "::error::A release $TAG already exists. A published archive is never replaced; release a new version."
