@@ -13,7 +13,7 @@ from .strings import EN, Msg, msg
 
 #: The add-on version. ``blender_manifest.toml`` must say the same (the tests check it). Experimental builds
 #: carry ``-experimental.N``.
-VERSION = "0.1.0"
+VERSION = "0.1.0-experimental.1"
 EXTENSION_ID = "durty_cloth_tool_link"
 PLUGIN_KIND = "blender"
 HOST_NAME = "Blender"
