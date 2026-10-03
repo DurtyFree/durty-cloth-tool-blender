@@ -1,0 +1,8 @@
+# Test configuration only. The add-on itself is built with Blender:
+#   blender --command extension build --source-dir durty_cloth_tool_link --output-dir dist
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-p no:cacheprovider"
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]

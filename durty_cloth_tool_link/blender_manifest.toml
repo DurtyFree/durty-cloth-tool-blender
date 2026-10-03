@@ -1,0 +1,34 @@
+schema_version = "1.0.0"
+
+# Every value the gta.clothing extension repository lists (id, name, tagline, maintainer, type, website, tags,
+# license, platforms, permissions) must equal that listing. The version must equal VERSION in settings.py.
+id = "durty_cloth_tool_link"
+version = "0.1.0"
+name = "Durty Cloth Tool Link"
+tagline = "Preview and save your models in Durty Cloth Tool"
+maintainer = "DurtyFree (Pleb Masters)"
+type = "add-on"
+
+website = "https://docs.gta.clothing/creator-link/blender"
+
+tags = ["Import-Export", "Paint"]
+
+blender_version_min = "4.2.0"
+
+# Durty Cloth Tool runs on Windows, and the add-on only talks to it on the same computer.
+platforms = ["windows-x64"]
+
+license = ["SPDX:GPL-3.0-or-later"]
+copyright = ["2026 Schmid Software Solutions"]
+
+[permissions]
+network = "Durty Cloth Tool on this computer and gta.clothing for sign-in"
+files = "Reads Durty Cloth Tool's endpoint file, writes temporary exports"
+clipboard = "Copies the sign-in code and diagnostics"
+
+[build]
+paths_exclude_pattern = [
+  "__pycache__/",
+  "*.pyc",
+  "/.*",
+]

@@ -1,0 +1,10 @@
+Durty Cloth Tool Link for Blender
+Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
+
+The add-on's code is free software under the GNU General Public License, version 3 or (at your option) any
+later version (GPL-3.0-or-later); see LICENSE. The vendored dct_link package (the dct_link folder of the add-on)
+is MIT licensed; see the LICENSE file in that folder.
+
+The Durty Cloth Tool logo (dct-mark.png in the add-on's icons folder) is not covered by the GPL or the MIT
+licence. It is a mark of Schmid Software Solutions, included only to identify Durty Cloth Tool in the add-on's
+interface. It may not be modified or used for any other purpose.

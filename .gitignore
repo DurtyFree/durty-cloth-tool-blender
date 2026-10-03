@@ -1,0 +1,37 @@
+# Built extension archives and other build output
+dist/
+build/
+*.egg-info/
+
+# Python caches, virtual environments and tool state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.venv/
+.venv*/
+venv/
+.env
+
+# Local Blender smoke runs and test leftovers
+.smoke/
+smoke-report*.json
+*.blend1
+*.log
+tmp/
+temp/
+
+# Editors, assistants and operating systems
+.vscode/
+.idea/
+.claude/
+.impeccable/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
