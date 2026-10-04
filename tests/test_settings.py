@@ -193,8 +193,7 @@ def test_the_repository_points_at_nothing_outside_itself():
     documents = {p.name for p in repository_files()} | GENERATED_DOCUMENTS
     offenders = []
     for path in text_files(include_vendored=True):
-        # An ignore file lists what the repository does not hold; the sync's record says where the copy came from.
-        if path.name == ".gitignore" or path == VENDORED / "VENDORED.md":
+        if path.name == ".gitignore":  # an ignore file lists what the repository does not hold
             continue
         text = path.read_text("utf-8")
         missing = {name for name in named_paths(text) if not in_repository(name)}

@@ -9,9 +9,9 @@ Do not edit these files by hand. Change dct_link upstream, then run
 `python tools/sync_dct_link.py <Durty Cloth Tool checkout>`, which rewrites this folder and this record.
 `python tools/sync_dct_link.py --check` and the test suite verify the hashes below.
 
-- Source: `plugins/python/dct_link` and `plugins/python/LICENSE` in the Durty Cloth Tool repository
+- Source: the `dct_link` package and its `LICENSE` in the Durty Cloth Tool repository, where it is developed
 - dct_link version: 0.1.0
-- Source revision: not recorded yet: the sync records the Durty Cloth Tool commit once plugins/python/dct_link is committed there unchanged
+- Source revision: not recorded yet: the sync records the Durty Cloth Tool commit once dct_link is committed there unchanged
 - Left out: `es256.py`, `keys.json`, `loader.py`, `manifest.py`, `updater.py` (the modules for self-updating hosts;
   Blender updates the add-on, and nothing in the add-on imports them).
 
