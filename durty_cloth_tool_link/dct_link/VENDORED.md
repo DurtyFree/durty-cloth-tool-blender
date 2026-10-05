@@ -12,7 +12,7 @@ Do not edit these files by hand. Change dct_link in the Durty Cloth Tool reposit
 
 - Source: `plugins/python/dct_link` and `plugins/python/LICENSE` in the Durty Cloth Tool repository
 - dct_link version: 0.1.0
-- Source revision: 865013930cc6cba2f81e400a51473ae4098c0e52
+- Source revision: fa8d9ea4830a93665d939f549acfd1ec467a4c89
 - Left out: `es256.py`, `keys.json`, `loader.py`, `manifest.py`, `updater.py` (the modules for self-updating hosts;
   Blender updates the add-on, and nothing in the add-on imports them).
 
