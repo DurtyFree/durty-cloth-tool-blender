@@ -58,9 +58,11 @@ def launch(argv=None) -> int:
     parser.add_argument("--timeout", type=float, default=420.0)
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
+    sys.path.insert(0, str(REPO_ROOT))
+    from tools.blender_smoke import isolated_environment  # never the real Blender profile
+
     user = tempfile.mkdtemp(prefix="dct_shots_user_")
-    env = dict(os.environ, BLENDER_USER_RESOURCES=user)
-    env.pop("PYTHONPATH", None)
+    env = isolated_environment(user)
     try:
         build = pathlib.Path(user) / "build"
         build.mkdir()

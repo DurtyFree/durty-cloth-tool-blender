@@ -35,6 +35,20 @@ DIST = REPO_ROOT / "dist"
 SMOKE = REPO_ROOT / "tests" / "blender" / "smoke_in_blender.py"
 
 
+#: Blender's variables that point single user folders elsewhere; each would beat BLENDER_USER_RESOURCES and could
+#: reach the real profile, so the child never inherits them.
+USER_FOLDER_VARIABLES = ("BLENDER_USER_CONFIG", "BLENDER_USER_SCRIPTS", "BLENDER_USER_EXTENSIONS",
+                         "BLENDER_USER_DATAFILES")
+
+
+def isolated_environment(user: str) -> Dict[str, str]:
+    """The environment for a Blender that must use only the throw-away user folder ``user``."""
+    env = dict(os.environ, BLENDER_USER_RESOURCES=user)
+    for name in ("PYTHONPATH", *USER_FOLDER_VARIABLES):
+        env.pop(name, None)
+    return env
+
+
 def run(command: List[str], env: Dict[str, str], timeout: float = 300) -> subprocess.CompletedProcess:
     return subprocess.run(command, cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=timeout,
                           encoding="utf-8", errors="replace")
@@ -48,8 +62,7 @@ def blender_version(blender: str, env: Dict[str, str]) -> str:
 
 def smoke_one(blender: str, sollumz: Optional[str], sollumz_site: Optional[str], verbose: bool) -> Dict[str, object]:
     user = tempfile.mkdtemp(prefix="dct_smoke_user_")
-    env = dict(os.environ, BLENDER_USER_RESOURCES=user)
-    env.pop("PYTHONPATH", None)
+    env = isolated_environment(user)
     summary: Dict[str, object] = {"blender": blender_version(blender, env), "steps": []}
     steps: List[Dict[str, object]] = summary["steps"]  # type: ignore[assignment]
 

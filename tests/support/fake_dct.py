@@ -45,8 +45,7 @@ def assertion_claims(assertion: str) -> Dict[str, Any]:
     except (ValueError, IndexError):
         return {}
 BINDING = {"clothId": "3f2b8c1e-7a4d-4e8b-9c1f-2d6e5a7b8c90", "textureId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"}
-#: The features DCT enforces itself and reports in welcome and event.entitlement, in DCT's order (the rows with
-#: enforcedBy "dct" in plugins/protocol/features.json).
+#: The features Durty Cloth Tool checks itself and reports in welcome and event.entitlement, in its order.
 DCT_FEATURES = ("dct.link.connect", "dct.link.context", "dct.link.liveTexture", "dct.link.save", "dct.link.model",
                 "dct.link.services", "dct.studio.edit", "dct.studio.materials")
 #: The request types DCT checks against a feature before it does anything (answered with needs-license or
@@ -507,7 +506,7 @@ class FakeDct:
         self.check_assertion: Callable[[str, str], bool] = self._check_assertion
         self.account = "Durty"
         self.incompatible = False
-        #: Behave like a DCT of protocol 1 (the published 4.0.2-experimental.54), which cannot read a protocol 2 hello.
+        #: Behave like a Durty Cloth Tool of protocol 1, which cannot read a protocol 2 hello.
         self.major_one = False
         #: The focused item context.get reports (default: one without the optional metadata).
         self.focused: Optional[Dict[str, Any]] = None
@@ -599,8 +598,8 @@ class FakeDct:
         return True
 
     def report_no_features(self) -> None:
-        """Behaves like the published Durty Cloth Tool 4.0.2-experimental.54: welcome and event.entitlement carry
-        ``"features": []`` (its protected build loses the list), while every gated request is still enforced."""
+        """Behaves like a Durty Cloth Tool that reports no feature states: welcome and event.entitlement carry
+        ``"features": []``, while every gated request is still enforced."""
         self.unreported_features = set(DCT_FEATURES)
 
     def feature_rows(self) -> List[Dict[str, str]]:

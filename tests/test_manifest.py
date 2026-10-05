@@ -7,7 +7,7 @@ import pathlib
 import tomllib
 
 from durty_cloth_tool_link import settings
-from tools import check_manifest, sync_dct_link
+from tools import blender_smoke, check_manifest, sync_dct_link
 
 
 def test_manifest_matches_the_repository_listing_and_blender_rules():
@@ -24,7 +24,7 @@ def test_the_check_notices_a_wrong_manifest(tmp_path):
     text = check_manifest.MANIFEST.read_text("utf-8")
     broken = tmp_path / "blender_manifest.toml"
     broken.write_text(text.replace('maintainer = "DurtyFree (Pleb Masters)"', 'maintainer = "Someone"').replace(
-        '''files = "Reads Durty Cloth Tool's endpoint file, writes temporary exports"''',
+        '''files = "Reads Durty Cloth Tool's endpoint file, writes temporary models"''',
         'files = "Writes exported models."'), "utf-8")
     problems = check_manifest.check(broken)
     assert any(p.startswith("maintainer") for p in problems)
@@ -62,3 +62,15 @@ def test_add_on_modules_carry_the_gpl_header():
     package = pathlib.Path(settings.__file__).parent
     for module in package.glob("*.py"):
         assert module.read_text("utf-8").startswith("# SPDX-License-Identifier: GPL-3.0-or-later"), module.name
+
+
+def test_blender_runs_of_the_tools_never_reach_the_real_profile(monkeypatch):
+    """The smoke and the screenshots start Blender with a throw-away user folder; Blender's variables for single
+    user folders would beat it and lead to the real profile, so the child never gets them."""
+    for name in blender_smoke.USER_FOLDER_VARIABLES + ("PYTHONPATH",):
+        monkeypatch.setenv(name, "C:/somewhere/real")
+    env = blender_smoke.isolated_environment("C:/throw-away")
+    assert env["BLENDER_USER_RESOURCES"] == "C:/throw-away"
+    assert not set(blender_smoke.USER_FOLDER_VARIABLES + ("PYTHONPATH",)) & set(env)
+    assert set(blender_smoke.USER_FOLDER_VARIABLES) == {"BLENDER_USER_CONFIG", "BLENDER_USER_SCRIPTS",
+                                                        "BLENDER_USER_EXTENSIONS", "BLENDER_USER_DATAFILES"}

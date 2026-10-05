@@ -39,7 +39,7 @@ EXPECTED: Dict[str, Any] = {
     "copyright": ["2026 Schmid Software Solutions"],
     "permissions": {
         "network": "Durty Cloth Tool on this computer and gta.clothing for sign-in",
-        "files": "Reads Durty Cloth Tool's endpoint file, writes temporary exports",
+        "files": "Reads Durty Cloth Tool's endpoint file, writes temporary models",
         "clipboard": "Copies the sign-in code and diagnostics",
     },
 }
