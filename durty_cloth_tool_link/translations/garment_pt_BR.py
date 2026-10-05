@@ -24,10 +24,6 @@ TEXT = {
     ),
     "garment.next.lods": "A seguir: Gerar LODs em Pronto para o jogo.",
     "garment.next.validate": "A seguir: Validar em Pronto para o jogo.",
-    "garment.next.done": (
-        "As etapas locais estão concluídas. O ajuste à pose do GTA e a adição da roupa a um projeto do Durty Cloth "
-        "Tool vêm numa versão futura."
-    ),
     "garment.next.sculpting": (
         "Esculpindo: arraste com o pincel Grab e depois escolha Aceitar ou Cancelar em Correção."
     ),
@@ -491,4 +487,249 @@ TEXT = {
         "Verificações locais rápidas: pesos, mais de quatro ossos por vértice, coordenadas inválidas, o layout UV, "
         "cores de vértice, os vértices de cada nível de detalhe e quanto está dentro do corpo."
     ),
+    # ---- adding to Durty Cloth Tool ----
+    "error.item-limit": "O projeto tem o máximo de roupas que a versão gratuita do Durty Cloth Tool permite.",
+    "garment.next.done": (
+        "Concluído: a roupa está no seu projeto do Durty Cloth Tool. Enviar modelo e Salvar modelo na roupa, em "
+        "Modelo, a atualizam (incluídos no Durty Cloth Tool Ultimate)."
+    ),
+    "garment.next.validate-problems": (
+        "A seguir: corrija o que Validar lista em Pronto para o jogo e depois valide de novo."
+    ),
+    "garment.next.adding": (
+        "Adicionando: o Durty Cloth Tool mostra a roupa. Escolha Adicionar ao projeto ou Cancelar lá."
+    ),
+    "garment.next.connect": (
+        "A seguir: conecte-se ao Durty Cloth Tool (Conectar) para adicionar a roupa a um projeto."
+    ),
+    "garment.next.project": (
+        "A seguir: abra um projeto no Durty Cloth Tool e depois adicione a roupa em Pronto para o jogo."
+    ),
+    "garment.next.sollumz": "A seguir: instale o Sollumz para adicionar a roupa ao Durty Cloth Tool.",
+    "garment.next.skeleton": (
+        "A seguir: Usar esqueleto do Durty Cloth Tool em Pronto para o jogo, ou Adicionar ao projeto do Durty Cloth "
+        "Tool, que também faz isso."
+    ),
+    "garment.next.add": "A seguir: Adicionar ao projeto do Durty Cloth Tool em Pronto para o jogo.",
+    "add.heading": "Adicionar ao Durty Cloth Tool",
+    "add.heading.variations": "Variações de cor",
+    "add.heading.skeleton": "Esqueleto freemode",
+    "add.target": "A roupa entra como {slot}, {gender}. Mude os dois em Configuração.",
+    "add.variation.none": "Ainda sem textura de cor",
+    "add.variations.subtext": "Variações: {count} de no máximo {limit}.",
+    "add.prop.name": "Nome da roupa",
+    "add.prop.name.desc": "O nome que a roupa recebe no Durty Cloth Tool. Vazio: o nome da roupa no Blender",
+    "add.prop.skin": "Mostra pele",
+    "add.prop.skin.desc": (
+        "A roupa mostra parte da pele do ped, então o jogo a colore com o tom de pele do ped (a variante _r)"
+    ),
+    "add.prop.image": "Imagem da variação",
+    "add.prop.image.desc": "A textura de cor desta variação, no layout da própria textura da roupa",
+    "add.prop.variation-name": "Nome da variação",
+    "add.prop.variation-name.desc": (
+        "O nome desta variação de cor no Durty Cloth Tool. Vazio: o nome da imagem"
+    ),
+    "add.prop.first-name.desc": (
+        "O nome da primeira variação de cor (a própria textura da roupa) no Durty Cloth Tool. Vazio: o nome da "
+        "imagem"
+    ),
+    "add.op.skeleton": "Usar esqueleto do Durty Cloth Tool",
+    "add.op.skeleton.desc": (
+        "Obter do Durty Cloth Tool o esqueleto freemode do gênero escolhido em Configuração e colocar a roupa nele, "
+        "pronta para o Sollumz"
+    ),
+    "add.op.add": "Adicionar ao projeto do Durty Cloth Tool",
+    "add.op.add.desc": (
+        "Verificar a roupa, exportá-la com o Sollumz e adicioná-la como roupa nova ao projeto aberto no Durty Cloth "
+        "Tool. O Durty Cloth Tool pede a sua confirmação antes"
+    ),
+    "add.op.cancel.desc": (
+        "Parar a adição. Enquanto o Durty Cloth Tool ainda estiver perguntando, nada é adicionado"
+    ),
+    "add.op.add-variation": "Adicionar variação de cor",
+    "add.op.add-variation.desc": "Adicionar outra imagem como variação de cor da roupa",
+    "add.op.remove-variation": "Remover",
+    "add.op.remove-variation.desc": "Remover esta variação de cor",
+    "add.info": (
+        "Adiciona a roupa como roupa nova ao projeto aberto no Durty Cloth Tool. O Durty Cloth Tool a mostra primeiro, "
+        "e nada é adicionado a menos que você escolha Adicionar ao projeto lá. Precisa do Durty Cloth Tool com um "
+        "projeto aberto e o jogo configurado nele, e do Sollumz."
+    ),
+    "add.info.variations": (
+        "A própria textura da roupa é a primeira variação de cor. Adicione mais com outras imagens no mesmo layout; "
+        "cada uma vira uma variação de cor da roupa, com o nome que você der."
+    ),
+    "add.info.skeleton": (
+        "O Durty Cloth Tool envia o esqueleto freemode do gênero escolhido em Configuração, feito a partir dos seus "
+        "arquivos do jogo. O Sollumz o importa como armature, e a roupa vira filha dela com um modificador "
+        "Armature; os grupos de vértices da roupa mantêm os nomes dos ossos. Adicionar faz isso por você quando "
+        "necessário."
+    ),
+    "add.skeleton.ready": "No esqueleto do Durty Cloth Tool ({gender}, {count} ossos): {name}",
+    "add.skeleton.missing": (
+        "A roupa ainda não está no esqueleto do Durty Cloth Tool. Escolha Usar esqueleto do Durty Cloth Tool, ou "
+        "Adicionar, que faz isso por você."
+    ),
+    "add.skeleton.other-gender": (
+        "A roupa está no esqueleto do gênero {gender}. Escolha Usar esqueleto do Durty Cloth Tool para passá-la ao "
+        "esqueleto do gênero escolhido em Configuração."
+    ),
+    "add.skeleton.modifier": (
+        "O modificador Armature da roupa não usa o esqueleto do Durty Cloth Tool dela. Escolha Usar esqueleto do "
+        "Durty Cloth Tool de novo."
+    ),
+    "add.skeleton.order": (
+        "Os ossos do esqueleto não estão na ordem do jogo, então os pesos moveriam os ossos errados. Escolha Usar "
+        "esqueleto do Durty Cloth Tool de novo em vez de alterar os ossos dele."
+    ),
+    "add.skeleton.bones": (
+        "O esqueleto tem {count} ossos, mas o esqueleto freemode tem {expected}. Escolha Usar esqueleto do Durty "
+        "Cloth Tool de novo em vez de alterar os ossos dele."
+    ),
+    "add.skeleton.import": (
+        "O Sollumz não importou o esqueleto como uma única armature. O log Info dele tem os detalhes."
+    ),
+    "add.skeleton.invalid": (
+        "O Durty Cloth Tool enviou um esqueleto que o add-on não consegue ler. Atualize os dois e tente de novo."
+    ),
+    "add.skeleton.game-required": (
+        "O Durty Cloth Tool precisa da sua instalação do GTA V para o esqueleto freemode. Configure o jogo no Durty "
+        "Cloth Tool e tente de novo."
+    ),
+    "add.skeleton.busy": "O Durty Cloth Tool ainda está lendo os arquivos do jogo. Tente de novo em instantes.",
+    "add.dct-too-old": (
+        "Este Durty Cloth Tool ainda não pode adicionar roupas do Blender. Atualize o Durty Cloth Tool."
+    ),
+    "add.done.skeleton": "A roupa está no esqueleto do Durty Cloth Tool ({gender}, {count} ossos): {name}.",
+    "add.fetching": "Obtendo o esqueleto freemode ({gender}) do Durty Cloth Tool…",
+    "add.progress.skeleton": "Obtendo o esqueleto freemode do Durty Cloth Tool…",
+    "add.sent": "Enviado: {name}, com {count} variações de cor. Escolha Adicionar ao projeto no Durty Cloth Tool.",
+    "add.waiting": "O Durty Cloth Tool mostra a roupa. Escolha Adicionar ao projeto ou Cancelar lá.",
+    "add.waiting.subtext": (
+        "Nada é adicionado até você escolher Adicionar ao projeto no Durty Cloth Tool. Cancelar aqui retira o pedido "
+        "de adição."
+    ),
+    "add.withdrawing": "Cancelando a adição…",
+    "add.blocked": "A adição está bloqueada: {count} problemas a corrigir primeiro, listados em Pronto para o jogo.",
+    "add.problems": "Corrija isto primeiro ({count}):",
+    "add.findings": "Verificações do Durty Cloth Tool: {count}",
+    "add.added.subtext": (
+        "O Drawable Dictionary está vinculado à nova roupa: Enviar modelo e Salvar modelo na roupa, em Modelo, a "
+        "atualizam (incluídos no Durty Cloth Tool Ultimate)."
+    ),
+    "add.invalid": "A adição não pode ser enviada: {detail}",
+    "add.why.connect": "Conecte-se ao Durty Cloth Tool para adicionar a roupa a um projeto.",
+    "add.why.no-project": "Abra um projeto no Durty Cloth Tool para adicionar a roupa a ele.",
+    "add.why.adding": "Uma adição está aguardando o Durty Cloth Tool.",
+    "add.why.fetching": "Aguardando o esqueleto freemode do Durty Cloth Tool.",
+    "add.why.nothing-running": "Nada está em andamento.",
+    "add.why.no-template": "O Durty Cloth Tool não enviou nenhum esqueleto freemode. Tente de novo.",
+    "add.why.garment-changed": (
+        "Outra roupa foi escolhida nesse meio-tempo, então a etapa não foi executada. Execute-a de novo."
+    ),
+    "add.why.no-weights": (
+        "A roupa ainda não tem pesos para o esqueleto freemode. Atribua pesos aos ossos do esqueleto (grupos de "
+        "vértices com o nome deles, como SKEL_Spine3)."
+    ),
+    "add.why.unknown-groups": (
+        "{count} grupos de vértices não são ossos do esqueleto freemode: {names}. Renomeie-os ou remova-os; o jogo "
+        "os moveria com a raiz."
+    ),
+    "add.why.name-empty": "Dê um nome à roupa.",
+    "add.why.name-invalid": "O nome da roupa pode ter no máximo {limit} caracteres e nenhum caractere de controle.",
+    "add.why.combine": (
+        "A roupa tem {count} materiais. Use Combinar materiais primeiro: cada variação de cor é uma única textura."
+    ),
+    "add.why.no-diffuse": "O material da roupa não tem textura de cor. Combinar materiais cria uma.",
+    "add.why.variation-empty": "A variação de cor {number} não tem imagem. Escolha uma ou remova a linha.",
+    "add.why.too-many": "Uma roupa tem no máximo {limit} variações de cor.",
+    "add.why.variation-twice": "A imagem {name} é usada em duas variações de cor. Cada uma precisa da sua própria.",
+    "add.why.too-large": (
+        "O modelo e as imagens juntos passam de {size} MiB e não podem ser enviados. Use imagens menores ou menos "
+        "variações de cor."
+    ),
+    "add.why.work-folder": "A pasta de exportação do add-on é um link para outro lugar, então ela não é usada.",
+    "add.why.convert": "O Sollumz não conseguiu transformar a roupa em um Drawable Model ({detail}).",
+    "add.why.material": "O Sollumz não conseguiu dar à roupa o shader do ped ({detail}).",
+    "add.picture.empty": "A imagem {name} não tem pixels.",
+    "add.picture.too-large": (
+        "A imagem {name} tem mais de {size} pixels de lado, o que o Durty Cloth Tool não aceita."
+    ),
+    "add.picture.not-multiple-of-four": (
+        "A imagem {name} tem {width} x {height}: o Durty Cloth Tool precisa que os dois lados sejam divisíveis por "
+        "quatro."
+    ),
+    "add.picture.non-power-of-two": (
+        "A imagem {name} tem {width} x {height}, que não é uma potência de dois (por exemplo 1024 ou 2048)."
+    ),
+    "add.picture.large": "A imagem {name} tem mais de {size} pixels de lado, o que usa muita memória do jogo.",
+    "add.picture.small": "A imagem {name} tem menos de {size} pixels de lado.",
+    "add.picture.unusable": "A imagem {name} não pode ser enviada: {problem}",
+    "add.export.empty": (
+        "O Sollumz exportou o Drawable Dictionary sem a geometria da roupa. O log Info dele tem os detalhes."
+    ),
+    "add.export.several": "O Sollumz exportou {count} drawables; o Durty Cloth Tool aceita um por roupa.",
+    "add.export.skeleton": "A exportação ainda contém o esqueleto. Atualize o Sollumz e tente de novo.",
+    "add.export.errors": (
+        "O Sollumz informou erros ao exportar, então pode faltar parte da roupa. O log Info dele tem os detalhes."
+    ),
+    "add.export.unreadable": "Não foi possível ler a exportação ({detail}).",
+    "add.export.warnings": "O Sollumz informou avisos ao exportar; o log Info dele tem os detalhes.",
+    "add.result.added": "Adicionado ao projeto: {name}, como {slot}.",
+    "add.result.added-unlinked": (
+        "Adicionado ao projeto: {name}, mas não foi possível vincular o modelo do Blender à roupa ({detail})."
+    ),
+    "add.result.denied": (
+        "O Durty Cloth Tool não adicionou a roupa: Cancelar foi escolhido lá. O projeto não mudou."
+    ),
+    "add.result.withdrawn": "A adição foi cancelada. O projeto não mudou.",
+    "add.result.cancel-unanswered": (
+        "A adição foi cancelada, mas o Durty Cloth Tool não confirmou. Confira o projeto no Durty Cloth Tool."
+    ),
+    "add.result.timeout": (
+        "O Durty Cloth Tool não respondeu à adição a tempo. Confira o projeto no Durty Cloth Tool."
+    ),
+    "add.result.disconnected": (
+        "A conexão com o Durty Cloth Tool foi perdida durante a adição. Confira o projeto no Durty Cloth Tool antes "
+        "de adicionar a roupa de novo."
+    ),
+    "add.result.item-limit": (
+        "O Durty Cloth Tool não adicionou a roupa: o projeto já tem o máximo de roupas que a versão gratuita do "
+        "Durty Cloth Tool permite. Quem define e verifica esse limite é o Durty Cloth Tool, não o add-on; o seu "
+        "plano no Durty Cloth Tool decide quantas você pode adicionar."
+    ),
+    "add.result.rejected": (
+        "O Durty Cloth Tool não conseguiu usar o modelo ou uma variação de cor, então nada foi adicionado. As "
+        "verificações dele abaixo dizem o motivo."
+    ),
+    "add.result.no-project": "Abra um projeto no Durty Cloth Tool primeiro e depois adicione a roupa de novo.",
+    "add.result.item-refused": (
+        "Este projeto não aceita roupas freemode desta forma (por exemplo, um projeto de ped personalizado). Abra "
+        "um projeto freemode no Durty Cloth Tool."
+    ),
+    "add.result.busy": (
+        "O Durty Cloth Tool está ocupado (uma compilação está rodando ou outra adição aguarda resposta). Tente de "
+        "novo em instantes."
+    ),
+    "add.result.rate-limited": "Adições demais em pouco tempo. Aguarde alguns segundos e tente de novo.",
+    "add.result.save-failed": (
+        "O Durty Cloth Tool não conseguiu adicionar a roupa. A barra de status dele tem os detalhes."
+    ),
+    "add.finding.rig-invalid": (
+        "Os pesos ou índices de osso não combinam com o esqueleto freemode: a roupa se moveria errado no jogo."
+    ),
+    "add.finding.rig-unchecked": "O Durty Cloth Tool não conseguiu ler os pesos para verificá-los.",
+    "add.finding.single-bone-rig": (
+        "Um único osso carrega quase todo o peso de um nível de detalhe, então a roupa mal se moveria com o corpo."
+    ),
+    "add.finding.hair-tint-unsupported": "Este cabelo não consegue receber a cor de cabelo que o jogador escolhe.",
+    "add.finding.picture.non-power-of-two": (
+        "O tamanho de uma variação de cor não é uma potência de dois (por exemplo 1024 ou 2048)."
+    ),
+    "add.finding.picture.not-multiple-of-four": "O tamanho de uma variação de cor não é divisível por quatro.",
+    "add.finding.picture.too-large": (
+        "Uma variação de cor é maior do que o Durty Cloth Tool recomenda (2048 pixels de lado; ele aceita no máximo "
+        "4096)."
+    ),
+    "add.finding.picture.too-small": "Uma variação de cor tem menos de 16 pixels de lado.",
 }

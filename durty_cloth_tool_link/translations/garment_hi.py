@@ -22,10 +22,6 @@ TEXT = {
     ),
     "garment.next.lods": "अगला चरण: गेम के लिए तैयार पैनल में LOD बनाएँ।",
     "garment.next.validate": "अगला चरण: गेम के लिए तैयार पैनल में जाँचें।",
-    "garment.next.done": (
-        "स्थानीय चरण पूरे हो गए। GTA पोज़ पर फ़िटिंग और कपड़े को Durty Cloth Tool प्रोजेक्ट में जोड़ना बाद के "
-        "संस्करण में आएँगे।"
-    ),
     "garment.next.sculpting": "स्कल्प्टिंग: Grab ब्रश से खींचें, फिर सुधार पैनल में स्वीकार करें या रद्द करें चुनें।",
     "garment.gender.male.desc": "पुरुष फ़्रीमोड ped (mp_m_freemode_01)",
     "garment.gender.female.desc": "महिला फ़्रीमोड ped (mp_f_freemode_01)",
@@ -456,4 +452,230 @@ TEXT = {
         "तेज़ स्थानीय जाँच: वेट, प्रति वर्टेक्स चार से ज़्यादा बोन, खराब कोऑर्डिनेट, UV लेआउट, वर्टेक्स कलर, डिटेल "
         "के हर स्तर के वर्टेक्स और बॉडी के अंदर कितना है।"
     ),
+    # ---- adding to Durty Cloth Tool ----
+    "error.item-limit": "प्रोजेक्ट में उतने कपड़े हैं जितने Durty Cloth Tool का मुफ़्त संस्करण अनुमति देता है।",
+    "garment.next.done": (
+        "पूरा हुआ: कपड़ा आपके Durty Cloth Tool प्रोजेक्ट में है। इसे मॉडल पैनल में मॉडल भेजें और मॉडल को कपड़े "
+        "में सेव करें से अपडेट करें (Durty Cloth Tool Ultimate में शामिल)।"
+    ),
+    "garment.next.validate-problems": (
+        "अगला चरण: गेम के लिए तैयार पैनल में जाँचें जो समस्याएँ दिखाता है, उन्हें ठीक करें, फिर दोबारा जाँचें।"
+    ),
+    "garment.next.adding": (
+        "जोड़ा जा रहा है: Durty Cloth Tool कपड़ा दिखा रहा है। वहाँ प्रोजेक्ट में जोड़ें या रद्द करें चुनें।"
+    ),
+    "garment.next.connect": (
+        "अगला चरण: कपड़े को किसी प्रोजेक्ट में जोड़ने के लिए कनेक्ट करें पैनल में Durty Cloth Tool से कनेक्ट करें।"
+    ),
+    "garment.next.project": (
+        "अगला चरण: Durty Cloth Tool में एक प्रोजेक्ट खोलें, फिर गेम के लिए तैयार पैनल में कपड़ा जोड़ें।"
+    ),
+    "garment.next.sollumz": "अगला चरण: कपड़े को Durty Cloth Tool में जोड़ने के लिए Sollumz इंस्टॉल करें।",
+    "garment.next.skeleton": (
+        "अगला चरण: गेम के लिए तैयार पैनल में Durty Cloth Tool स्केलेटन इस्तेमाल करें चुनें, या Durty Cloth Tool "
+        "प्रोजेक्ट में जोड़ें, जो यह भी करता है।"
+    ),
+    "garment.next.add": "अगला चरण: गेम के लिए तैयार पैनल में Durty Cloth Tool प्रोजेक्ट में जोड़ें।",
+    "add.heading": "Durty Cloth Tool में जोड़ें",
+    "add.heading.variations": "रंग वैरिएशन",
+    "add.heading.skeleton": "फ़्रीमोड स्केलेटन",
+    "add.target": "यह {slot}, {gender} के रूप में जुड़ेगा। दोनों को सेटअप पैनल में बदलें।",
+    "add.variation.none": "अभी कोई रंग वाला टेक्सचर नहीं",
+    "add.variations.subtext": "वैरिएशन: अधिकतम {limit} में से {count}।",
+    "add.prop.name": "कपड़े का नाम",
+    "add.prop.name.desc": "Durty Cloth Tool में कपड़े को मिलने वाला नाम। खाली हो तो: कपड़े के ऑब्जेक्ट का नाम",
+    "add.prop.skin": "त्वचा दिखती है",
+    "add.prop.skin.desc": (
+        "कपड़े में ped की कुछ त्वचा दिखती है, इसलिए गेम उसे ped की त्वचा के रंग से रंगता है (_r वैरिएंट)"
+    ),
+    "add.prop.image": "वैरिएशन की इमेज",
+    "add.prop.image.desc": "इस वैरिएशन का रंग वाला टेक्सचर, कपड़े के अपने टेक्सचर वाले लेआउट में",
+    "add.prop.variation-name": "वैरिएशन का नाम",
+    "add.prop.variation-name.desc": "Durty Cloth Tool में इस रंग वैरिएशन का नाम। खाली हो तो: इमेज का नाम",
+    "add.prop.first-name.desc": (
+        "Durty Cloth Tool में पहले रंग वैरिएशन (कपड़े का अपना टेक्सचर) का नाम। खाली हो तो: इमेज का नाम"
+    ),
+    "add.op.skeleton": "Durty Cloth Tool स्केलेटन इस्तेमाल करें",
+    "add.op.skeleton.desc": (
+        "सेटअप पैनल में चुने गए लिंग का फ़्रीमोड स्केलेटन Durty Cloth Tool से लें और कपड़े को उस पर लगाएँ, "
+        "Sollumz के लिए तैयार"
+    ),
+    "add.op.add": "Durty Cloth Tool प्रोजेक्ट में जोड़ें",
+    "add.op.add.desc": (
+        "कपड़ा जाँचें, उसे Sollumz से एक्सपोर्ट करें और Durty Cloth Tool में खुले प्रोजेक्ट में नए कपड़े के रूप में "
+        "जोड़ें। Durty Cloth Tool पहले आपसे पूछता है"
+    ),
+    "add.op.cancel.desc": "जोड़ना रोकें। जब तक Durty Cloth Tool अभी पूछ रहा है, कुछ नहीं जोड़ा जाता",
+    "add.op.add-variation": "रंग वैरिएशन जोड़ें",
+    "add.op.add-variation.desc": "कपड़े के रंग वैरिएशन के रूप में एक और इमेज जोड़ें",
+    "add.op.remove-variation": "हटाएँ",
+    "add.op.remove-variation.desc": "यह रंग वैरिएशन हटाएँ",
+    "add.info": (
+        "कपड़े को Durty Cloth Tool में खुले प्रोजेक्ट में नए कपड़े के रूप में जोड़ता है। Durty Cloth Tool पहले उसे "
+        "दिखाता है, और जब तक आप वहाँ प्रोजेक्ट में जोड़ें न चुनें, कुछ नहीं जोड़ा जाता। इसके लिए Durty Cloth Tool "
+        "चाहिए, जिसमें प्रोजेक्ट खुला हो और गेम सेट हो, और Sollumz भी।"
+    ),
+    "add.info.variations": (
+        "कपड़े का अपना टेक्सचर पहला रंग वैरिएशन है। उसी लेआउट वाली दूसरी इमेज से और जोड़ें; हर इमेज आपके दिए "
+        "नाम के साथ कपड़े का एक रंग वैरिएशन बनती है।"
+    ),
+    "add.info.skeleton": (
+        "Durty Cloth Tool सेटअप पैनल में चुने गए लिंग का फ़्रीमोड स्केलेटन भेजता है, जो आपकी गेम फ़ाइलों से बनता "
+        "है। Sollumz उसे आर्मेचर के रूप में इम्पोर्ट करता है, और कपड़ा Armature मॉडिफ़ायर के साथ उसका चाइल्ड बनाया "
+        "जाता है; उसके vertex group अपने बोन के नाम रखते हैं। ज़रूरत होने पर जोड़ें यह आपके लिए करता है।"
+    ),
+    "add.skeleton.ready": "Durty Cloth Tool के {gender} स्केलेटन पर ({count} बोन): {name}",
+    "add.skeleton.missing": (
+        "कपड़ा अभी Durty Cloth Tool स्केलेटन पर नहीं है। Durty Cloth Tool स्केलेटन इस्तेमाल करें चुनें, या जोड़ें, "
+        "जो यह आपके लिए करता है।"
+    ),
+    "add.skeleton.other-gender": (
+        "कपड़ा {gender} स्केलेटन पर है। उसे सेटअप पैनल में चुने गए लिंग के स्केलेटन पर ले जाने के लिए Durty Cloth "
+        "Tool स्केलेटन इस्तेमाल करें चुनें।"
+    ),
+    "add.skeleton.modifier": (
+        "कपड़े का Armature मॉडिफ़ायर उसका Durty Cloth Tool स्केलेटन इस्तेमाल नहीं करता। फिर से Durty Cloth Tool "
+        "स्केलेटन इस्तेमाल करें चुनें।"
+    ),
+    "add.skeleton.order": (
+        "स्केलेटन के बोन गेम के क्रम में नहीं हैं, इसलिए वेट गलत बोन हिलाएँगे। उसके बोन बदलने के बजाय फिर से "
+        "Durty Cloth Tool स्केलेटन इस्तेमाल करें चुनें।"
+    ),
+    "add.skeleton.bones": (
+        "स्केलेटन में {count} बोन हैं, लेकिन फ़्रीमोड स्केलेटन में {expected} हैं। उसके बोन बदलने के बजाय फिर से "
+        "Durty Cloth Tool स्केलेटन इस्तेमाल करें चुनें।"
+    ),
+    "add.skeleton.import": (
+        "Sollumz ने स्केलेटन को एक आर्मेचर के रूप में इम्पोर्ट नहीं किया। उसके Info लॉग में विवरण है।"
+    ),
+    "add.skeleton.invalid": (
+        "Durty Cloth Tool ने ऐसा स्केलेटन भेजा जिसे ऐड-ऑन पढ़ नहीं सकता। दोनों अपडेट करें, फिर कोशिश करें।"
+    ),
+    "add.skeleton.game-required": (
+        "फ़्रीमोड स्केलेटन के लिए Durty Cloth Tool को आपका GTA V इंस्टॉलेशन चाहिए। Durty Cloth Tool में गेम सेट "
+        "करें, फिर कोशिश करें।"
+    ),
+    "add.skeleton.busy": "Durty Cloth Tool अभी गेम फ़ाइलें पढ़ रहा है। थोड़ी देर में फिर कोशिश करें।",
+    "add.dct-too-old": "यह Durty Cloth Tool अभी Blender से कपड़े नहीं जोड़ सकता। Durty Cloth Tool अपडेट करें।",
+    "add.done.skeleton": "कपड़ा Durty Cloth Tool के {gender} स्केलेटन पर है ({count} बोन): {name}।",
+    "add.fetching": "Durty Cloth Tool से {gender} फ़्रीमोड स्केलेटन लिया जा रहा है…",
+    "add.progress.skeleton": "Durty Cloth Tool से फ़्रीमोड स्केलेटन लिया जा रहा है…",
+    "add.sent": "{name} {count} रंग वैरिएशन के साथ भेजा गया। Durty Cloth Tool में प्रोजेक्ट में जोड़ें चुनें।",
+    "add.waiting": "Durty Cloth Tool कपड़ा दिखा रहा है। वहाँ प्रोजेक्ट में जोड़ें या रद्द करें चुनें।",
+    "add.waiting.subtext": (
+        "जब तक आप Durty Cloth Tool में प्रोजेक्ट में जोड़ें न चुनें, कुछ नहीं जोड़ा जाता। यहाँ रद्द करें जोड़ने का "
+        "अनुरोध वापस लेता है।"
+    ),
+    "add.withdrawing": "जोड़ना रद्द हो रहा है…",
+    "add.blocked": "जोड़ना रुका हुआ है: पहले {count} समस्याएँ ठीक करें, जो गेम के लिए तैयार पैनल में दी गई हैं।",
+    "add.problems": "पहले इन्हें ठीक करें ({count}):",
+    "add.findings": "Durty Cloth Tool की जाँच: {count}",
+    "add.added.subtext": (
+        "Drawable Dictionary नए कपड़े से लिंक है: इसे मॉडल पैनल में मॉडल भेजें और मॉडल को कपड़े में सेव करें से "
+        "अपडेट करें (Durty Cloth Tool Ultimate में शामिल)।"
+    ),
+    "add.invalid": "जोड़ने का अनुरोध भेजा नहीं जा सकता: {detail}",
+    "add.why.connect": "कपड़े को किसी प्रोजेक्ट में जोड़ने के लिए Durty Cloth Tool से कनेक्ट करें।",
+    "add.why.no-project": "कपड़ा जोड़ने के लिए Durty Cloth Tool में एक प्रोजेक्ट खोलें।",
+    "add.why.adding": "जोड़ने का एक अनुरोध Durty Cloth Tool का इंतज़ार कर रहा है।",
+    "add.why.fetching": "Durty Cloth Tool से फ़्रीमोड स्केलेटन का इंतज़ार।",
+    "add.why.nothing-running": "कुछ नहीं चल रहा है।",
+    "add.why.no-template": "Durty Cloth Tool ने कोई फ़्रीमोड स्केलेटन नहीं भेजा। फिर कोशिश करें।",
+    "add.why.garment-changed": "इस बीच कोई दूसरा कपड़ा चुना गया, इसलिए चरण नहीं चला। उसे फिर से चलाएँ।",
+    "add.why.no-weights": (
+        "कपड़े में अभी फ़्रीमोड स्केलेटन के लिए कोई वेट नहीं है। उसे स्केलेटन के बोन पर वेट करें (उनके नाम वाले "
+        "vertex group, जैसे SKEL_Spine3)।"
+    ),
+    "add.why.unknown-groups": (
+        "{count} vertex group फ़्रीमोड स्केलेटन के बोन नहीं हैं: {names}। उनका नाम बदलें या उन्हें हटाएँ; गेम "
+        "उन्हें रूट के साथ हिलाएगा।"
+    ),
+    "add.why.name-empty": "कपड़े को एक नाम दें।",
+    "add.why.name-invalid": "कपड़े के नाम में अधिकतम {limit} अक्षर हो सकते हैं और कोई कंट्रोल कैरेक्टर नहीं।",
+    "add.why.combine": "कपड़े में {count} मटीरियल हैं। पहले मटीरियल मिलाएँ: हर रंग वैरिएशन एक टेक्सचर है।",
+    "add.why.no-diffuse": "कपड़े के मटीरियल में कोई रंग वाला टेक्सचर नहीं है। मटीरियल मिलाएँ एक बनाता है।",
+    "add.why.variation-empty": "रंग वैरिएशन {number} में कोई इमेज नहीं है। एक चुनें, या पंक्ति हटाएँ।",
+    "add.why.too-many": "एक कपड़े में अधिकतम {limit} रंग वैरिएशन होते हैं।",
+    "add.why.variation-twice": "इमेज {name} दो रंग वैरिएशन के लिए इस्तेमाल हुई है। हर वैरिएशन को अपनी इमेज चाहिए।",
+    "add.why.too-large": (
+        "मॉडल और उसकी इमेज मिलकर {size} MiB से बड़ी हैं और भेजी नहीं जा सकतीं। छोटी इमेज या कम रंग वैरिएशन "
+        "इस्तेमाल करें।"
+    ),
+    "add.why.work-folder": (
+        "एक्सपोर्ट के लिए ऐड-ऑन का फ़ोल्डर किसी दूसरी जगह का लिंक है, इसलिए उसका इस्तेमाल नहीं होता।"
+    ),
+    "add.why.convert": "Sollumz कपड़े को Drawable Model नहीं बना सका ({detail})।",
+    "add.why.material": "Sollumz कपड़े को ped शेडर नहीं दे सका ({detail})।",
+    "add.picture.empty": "इमेज {name} में कोई पिक्सेल नहीं है।",
+    "add.picture.too-large": "इमेज {name} की एक भुजा {size} पिक्सेल से बड़ी है, जिसे Durty Cloth Tool नहीं लेता।",
+    "add.picture.not-multiple-of-four": (
+        "इमेज {name} का आकार {width} x {height} है: Durty Cloth Tool को चाहिए कि दोनों भुजाएँ चार से विभाज्य हों।"
+    ),
+    "add.picture.non-power-of-two": (
+        "इमेज {name} का आकार {width} x {height} है, जो दो की घात नहीं है (जैसे 1024 या 2048)।"
+    ),
+    "add.picture.large": "इमेज {name} की एक भुजा {size} पिक्सेल से बड़ी है, जिससे गेम की बहुत मेमोरी लगती है।",
+    "add.picture.small": "इमेज {name} की एक भुजा {size} पिक्सेल से छोटी है।",
+    "add.picture.unusable": "इमेज {name} भेजी नहीं जा सकती: {problem}",
+    "add.export.empty": (
+        "Sollumz ने Drawable Dictionary कपड़े की ज्योमेट्री के बिना एक्सपोर्ट किया। उसके Info लॉग में विवरण है।"
+    ),
+    "add.export.several": "Sollumz ने {count} drawable एक्सपोर्ट किए; Durty Cloth Tool हर कपड़े के लिए एक लेता है।",
+    "add.export.skeleton": "एक्सपोर्ट में अब भी स्केलेटन है। Sollumz अपडेट करें, फिर कोशिश करें।",
+    "add.export.errors": (
+        "Sollumz ने एक्सपोर्ट में गड़बड़ियाँ बताईं, इसलिए कपड़े का कुछ हिस्सा गायब हो सकता है। उसके Info लॉग में "
+        "विवरण है।"
+    ),
+    "add.export.unreadable": "एक्सपोर्ट पढ़ा नहीं जा सका ({detail})।",
+    "add.export.warnings": "Sollumz ने एक्सपोर्ट में चेतावनियाँ बताईं; उसके Info लॉग में विवरण है।",
+    "add.result.added": "{name} को प्रोजेक्ट में {slot} के रूप में जोड़ा गया।",
+    "add.result.added-unlinked": (
+        "{name} को प्रोजेक्ट में जोड़ा गया, लेकिन Blender का मॉडल उससे लिंक नहीं हो सका ({detail})।"
+    ),
+    "add.result.denied": "Durty Cloth Tool ने कपड़ा नहीं जोड़ा: वहाँ रद्द करें चुना गया। प्रोजेक्ट नहीं बदला।",
+    "add.result.withdrawn": "जोड़ना रद्द कर दिया गया। प्रोजेक्ट नहीं बदला।",
+    "add.result.cancel-unanswered": (
+        "जोड़ना रद्द कर दिया गया, लेकिन Durty Cloth Tool ने इसकी पुष्टि नहीं की। Durty Cloth Tool में प्रोजेक्ट जाँचें।"
+    ),
+    "add.result.timeout": (
+        "Durty Cloth Tool ने जोड़ने के अनुरोध का समय पर जवाब नहीं दिया। Durty Cloth Tool में प्रोजेक्ट जाँचें।"
+    ),
+    "add.result.disconnected": (
+        "जोड़ते समय Durty Cloth Tool से कनेक्शन टूट गया। कपड़ा दोबारा जोड़ने से पहले Durty Cloth Tool में प्रोजेक्ट "
+        "जाँचें।"
+    ),
+    "add.result.item-limit": (
+        "Durty Cloth Tool ने कपड़ा नहीं जोड़ा: प्रोजेक्ट में पहले से उतने कपड़े हैं जितने Durty Cloth Tool का मुफ़्त "
+        "संस्करण अनुमति देता है। यह सीमा Durty Cloth Tool तय करता और जाँचता है, ऐड-ऑन नहीं; आप कितने जोड़ सकते "
+        "हैं, यह Durty Cloth Tool में आपका प्लान तय करता है।"
+    ),
+    "add.result.rejected": (
+        "Durty Cloth Tool मॉडल या कोई रंग वैरिएशन इस्तेमाल नहीं कर सका, इसलिए कुछ नहीं जोड़ा गया। नीचे उसकी जाँच "
+        "कारण बताती है।"
+    ),
+    "add.result.no-project": "पहले Durty Cloth Tool में एक प्रोजेक्ट खोलें, फिर कपड़ा दोबारा जोड़ें।",
+    "add.result.item-refused": (
+        "यह प्रोजेक्ट इस तरह फ़्रीमोड कपड़े नहीं लेता (जैसे कस्टम ped प्रोजेक्ट)। Durty Cloth Tool में एक फ़्रीमोड "
+        "प्रोजेक्ट खोलें।"
+    ),
+    "add.result.busy": (
+        "Durty Cloth Tool व्यस्त है (बिल्ड चल रहा है, या जोड़ने का कोई दूसरा अनुरोध जवाब का इंतज़ार कर रहा है)। थोड़ी "
+        "देर में फिर कोशिश करें।"
+    ),
+    "add.result.rate-limited": "थोड़े समय में जोड़ने के बहुत ज़्यादा अनुरोध। कुछ सेकंड रुकें, फिर कोशिश करें।",
+    "add.result.save-failed": "Durty Cloth Tool कपड़ा नहीं जोड़ सका। उसके स्टेटस बार में विवरण है।",
+    "add.finding.rig-invalid": (
+        "वेट या बोन इंडेक्स फ़्रीमोड स्केलेटन से मेल नहीं खाते: गेम में कपड़ा गलत तरह से हिलेगा।"
+    ),
+    "add.finding.rig-unchecked": "Durty Cloth Tool वेट जाँचने के लिए उन्हें पढ़ नहीं सका।",
+    "add.finding.single-bone-rig": (
+        "डिटेल के एक स्तर का लगभग पूरा वेट एक ही बोन पर है, इसलिए कपड़ा बॉडी के साथ मुश्किल से हिलेगा।"
+    ),
+    "add.finding.hair-tint-unsupported": "ये बाल खिलाड़ी का चुना हुआ बालों का रंग नहीं ले सकते।",
+    "add.finding.picture.non-power-of-two": "किसी रंग वैरिएशन का आकार दो की घात नहीं है (जैसे 1024 या 2048)।",
+    "add.finding.picture.not-multiple-of-four": "किसी रंग वैरिएशन का आकार चार से विभाज्य नहीं है।",
+    "add.finding.picture.too-large": (
+        "कोई रंग वैरिएशन Durty Cloth Tool की सलाह से बड़ा है (हर भुजा पर 2048 पिक्सेल; वह अधिकतम 4096 लेता है)।"
+    ),
+    "add.finding.picture.too-small": "कोई रंग वैरिएशन किसी भुजा पर 16 पिक्सेल से छोटा है।",
 }

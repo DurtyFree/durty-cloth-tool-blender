@@ -104,6 +104,7 @@ CONSTANTS: Dict[str, Any] = {
         "maxDrawableNumber": 65535,
         "openTextureAnswerSeconds": 20,
         "openModelAnswerSeconds": 60,
+        "maxItemVariations": 26,
     },
     "values": {
         "pluginKinds": ["photoshop", "photopea", "blender", "gimp", "krita", "substance"],
@@ -128,6 +129,10 @@ CONSTANTS: Dict[str, Any] = {
             "cutout-alpha",
             "hair-ramp",
             "bc1-alpha",
+            "rig-invalid",
+            "rig-unchecked",
+            "single-bone-rig",
+            "hair-tint-unsupported",
         ],
         "modelCloseReasons": ["closed", "replaced", "itemRemoved", "projectClosed", "entitlementLost", "signedOut"],
         "hostResultCodes": ["open-failed", "not-supported", "dependency-missing", "busy"],
@@ -196,6 +201,7 @@ CONSTANTS: Dict[str, Any] = {
         "request-denied",
         "model-rejected",
         "internal-error",
+        "item-limit",
     ],
     "closeCodes": {
         "normal": 1000,
@@ -253,6 +259,8 @@ MAX_DRAWABLE_NUMBER: int = _L["maxDrawableNumber"]
 #: How long DCT waits for the ``host.result`` that answers a ``host.openTexture`` or a ``host.openModel``.
 OPEN_TEXTURE_ANSWER_SECONDS: int = _L["openTextureAnswerSeconds"]
 OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
+#: The colour variations one ``item.add`` may carry (the game's variation limit per drawable).
+MAX_ITEM_VARIATIONS: int = _L["maxItemVariations"]
 
 # Values the C# codec defines beside constants.json.
 MAX_REVISION: int = 9007199254740991  # JavaScript's largest safe integer
@@ -853,6 +861,124 @@ def _host_open_model(m: Mapping[str, Any]) -> Optional[str]:
     return None if total == m.get("payloadLength") else FRAME_SIZE_MISMATCH
 
 
+def _skeleton_template_data(m: Mapping[str, Any]) -> Optional[str]:
+    """Exactly one file, a ``*.ydd.xml`` under the file rules of ``model.push``, whose length is the payload."""
+    files = m.get("files")
+    if (
+        not _one_of(m.get("gender"), GENDERS)
+        or m.get("format") != MODEL_YDD_XML
+        or not _payload_in(m, 1)
+        or files is None
+        or len(files) != 1
+    ):
+        return INVALID_MESSAGE
+    problem = model_files_problem(MODEL_YDD_XML, files)  # one file of the ydd-xml rules is exactly the model XML
+    if problem is not None:
+        return problem
+    return None if files[0]["length"] == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def is_prop_type(drawable_type: Any) -> bool:
+    """A prop's token (``p_head``, ``p_eyes`` ...): props take no skin."""
+    return isinstance(drawable_type, str) and drawable_type.startswith("p_")
+
+
+def item_files_reason(files: Any, variations: Any) -> Optional[str]:
+    """Why the files and variations of an ``item.add`` break the rules, as an English sentence for a developer, or
+    ``None``. The rules: the bare-name rules of ``model.push`` (unique ignoring case, no empty file), exactly one
+    ``*.ydd.xml`` and otherwise only ``*.dds`` and ``*.png``; 1 to :data:`MAX_ITEM_VARIATIONS` variations, each with a
+    display name and naming a ``*.png`` or ``*.dds`` of the files (never the model), no two the same file ignoring
+    case, and every ``*.png`` named by a variation. The caller checks the lengths against the payload."""
+    if files is None or len(files) == 0 or len(files) > MAX_MODEL_FILES:
+        return f"an item carries 1 to {MAX_MODEL_FILES} files"
+    if variations is None or not 1 <= len(variations) <= MAX_ITEM_VARIATIONS:
+        return f"an item has 1 to {MAX_ITEM_VARIATIONS} colour variations"
+    names = set()
+    pictures = set()
+    models = 0
+    for entry in files:
+        if entry is None:
+            return "a file entry is missing"
+        name, length = entry.get("name"), entry.get("length")
+        if not is_file_name(name):
+            return (
+                f"{name!r} is not a bare file name (letters, digits, _ - ., not starting with '.', no '..', "
+                "not a Windows device name)"
+            )
+        if not _in_range(length, 1, MAX_BINARY_PAYLOAD_BYTES):
+            return f"{name} is empty or larger than one binary frame allows"
+        folded = name.lower()  # names are ASCII, so this is ordinal ignore-case
+        if folded in names:
+            return f"two files are named {name} (names are unique ignoring case)"
+        names.add(folded)
+        if folded.endswith(".ydd.xml"):
+            models += 1
+        elif folded.endswith(".png"):
+            pictures.add(folded)
+        elif not folded.endswith(".dds"):
+            return f"{name} is neither the model (*.ydd.xml) nor a texture (*.dds) or variation picture (*.png)"
+    if models != 1:
+        return "an item carries exactly one model file (*.ydd.xml)"
+    used = set()
+    for variation in variations:
+        if variation is None:
+            return "a variation is missing"
+        file, title = variation.get("file"), variation.get("name")
+        if not is_text(title):
+            return "a variation's name is 1 to 128 characters of display text"
+        if not is_file_name(file) or file.lower() not in names:
+            return f"the variation {title} names {file!r}, which is not one of the files"
+        folded = file.lower()
+        if folded.endswith(".ydd.xml"):
+            return f"the variation {title} names the model file; it names its diffuse (*.png or *.dds)"
+        if folded in used:
+            return f"two variations name {file} (each variation has a diffuse of its own)"
+        used.add(folded)
+    unnamed = sorted(pictures - used)
+    if unnamed:
+        return f"{unnamed[0]} is a picture no variation names (a *.png is always a variation's diffuse)"
+    return None
+
+
+def item_files_problem(files: Any, variations: Any) -> Optional[str]:
+    """The file and variation rules of ``item.add`` (see :func:`item_files_reason`). Returns ``None`` or
+    ``invalid-message``; the caller checks the lengths against the payload."""
+    return None if item_files_reason(files, variations) is None else INVALID_MESSAGE
+
+
+def _item_add(m: Mapping[str, Any]) -> Optional[str]:
+    """Always with an id (what ``item.addResult`` names), XML drawables only, skin only on a component, the file and
+    variation rules of :func:`item_files_reason`; the lengths add up to the payload."""
+    drawable_type, skin = m.get("drawableType"), m.get("skin")
+    if (
+        not is_id(m.get("id"))
+        or not _payload_in(m, 1)
+        or m.get("format") != MODEL_YDD_XML
+        or not _one_of(drawable_type, DRAWABLE_TYPES)
+        or not _one_of(m.get("gender"), GENDERS)
+        or skin is None
+        or (skin and is_prop_type(drawable_type))
+        or not is_text(m.get("name"))
+    ):
+        return INVALID_MESSAGE
+    files = m.get("files")
+    problem = item_files_problem(files, m.get("variations"))
+    if problem is not None:
+        return problem
+    total = sum(entry["length"] for entry in files)
+    return None if total == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def _item_add_result(m: Mapping[str, Any]) -> Optional[str]:
+    """``binding`` present and ``code`` absent exactly when ``ok`` is true; ``code`` (any protocol error code) present
+    and ``binding`` absent exactly when it is false. ``findings`` is always there."""
+    ok, code, binding = m.get("ok"), m.get("code"), m.get("binding")
+    if ok is None or not is_id(m.get("re")):
+        return INVALID_MESSAGE
+    paired = (code is None and _binding_ok(binding)) if ok else (_one_of(code, _ERROR_CODE_SET) and binding is None)
+    return _check(paired and _findings_ok(m.get("findings")))
+
+
 def _thumbnail_image(m: Mapping[str, Any]) -> Optional[str]:
     if (
         _binding_ok(m.get("binding"))
@@ -1008,6 +1134,22 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
             _optional_binding_ok(m.get("binding")) and _in_range(m.get("size"), MIN_THUMBNAIL_EDGE, MAX_THUMBNAIL_EDGE)
         ),
     ),
+    "skeleton.template": _text(TO_DCT, {"gender": _STR}, lambda m: _check(_one_of(m.get("gender"), GENDERS))),
+    "item.add": _binary(
+        TO_DCT,
+        {
+            "format": _STR,
+            "drawableType": _STR,
+            "gender": _STR,
+            "skin": _BOOL,
+            "name": _STR,
+            "variations": _list(_obj({"file": _STR, "name": _STR})),
+            "files": _MODEL_FILES,
+        },
+        _item_add,
+    ),
+    # The cancel names the add it withdraws; it has no reply of its own.
+    "item.addCancel": _text(TO_DCT, {}, lambda m: _check(is_id(m.get("re")))),
     "bye": _text(TO_DCT, {}, lambda m: None),
     # DCT to plugin
     "challenge": _text(TO_CLIENT, {"serverNonce": _STR}, lambda m: _check(is_bytes32(m.get("serverNonce")))),
@@ -1136,6 +1278,14 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
         TO_CLIENT,
         {"binding": _BINDING, "width": _INT32, "height": _INT32, "format": _STR},
         _thumbnail_image,
+    ),
+    "skeleton.template.data": _binary(
+        TO_CLIENT, {"gender": _STR, "format": _STR, "files": _MODEL_FILES}, _skeleton_template_data
+    ),
+    "item.addResult": _text(
+        TO_CLIENT,
+        {"ok": _BOOL, "code": _STR, "binding": _BINDING, "findings": _FINDINGS},
+        _item_add_result,
     ),
     "error": _text(
         TO_CLIENT,

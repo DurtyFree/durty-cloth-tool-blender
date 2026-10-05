@@ -18,10 +18,6 @@ TEXT = {
     "garment.next.combine": "下一步：在游戏就绪面板中点击合并材质，让服装只使用一张贴图。",
     "garment.next.lods": "下一步：在游戏就绪面板中点击生成 LOD。",
     "garment.next.validate": "下一步：在游戏就绪面板中点击验证。",
-    "garment.next.done": (
-        "本地步骤已完成。适配到 GTA 姿势以及把服装添加到 Durty Cloth Tool 项目的功能，"
-        "将在以后的版本中提供。"
-    ),
     "garment.next.sculpting": "雕刻中：用抓起笔刷拖动，然后在修正面板中选择接受或取消。",
     "garment.gender.male.desc": "男性 freemode ped（mp_m_freemode_01）",
     "garment.gender.female.desc": "女性 freemode ped（mp_f_freemode_01）",
@@ -394,4 +390,177 @@ TEXT = {
         "快速的本地检查：权重、每个顶点超过四根骨骼、损坏的坐标、UV 布局、顶点色、每个细节级别的顶点数，"
         "以及有多少部分在身体内。"
     ),
+    # ---- adding to Durty Cloth Tool ----
+    "error.item-limit": "项目中的服装数量已达到 Durty Cloth Tool 免费版允许的上限。",
+    "garment.next.done": (
+        "完成：服装已在你的 Durty Cloth Tool 项目中。模型面板中的发送模型和将模型保存到服装可以更新它"
+        "（包含在 Durty Cloth Tool Ultimate 中）。"
+    ),
+    "garment.next.validate-problems": "下一步：修复验证在游戏就绪面板中列出的问题，然后再次验证。",
+    "garment.next.adding": "正在添加：Durty Cloth Tool 显示了这件服装。请在那里选择添加到项目或取消。",
+    "garment.next.connect": "下一步：连接到 Durty Cloth Tool（开始连接），以便把服装添加到项目中。",
+    "garment.next.project": "下一步：在 Durty Cloth Tool 中打开一个项目，然后在游戏就绪面板中添加服装。",
+    "garment.next.sollumz": "下一步：安装 Sollumz，以便把服装添加到 Durty Cloth Tool。",
+    "garment.next.skeleton": (
+        "下一步：在游戏就绪面板中点击使用 Durty Cloth Tool 骨架，或点击添加到 Durty Cloth Tool 项目，"
+        "它也会完成这一步。"
+    ),
+    "garment.next.add": "下一步：在游戏就绪面板中点击添加到 Durty Cloth Tool 项目。",
+    "add.heading": "添加到 Durty Cloth Tool",
+    "add.heading.variations": "颜色变体",
+    "add.heading.skeleton": "freemode 骨架",
+    "add.target": "添加为：{slot}，{gender}。可在初始设置面板中更改这两项。",
+    "add.variation.none": "还没有颜色贴图",
+    "add.variations.subtext": "变体：{count} 个，最多 {limit} 个。",
+    "add.prop.name": "服装名称",
+    "add.prop.name.desc": "服装在 Durty Cloth Tool 中的名称。留空时使用 Blender 中服装的名称",
+    "add.prop.skin": "显示皮肤",
+    "add.prop.skin.desc": "服装会露出 ped 的部分皮肤，因此游戏会用 ped 的肤色为它着色（_r 版本）",
+    "add.prop.image": "变体图像",
+    "add.prop.image.desc": "此变体的颜色贴图，采用服装自身贴图的布局",
+    "add.prop.variation-name": "变体名称",
+    "add.prop.variation-name.desc": "此颜色变体在 Durty Cloth Tool 中的名称。留空时使用图像的名称",
+    "add.prop.first-name.desc": (
+        "第一个颜色变体（服装自身的贴图）在 Durty Cloth Tool 中的名称。留空时使用图像的名称"
+    ),
+    "add.op.skeleton": "使用 Durty Cloth Tool 骨架",
+    "add.op.skeleton.desc": (
+        "从 Durty Cloth Tool 获取初始设置面板中所选性别的 freemode 骨架，并把服装放到骨架上，供 Sollumz 使用"
+    ),
+    "add.op.add": "添加到 Durty Cloth Tool 项目",
+    "add.op.add.desc": (
+        "检查服装，用 Sollumz 导出，并作为新服装添加到 Durty Cloth Tool 中打开的项目。"
+        "Durty Cloth Tool 会先征求你的确认"
+    ),
+    "add.op.cancel.desc": "停止添加。在 Durty Cloth Tool 仍在询问时，不会添加任何内容",
+    "add.op.add-variation": "添加颜色变体",
+    "add.op.add-variation.desc": "添加另一张图像作为服装的颜色变体",
+    "add.op.remove-variation": "移除",
+    "add.op.remove-variation.desc": "移除此颜色变体",
+    "add.info": (
+        "把服装作为新服装添加到 Durty Cloth Tool 中打开的项目。Durty Cloth Tool 会先显示它，只有你在那里选择添加到项目后才会添加。需要已打开项目并设置好游戏的 Durty Cloth "
+        "Tool，以及 Sollumz。"
+    ),
+    "add.info.variations": (
+        "服装自身的贴图是第一个颜色变体。可以用相同布局的其他图像添加更多；每张图像都会成为服装的一个颜色变体，"
+        "并使用你为它起的名称。"
+    ),
+    "add.info.skeleton": (
+        "Durty Cloth Tool 会发送初始设置面板中所选性别的 freemode 骨架，它由你的游戏文件生成。"
+        "Sollumz 会把它导入为骨架对象，服装通过骨架修改器成为它的子级；服装的顶点组保留骨骼名称。"
+        "需要时，添加会为你完成这一步。"
+    ),
+    "add.skeleton.ready": "在 Durty Cloth Tool 骨架上（{gender}，{count} 根骨骼）：{name}",
+    "add.skeleton.missing": (
+        "服装还不在 Durty Cloth Tool 骨架上。请点击使用 Durty Cloth Tool 骨架，或点击添加，它会为你完成这一步。"
+    ),
+    "add.skeleton.other-gender": (
+        "服装在{gender}性骨架上。请点击使用 Durty Cloth Tool 骨架，把它移到初始设置面板中所选性别的骨架上。"
+    ),
+    "add.skeleton.modifier": (
+        "服装的骨架修改器没有使用它的 Durty Cloth Tool 骨架。请再次点击使用 Durty Cloth Tool 骨架。"
+    ),
+    "add.skeleton.order": (
+        "骨架的骨骼不是按游戏的顺序排列的，因此权重会移动错误的骨骼。请再次点击使用 Durty Cloth Tool 骨架，"
+        "而不要更改它的骨骼。"
+    ),
+    "add.skeleton.bones": (
+        "该骨架有 {count} 根骨骼，但 freemode 骨架有 {expected} 根。请再次点击使用 Durty Cloth Tool 骨架，"
+        "而不要更改它的骨骼。"
+    ),
+    "add.skeleton.import": "Sollumz 没有把骨架导入为单个骨架对象。详情见其 Info 日志。",
+    "add.skeleton.invalid": "Durty Cloth Tool 发送的骨架无法被插件读取。请更新两者，然后重试。",
+    "add.skeleton.game-required": (
+        "Durty Cloth Tool 需要你的 GTA V 安装才能提供 freemode 骨架。请在 Durty Cloth Tool 中设置游戏，然后重试。"
+    ),
+    "add.skeleton.busy": "Durty Cloth Tool 仍在读取游戏文件。请稍后重试。",
+    "add.dct-too-old": "这个 Durty Cloth Tool 还不能从 Blender 添加服装。请更新 Durty Cloth Tool。",
+    "add.done.skeleton": "服装已在 Durty Cloth Tool 骨架上（{gender}，{count} 根骨骼）：{name}。",
+    "add.fetching": "正在从 Durty Cloth Tool 获取{gender}性 freemode 骨架…",
+    "add.progress.skeleton": "正在从 Durty Cloth Tool 获取 freemode 骨架…",
+    "add.sent": "已发送 {name}，包含 {count} 个颜色变体。请在 Durty Cloth Tool 中选择添加到项目。",
+    "add.waiting": "Durty Cloth Tool 显示了这件服装。请在那里选择添加到项目或取消。",
+    "add.waiting.subtext": "在你于 Durty Cloth Tool 中选择添加到项目之前，不会添加任何内容。在这里取消会撤回此次添加。",
+    "add.withdrawing": "正在取消添加…",
+    "add.blocked": "添加被阻止：有 {count} 个问题需要先修复，已在游戏就绪面板中列出。",
+    "add.problems": "请先修复这些问题（{count}）：",
+    "add.findings": "Durty Cloth Tool 的检查：{count}",
+    "add.added.subtext": (
+        "Drawable Dictionary 已关联到新服装：模型面板中的发送模型和将模型保存到服装可以更新它"
+        "（包含在 Durty Cloth Tool Ultimate 中）。"
+    ),
+    "add.invalid": "无法发送此次添加：{detail}",
+    "add.why.connect": "请连接到 Durty Cloth Tool，以便把服装添加到项目中。",
+    "add.why.no-project": "请在 Durty Cloth Tool 中打开一个项目，以便把服装添加进去。",
+    "add.why.adding": "有一个添加正在等待 Durty Cloth Tool。",
+    "add.why.fetching": "正在等待 Durty Cloth Tool 发送 freemode 骨架。",
+    "add.why.nothing-running": "没有正在进行的操作。",
+    "add.why.no-template": "Durty Cloth Tool 没有发送 freemode 骨架。请重试。",
+    "add.why.garment-changed": "期间选择了另一件服装，因此该步骤没有运行。请再次运行。",
+    "add.why.no-weights": (
+        "服装还没有针对 freemode 骨架的权重。请为骨架的骨骼分配权重（以骨骼命名的顶点组，例如 SKEL_Spine3）。"
+    ),
+    "add.why.unknown-groups": (
+        "{count} 个顶点组不是 freemode 骨架的骨骼：{names}。请重命名或移除它们；游戏会让它们随根骨骼移动。"
+    ),
+    "add.why.name-empty": "请为服装起一个名称。",
+    "add.why.name-invalid": "服装名称最多 {limit} 个字符，且不能包含控制字符。",
+    "add.why.combine": "服装有 {count} 个材质。请先点击合并材质：每个颜色变体对应一张贴图。",
+    "add.why.no-diffuse": "服装的材质没有颜色贴图。合并材质会生成一张。",
+    "add.why.variation-empty": "颜色变体 {number} 没有图像。请选择一张，或移除该行。",
+    "add.why.too-many": "一件服装最多有 {limit} 个颜色变体。",
+    "add.why.variation-twice": "图像 {name} 被用于两个颜色变体。每个变体都需要自己的图像。",
+    "add.why.too-large": "模型及其图像合计超过 {size} MiB，无法发送。请使用更小的图像或更少的颜色变体。",
+    "add.why.work-folder": "插件用于导出的文件夹是指向其他位置的链接，因此不会使用它。",
+    "add.why.convert": "Sollumz 无法把服装转换为 Drawable Model（{detail}）。",
+    "add.why.material": "Sollumz 无法为服装设置 ped 着色器（{detail}）。",
+    "add.picture.empty": "图像 {name} 没有像素。",
+    "add.picture.too-large": "图像 {name} 的边长超过 {size} 像素，Durty Cloth Tool 不接受。",
+    "add.picture.not-multiple-of-four": (
+        "图像 {name} 的尺寸为 {width} x {height}：Durty Cloth Tool 要求两边都能被 4 整除。"
+    ),
+    "add.picture.non-power-of-two": "图像 {name} 的尺寸为 {width} x {height}，不是 2 的幂（例如 1024 或 2048）。",
+    "add.picture.large": "图像 {name} 的边长超过 {size} 像素，会占用大量游戏内存。",
+    "add.picture.small": "图像 {name} 的边长小于 {size} 像素。",
+    "add.picture.unusable": "无法发送图像 {name}：{problem}",
+    "add.export.empty": "Sollumz 导出的 Drawable Dictionary 不含服装的几何体。详情见其 Info 日志。",
+    "add.export.several": "Sollumz 导出了 {count} 个 drawable；Durty Cloth Tool 每件服装只接受一个。",
+    "add.export.skeleton": "导出结果仍包含骨架。请更新 Sollumz，然后重试。",
+    "add.export.errors": "Sollumz 在导出时报告了错误，因此服装可能缺少部分内容。详情见其 Info 日志。",
+    "add.export.unreadable": "无法读取导出结果（{detail}）。",
+    "add.export.warnings": "Sollumz 在导出时报告了警告；详情见其 Info 日志。",
+    "add.result.added": "已将 {name} 作为 {slot} 添加到项目。",
+    "add.result.added-unlinked": "已将 {name} 添加到项目，但无法把 Blender 中的模型关联到它（{detail}）。",
+    "add.result.denied": "Durty Cloth Tool 没有添加这件服装：那里选择了取消。项目未改变。",
+    "add.result.withdrawn": "已取消添加。项目未改变。",
+    "add.result.cancel-unanswered": "已取消添加，但 Durty Cloth Tool 没有确认。请在 Durty Cloth Tool 中检查项目。",
+    "add.result.timeout": "Durty Cloth Tool 没有及时回应此次添加。请在 Durty Cloth Tool 中检查项目。",
+    "add.result.disconnected": (
+        "添加期间与 Durty Cloth Tool 的连接已断开。再次添加服装之前，请在 Durty Cloth Tool 中检查项目。"
+    ),
+    "add.result.item-limit": (
+        "Durty Cloth Tool 没有添加这件服装：项目中的服装数量已达到 Durty Cloth Tool 免费版允许的上限。"
+        "此上限由 Durty Cloth Tool 设定和检查，而不是插件；你在 Durty Cloth Tool 中的方案决定你可以添加多少件。"
+    ),
+    "add.result.rejected": (
+        "Durty Cloth Tool 无法使用该模型或某个颜色变体，因此没有添加任何内容。下方的检查结果说明了原因。"
+    ),
+    "add.result.no-project": "请先在 Durty Cloth Tool 中打开一个项目，然后再次添加服装。",
+    "add.result.item-refused": (
+        "此项目不能以这种方式接收 freemode 服装（例如自定义 ped 项目）。请在 Durty Cloth Tool 中打开一个 "
+        "freemode 项目。"
+    ),
+    "add.result.busy": "Durty Cloth Tool 正忙（正在构建，或另一个添加正在等待回应）。请稍后重试。",
+    "add.result.rate-limited": "短时间内添加次数过多。请等待几秒钟，然后重试。",
+    "add.result.save-failed": "Durty Cloth Tool 无法添加这件服装。详情见其状态栏。",
+    "add.finding.rig-invalid": "权重或骨骼索引与 freemode 骨架不匹配：服装在游戏中会错误地移动。",
+    "add.finding.rig-unchecked": "Durty Cloth Tool 无法读取权重进行检查。",
+    "add.finding.single-bone-rig": "某个细节级别几乎全部权重都在一根骨骼上，因此服装几乎不会随身体移动。",
+    "add.finding.hair-tint-unsupported": "这种头发无法使用玩家选择的发色。",
+    "add.finding.picture.non-power-of-two": "某个颜色变体的尺寸不是 2 的幂（例如 1024 或 2048）。",
+    "add.finding.picture.not-multiple-of-four": "某个颜色变体的尺寸不能被 4 整除。",
+    "add.finding.picture.too-large": (
+        "某个颜色变体大于 Durty Cloth Tool 的建议尺寸（边长 2048 像素；最多接受 4096）。"
+    ),
+    "add.finding.picture.too-small": "某个颜色变体的边长小于 16 像素。",
 }

@@ -24,10 +24,6 @@ TEXT = {
     ),
     "garment.next.lods": "التالي: توليد مستويات LOD في لوحة جاهز للعبة.",
     "garment.next.validate": "التالي: التحقق في لوحة جاهز للعبة.",
-    "garment.next.done": (
-        "اكتملت الخطوات المحلية. تأتي الملاءمة على وضعية GTA وإضافة قطعة الملابس إلى مشروع Durty Cloth Tool "
-        "في إصدار لاحق."
-    ),
     "garment.next.sculpting": "النحت: اسحب بفرشاة Grab، ثم اختر قبول أو إلغاء في لوحة الإصلاح.",
     "garment.gender.male.desc": "الـ ped الذكر في freemode (mp_m_freemode_01)",
     "garment.gender.female.desc": "الـ ped الأنثى في freemode (mp_f_freemode_01)",
@@ -445,4 +441,206 @@ TEXT = {
         "فحوصات محلية سريعة: الأوزان، وأكثر من أربع عظام لكل رأس، والإحداثيات المعطوبة، وتخطيط UV، وألوان "
         "الرؤوس، ورؤوس كل مستوى تفاصيل، ومقدار ما هو داخل الجسم."
     ),
+    # ---- adding to Durty Cloth Tool ----
+    "error.item-limit": "يحتوي المشروع على أكبر عدد من الملابس يسمح به الإصدار المجاني من Durty Cloth Tool.",
+    "garment.next.done": (
+        "تم: قطعة الملابس في مشروع Durty Cloth Tool الخاص بك. يحدّثها إرسال النموذج وحفظ النموذج في قطعة الملابس "
+        "في لوحة النموذج (مضمّن في Durty Cloth Tool Ultimate)."
+    ),
+    "garment.next.validate-problems": "التالي: أصلح ما يسرده التحقق في لوحة جاهز للعبة، ثم تحقق مرة أخرى.",
+    "garment.next.adding": "جارٍ الإضافة: يعرض Durty Cloth Tool قطعة الملابس. اختر إضافة إلى المشروع أو إلغاء هناك.",
+    "garment.next.connect": "التالي: اتصل بـ Durty Cloth Tool (بدء الاتصال) لإضافة قطعة الملابس إلى مشروع.",
+    "garment.next.project": "التالي: افتح مشروعًا في Durty Cloth Tool، ثم أضف قطعة الملابس في لوحة جاهز للعبة.",
+    "garment.next.sollumz": "التالي: ثبّت Sollumz لإضافة قطعة الملابس إلى Durty Cloth Tool.",
+    "garment.next.skeleton": (
+        "التالي: اختر استخدام هيكل Durty Cloth Tool العظمي في لوحة جاهز للعبة، أو إضافة إلى مشروع Durty Cloth "
+        "Tool، التي تفعل ذلك أيضًا."
+    ),
+    "garment.next.add": "التالي: إضافة إلى مشروع Durty Cloth Tool في لوحة جاهز للعبة.",
+    "add.heading": "الإضافة إلى Durty Cloth Tool",
+    "add.heading.variations": "التنويعات اللونية",
+    "add.heading.skeleton": "هيكل freemode العظمي",
+    "add.target": "تُضاف في الخانة {slot} ({gender}). غيّر كليهما في لوحة الإعداد.",
+    "add.variation.none": "لا يوجد نسيج لون بعد",
+    "add.variations.subtext": "التنويعات: {count} من {limit} على الأكثر.",
+    "add.prop.name": "اسم قطعة الملابس",
+    "add.prop.name.desc": "الاسم الذي تحمله قطعة الملابس في Durty Cloth Tool. إذا تُرك فارغًا: اسم كائن قطعة الملابس",
+    "add.prop.skin": "تُظهر البشرة",
+    "add.prop.skin.desc": "تُظهر قطعة الملابس جزءًا من بشرة الـ ped، لذا تلوّنها اللعبة بلون بشرة الـ ped (النسخة _r)",
+    "add.prop.image": "صورة التنويعة",
+    "add.prop.image.desc": "نسيج اللون لهذه التنويعة، بتخطيط نسيج قطعة الملابس نفسه",
+    "add.prop.variation-name": "اسم التنويعة",
+    "add.prop.variation-name.desc": "اسم هذه التنويعة اللونية في Durty Cloth Tool. إذا تُرك فارغًا: اسم الصورة",
+    "add.prop.first-name.desc": (
+        "اسم التنويعة اللونية الأولى (نسيج قطعة الملابس نفسه) في Durty Cloth Tool. إذا تُرك فارغًا: اسم الصورة"
+    ),
+    "add.op.skeleton": "استخدام هيكل Durty Cloth Tool العظمي",
+    "add.op.skeleton.desc": (
+        "جلب هيكل freemode العظمي للجنس المحدد في لوحة الإعداد من Durty Cloth Tool ووضع قطعة الملابس عليه، جاهزة "
+        "لـ Sollumz"
+    ),
+    "add.op.add": "إضافة إلى مشروع Durty Cloth Tool",
+    "add.op.add.desc": (
+        "فحص قطعة الملابس وتصديرها باستخدام Sollumz وإضافتها كقطعة ملابس جديدة إلى المشروع المفتوح في Durty Cloth "
+        "Tool. يسألك Durty Cloth Tool أولًا"
+    ),
+    "add.op.cancel.desc": "إيقاف عملية الإضافة. ما دام Durty Cloth Tool لا يزال يسأل، لا يُضاف شيء",
+    "add.op.add-variation": "إضافة تنويعة لونية",
+    "add.op.add-variation.desc": "إضافة صورة أخرى كتنويعة لونية لقطعة الملابس",
+    "add.op.remove-variation": "إزالة",
+    "add.op.remove-variation.desc": "إزالة هذه التنويعة اللونية",
+    "add.info": (
+        "يضيف قطعة الملابس كقطعة ملابس جديدة إلى المشروع المفتوح في Durty Cloth Tool. يعرضها Durty Cloth Tool أولًا، "
+        "ولا يُضاف شيء ما لم تختر إضافة إلى المشروع هناك. يحتاج إلى Durty Cloth Tool مع مشروع مفتوح واللعبة مُعدّة "
+        "فيه، وإلى Sollumz."
+    ),
+    "add.info.variations": (
+        "نسيج قطعة الملابس نفسه هو التنويعة اللونية الأولى. أضف المزيد بصور أخرى بالتخطيط نفسه؛ تصبح كل منها تنويعة "
+        "لونية لقطعة الملابس، بالاسم الذي تمنحه لها."
+    ),
+    "add.info.skeleton": (
+        "يرسل Durty Cloth Tool هيكل freemode العظمي للجنس المحدد في لوحة الإعداد، مبنيًا من ملفات لعبتك. يستورده "
+        "Sollumz كهيكل عظمي (Armature)، وتُجعل قطعة الملابس تابعة له بمُعدِّل Armature؛ وتحتفظ مجموعات الرؤوس فيها "
+        "بأسماء عظامها. تفعل إضافة ذلك نيابةً عنك عند الحاجة."
+    ),
+    "add.skeleton.ready": "على هيكل Durty Cloth Tool العظمي ({gender}، العظام: {count}): {name}",
+    "add.skeleton.missing": (
+        "قطعة الملابس ليست على هيكل Durty Cloth Tool العظمي بعد. اختر استخدام هيكل Durty Cloth Tool العظمي، أو "
+        "إضافة، التي تفعل ذلك نيابةً عنك."
+    ),
+    "add.skeleton.other-gender": (
+        "قطعة الملابس على الهيكل العظمي ({gender}). اختر استخدام هيكل Durty Cloth Tool العظمي لنقلها إلى الهيكل "
+        "العظمي للجنس المحدد في لوحة الإعداد."
+    ),
+    "add.skeleton.modifier": (
+        "مُعدِّل Armature في قطعة الملابس لا يستخدم هيكل Durty Cloth Tool العظمي الخاص بها. اختر استخدام هيكل Durty "
+        "Cloth Tool العظمي مرة أخرى."
+    ),
+    "add.skeleton.order": (
+        "عظام الهيكل العظمي ليست بترتيب اللعبة، لذا ستحرك الأوزان العظام الخطأ. اختر استخدام هيكل Durty Cloth Tool "
+        "العظمي مرة أخرى بدلًا من تغيير عظامه."
+    ),
+    "add.skeleton.bones": (
+        "عدد عظام الهيكل العظمي {count}، لكن عدد عظام هيكل freemode العظمي {expected}. اختر استخدام هيكل Durty "
+        "Cloth Tool العظمي مرة أخرى بدلًا من تغيير عظامه."
+    ),
+    "add.skeleton.import": "لم يستورد Sollumz الهيكل العظمي كهيكل Armature واحد. التفاصيل في سجل Info الخاص به.",
+    "add.skeleton.invalid": (
+        "أرسل Durty Cloth Tool هيكلًا عظميًا لا تستطيع الإضافة قراءته. حدّث كليهما، ثم حاول مرة أخرى."
+    ),
+    "add.skeleton.game-required": (
+        "يحتاج Durty Cloth Tool إلى تثبيت GTA V لديك من أجل هيكل freemode العظمي. اضبط اللعبة في Durty Cloth Tool، "
+        "ثم حاول مرة أخرى."
+    ),
+    "add.skeleton.busy": "لا يزال Durty Cloth Tool يقرأ ملفات اللعبة. حاول مرة أخرى بعد لحظة.",
+    "add.dct-too-old": "لا يستطيع Durty Cloth Tool هذا إضافة ملابس من Blender بعد. حدّث Durty Cloth Tool.",
+    "add.done.skeleton": "قطعة الملابس على هيكل Durty Cloth Tool العظمي ({gender}، العظام: {count}): {name}.",
+    "add.fetching": "جارٍ جلب هيكل freemode العظمي ({gender}) من Durty Cloth Tool…",
+    "add.progress.skeleton": "جارٍ جلب هيكل freemode العظمي من Durty Cloth Tool…",
+    "add.sent": "أُرسل {name} (التنويعات اللونية: {count}). اختر إضافة إلى المشروع في Durty Cloth Tool.",
+    "add.waiting": "يعرض Durty Cloth Tool قطعة الملابس. اختر إضافة إلى المشروع أو إلغاء هناك.",
+    "add.waiting.subtext": "لا يُضاف شيء حتى تختار إضافة إلى المشروع في Durty Cloth Tool. يسحب إلغاء هنا طلب الإضافة.",
+    "add.withdrawing": "جارٍ إلغاء عملية الإضافة…",
+    "add.blocked": "عملية الإضافة محظورة: أصلح أولًا المشكلات المدرجة في لوحة جاهز للعبة ({count}).",
+    "add.problems": "أصلح هذه أولًا ({count}):",
+    "add.findings": "فحوصات Durty Cloth Tool: {count}",
+    "add.added.subtext": (
+        "الـ Drawable Dictionary مرتبط بقطعة الملابس الجديدة: يحدّثه إرسال النموذج وحفظ النموذج في قطعة الملابس في "
+        "لوحة النموذج (مضمّن في Durty Cloth Tool Ultimate)."
+    ),
+    "add.invalid": "لا يمكن إرسال طلب الإضافة: {detail}",
+    "add.why.connect": "اتصل بـ Durty Cloth Tool لإضافة قطعة الملابس إلى مشروع.",
+    "add.why.no-project": "افتح مشروعًا في Durty Cloth Tool لإضافة قطعة الملابس إليه.",
+    "add.why.adding": "هناك طلب إضافة ينتظر Durty Cloth Tool.",
+    "add.why.fetching": "بانتظار هيكل freemode العظمي من Durty Cloth Tool.",
+    "add.why.nothing-running": "لا يجري شيء.",
+    "add.why.no-template": "لم يرسل Durty Cloth Tool هيكل freemode العظمي. حاول مرة أخرى.",
+    "add.why.garment-changed": "اختيرت قطعة ملابس أخرى في الأثناء، لذا لم تُنفَّذ الخطوة. شغّلها مرة أخرى.",
+    "add.why.no-weights": (
+        "لا تحتوي قطعة الملابس على أوزان لهيكل freemode العظمي بعد. امنحها أوزانًا على عظام الهيكل العظمي "
+        "(مجموعات رؤوس تحمل أسماءها، مثل SKEL_Spine3)."
+    ),
+    "add.why.unknown-groups": (
+        "مجموعات رؤوس ليست من عظام هيكل freemode العظمي ({count}): {names}. أعد تسميتها أو أزلها؛ ستحركها اللعبة "
+        "مع عظمة الجذر."
+    ),
+    "add.why.name-empty": "امنح قطعة الملابس اسمًا.",
+    "add.why.name-invalid": "يمكن أن يحتوي اسم قطعة الملابس على {limit} حرفًا على الأكثر، ودون أحرف تحكم.",
+    "add.why.combine": "عدد المواد في قطعة الملابس: {count}. استخدم دمج المواد أولًا: كل تنويعة لونية نسيج واحد.",
+    "add.why.no-diffuse": "لا تحتوي مادة قطعة الملابس على نسيج لون. يُنشئ دمج المواد واحدًا.",
+    "add.why.variation-empty": "التنويعة اللونية {number} بلا صورة. اختر صورة، أو أزل الصف.",
+    "add.why.too-many": "الحد الأقصى للتنويعات اللونية في قطعة الملابس هو {limit}.",
+    "add.why.variation-twice": "الصورة {name} مستخدمة في تنويعتين لونيتين. تحتاج كل تنويعة إلى صورتها الخاصة.",
+    "add.why.too-large": (
+        "حجم النموذج وصوره معًا أكبر من {size} MiB ولا يمكن إرسالها. استخدم صورًا أصغر أو تنويعات لونية أقل."
+    ),
+    "add.why.work-folder": "مجلد الإضافة المخصص للتصدير رابط إلى مكان آخر، لذا لا يُستخدم.",
+    "add.why.convert": "تعذّر على Sollumz جعل قطعة الملابس Drawable Model ({detail}).",
+    "add.why.material": "تعذّر على Sollumz منح قطعة الملابس مظلّل الـ ped ({detail}).",
+    "add.picture.empty": "الصورة {name} بلا بكسلات.",
+    "add.picture.too-large": "يزيد ضلع الصورة {name} على {size} بكسل، وهذا ما لا يقبله Durty Cloth Tool.",
+    "add.picture.not-multiple-of-four": (
+        "أبعاد الصورة {name} هي {width} x {height}: يحتاج Durty Cloth Tool أن يقبل الضلعان القسمة على أربعة."
+    ),
+    "add.picture.non-power-of-two": (
+        "أبعاد الصورة {name} هي {width} x {height}، وليست قوة للعدد اثنين (مثل 1024 أو 2048)."
+    ),
+    "add.picture.large": "يزيد ضلع الصورة {name} على {size} بكسل، مما يستهلك الكثير من ذاكرة اللعبة.",
+    "add.picture.small": "يقل ضلع الصورة {name} عن {size} بكسل.",
+    "add.picture.unusable": "لا يمكن إرسال الصورة {name}: {problem}",
+    "add.export.empty": (
+        "صدّر Sollumz الـ Drawable Dictionary دون الشكل الهندسي لقطعة الملابس. التفاصيل في سجل Info الخاص به."
+    ),
+    "add.export.several": "صدّر Sollumz عدة drawable ({count})؛ يقبل Durty Cloth Tool واحدًا لكل قطعة ملابس.",
+    "add.export.skeleton": "لا يزال التصدير يحتوي على الهيكل العظمي. حدّث Sollumz، ثم حاول مرة أخرى.",
+    "add.export.errors": (
+        "أبلغ Sollumz عن أخطاء أثناء التصدير، لذا قد يكون جزء من قطعة الملابس مفقودًا. التفاصيل في سجل Info الخاص به."
+    ),
+    "add.export.unreadable": "تعذرت قراءة التصدير ({detail}).",
+    "add.export.warnings": "أبلغ Sollumz عن تحذيرات أثناء التصدير؛ التفاصيل في سجل Info الخاص به.",
+    "add.result.added": "تمت إضافة {name} إلى المشروع في الخانة {slot}.",
+    "add.result.added-unlinked": "تمت إضافة {name} إلى المشروع، لكن تعذّر ربط النموذج في Blender به ({detail}).",
+    "add.result.denied": "لم يُضف Durty Cloth Tool قطعة الملابس: اختير إلغاء هناك. لم يتغير المشروع.",
+    "add.result.withdrawn": "أُلغيت عملية الإضافة. لم يتغير المشروع.",
+    "add.result.cancel-unanswered": (
+        "أُلغيت عملية الإضافة، لكن Durty Cloth Tool لم يؤكد ذلك. تحقق من المشروع في Durty Cloth Tool."
+    ),
+    "add.result.timeout": (
+        "لم يرد Durty Cloth Tool على طلب الإضافة في الوقت المناسب. تحقق من المشروع في Durty Cloth Tool."
+    ),
+    "add.result.disconnected": (
+        "انقطع الاتصال بـ Durty Cloth Tool أثناء عملية الإضافة. تحقق من المشروع في Durty Cloth Tool قبل أن تضيف قطعة "
+        "الملابس مرة أخرى."
+    ),
+    "add.result.item-limit": (
+        "لم يُضف Durty Cloth Tool قطعة الملابس: يحتوي المشروع بالفعل على أكبر عدد من الملابس يسمح به الإصدار المجاني "
+        "من Durty Cloth Tool. يضع Durty Cloth Tool هذا الحد ويتحقق منه، لا الإضافة؛ وتحدد خطتك في Durty Cloth Tool "
+        "كم يمكنك أن تضيف."
+    ),
+    "add.result.rejected": (
+        "تعذّر على Durty Cloth Tool استخدام النموذج أو إحدى التنويعات اللونية، لذا لم يُضف شيء. توضح فحوصاته أدناه "
+        "السبب."
+    ),
+    "add.result.no-project": "افتح مشروعًا في Durty Cloth Tool أولًا، ثم أضف قطعة الملابس مرة أخرى.",
+    "add.result.item-refused": (
+        "لا يقبل هذا المشروع ملابس freemode بهذه الطريقة (مثل مشروع ped مخصص). افتح مشروع freemode في Durty Cloth "
+        "Tool."
+    ),
+    "add.result.busy": "Durty Cloth Tool مشغول (يجري بناء، أو ينتظر طلب إضافة آخر ردًا). حاول مرة أخرى بعد لحظة.",
+    "add.result.rate-limited": "طلبات إضافة كثيرة جدًا في وقت قصير. انتظر بضع ثوانٍ، ثم حاول مرة أخرى.",
+    "add.result.save-failed": "تعذر على Durty Cloth Tool إضافة قطعة الملابس. التفاصيل في شريط الحالة لديه.",
+    "add.finding.rig-invalid": (
+        "الأوزان أو فهارس العظام لا تناسب هيكل freemode العظمي: ستتحرك قطعة الملابس بشكل خاطئ في اللعبة."
+    ),
+    "add.finding.rig-unchecked": "تعذّر على Durty Cloth Tool قراءة الأوزان لفحصها.",
+    "add.finding.single-bone-rig": (
+        "تحمل عظمة واحدة تقريبًا كل وزن أحد مستويات التفاصيل، لذا لن تكاد قطعة الملابس تتحرك مع الجسم."
+    ),
+    "add.finding.hair-tint-unsupported": "لا يمكن لهذا الشعر أن يأخذ لون الشعر الذي يختاره اللاعب.",
+    "add.finding.picture.non-power-of-two": "حجم إحدى التنويعات اللونية ليس قوة للعدد اثنين (مثل 1024 أو 2048).",
+    "add.finding.picture.not-multiple-of-four": "حجم إحدى التنويعات اللونية لا يقبل القسمة على أربعة.",
+    "add.finding.picture.too-large": (
+        "إحدى التنويعات اللونية أكبر مما ينصح به Durty Cloth Tool (2048 بكسل للضلع؛ ويقبل 4096 على الأكثر)."
+    ),
+    "add.finding.picture.too-small": "يقل ضلع إحدى التنويعات اللونية عن 16 بكسل.",
 }

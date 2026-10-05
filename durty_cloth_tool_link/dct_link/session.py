@@ -60,6 +60,11 @@ __all__ = [
     "HostOpenModel",
     "Thumbnail",
     "ThumbnailRefusal",
+    "ModelFile",
+    "SkeletonTemplate",
+    "SkeletonTemplateRefusal",
+    "ItemAddRequest",
+    "ItemAddResult",
     "SignInPrompt",
     "DiscoveredEndpoint",
     "ASSERTION_AUDIENCE",
@@ -469,7 +474,8 @@ class Request:
 #: Requests DCT runs as services: at most ``MAX_SERVICE_IN_FLIGHT`` of them (model pushes included) are in
 #: flight per connection; DCT answers more with ``busy``, so the session queues the rest.
 SERVICE_TYPES = frozenset(
-    {"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push", "item.thumbnail"}
+    {"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push", "item.thumbnail",
+     "skeleton.template"}
 )
 MAX_SERVICE_IN_FLIGHT = 2
 
@@ -489,6 +495,8 @@ _RESPONSES: Dict[str, Tuple[str, ...]] = {
     "model.save": ("model.saveResult",),
     "model.discard": ("model.closed",),
     "item.thumbnail": ("item.thumbnail.data",),
+    "skeleton.template": ("skeleton.template.data",),
+    "item.add": ("item.addResult",),
 }
 
 
@@ -919,6 +927,177 @@ def _same_binding(a: Dict[str, str], b: Dict[str, str]) -> bool:
 
 def _is_binding(value: Any) -> bool:
     return isinstance(value, dict) and protocol.is_guid(value.get("clothId")) and protocol.is_guid(value.get("textureId"))
+
+
+# --------------------------------------------------------------------------------------------------
+# Adding an item (Blender): the skeleton template and item.add
+# --------------------------------------------------------------------------------------------------
+
+
+class ModelFile(NamedTuple):
+    """One file of a model DCT sent: a bare file name and its bytes."""
+
+    name: str
+    data: bytes
+
+
+class SkeletonTemplate(NamedTuple):
+    """The freemode skeleton of one gender (``skeleton.template.data``). ``files`` holds one ``*.ydd.xml`` whose only
+    drawable is the skeleton (its bones in the game's order) with an empty shader group, nothing else; Sollumz
+    imports it as an armature."""
+
+    gender: str
+    files: List[ModelFile]
+    ok: bool = True
+
+
+class SkeletonTemplateRefusal(NamedTuple):
+    """Why :meth:`LinkSession.request_skeleton_template` got no skeleton: DCT's error code (for example
+    ``game-required`` when DCT has no game files, ``busy`` while it still reads them)."""
+
+    code: str
+    ok: bool = False
+
+
+def _skeleton_answer(gender: str) -> Callable[[Any], Union[SkeletonTemplate, SkeletonTemplateRefusal]]:
+    """Turns DCT's answer to one ``skeleton.template`` into its result. A skeleton of the other gender does not answer
+    the request: ``protocol-violation``."""
+
+    def result(answer: Any) -> Union[SkeletonTemplate, SkeletonTemplateRefusal]:
+        if isinstance(answer, SkeletonTemplateRefusal):
+            return answer
+        header = answer.header
+        if header["gender"] != gender:
+            raise LinkError("protocol-violation", "DCT answered skeleton.template with the skeleton of another gender")
+        files, offset = [], 0
+        for entry in header["files"]:  # the codec checked the names and that the lengths add up
+            files.append(ModelFile(entry["name"], bytes(answer.payload[offset : offset + entry["length"]])))
+            offset += entry["length"]
+        return SkeletonTemplate(header["gender"], files)
+
+    return result
+
+
+class ItemAddResult(NamedTuple):
+    """DCT's answer to :meth:`LinkSession.add_item` (``item.addResult``, or an ``error`` that answered the add).
+
+    ``ok`` true: the cloth was added. ``binding`` names it and its first variation (``clothId``, ``textureId``), and
+    this connection may now read it and push and save its model. ``ok`` false: ``code`` says why, for example
+    ``request-denied`` (the user chose Cancel, or the add was withdrawn), ``item-limit`` (the free plan's project
+    limits), ``model-rejected`` (the model or a picture did not convert), ``busy``, ``rate-limited``, ``no-project``,
+    ``item-refused`` or ``save-failed``. ``findings`` are DCT's checks of the model and the variations (each a
+    ``code`` and a ``severity``), also when the add failed; empty when DCT answered with an error."""
+
+    ok: bool
+    code: Optional[str]
+    binding: Optional[Dict[str, str]]
+    findings: List[Dict[str, str]]
+
+
+def _item_add_answer(answer: Any) -> ItemAddResult:
+    if isinstance(answer, ItemAddResult):
+        return answer
+    binding = answer.get("binding")
+    return ItemAddResult(
+        bool(answer["ok"]),
+        answer.get("code"),
+        None if binding is None else {"clothId": binding["clothId"], "textureId": binding["textureId"]},
+        [{"code": finding["code"], "severity": finding["severity"]} for finding in answer["findings"]],
+    )
+
+
+#: Requests whose ``error`` answer is a typed refusal (a result of the request), not a failure of it.
+_REFUSALS: Dict[str, Callable[[str], Any]] = {
+    "item.thumbnail": ThumbnailRefusal,
+    "skeleton.template": SkeletonTemplateRefusal,
+    "item.add": lambda code: ItemAddResult(False, code, None, []),
+}
+
+#: How long a withdrawn ``item.add`` waits for DCT's ``item.addResult`` before it fails on its own.
+_ADD_CANCEL_GRACE_SECONDS = 10.0
+
+
+class ItemAddRequest(Request):
+    """A pending ``item.add`` (:meth:`LinkSession.add_item`). Resolves with an :class:`ItemAddResult`, whatever DCT
+    decided, and fails with :class:`LinkError` only when DCT gave no answer: ``disconnected``, or ``cancelled`` /
+    ``timeout`` when a withdrawn add got no answer in time.
+
+    When it times out, the session first withdraws the add (``item.addCancel``) and waits a short grace for DCT's
+    answer, exactly as :meth:`cancel` does."""
+
+    def __init__(self, session: "LinkSession", request_id: str, message_type: str, timeout: Optional[float]) -> None:
+        super().__init__(session, request_id, message_type, timeout)
+        self._withdrawn: Optional[str] = None  # "cancelled" or "timeout" once item.addCancel was sent
+
+    @property
+    def withdrawn(self) -> bool:
+        """``item.addCancel`` was sent for this add (by :meth:`cancel`, or when it timed out)."""
+        return self._withdrawn is not None
+
+    def cancel(self) -> bool:
+        """Withdraws the add while DCT still asks the user: sends ``item.addCancel`` once and keeps waiting up to 10
+        seconds for DCT's answer, normally ``request-denied`` (an :class:`ItemAddResult` with ``ok`` false). When the
+        user chose Add at that moment the answer is the added cloth; the result says which. Without an answer in time
+        the request fails with ``cancelled``. True when the cancel was sent now; False when the add has finished or
+        was withdrawn already. Callable from any thread."""
+        session = self.session
+        with session._lock:
+            sent = session._withdraw_add(self, "cancelled")
+        session._run_calls()
+        return sent
+
+
+def _pairs(values: Any, what: str, shape: str) -> List[Tuple[Any, Any]]:
+    try:
+        items = list(values)
+    except TypeError:
+        raise ValueError(f"{what} is a sequence of {shape} pairs") from None
+    for item in items:
+        if not isinstance(item, (tuple, list)) or len(item) != 2:
+            raise ValueError(f"each of {what} is a {shape} pair (a tuple of two)")
+    return [(item[0], item[1]) for item in items]
+
+
+def _prepare_item(
+    drawable_type: Any, gender: Any, skin: Any, name: Any, variations: Any, files: Any
+) -> Tuple[Dict[str, Any], List[Tuple[str, memoryview]], int]:
+    """Checks an ``item.add`` with the codec's rules before anything is sent. Returns its header (without an id), the
+    files as ``(name, view)`` and the payload size; raises ``ValueError`` with the rule that failed."""
+    if not isinstance(drawable_type, str) or drawable_type not in protocol.DRAWABLE_TYPES:
+        raise ValueError("drawable_type is one of protocol.DRAWABLE_TYPES (the game's tokens, such as jbib or p_head)")
+    if not isinstance(gender, str) or gender not in protocol.GENDERS:
+        raise ValueError("gender is 'male' or 'female'")
+    if type(skin) is not bool:
+        raise ValueError("skin is True or False")
+    if skin and protocol.is_prop_type(drawable_type):
+        raise ValueError("only a component shows skin; a prop (p_...) takes skin=False")
+    if not protocol.is_text(name):
+        raise ValueError("the name is 1 to 128 characters of display text without control characters")
+    prepared: List[Tuple[str, memoryview]] = []
+    for file_name, data in _pairs(files, "files", "(name, data)"):
+        try:
+            view = memoryview(data).cast("B")
+        except TypeError:
+            raise ValueError(f"the data of {file_name!r} is not bytes") from None
+        prepared.append((file_name, view))
+    entries = [{"name": file_name, "length": view.nbytes} for file_name, view in prepared]
+    chosen = [{"file": file, "name": title} for file, title in _pairs(variations, "variations", "(file, name)")]
+    reason = protocol.item_files_reason(entries, chosen)
+    if reason is not None:
+        raise ValueError(reason)
+    size = sum(entry["length"] for entry in entries)
+    if size > protocol.MAX_BINARY_PAYLOAD_BYTES:
+        raise ValueError("the item is larger than one binary frame allows (64 MiB)")
+    header: Dict[str, Any] = {"type": "item.add", "format": protocol.MODEL_YDD_XML, "drawableType": drawable_type,
+                              "gender": gender, "skin": skin, "name": name, "variations": chosen, "files": entries}
+    try:
+        # The whole codec, with the longest id the session could give it (the header has a size limit).
+        protocol.encode_binary_header(dict(header, id="x" * protocol.MAX_ID_LENGTH), size)
+    except ProtocolError as exc:
+        if exc.code == protocol.MESSAGE_TOO_LARGE:
+            raise ValueError("the file and variation lists do not fit one binary header (16 KiB)") from None
+        raise ValueError(f"DCT would refuse this item.add ({exc.code})") from None
+    return header, prepared, size
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1913,9 +2092,10 @@ class LinkSession:
         if kind == "error":
             if request is not None:
                 self._pending.pop(re_id, None)
-                if request.type == "item.thumbnail":
-                    # DCT refused the picture: an answer, not a failure of the request.
-                    self._finish_request(request, result=ThumbnailRefusal(message["code"]))
+                refusal = _REFUSALS.get(request.type)
+                if refusal is not None:
+                    # DCT refused the picture, the skeleton or the add: an answer, not a failure of the request.
+                    self._finish_request(request, result=refusal(message["code"]))
                 else:
                     self._finish_request(request, error=LinkError(message["code"], message.get("message") or ""))
             else:
@@ -2128,6 +2308,15 @@ class LinkSession:
 
     def _expire_requests(self, now: float) -> None:
         for request in [r for r in self._pending.values() if r.deadline is not None and now > r.deadline]:
+            if isinstance(request, ItemAddRequest):
+                if request._withdrawn is None:
+                    # DCT may still be asking the user: withdraw the add and wait a short grace for its answer.
+                    self._withdraw_add(request, "timeout")
+                else:
+                    self._pending.pop(request.id, None)
+                    self._finish_request(request, error=LinkError(
+                        request._withdrawn, "DCT did not answer the withdrawn item.add"))
+                continue
             self._pending.pop(request.id, None)
             if request.id in self._service_in_flight:
                 # DCT is still working on it; another request now would be answered busy.
@@ -2176,10 +2365,10 @@ class LinkSession:
         self._run_calls()
         return request
 
-    def _register(self, message_type: str, timeout: Optional[float]) -> Request:
+    def _register(self, message_type: str, timeout: Optional[float], kind: Callable[..., Request] = Request) -> Request:
         if self.state != READY:
             raise LinkError("not-authenticated", "the link is not ready")
-        request = Request(self, self._new_id(), message_type, self.request_timeout if timeout is None else timeout)
+        request = kind(self, self._new_id(), message_type, self.request_timeout if timeout is None else timeout)
         self._pending[request.id] = request
         return request
 
@@ -2224,6 +2413,86 @@ class LinkSession:
             raise ValueError("a binding names a cloth and a texture variation by their ids (8-4-4-4-12 hex digits)")
         return self.request("item.thumbnail", {"size": size, "binding": binding}, timeout=timeout,
                             transform=_thumbnail_answer(size, binding))
+
+    # ---- adding an item (Blender) --------------------------------------------------------------------
+
+    def request_skeleton_template(self, gender: str, timeout: Optional[float] = 90.0) -> Request:
+        """``skeleton.template``: the freemode skeleton of ``gender`` (``male`` or ``female``, ``ValueError``
+        otherwise), which DCT builds from the user's own game files. Resolves with a :class:`SkeletonTemplate` (one
+        ``*.ydd.xml`` in ``files``), or with a :class:`SkeletonTemplateRefusal` when DCT refused (its error code:
+        ``game-required`` without the game files, ``busy`` when DCT still reads them after a minute). Fails with
+        :class:`LinkError` when the request itself failed (``timeout``, ``disconnected``), and with
+        ``protocol-violation`` when DCT sends the skeleton of the other gender. It counts as a service request (two
+        at a time); DCT may wait up to a minute for its game files before it answers."""
+        if not isinstance(gender, str) or gender not in protocol.GENDERS:
+            raise ValueError("gender is 'male' or 'female'")
+        return self.request("skeleton.template", {"gender": gender}, timeout=timeout, transform=_skeleton_answer(gender))
+
+    def add_item(
+        self,
+        drawable_type: str,
+        gender: str,
+        skin: bool,
+        name: str,
+        variations: Sequence[Tuple[str, str]],
+        files: Sequence[Tuple[str, Union[bytes, bytearray, memoryview]]],
+        timeout: Optional[float] = 900.0,
+    ) -> ItemAddRequest:
+        """``item.add``: adds a new cloth to the open project. DCT shows the user what arrives and adds nothing unless
+        the user chooses Add there, so the answer can take minutes.
+
+        ``drawable_type`` is the slot (one of :data:`protocol.DRAWABLE_TYPES`, such as ``jbib`` or ``p_head``),
+        ``gender`` is ``male`` or ``female``, ``skin`` says the cloth shows skin (components only, never a ``p_``
+        prop) and ``name`` is the name the user sees. ``files`` lists ``(name, data)`` in payload order: one
+        ``*.ydd.xml``, its ``*.dds`` textures, then the variation diffuses as ``*.png`` or ``*.dds``; names are bare
+        and unique ignoring case, and no file is empty. ``variations`` lists ``(file, name)`` per colour variation,
+        1 to :data:`protocol.MAX_ITEM_VARIATIONS` (26) in order: ``file`` names that variation's diffuse among
+        ``files`` (never the model, no two the same), ``name`` is its display name; every ``*.png`` is some
+        variation's diffuse. A broken rule raises ``ValueError`` before anything is sent. The data is sent as given,
+        without a copy: do not change it until the request finishes.
+
+        Resolves with an :class:`ItemAddResult`, whatever DCT decided (also when DCT answered with an error such as
+        ``busy`` or ``rate-limited``). Fails with :class:`LinkError` only when no answer came: ``disconnected``, or
+        ``timeout`` / ``cancelled`` when the withdrawn add (see :meth:`ItemAddRequest.cancel`; a timeout withdraws
+        it too) got no answer within 10 seconds. It does not take a service slot. Callable from any thread."""
+        header, files_out, size = _prepare_item(drawable_type, gender, skin, name, variations, files)
+        with self._lock:
+            request = self._register("item.add", timeout, ItemAddRequest)
+            request.transform = _item_add_answer
+            header["id"] = request.id
+            ws = self._ws
+            try:
+                # The files are written one after another; they are never joined in memory.
+                prefix = protocol.encode_binary_header(header, size)
+                if ws is None or not ws.is_open:
+                    raise LinkError("disconnected", "not connected to DCT")
+                ws.send_binary(prefix, *(data for _, data in files_out))
+            except (LinkError, ProtocolError, WebSocketError) as exc:
+                self._pending.pop(request.id, None)
+                if isinstance(exc, LinkError):
+                    error = exc
+                elif isinstance(exc, ProtocolError):
+                    error = LinkError(exc.code, str(exc))
+                else:
+                    error = LinkError("disconnected", str(exc))
+                self._finish_request(request, error=error)
+        self._run_calls()
+        return request  # type: ignore[return-value]
+
+    def _withdraw_add(self, request: ItemAddRequest, reason: str) -> bool:
+        """Sends ``item.addCancel`` for an add that still waits, once, and gives DCT a short grace to answer it (its
+        answer then resolves the request as usual). Under the lock."""
+        if request.done or request._withdrawn is not None or self._pending.get(request.id) is not request:
+            return False
+        request._withdrawn = reason
+        request.deadline = self._clock() + _ADD_CANCEL_GRACE_SECONDS
+        try:
+            self._send({"type": "item.addCancel", "id": self._new_id(), "re": request.id})
+        except LinkError as exc:
+            self._pending.pop(request.id, None)
+            self._finish_request(request, error=exc)
+            return False
+        return True
 
     # ---- live textures -------------------------------------------------------------------------------
 

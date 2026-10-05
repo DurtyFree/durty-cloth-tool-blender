@@ -165,6 +165,104 @@ def body(arm_angle: float = 45.0) -> Mesh:
     return builder.mesh(joints)
 
 
+#: A small skeleton in the shape of a freemode skeleton (made up, nothing of the game): (name, parent index, head in
+#: ped space). The bones are listed depth first with each bone's children in order, as a ped skeleton lists them,
+#: so a bone's index is its position in the armature Sollumz imports.
+SKELETON_BONES = (
+    ("SKEL_ROOT", -1, (0.0, 0.0, 0.0)),
+    ("SKEL_Pelvis", 0, (0.0, 0.0, -0.02)),
+    ("SKEL_L_Thigh", 1, (0.09, 0.0, -0.1)),
+    ("SKEL_L_Calf", 2, (0.1, 0.0, -0.55)),
+    ("SKEL_L_Foot", 3, (0.11, 0.0, -0.95)),
+    ("SKEL_R_Thigh", 1, (-0.09, 0.0, -0.1)),
+    ("SKEL_R_Calf", 5, (-0.1, 0.0, -0.55)),
+    ("SKEL_R_Foot", 6, (-0.11, 0.0, -0.95)),
+    ("SKEL_Spine_Root", 0, (0.0, 0.0, 0.0)),
+    ("SKEL_Spine0", 8, (0.0, 0.0, 0.08)),
+    ("SKEL_Spine1", 9, (0.0, 0.0, 0.16)),
+    ("SKEL_Spine2", 10, (0.0, 0.0, 0.26)),
+    ("SKEL_Spine3", 11, (0.0, 0.0, 0.36)),
+    ("SKEL_L_Clavicle", 12, (0.04, 0.0, 0.44)),
+    ("SKEL_L_UpperArm", 13, (SHOULDER, 0.0, SHOULDER_Z)),
+    ("SKEL_L_Forearm", 14, (SHOULDER + 0.198, 0.0, SHOULDER_Z - 0.198)),
+    ("SKEL_L_Hand", 15, (SHOULDER + 0.382, 0.0, SHOULDER_Z - 0.382)),
+    ("SKEL_R_Clavicle", 12, (-0.04, 0.0, 0.44)),
+    ("SKEL_R_UpperArm", 17, (-SHOULDER, 0.0, SHOULDER_Z)),
+    ("SKEL_R_Forearm", 18, (-SHOULDER - 0.198, 0.0, SHOULDER_Z - 0.198)),
+    ("SKEL_R_Hand", 19, (-SHOULDER - 0.382, 0.0, SHOULDER_Z - 0.382)),
+    ("SKEL_Neck_1", 12, (0.0, 0.0, NECK_Z - 0.01)),
+    ("SKEL_Head", 21, (0.0, 0.0, 0.62)),
+)
+
+
+def skeleton_names() -> List[str]:
+    return [name for name, _, _ in SKELETON_BONES]
+
+
+def skeleton_template_xml(gender: str = "male", bones=SKELETON_BONES) -> bytes:
+    """A skeleton template as Durty Cloth Tool sends it for ``skeleton.template``, in CodeWalker XML: one drawable named
+    after the freemode ped of ``gender`` that holds only the skeleton and an empty shader group. The skeleton is
+    :data:`SKELETON_BONES` (synthetic; no game data)."""
+    ped = "mp_m_freemode_01" if gender == "male" else "mp_f_freemode_01"
+    children: Dict[int, List[int]] = {}
+    for index, (_, parent, _) in enumerate(bones):
+        children.setdefault(parent, []).append(index)
+    items = []
+    for index, (name, parent, head) in enumerate(bones):
+        siblings = children[parent]
+        position = siblings.index(index)
+        sibling = siblings[position + 1] if position + 1 < len(siblings) else -1
+        origin = bones[parent][2] if parent >= 0 else (0.0, 0.0, 0.0)
+        x, y, z = (round(head[i] - origin[i], 6) for i in range(3))
+        items.append(
+            f"        <Item>\n"
+            f"          <Name>{name}</Name>\n"
+            f"          <Tag value=\"{1000 + index}\" />\n"
+            f"          <Index value=\"{index}\" />\n"
+            f"          <ParentIndex value=\"{parent}\" />\n"
+            f"          <SiblingIndex value=\"{sibling}\" />\n"
+            f"          <Flags>RotX, RotY, RotZ</Flags>\n"
+            f"          <Translation x=\"{x}\" y=\"{y}\" z=\"{z}\" />\n"
+            f"          <Rotation x=\"0\" y=\"0\" z=\"0\" w=\"1\" />\n"
+            f"          <Scale x=\"1\" y=\"1\" z=\"1\" />\n"
+            f"          <TransformUnk x=\"0\" y=\"0\" z=\"0\" w=\"0\" />\n"
+            f"        </Item>\n")
+    text = (
+        "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        "<DrawableDictionary>\n"
+        "  <Item>\n"
+        f"    <Name>{ped}</Name>\n"
+        "    <BoundingSphereCenter x=\"0\" y=\"0\" z=\"-0.2\" />\n"
+        "    <BoundingSphereRadius value=\"1.1\" />\n"
+        "    <BoundingBoxMin x=\"-0.6\" y=\"-0.2\" z=\"-1\" />\n"
+        "    <BoundingBoxMax x=\"0.6\" y=\"0.2\" z=\"0.7\" />\n"
+        "    <LodDistHigh value=\"9998\" />\n"
+        "    <LodDistMed value=\"9998\" />\n"
+        "    <LodDistLow value=\"9998\" />\n"
+        "    <LodDistVlow value=\"9998\" />\n"
+        "    <ShaderGroup>\n"
+        "      <Shaders />\n"
+        "    </ShaderGroup>\n"
+        "    <Skeleton>\n"
+        "      <Unknown1C value=\"16777216\" />\n"
+        "      <Unknown50 value=\"567032952\" />\n"
+        "      <Unknown54 value=\"2134582703\" />\n"
+        "      <Unknown58 value=\"2503907467\" />\n"
+        "      <Bones>\n"
+        + "".join(items) +
+        "      </Bones>\n"
+        "    </Skeleton>\n"
+        "  </Item>\n"
+        "</DrawableDictionary>\n"
+    )
+    return text.encode("utf-8")
+
+
+def skeleton_template_file(gender: str = "male") -> str:
+    """The file name Durty Cloth Tool gives the template (the drawable is named after the ped, the file differs)."""
+    return ("mp_m_freemode_01" if gender == "male" else "mp_f_freemode_01") + "_skeleton.ydd.xml"
+
+
 def triangles(faces: List[Tuple[int, ...]]) -> np.ndarray:
     tris = []
     for face in faces:

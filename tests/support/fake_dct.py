@@ -8,7 +8,9 @@ Adapted from the dct_link test suite (MIT, like dct_link itself). Changes: the p
 same file serves pytest and the Blender smoke (which uses the add-on's vendored copy); a ``glb`` model push is
 answered with ``unsupported-format`` as Durty Cloth Tool does today; ``save_busy`` makes ``model.save`` answer
 ``busy`` that many times; ``texture.read`` answers for the cloth and map asked for; ``open_texture`` and
-``open_model`` send ``host.openTexture`` and ``host.openModel`` as Durty Cloth Tool's "Edit in connected app" does.
+``open_model`` send ``host.openTexture`` and ``host.openModel`` as Durty Cloth Tool's "Edit in connected app" does;
+``skeleton.template`` answers with a synthetic skeleton template (or ``skeleton_files``), and ``item.add`` with
+``add_result`` (``hold_adds`` keeps it waiting like Durty Cloth Tool's dialog, ``item.addCancel`` answers it as refused).
 Standard library only.
 """
 
@@ -45,15 +47,21 @@ def assertion_claims(assertion: str) -> Dict[str, Any]:
     except (ValueError, IndexError):
         return {}
 BINDING = {"clothId": "3f2b8c1e-7a4d-4e8b-9c1f-2d6e5a7b8c90", "textureId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"}
+#: The cloth an item.add creates (and its first variation).
+ADDED_BINDING = {"clothId": "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b", "textureId": "6f7a8b9c-0d1e-4f2a-9b3c-4d5e6f7a8b9c"}
+#: What skeleton.template.data carries unless ``skeleton_files`` says otherwise (a stand-in for DCT's skeleton-only
+#: YDD XML; the tests and the smoke give it a synthetic skeleton).
+SKELETON_XML = b'<?xml version="1.0" encoding="UTF-8"?>\n<DrawableDictionary><Item><Skeleton /></Item></DrawableDictionary>\n'
 #: The features Durty Cloth Tool checks itself and reports in welcome and event.entitlement, in its order.
 DCT_FEATURES = ("dct.link.connect", "dct.link.context", "dct.link.liveTexture", "dct.link.save", "dct.link.model",
-                "dct.link.services", "dct.studio.edit", "dct.studio.materials")
+                "dct.link.services", "dct.link.addItem", "dct.studio.edit", "dct.studio.materials")
 #: The request types DCT checks against a feature before it does anything (answered with needs-license or
 #: needs-ultimate otherwise).
 GATED_REQUESTS = {"live.open": "dct.link.liveTexture", "live.save": "dct.link.save",
                   "texture.read": "dct.link.services", "texture.validate": "dct.link.services",
                   "uv.layout": "dct.link.services", "model.glb": "dct.link.services", "body.glb": "dct.link.services",
-                  "item.thumbnail": "dct.link.services", "model.save": "dct.link.model"}
+                  "item.thumbnail": "dct.link.services", "model.save": "dct.link.model",
+                  "skeleton.template": "dct.link.addItem", "item.add": "dct.link.addItem"}
 REFUSALS = {"needsLicense": "needs-license", "needsUltimate": "needs-ultimate"}
 
 
@@ -92,6 +100,7 @@ class Connection:
         self.close_code: Optional[int] = None
         self.model_revision = 0
         self.converting: set = set()  # model leases whose push is still converting
+        self.waiting_adds: Dict[str, Dict[str, Any]] = {}  # item.add headers by id while "the user" decides
         # DCT's message budget: about 1000 messages a second, bursts up to 2000, then close 4008.
         self.message_tokens = float(server.message_burst)
         self.message_clock = time.monotonic()
@@ -351,6 +360,21 @@ class Connection:
             self.reply(m, {"type": "context.snapshot", "project": {"name": "FS Studio Clothing"}, "focused": focused})
         elif kind == "host.result":
             server.host_results.append(m)  # the answer to host.openTexture or host.openModel; nothing goes back
+        elif kind == "skeleton.template":
+            # DCT's skeleton-only YDD XML of the gender asked for (skeleton_files: other files, any gender).
+            server.templates_sent.append(m["gender"])
+            gender = m["gender"]
+            files = server.skeleton_files.get(gender) if server.skeleton_files else None
+            files = files or [(f"mp_{gender[0]}_freemode_01_skeleton.ydd.xml", SKELETON_XML)]
+            header = {"type": "skeleton.template.data", "re": m["id"], "gender": gender, "format": "ydd-xml",
+                      "files": [{"name": name, "length": len(data)} for name, data in files]}
+            self.send_binary(header, b"".join(data for _, data in files))
+        elif kind == "item.addCancel":
+            server.add_cancels.append(m["re"])
+            # Like the user choosing Cancel: the add answers request-denied. A cancel for an add that already
+            # answered, or that never was, has no reply of its own.
+            if self.waiting_adds.pop(m["re"], None) is not None:
+                self.answer_add(m["re"], {"ok": False, "code": "request-denied", "findings": []})
         elif kind == "item.thumbnail":
             # DCT's picture: its longest edge is at most the size asked for (here 2:1, at most 8 wide).
             reply = server.thumbnail_reply or {}
@@ -421,6 +445,12 @@ class Connection:
             server.byes += 1
             self.close(1000, "bye")
 
+    def answer_add(self, add_id: str, result: Optional[Dict[str, Any]] = None) -> None:
+        """Answers the item.add ``add_id`` with item.addResult (the server's ``add_result`` unless one is given)."""
+        message: Dict[str, Any] = {"type": "item.addResult", "id": "ar" + secrets.token_hex(3), "re": add_id}
+        message.update(result if result is not None else self.server.add_result)
+        self.send(message)
+
     def kick(self, code: str) -> None:
         """What DCT does when it signs out (``dct-signed-out``), switches account (``account-mismatch``) or the user
         disconnects the app in DCT (``disconnected``)."""
@@ -485,6 +515,19 @@ class Connection:
             timer = threading.Timer(server.push_delay, finish)
             timer.daemon = True
             timer.start()
+        elif header["type"] == "item.add":
+            files, offset = [], 0
+            for entry in header["files"]:
+                files.append((entry["name"], payload[offset : offset + entry["length"]]))
+                offset += entry["length"]
+            server.item_adds.append((header, files))
+            code = server.fail.get("item.add") or server.refusal("item.add")
+            if code is not None:  # busy, rate-limited, no-project ...: an error that answers the add
+                self.send({"type": "error", "id": "e" + secrets.token_hex(3), "re": header["id"], "code": code})
+            elif server.hold_adds:
+                self.waiting_adds[header["id"]] = header  # "the user" decides later (release_adds or a cancel)
+            else:
+                self.answer_add(header["id"])
 
 
 class FakeDct:
@@ -512,6 +555,17 @@ class FakeDct:
         self.focused: Optional[Dict[str, Any]] = None
         #: Answer item.thumbnail with a picture of this width, height or binding, whatever was asked for.
         self.thumbnail_reply: Optional[Dict[str, Any]] = None
+        #: The files skeleton.template answers with, per gender (``None``: a stand-in without bones). An error answer
+        #: (game-required, busy) goes through ``fail`` like any other request.
+        self.skeleton_files: Optional[Dict[str, List[Any]]] = None
+        self.templates_sent: List[str] = []  # the gender of every skeleton.template answered
+        #: The fields of the item.addResult that answers an item.add (default: added, no findings).
+        self.add_result: Dict[str, Any] = {"ok": True, "binding": dict(ADDED_BINDING), "findings": []}
+        #: Keep every item.add waiting, as DCT does while its dialog is open: release_adds() answers them with
+        #: add_result, an item.addCancel with request-denied.
+        self.hold_adds = False
+        self.item_adds: List[Any] = []  # (header, [(name, data)]) per item.add received
+        self.add_cancels: List[str] = []  # the add ids item.addCancel named
         self.host_results: List[Dict[str, Any]] = []
         self.fragment_size = 0
         self.frame_delay = 0.0
@@ -629,6 +683,16 @@ class FakeDct:
             finally:
                 self.hold_types = server_hold
         return len(held)
+
+    def release_adds(self, result: Optional[Dict[str, Any]] = None) -> int:
+        """The user chose Add for every waiting item.add: each answers with ``result`` (default ``add_result``)."""
+        count = 0
+        for connection in list(self.all_connections):
+            waiting, connection.waiting_adds = connection.waiting_adds, {}
+            for add_id in waiting:
+                connection.answer_add(add_id, result)
+                count += 1
+        return count
 
     def broadcast(self, message: Dict[str, Any]) -> None:
         for connection in list(self.connections_ready):

@@ -51,6 +51,8 @@ FEATURE_LIVE_TEXTURE = "dct.link.liveTexture"
 FEATURE_SAVE = "dct.link.save"
 FEATURE_MODEL = "dct.link.model"
 FEATURE_SERVICES = "dct.link.services"
+#: Adding a new cloth to the open project (every plan; Durty Cloth Tool applies its own project limits).
+FEATURE_ADD_ITEM = "dct.link.addItem"
 
 MAX_TEXTURE_EDGE = protocol.MAX_TEXTURE_EDGE
 AUTO_PUSH_DELAY_DEFAULT = 1.5

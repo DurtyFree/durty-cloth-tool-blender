@@ -27,7 +27,7 @@ import time
 import traceback
 from typing import Any, Callable, Deque, Dict, List, NamedTuple, Optional, Protocol, Set
 
-from . import bundle, settings
+from . import bundle, garment_add, settings
 from .dct_link import auth, protocol, tokens
 from .dct_link.session import (
     AUTHENTICATING,
@@ -45,6 +45,7 @@ from .dct_link.session import (
     PluginInfo,
     Request,
     SignInPrompt,
+    SkeletonTemplate,
     Thumbnail,
 )
 from .pixels import Conversion, StreamBuffers, limit_rects
@@ -989,6 +990,191 @@ class ModelPush:
 
 
 # --------------------------------------------------------------------------------------------------
+# Adding a garment: the skeleton template and item.add
+# --------------------------------------------------------------------------------------------------
+
+
+class SkeletonTemplates:
+    """The freemode skeleton templates Durty Cloth Tool sent (``skeleton.template``), kept per gender for as long as
+    Blender runs: DCT builds them from the user's own game files, which do not change while it runs."""
+
+    def __init__(self, controller: "LinkController") -> None:
+        self.controller = controller
+        self._cache: Dict[str, SkeletonTemplate] = {}
+        self._bones: Dict[str, List[str]] = {}
+        self._requests: Dict[str, Request] = {}
+        #: Why the last request for a gender brought no template (a :class:`Notice`), until the next request.
+        self.problems: Dict[str, Notice] = {}
+
+    def get(self, gender: str) -> Optional[SkeletonTemplate]:
+        return self._cache.get(gender)
+
+    def bones(self, gender: str) -> Optional[List[str]]:
+        """The template's bone names in the game's order (``None`` until it arrived)."""
+        return self._bones.get(gender)
+
+    def fetching(self, gender: str) -> bool:
+        request = self._requests.get(gender)
+        return request is not None and not request.done
+
+    def fetch(self, gender: str) -> Optional[Request]:
+        """Asks DCT for the template of ``gender`` unless it is kept already or on its way. Raises
+        :class:`strings.UserError` when the link is not ready."""
+        if gender in self._cache:
+            return None
+        pending = self._requests.get(gender)
+        if pending is not None and not pending.done:
+            return pending
+        session = self.controller.ready_session()
+        problem = self.controller.feature_problem(settings.FEATURE_ADD_ITEM)
+        if problem is not None:
+            raise UserError(problem)
+        self.problems.pop(gender, None)
+        request = session.request_skeleton_template(gender)
+        self._requests[gender] = request
+        request.add_done_callback(lambda done, gender=gender: self._on_template(done, gender))
+        self.controller.touch()
+        return request
+
+    def _on_template(self, request: Request, gender: str) -> None:
+        if self._requests.get(gender) is request:
+            del self._requests[gender]
+        if request.error is not None:
+            code = request.error.code
+            self.controller._remember_error(code)
+            self.problems[gender] = Notice("WARNING" if code in ("disconnected", "timeout") else "ERROR",
+                                           garment_add.template_refusal(code))
+        elif not getattr(request.result(), "ok", False):
+            code = request.result().code
+            self.controller._remember_error(code)
+            self.problems[gender] = Notice("ERROR", garment_add.template_refusal(code))
+        else:
+            template = request.result()
+            try:
+                bones = garment_add.template_bones(template.files[0].data)
+            except garment_add.TemplateError:
+                self.problems[gender] = Notice("ERROR", msg("add.skeleton.invalid"))
+            else:
+                self._cache[gender] = template
+                self._bones[gender] = bones
+        self.controller.touch()
+
+    def forget(self) -> None:
+        """Drops the kept templates (for tests; a running Blender keeps them)."""
+        self._cache.clear()
+        self._bones.clear()
+        self.problems.clear()
+
+
+class ItemAdd:
+    """Adds a garment as a new cloth to the project open in DCT (``item.add``) and keeps the outcome for the panel. DCT
+    shows the cloth in a dialog of its own and adds nothing unless the user chooses Add there; until then the add-on
+    can withdraw it (``item.addCancel``)."""
+
+    def __init__(self, controller: "LinkController") -> None:
+        self.controller = controller
+        self.request: Optional[Request] = None
+        self.status: Optional[Notice] = None
+        #: DCT's checks of the model and the variations from the last answer, errors first.
+        self.findings: List[Dict[str, str]] = []
+        #: The cloth the last add made: its name, slot (drawable type) and binding.
+        self.added: Optional[Dict[str, Any]] = None
+        self._plan: Optional[Dict[str, Any]] = None
+        self._on_added: Optional[Callable[[Dict[str, str]], None]] = None
+
+    @property
+    def adding(self) -> bool:
+        return self.request is not None and not self.request.done
+
+    @property
+    def withdrawing(self) -> bool:
+        return self.adding and bool(getattr(self.request, "withdrawn", False))
+
+    def problem(self) -> Optional[Msg]:
+        """Why an add cannot start now (the link, DCT's project, one add at a time), or ``None``."""
+        if not self.controller.ready:
+            return msg("notice.connect-first")
+        if self.controller.project is None:
+            return msg("add.why.no-project")
+        if self.adding:
+            return msg("add.why.adding")
+        return self.controller.feature_problem(settings.FEATURE_ADD_ITEM)
+
+    def start(self, drawable_type: str, gender: str, skin: bool, name: str, variations: List[Any], files: List[Any],
+              *, on_added: Optional[Callable[[Dict[str, str]], None]] = None) -> Request:
+        """Sends the add. ``on_added(binding)`` runs once DCT added the cloth. Raises :class:`strings.UserError` when it
+        cannot be sent now, with what to do."""
+        session = self.controller.ready_session()
+        problem = self.problem()
+        if problem is not None:
+            raise UserError(problem)
+        try:
+            request = session.add_item(drawable_type, gender, skin, name, variations, files)
+        except ValueError as exc:
+            raise UserError(msg("add.invalid", detail=str(exc))) from exc
+        self.request = request
+        self._plan = {"name": name, "slot": drawable_type, "gender": gender}
+        self._on_added = on_added
+        self.findings = []
+        self.added = None
+        self.status = Notice("INFO", msg("add.waiting"))
+        request.add_done_callback(self._on_done)
+        self.controller.touch()
+        return request
+
+    def cancel(self) -> bool:
+        """Withdraws the add while DCT's dialog is open. DCT answers it as refused, unless the user chose Add at that
+        moment (then the cloth is added after all, and the panel says so)."""
+        request = self.request
+        if request is None or request.done:
+            return False
+        sent = bool(request.cancel())  # type: ignore[attr-defined]
+        if sent:
+            self.status = Notice("INFO", msg("add.withdrawing"))
+            self.controller.touch()
+        return sent
+
+    def _on_done(self, request: Request) -> None:
+        if request is not self.request:
+            return
+        withdrawn = bool(getattr(request, "withdrawn", False))
+        plan = self._plan or {}
+        on_added, self._on_added = self._on_added, None
+        if request.error is not None:
+            self.controller._remember_error(request.error.code)
+            self.status = Notice(*garment_add.failure_message(request.error.code))
+            self.findings = []
+            self.controller.touch()
+            return
+        result = request.result()
+        self.findings = garment_add.sorted_findings(result.findings)
+        if result.ok:
+            binding = dict(result.binding or {})
+            self.added = {"name": plan.get("name"), "slot": plan.get("slot"), "binding": binding}
+            self.status = Notice("INFO", msg("add.result.added", name=plan.get("name") or "",
+                                             slot=msg(f"garment.slot.{plan.get('slot')}")
+                                             if plan.get("slot") in garment_add.SLOTS else plan.get("slot") or ""))
+            if on_added is not None:
+                try:
+                    on_added(binding)
+                except Exception as exc:  # noqa: BLE001 - the cloth is added; only the link in Blender failed
+                    traceback.print_exc()
+                    self.status = Notice("WARNING", msg("add.result.added-unlinked", name=plan.get("name") or "",
+                                                        detail=f"{type(exc).__name__}: {exc}"))
+        else:
+            self.controller._remember_error(result.code)
+            self.status = Notice(*garment_add.result_message(result.code, withdrawn=withdrawn))
+        self.controller.touch()
+
+    def forget(self) -> None:
+        """Clears the outcome shown in the panel (another garment, another file)."""
+        if not self.adding:
+            self.status = None
+            self.findings = []
+            self.added = None
+
+
+# --------------------------------------------------------------------------------------------------
 # The controller
 # --------------------------------------------------------------------------------------------------
 
@@ -1214,6 +1400,8 @@ class LinkController:
 
         self.stream = TextureStream(self)
         self.model = ModelPush(self)
+        self.skeletons = SkeletonTemplates(self)
+        self.item_add = ItemAdd(self)
 
     # ---- set-up --------------------------------------------------------------------------------------
 
@@ -1502,6 +1690,8 @@ class LinkController:
             f"dct state: {stream.live_state or 'none'}; paused: {stream.paused}; findings: "
             f"{len(stream.findings) if stream.findings is not None else 'none'}",
             f"model: {'pushed' if model.lease else 'none'}; pushing: {model.pushing}; automatic paused: {model.paused}",
+            f"add: {'waiting' if self.item_add.adding else 'added' if self.item_add.added else 'none'}; skeletons: "
+            f"{', '.join(sorted(g for g in ('male', 'female') if self.skeletons.get(g))) or 'none'}",
             f"recent errors: {', '.join(self.recent_errors) or 'none'}",
         ]
         for key, value in (extra or {}).items():
@@ -1641,7 +1831,7 @@ class LinkController:
             traceback.print_exc()
             self.model.status = Notice("ERROR", msg("model.failed", detail=f"{type(exc).__name__}: {exc}"))
             self.touch()
-        working = self.stream.active or self.model.pushing or self._model_import is not None
+        working = self.stream.active or self.model.pushing or self._model_import is not None or self.item_add.adding
         waiting = (self._sign_in_task is not None or self._logout_task is not None or self.active_sign_in() is not None
                    or self._browser_fallback_at is not None)
         state = self.session.state if self.session is not None else IDLE
