@@ -93,6 +93,8 @@ TEXT = {
     "open.model-failed": "无法打开模型 {name}：{detail}",
     "open.import-failed": "Sollumz 无法导入该模型（{detail}）。详情见其 Info 日志。",
     "open.no-dictionary": "Sollumz 没有导入 Drawable Dictionary。详情见其 Info 日志。",
+    "open.import-errors": "Sollumz 在导入时报告了错误，因此该模型没有关联到服装。详情见其 Info 日志。",
+    "open.model-warnings": "已从 Durty Cloth Tool 打开：{name}。Sollumz 报告了警告；详情见其 Info 日志。",
     "live.off": "启动实时预览，即可在 ped 上看到你的绘制。",
     "live.reading": "正在读取图像…",
     "live.starting": "正在启动实时预览…",
@@ -180,6 +182,9 @@ TEXT = {
     "model.wait.tool": "自动发送会等待正在运行的工具结束。",
     "model.wait.mode": "自动发送会等待你离开 {mode}。",
     "model.gone": "已发送的模型不在此文件中了。请重新发送。",
+    "model.linked": "已关联到 {name}",
+    "model.linked-twice": "{name} 关联到同一件服装。请解除其中一个的关联：每件服装只接受一个模型。",
+    "model.not-linked": "此 Drawable Dictionary 没有关联到服装。",
     "model.failed": "自动发送失败：{detail}",
     "model.select": "请选择要发送的模型：一个 Sollumz Drawable Dictionary 或其中的对象。",
     "model.one-root": "只能选择同一个 Drawable Dictionary 中的对象。",
@@ -253,6 +258,7 @@ TEXT = {
         "发来的模型会被导入、关联到它的服装，并在每次修改后再次发送。在你选择将模型保存到服装之前，不会保存任何内容。"
     ),
     "info.open-map": "把这件服装的这张贴图从你的项目中作为图像在 Blender 中打开，关联到该服装，并启动它的实时预览。Durty Cloth Tool 也可以发送贴图：服装菜单中的 {edit}。",
+    "info.model-linked": "从 Durty Cloth Tool 打开的模型会记住它的服装，保存的 .blend 文件中也会保留，因此总是发送到该服装。用复制得到的副本也带有该关联：请解除不应关联的那一个。",
     "info.linked": (
         "从 Durty Cloth Tool 打开的图像会记住它的服装和贴图，保存的 .blend 文件中也会保留，因此它的实时预览总是发送到该服装。在实时预览中解除关联，即可把它用于在 Durty Cloth Tool "
         "中选择的服装。"
@@ -286,6 +292,7 @@ TEXT = {
     "op.open-map.desc": "把这件服装的这张贴图从你的项目中作为关联到该服装的图像打开，并启动它的实时预览",
     "op.unlink": "解除关联",
     "op.unlink.desc": "不再把这张图像关联到它的服装，使它跟随你在 Durty Cloth Tool 中的选择",
+    "op.unlink-model.desc": "不再把此 Drawable Dictionary 关联到它的服装。它的下一次首次发送会发往在 Durty Cloth Tool 中选择的服装",
     "op.use-paint-image": "使用正在绘制的图像",
     "op.use-paint-image.desc": "使用你正在绘制的图像，或 Image Editor 中的图像",
     "op.live-start": "启动实时预览",

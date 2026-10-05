@@ -131,6 +131,13 @@ EN: Dict[str, str] = {
     "open.model-failed": "The model {name} could not be opened: {detail}",
     "open.import-failed": "Sollumz could not import the model ({detail}). Its Info log has the details.",
     "open.no-dictionary": "Sollumz did not import a Drawable Dictionary. Its Info log has the details.",
+    "open.import-errors": (
+        "Sollumz reported errors while importing the model, so it was not linked to the cloth. Its Info log has the "
+        "details."
+    ),
+    "open.model-warnings": (
+        "Opened from Durty Cloth Tool: {name}. Sollumz reported warnings; its Info log has the details."
+    ),
     # ---- live preview -------------------------------------------------------------------------------------
     "live.off": "Start the live preview to see your paint on the ped.",
     "live.reading": "Reading the image…",
@@ -233,6 +240,9 @@ EN: Dict[str, str] = {
     "model.wait.tool": "The automatic push waits until the running tool finishes.",
     "model.wait.mode": "The automatic push waits until you leave {mode}.",
     "model.gone": "The pushed model is no longer in this file. Push it again.",
+    "model.linked": "Linked to {name}",
+    "model.linked-twice": "{name} is linked to the same cloth. Unlink one of them: each cloth takes one model.",
+    "model.not-linked": "This Drawable Dictionary is not linked to a cloth.",
     "model.failed": "The automatic push failed: {detail}",
     "model.select": "Select the model to push: a Sollumz Drawable Dictionary or an object inside one.",
     "model.one-root": "Select objects of one Drawable Dictionary only.",
@@ -332,6 +342,10 @@ EN: Dict[str, str] = {
         "Opens this map of the cloth from your project as an image in Blender, linked to the cloth, and starts its "
         "live preview. Durty Cloth Tool can send a map too: {edit} in the cloth's menu."
     ),
+    "info.model-linked": (
+        "A model opened from Durty Cloth Tool remembers its cloth, also in the saved .blend file, so its pushes always "
+        "go to that cloth. A copy made with Duplicate carries the link too: unlink the one that should not be linked."
+    ),
     "info.linked": (
         "An image opened from Durty Cloth Tool remembers its cloth and map, also in the saved .blend file, so its "
         "live preview always goes to that cloth. Unlink it under Live Preview to use it for the cloth selected in "
@@ -374,6 +388,10 @@ EN: Dict[str, str] = {
     ),
     "op.unlink": "Unlink",
     "op.unlink.desc": "Stop linking this image to its cloth, so it follows your selection in Durty Cloth Tool",
+    "op.unlink-model.desc": (
+        "Stop linking this Drawable Dictionary to its cloth. Its next first push goes to the cloth selected in Durty "
+        "Cloth Tool"
+    ),
     "op.use-paint-image": "Use Painted Image",
     "op.use-paint-image.desc": "Use the image you are painting on, or the one in the Image Editor",
     "op.live-start": "Start Live Preview",

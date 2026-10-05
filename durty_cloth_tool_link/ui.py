@@ -687,6 +687,7 @@ def draw_model(layout: Any, context: Any) -> None:
     if model.open_notice is not None:
         layout.separator(factor=GAP_SMALL)
         draw_notice(layout, context, model.open_notice)
+    draw_model_link(layout, context)
 
     layout.separator(factor=GAP)
     if model.lease is not None:
@@ -712,6 +713,30 @@ def draw_model(layout: Any, context: Any) -> None:
     if model.waiting is not None and model.due_at is not None:
         wrapped(layout, context, strings.text(model.waiting), "TIME")
     draw_notice(layout, context, model.note)
+
+
+def model_root(context: Any) -> Optional[Any]:
+    """The Drawable Dictionary the Model panel talks about: the selected one, else the one pushed last."""
+    root = host.selected_dictionary(context)
+    return root if root is not None else state.watcher.root()
+
+
+def draw_model_link(layout: Any, context: Any) -> None:
+    """The cloth the Drawable Dictionary is linked to (a model opened from Durty Cloth Tool) with Unlink, and a
+    warning when a copy carries the same link."""
+    root = model_root(context)
+    binding = host.stored_binding(root)
+    if binding is None:
+        return
+    layout.separator(factor=GAP_SMALL)
+    name = state.get().cloth_label(binding) or t("linked.unknown")
+    row = layout.row()
+    wrapped(row.column(), context, t("model.linked", name=name), "LINKED", reserve=2 * 24)
+    row.operator("dct_link.unlink_model", text="", icon="UNLINKED")
+    info_button(row, "model-linked")
+    others = host.others_linked_alike(root)
+    if others:
+        wrapped(layout, context, t("model.linked-twice", name=others[0].name), "ERROR", alert=True)
 
 
 # ---- settings -----------------------------------------------------------------------------------------
@@ -1208,6 +1233,27 @@ class DCTLINK_OT_unlink_image(_Op):
         return {"FINISHED"}
 
 
+class DCTLINK_OT_unlink_model(_Op):
+    bl_idname = "dct_link.unlink_model"
+    bl_label = EN["op.unlink"]
+    bl_description = EN["op.unlink-model.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        reason = _controller_reason()
+        if reason is None and host.stored_binding(model_root(context)) is None:
+            reason = msg("model.not-linked")
+        return _refuse(cls, reason)
+
+    def execute(self, context):
+        root = model_root(context)
+        if root is not None:
+            host.clear_binding(root)
+            host.push_undo(t("op.unlink"))
+            state.get().touch()
+        return {"FINISHED"}
+
+
 class DCTLINK_OT_use_paint_image(_Op):
     bl_idname = "dct_link.use_paint_image"
     bl_label = EN["op.use-paint-image"]
@@ -1598,6 +1644,7 @@ CLASSES = (
     DCTLINK_MT_help,
     DCTLINK_OT_open_map,
     DCTLINK_OT_unlink_image,
+    DCTLINK_OT_unlink_model,
     DCTLINK_OT_use_paint_image,
     DCTLINK_OT_live_start,
     DCTLINK_OT_live_stop,

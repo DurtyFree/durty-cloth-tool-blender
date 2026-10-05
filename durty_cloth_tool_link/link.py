@@ -17,8 +17,11 @@ can be tested against a fake Durty Cloth Tool without Blender.
 from __future__ import annotations
 
 import collections
+import os
 import pathlib
+import secrets
 import shutil
+import stat
 import tempfile
 import time
 import traceback
@@ -1046,6 +1049,8 @@ class OpenedImage(NamedTuple):
     document: str
     warning: Optional[Msg] = None
     handle: Any = None  # whatever the Blender side needs to finish the image later
+    #: The image was made for this request (not an earlier one reused).
+    created: bool = False
 
 
 class DocumentHost(Protocol):
@@ -1054,6 +1059,8 @@ class DocumentHost(Protocol):
     def open_texture(self, document: TextureDocument) -> OpenedImage: ...  # creates or reuses the image
 
     def keep_texture(self, opened: OpenedImage) -> None: ...  # after DCT heard the answer (keeps the pixels)
+
+    def discard_texture(self, opened: OpenedImage) -> None: ...  # DCT no longer waits: drop an image made for it
 
     def model_problem(self) -> Optional[Msg]: ...  # why models cannot be opened now (Sollumz), or None
 
@@ -1065,11 +1072,14 @@ class ImportedModel(NamedTuple):
 
     name: str
     push: Callable[[], Any]
+    #: Sollumz logged warnings during the import (its Info log has them).
+    warnings: bool = False
 
 
 class _ModelImport(NamedTuple):
     request: Any  # the HostOpenModel
-    folder: pathlib.Path
+    folder: pathlib.Path  # this open's own folder, removed as a whole
+    directory: pathlib.Path  # the folder named after the model inside it, which Sollumz imports from
     model_file: str
     binding: Dict[str, str]
     name: str
@@ -1080,6 +1090,31 @@ class _ModelImport(NamedTuple):
 MODELS_FOLDER = "opened-models"
 #: The maps in Blender image names (data names stay English, like file names).
 MAP_NAMES = {"diffuse": "Diffuse", "normal": "Normal", "specular": "Specular"}
+
+
+def _is_link(path: pathlib.Path) -> bool:
+    """A symbolic link or (on Windows) any other reparse point, such as a junction."""
+    try:
+        info = os.lstat(path)
+    except OSError:
+        return False
+    return stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0)
+                                              & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0))
+
+
+def _opened_model_folder(folder: pathlib.Path) -> bool:
+    """``folder`` is what :meth:`LinkController._write_model_files` makes: a plain folder holding one plain folder
+    ``<name>`` with ``<name>.ydd.xml`` in it."""
+    try:
+        if _is_link(folder) or not folder.is_dir():
+            return False
+        entries = list(folder.iterdir())
+    except OSError:
+        return False
+    if len(entries) != 1 or _is_link(entries[0]) or not entries[0].is_dir():
+        return False
+    model = entries[0] / (entries[0].name + bundle.MODEL_SUFFIX)
+    return not _is_link(model) and model.is_file()
 
 
 def _inside(folder: pathlib.Path, name: str) -> pathlib.Path:
@@ -1711,8 +1746,12 @@ class LinkController:
             self.open_notice = Notice("ERROR", msg("open.texture-failed", name=document.name, detail=_detail(exc)))
             self.touch()
             return
-        if request is not None:
-            request.accept()
+        if request is not None and not request.accept():
+            # DCT no longer waits for this (the connection changed): an image made for it goes again.
+            self.documents.discard_texture(opened)
+            self.open_notice = Notice("WARNING", settings.describe_close_reason("disconnected"))
+            self.touch()
+            return
         self.open_notice = Notice("INFO", msg("open.opened", name=document.name))
         self._keep_texture = (opened, self._polls)  # after DCT heard the answer (it can take a moment)
         try:
@@ -1802,33 +1841,44 @@ class LinkController:
             self.touch()
             return
         try:
-            folder = self._write_model_files(name, model_file, request.files)
+            folder, directory = self._write_model_files(request.request_id, name, model_file, request.files)
         except (OSError, ValueError) as exc:
             request.refuse("open-failed")
             self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=name, detail=_detail(exc)))
             self.touch()
             return
-        self._model_import = _ModelImport(request, folder, model_file, dict(request.binding), name, self._polls)
-        request.accept()  # the files are in place and the import runs in the next step
+        if not request.accept():  # DCT no longer waits for this (the connection changed): nothing is imported
+            self._remove_model_folder(folder)
+            self.model.open_notice = Notice("WARNING", settings.describe_close_reason("disconnected"))
+            self.touch()
+            return
+        # The files are in place and the import runs in the next step, after DCT heard the answer.
+        self._model_import = _ModelImport(request, folder, directory, model_file, dict(request.binding), name,
+                                          self._polls)
         self.model.open_notice = Notice("INFO", msg("open.model-importing", name=name))
         self.touch()
 
-    def _write_model_files(self, name: str, model_file: str, files: List[Any]) -> pathlib.Path:
-        """``<data folder>/opened-models/<model>/<model>.ydd.xml`` with its textures in ``<model>/`` beside it, the
-        folder Sollumz reads them from. Every name is a bare file name and is joined inside its folder only."""
+    def _write_model_files(self, request_id: str, name: str, model_file: str,
+                           files: List[Any]) -> "tuple[pathlib.Path, pathlib.Path]":
+        """``<data folder>/opened-models/<request>/<model>/<model>.ydd.xml`` with its textures in ``<model>/`` beside
+        it, the folder Sollumz reads them from. Each open gets a folder of its own, so Sollumz never takes a texture
+        it loaded for an earlier open of the same model. Every name is a bare file name and is joined inside its
+        folder only; a link in place of the add-on's folder is refused. Returns this open's folder and the model's."""
         assert self.data_dir is not None
         base = self.data_dir / MODELS_FOLDER
+        if _is_link(base):
+            raise ValueError(f"{MODELS_FOLDER} is a link")
         base.mkdir(parents=True, exist_ok=True)
-        folder = _inside(base, name)
-        if folder.exists():
-            shutil.rmtree(folder)
+        folder = _inside(base, f"{request_id}-{secrets.token_hex(4)}")
         folder.mkdir()
         self._model_folders.add(folder)
         try:
-            textures = _inside(folder, name)
+            directory = _inside(folder, name)
+            directory.mkdir()
+            textures = _inside(directory, name)
             for file_name, data in files:
                 if file_name == model_file:
-                    target = _inside(folder, file_name)
+                    target = _inside(directory, file_name)
                 else:
                     textures.mkdir(exist_ok=True)
                     target = _inside(textures, file_name)
@@ -1837,7 +1887,7 @@ class LinkController:
         except BaseException:
             self._remove_model_folder(folder)
             raise
-        return folder
+        return folder, directory
 
     def _finish_opening(self) -> None:
         """Work that waits until DCT heard the answer to its request: importing a model, keeping a texture's
@@ -1856,13 +1906,14 @@ class LinkController:
         self._model_import = None
         try:
             assert self.documents is not None
-            imported = self.documents.import_model(job.folder, job.model_file, job.binding)
+            imported = self.documents.import_model(job.directory, job.model_file, job.binding)
         except Exception as exc:  # noqa: BLE001 - DCT already heard ok; the panel says what went wrong
             self._remove_model_folder(job.folder)
             self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=job.name, detail=_detail(exc)))
             self.touch()
             return
-        self.model.open_notice = Notice("INFO", msg("open.opened", name=imported.name))
+        self.model.open_notice = (Notice("WARNING", msg("open.model-warnings", name=imported.name))
+                                  if imported.warnings else Notice("INFO", msg("open.opened", name=imported.name)))
         try:
             imported.push()
         except UserError as exc:
@@ -1883,14 +1934,16 @@ class LinkController:
         shutil.rmtree(folder, ignore_errors=True)
 
     def _remove_stale_model_files(self) -> None:
-        """Files of opened models an earlier session left behind (Blender closed before the model was discarded)."""
+        """Files of opened models an earlier session left behind (Blender closed before the model was discarded).
+        Only folders the add-on made are removed (see :func:`_opened_model_folder`), and nothing when the add-on's
+        folder is a link."""
         base = self.data_dir / MODELS_FOLDER if self.data_dir is not None else None
-        if base is None or not base.is_dir():
+        if base is None or _is_link(base) or not base.is_dir():
             return
         cutoff = time.time() - self.STALE_MODEL_FILES_SECONDS
         for entry in base.iterdir():
             try:
-                if entry.is_dir() and not entry.is_symlink() and entry.stat().st_mtime < cutoff:
+                if _opened_model_folder(entry) and entry.stat().st_mtime < cutoff:
                     shutil.rmtree(entry, ignore_errors=True)
             except OSError:
                 continue  # another Blender may be using it; it goes with the next start

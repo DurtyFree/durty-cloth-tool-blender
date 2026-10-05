@@ -108,6 +108,13 @@ TEXT = {
     "open.model-failed": "No se pudo abrir el modelo {name}: {detail}",
     "open.import-failed": "Sollumz no pudo importar el modelo ({detail}). Su registro Info tiene los detalles.",
     "open.no-dictionary": "Sollumz no importó ningún Drawable Dictionary. Su registro Info tiene los detalles.",
+    "open.import-errors": (
+        "Sollumz informó de errores al importar, así que el modelo no se vinculó a la prenda. Su registro Info tiene "
+        "los detalles."
+    ),
+    "open.model-warnings": (
+        "Abierto desde Durty Cloth Tool: {name}. Sollumz informó de advertencias; su registro Info tiene los detalles."
+    ),
     "live.off": "Inicia la vista previa en directo para ver tu pintura en el ped.",
     "live.reading": "Leyendo la imagen…",
     "live.starting": "Iniciando la vista previa en directo…",
@@ -221,6 +228,11 @@ TEXT = {
     "model.wait.tool": "El envío automático espera a que termine la herramienta en curso.",
     "model.wait.mode": "El envío automático espera a que salgas de {mode}.",
     "model.gone": "El modelo enviado ya no está en este archivo. Envíalo de nuevo.",
+    "model.linked": "Vinculado a {name}",
+    "model.linked-twice": (
+        "{name} está vinculado a la misma prenda. Desvincula uno de los dos: cada prenda admite un modelo."
+    ),
+    "model.not-linked": "Este Drawable Dictionary no está vinculado a ninguna prenda.",
     "model.failed": "El envío automático falló: {detail}",
     "model.select": "Selecciona el modelo que enviar: un Drawable Dictionary de Sollumz o un objeto dentro de uno.",
     "model.one-root": "Selecciona objetos de un solo Drawable Dictionary.",
@@ -330,6 +342,11 @@ TEXT = {
         "Abre este mapa de la prenda desde tu proyecto como imagen en Blender, vinculada a la prenda, e inicia su "
         "vista previa en directo. Durty Cloth Tool también puede enviar un mapa: {edit} en el menú de la prenda."
     ),
+    "info.model-linked": (
+        "Un modelo abierto desde Durty Cloth Tool recuerda su prenda, también en el archivo .blend guardado, para "
+        "enviarse siempre a esa prenda. Una copia hecha con Duplicar también lleva el vínculo: desvincula el que no "
+        "debe estar vinculado."
+    ),
     "info.linked": (
         "Una imagen abierta desde Durty Cloth Tool recuerda su prenda y su mapa, también en el archivo .blend "
         "guardado, para que su vista previa en directo siempre vaya a esa prenda. Desvincúlala en Vista previa en "
@@ -375,6 +392,10 @@ TEXT = {
     ),
     "op.unlink": "Desvincular",
     "op.unlink.desc": "Dejar de vincular esta imagen a su prenda para que siga tu selección en Durty Cloth Tool",
+    "op.unlink-model.desc": (
+        "Dejar de vincular este Drawable Dictionary a su prenda. Su siguiente primer envío va a la prenda seleccionada "
+        "en Durty Cloth Tool"
+    ),
     "op.use-paint-image": "Usar imagen pintada",
     "op.use-paint-image.desc": "Usar la imagen en la que pintas, o la del Image Editor",
     "op.live-start": "Iniciar vista previa en directo",

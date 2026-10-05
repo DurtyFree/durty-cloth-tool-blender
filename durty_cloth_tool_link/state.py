@@ -67,6 +67,9 @@ def push_model(root: Any, automatic: bool = False) -> None:
     """Exports ``root`` with Sollumz and pushes it, bound to the cloth it is linked to (a model opened from Durty
     Cloth Tool). Raises ``ValueError`` with a message for the user."""
     ctrl = get()
+    others = host.others_linked_alike(root)
+    if others:  # a copy (Duplicate copies the link): the user decides which one stays linked
+        raise UserError(msg("model.linked-twice", name=others[0].name))
     watcher.exporting = True
     try:
         ctrl.model.push(lambda folder: host.export_with_sollumz(root, folder), root.name, automatic=automatic,
@@ -93,29 +96,40 @@ class BlenderDocuments:
     """Opens what Durty Cloth Tool sends: texture maps as images, models through Sollumz (``link.DocumentHost``)."""
 
     def open_texture(self, document: link.TextureDocument) -> link.OpenedImage:
-        image = host.open_texture_image(document)
+        image, created = host.open_texture_image(document)
         scene = current_scene()
         if scene is not None:
             scene.dct_link.image = image  # the image the live preview streams
             scene.dct_link.target = document.target
+        host.push_undo("Open Texture from Durty Cloth Tool")
         source = host.BlenderImageSource(image, document.target)
         return link.OpenedImage(source, source.width, source.height, source.conversion, image.name, source.warning,
-                                image)
+                                image, created)
 
     def keep_texture(self, opened: link.OpenedImage) -> None:
         host.keep_image(opened.handle)
+
+    def discard_texture(self, opened: link.OpenedImage) -> None:
+        if opened.created:  # an image made for a request DCT no longer waits for
+            for scene in bpy.data.scenes:
+                if getattr(scene, "dct_link", None) is not None and scene.dct_link.image == opened.handle:
+                    scene.dct_link.image = None
+            host.remove_image(opened.handle)
 
     def model_problem(self) -> Optional[Any]:
         return host.model_open_problem()
 
     def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> link.ImportedModel:
-        root = host.import_with_sollumz(folder, model_file)
+        root, warnings = host.import_with_sollumz(folder, model_file)
         host.store_binding(root, binding)
+        for earlier in host.others_linked_alike(root):
+            host.clear_binding(earlier)  # the model opened now is the one linked to the cloth
         window = host.window_for(root)
         scene = window.scene if window is not None else current_scene()
         if scene is not None:
             scene.dct_link.auto_push = True  # each change is sent again, as for a model pushed by hand
-        return link.ImportedModel(root.name, lambda: push_model(root))
+        host.push_undo("Open Model from Durty Cloth Tool")
+        return link.ImportedModel(root.name, lambda: push_model(root), warnings)
 
 
 def auto_push() -> None:

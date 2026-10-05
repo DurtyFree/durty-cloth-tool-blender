@@ -5,6 +5,7 @@ with Sollumz and redrawing the panels."""
 
 from __future__ import annotations
 
+import hashlib
 import pathlib
 import socket
 import sys
@@ -257,6 +258,9 @@ class BlenderImageSource:
 CLOTH_ID = "dct_cloth_id"
 TEXTURE_ID = "dct_texture_id"
 MAP = "dct_map"
+#: On an image opened from Durty Cloth Tool: the SHA-256 of the pixels it was filled with (RGBA8, rows top to
+#: bottom). The image is reused for the same map only while its pixels still are exactly those.
+PIXELS = "dct_pixels"
 
 
 def stored_binding(data: Optional[Any]) -> Optional[Dict[str, str]]:
@@ -286,9 +290,49 @@ def store_binding(data: Any, binding: Dict[str, str], target: Optional[str] = No
 
 
 def clear_binding(data: Any) -> None:
-    for key in (CLOTH_ID, TEXTURE_ID, MAP):
+    for key in (CLOTH_ID, TEXTURE_ID, MAP, PIXELS):
         if key in data:
             del data[key]
+
+
+def push_undo(message: str) -> None:
+    """An undo step after the add-on changed the file by itself (an image or model opened and linked), so undo and
+    redo keep the link with what it belongs to."""
+    window = getattr(bpy.context, "window", None) or first_window()
+    try:
+        with bpy.context.temp_override(**({"window": window} if window is not None else {})):
+            bpy.ops.ed.undo_push(message=message)
+    except (RuntimeError, TypeError):
+        pass  # no undo stack (background mode); nothing to keep in step with
+
+
+def _rgba_digest(rows_top_down: Any) -> str:
+    return hashlib.sha256(memoryview(rows_top_down).cast("B")).hexdigest()
+
+
+def _image_digest(image: Any) -> Optional[str]:
+    """The digest of an image's pixels as :data:`PIXELS` records them, or ``None`` for an image that cannot hold
+    exactly those (float or not RGBA)."""
+    import numpy as np
+
+    if image.is_float or image.channels != 4:
+        return None
+    width, height = tuple(image.size)
+    values = np.empty(width * height * 4, np.float32)
+    image.pixels.foreach_get(values)
+    rgba = np.floor(values * np.float32(255) + np.float32(0.5)).astype(np.uint8).reshape(height, width, 4)[::-1]
+    return _rgba_digest(np.ascontiguousarray(rgba))
+
+
+def _reusable(image: Any) -> bool:
+    """The image still holds exactly what was opened into it: not changed, saved over, repacked or appended."""
+    try:
+        recorded = image.get(PIXELS)
+        if not recorded or image.is_dirty or image.channels != 4 or image_problem(image, load=False):
+            return False
+        return _image_digest(image) == recorded
+    except (RuntimeError, ReferenceError):
+        return False
 
 
 def _linked_image(binding: Dict[str, str], target: str) -> Optional[Any]:
@@ -298,33 +342,45 @@ def _linked_image(binding: Dict[str, str], target: str) -> Optional[Any]:
     return None
 
 
-def open_texture_image(document: "link.TextureDocument") -> Any:
-    """The image for a cloth's map from Durty Cloth Tool, filled with its pixels and linked to the cloth.
+def open_texture_image(document: "link.TextureDocument") -> Tuple[Any, bool]:
+    """The image for a cloth's map from Durty Cloth Tool, filled with its pixels and linked to the cloth, and
+    whether it was made now.
 
-    The image linked to the same cloth, variation and map is reused when Blender holds no unsaved changes in it;
-    otherwise (and the first time) a new image is made, named after the cloth, variation and map, so paint that is
-    not saved anywhere is never overwritten. Normal and specular maps are set to Non-Color."""
+    The image linked to the same cloth, variation and map is reused only while its pixels are exactly what was
+    opened into it last time (:data:`PIXELS`); otherwise (and the first time) a new image is made, named after the
+    cloth, variation and map, so paint, a saved or repacked file and an appended image are never overwritten.
+    Normal and specular maps are set to Non-Color."""
     import numpy as np
 
     width, height = document.width, document.height
     problem = settings.check_stream_size(width, height)
     if problem is not None:
         raise UserError(problem)
-    image = _linked_image(document.binding, document.target)
-    if image is not None and (image.is_dirty or image.channels != 4 or image_problem(image, load=False)):
-        image = None
-    if image is None:
-        image = bpy.data.images.new(document.name, width, height, alpha=True)
-    elif tuple(image.size) != (width, height):
-        image.scale(width, height)
-    image.colorspace_settings.name = "sRGB" if document.target == "diffuse" else "Non-Color"
     rgba = np.frombuffer(document.pixels, dtype=np.uint8)
     if rgba.size != width * height * 4:
         raise ValueError("the texture has the wrong number of pixels")
+    image = _linked_image(document.binding, document.target)
+    created = image is None or not _reusable(image)
+    if created:
+        image = bpy.data.images.new(document.name, width, height, alpha=True)
+    # The colour space first: assigning it reloads a packed image from its packed pixels (at their old size).
+    space = "sRGB" if document.target == "diffuse" else "Non-Color"
+    if image.colorspace_settings.name != space:
+        image.colorspace_settings.name = space
+    if tuple(image.size) != (width, height):
+        image.scale(width, height)
     rows = rgba.reshape(height, width, 4)[::-1]  # Blender's rows start at the bottom
     image.pixels.foreach_set((rows.astype(np.float32) / np.float32(255)).reshape(-1))
     store_binding(image, document.binding, document.target)
-    return image
+    image[PIXELS] = _rgba_digest(rgba)
+    return image, created
+
+
+def remove_image(image: Any) -> None:
+    try:
+        bpy.data.images.remove(image)
+    except (ReferenceError, RuntimeError):
+        pass  # removed meanwhile
 
 
 def keep_image(image: Any) -> None:
@@ -486,10 +542,14 @@ def _import_settings(properties: Set[str]) -> Dict[str, Any]:
     return values
 
 
-def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Any:
+def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Tuple[Any, bool]:
     """Imports ``folder/model_file`` (CodeWalker XML of a Drawable Dictionary, its textures in the folder named after
-    it) with Sollumz into the active collection of the first window, and returns the new Drawable Dictionary. Every
-    image the import read from ``folder`` is packed into the .blend file, so the files can be deleted afterwards."""
+    it) with Sollumz into the active collection of the first window. Returns the new Drawable Dictionary and whether
+    Sollumz logged warnings. Every image the import read from ``folder`` is packed into the .blend file, so the files
+    can be deleted afterwards.
+
+    Sollumz finishes even when an asset failed; its log tells. Errors there (or no Drawable Dictionary) raise
+    :class:`ExportError`, so a partial import is never linked to the cloth."""
     problem = model_open_problem()
     if problem is not None:
         raise ExportError(problem)
@@ -499,17 +559,25 @@ def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Any:
     override: Dict[str, Any] = {"window": window} if window is not None else {}
     before = {obj.session_uid for obj in bpy.data.objects}
     images_before = {image.session_uid for image in bpy.data.images}
+    use_logger, counter = _sollumz_log_counter()
+    windows_before, logs_before = len(windows()), _info_log_count()
     with bpy.context.temp_override(**override):
         layer = bpy.context.view_layer
         active = layer.objects.active if layer is not None else None
         if active is not None and active.mode != "OBJECT":
             bpy.ops.object.mode_set(mode="OBJECT")  # Sollumz imports in Object Mode
         try:
-            result = bpy.ops.sollumz.import_assets("EXEC_DEFAULT", **arguments)
+            if use_logger is not None and counter is not None:
+                with use_logger(counter):
+                    result = bpy.ops.sollumz.import_assets("EXEC_DEFAULT", **arguments)
+            else:
+                result = bpy.ops.sollumz.import_assets("EXEC_DEFAULT", **arguments)
         except (RuntimeError, TypeError, ValueError) as exc:
             raise _export_error("open.import-failed", detail=str(exc)) from exc
         if "FINISHED" not in result:
             raise _export_error("open.import-failed", detail=", ".join(sorted(result)))
+        if counter is not None and counter.errors:
+            raise _export_error("open.import-errors")
         new = [obj for obj in bpy.data.objects if obj.session_uid not in before]
         roots = [obj for obj in new if obj.parent is None and getattr(obj, "sollum_type", None) == DRAWABLE_DICTIONARY]
         if not roots:
@@ -524,7 +592,34 @@ def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Any:
             layer.objects.active = root
         except (RuntimeError, AttributeError):
             pass  # not in the view layer that is shown; it is still linked to its cloth
-    return root
+    if counter is not None:
+        return root, counter.problems > 0
+    return root, len(windows()) > windows_before or _info_log_count() > logs_before
+
+
+def drawable_dictionaries() -> List[Any]:
+    """Every Drawable Dictionary (a Sollumz root object) of the file."""
+    return [obj for obj in bpy.data.objects
+            if obj.parent is None and getattr(obj, "sollum_type", None) == DRAWABLE_DICTIONARY]
+
+
+def others_linked_alike(root: Any) -> List[Any]:
+    """Other Drawable Dictionaries linked to the same cloth as ``root`` (a copy made with Duplicate copies the
+    link): each cloth takes one model, so the user decides which one stays linked."""
+    binding = stored_binding(root)
+    if binding is None:
+        return []
+    return [obj for obj in drawable_dictionaries()
+            if obj.session_uid != root.session_uid and link.same_binding(stored_binding(obj), binding)]
+
+
+def selected_dictionary(context: Any) -> Optional[Any]:
+    """The Drawable Dictionary the active object belongs to, or ``None``."""
+    obj = getattr(context, "active_object", None)
+    if obj is None:
+        return None
+    root = top_parent(obj)
+    return root if getattr(root, "sollum_type", None) == DRAWABLE_DICTIONARY else None
 
 
 def _pack_imported_images(folder: pathlib.Path, images_before: Set[int]) -> None:
@@ -636,10 +731,13 @@ def _sollumz_log_counter() -> Tuple[Optional[Any], Optional[Any]]:
         class Counter(base):  # type: ignore[misc, valid-type]
             def __init__(self) -> None:
                 self.problems = 0
+                self.errors = 0
 
             def do_log(self, msg: str, level: str) -> None:
                 if level in ("WARNING", "ERROR"):
                     self.problems += 1
+                if level == "ERROR":
+                    self.errors += 1
 
         counter_class = _COUNTER_CLASSES[id(base)] = Counter
     try:

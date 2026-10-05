@@ -412,7 +412,7 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
         "targets": ["diffuse", "normal", "specular"]}})
     pump(addon, lambda: ctrl.focused is not None, what="the selection")
 
-    # The same map again reuses the image (nothing unsaved in it); a busy live preview refuses the next one.
+    # The same map again reuses the image (nothing changed in it); a busy live preview refuses the next one.
     request_id = dct.open_texture(rgba[::-1].copy().tobytes(), 64, 32, target="normal", name="jbib_normal_003")
     pump(addon, lambda: dct.host_result(request_id) is not None and ctrl.stream.live_state == "attached",
          what="the texture opened again")
@@ -423,7 +423,43 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
     check("a texture sent during a live preview is refused as busy", dct.host_result(busy).get("code") == "busy")
     bpy.ops.dct_link.live_stop()
     pump(addon, lambda: not dct.connections_ready[-1].leases, what="the live texture to close")
-    check("Unlink runs", "FINISHED" in bpy.ops.dct_link.unlink_image() and host.stored_binding(opened) is None)
+    pump(addon, lambda: not opened.is_dirty, what="the image to be kept with the file again")
+
+    # Reopen a map at another size: the packed image is scaled and filled, and stays usable for the next open.
+    smaller = rng.integers(0, 256, size=(16, 32, 4), dtype=np.uint8)
+    request_id = dct.open_texture(smaller.tobytes(), 32, 16, target="normal", name="jbib_normal_003")
+    pump(addon, lambda: dct.host_result(request_id) is not None, what="the answer at another size")
+    check("a map reopened at another size is accepted", dct.host_result(request_id)["ok"] is True,
+          (dct.host_result(request_id), ctrl.open_notice))
+    pump(addon, lambda: ctrl.stream.live_state == "attached", what="the live preview at another size")
+    lease = list(dct.connections_ready[-1].leases.values())[-1]
+    check("a map reopened at another size reuses the image, at the new size and with the new pixels",
+          scene.dct_link.image == opened and tuple(opened.size) == (32, 16)
+          and bytes(lease["canvas"]) == smaller.tobytes(), tuple(opened.size))
+    bpy.ops.dct_link.live_stop()
+    pump(addon, lambda: not dct.connections_ready[-1].leases, what="the live texture to close")
+    pump(addon, lambda: not opened.is_dirty, what="the resized image to be kept with the file")
+
+    # An image changed since it was opened (here changed and packed again, so Blender sees nothing unsaved) is never
+    # overwritten: the next open makes a new image.
+    values = np.empty(32 * 16 * 4, np.float32)
+    opened.pixels.foreach_get(values)
+    values[:4] = [1.0, 0.0, 1.0, 1.0]
+    opened.pixels.foreach_set(values)
+    opened.pack()
+    check("the changed image counts as saved for Blender", not opened.is_dirty)
+    request_id = dct.open_texture(smaller.tobytes(), 32, 16, target="normal", name="jbib_normal_003")
+    pump(addon, lambda: dct.host_result(request_id) is not None and ctrl.stream.live_state == "attached",
+         what="the open after a change")
+    changed = np.empty(32 * 16 * 4, np.float32)
+    opened.pixels.foreach_get(changed)
+    check("an image changed since it was opened is never overwritten",
+          scene.dct_link.image != opened and list(changed[:4]) == [1.0, 0.0, 1.0, 1.0]
+          and host.stored_map(scene.dct_link.image) == "normal")
+    bpy.ops.dct_link.live_stop()
+    pump(addon, lambda: not dct.connections_ready[-1].leases, what="the live texture to close")
+    newer = scene.dct_link.image
+    check("Unlink runs", "FINISHED" in bpy.ops.dct_link.unlink_image() and host.stored_binding(newer) is None)
 
     # A model: without a usable Sollumz DCT hears dependency-missing.
     if not args.sollumz:
@@ -443,26 +479,26 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
         xml = exported[model].replace(b'<Item name="DiffuseSampler" type="Texture" />',
                                       b'<Item name="DiffuseSampler" type="Texture"><Name>smoke_open_diff</Name></Item>')
         check("the exported model has a diffuse sampler to name a texture in", xml != exported[model])
-        files = [("smoke_open.ydd.xml", xml), ("smoke_open_diff.dds", rgba_dds(4, 4))]
+        files = [("smoke_open.ydd.xml", xml), ("smoke_open_diff.dds", rgba_dds(4, 4, (40, 80, 160)))]
         files += [(n, d) for n, d in sorted(exported.items()) if n != model]
-    pushes = len(dct.pushes)
+
+    # A model whose import fails is never linked.
+    broken = [("smoke_broken.ydd.xml", b"<DrawableDictionary><Item>")]
+    if not args.sollumz:
+        STUB["mode"] = "fail-import"
     objects_before = {obj.session_uid for obj in bpy.data.objects}
-    request_id = dct.open_model(files)
-    pump(addon, lambda: dct.host_result(request_id) is not None, what="the answer to the model")
-    check("DCT hears ok for the model it sent", dct.host_result(request_id)["ok"] is True, dct.host_result(request_id))
-    pump(addon, lambda: len(dct.pushes) > pushes and ctrl.model.lease is not None and not ctrl.model.pushing,
-         timeout=60, what="the push of the opened model")
-    roots = [obj for obj in bpy.data.objects if obj.session_uid not in objects_before and obj.parent is None
-             and getattr(obj, "sollum_type", "") == "sollumz_drawable_dictionary"]
-    check("Sollumz imported the model as a Drawable Dictionary linked to its cloth",
-          len(roots) == 1 and link.same_binding(host.stored_binding(roots[0]), BINDING), [o.name for o in roots])
-    root = roots[0]
+    dct.open_model(broken)
+    pump(addon, lambda: ctrl.model.open_notice is not None and ctrl.model.open_notice.level == "ERROR",
+         timeout=60, what="the failed import")
+    STUB["mode"] = "ydd"
+    linked = [obj for obj in bpy.data.objects if obj.session_uid not in objects_before and host.stored_binding(obj)]
+    check("a model whose import failed is not linked, and the panel says so",
+          not linked and ctrl.model.open_notice.message.key == "open.model-failed", ctrl.model.open_notice)
+
+    root, folder = open_model_from_dct(addon, ctrl, dct, files, host, link, BINDING)
+    scene = bpy.context.scene
     check("the opened model is selected and pushed automatically",
           root.select_get() and bpy.context.view_layer.objects.active == root and scene.dct_link.auto_push)
-    header = dct.pushes[pushes][0]
-    check("the first push of the opened model names its cloth", header.get("binding") == BINDING
-          and "lease" not in header, header)
-    folder = pathlib.Path(ctrl.data_dir) / link.MODELS_FOLDER / "smoke_open"
     if not args.sollumz:
         imported = sollumz_stub.STUB["imports"][-1]
         check("the files were written where Sollumz reads them, and its textures are packed",
@@ -471,8 +507,44 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
     check("the opened model's files exist while it is on the ped", folder.is_dir())
     log = draw_everything(package, state, "opened model")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
-    check("the opened model says where it came from", "Opened from Durty Cloth Tool: smoke_open" in labels)
+    check("the opened model says where it came from and which cloth it is linked to",
+          "Opened from Durty Cloth Tool: smoke_open" in labels and "Linked to jbib_003_u" in labels
+          and ("operator", "dct_link.unlink_model") in log, labels)
+
+    # Undo and redo keep the link (the add-on records an undo step after linking).
+    root_name = root.name
+    try:
+        bpy.ops.ed.undo()
+        bpy.ops.ed.redo()
+        again = bpy.data.objects.get(root_name)
+        check("after an undo and a redo the opened model is still linked",
+              again is not None and link.same_binding(host.stored_binding(again), BINDING))
+        root = again
+    except RuntimeError as exc:
+        RESULTS.append({"check": "undo of the link (not available in background mode)", "ok": True, "detail": str(exc)})
+    scene = bpy.context.scene  # an undo step replaces the data blocks
+
+    # A copy made with Duplicate carries the link: pushing it is refused until one of them is unlinked.
+    copy = root.copy()
+    scene.collection.objects.link(copy)
+    bpy.ops.object.select_all(action="DESELECT")
+    copy.select_set(True)
+    bpy.context.view_layer.objects.active = copy
+    pushes = len(dct.pushes)
+    check("a copy linked to the same cloth is not pushed", refused(bpy.ops.dct_link.model_push, "same cloth")
+          and len(dct.pushes) == pushes)
+    log = draw_everything(package, state, "copied model")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the Model panel says that two models are linked to one cloth", "is linked to the same cloth" in labels,
+          labels)
+    check("Unlink (model) runs for the copy", "FINISHED" in bpy.ops.dct_link.unlink_model()
+          and host.stored_binding(copy) is None and link.same_binding(host.stored_binding(root), BINDING))
+    bpy.data.objects.remove(copy)
+
     scene.dct_link.auto_push = False
+    bpy.ops.object.select_all(action="DESELECT")
+    root.select_set(True)
+    bpy.context.view_layer.objects.active = root
     check("Discard (opened model) runs", "FINISHED" in bpy.ops.dct_link.model_discard())
     pump(addon, lambda: ctrl.model.lease is None, what="the opened model's discard")
     check("discarding the opened model removes its temporary files", not folder.exists())
@@ -483,15 +555,64 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
           and (not args.sollumz or tuple(images[0].size) == (4, 4)),
           [(image.name, tuple(image.size), image.packed_file is not None) for image in images])
 
+    if args.sollumz:
+        # Open the same model twice with a changed diffuse: the second import shows the new pixels, never the
+        # image Sollumz loaded for the first one.
+        files = [(n, rgba_dds(4, 4, (200, 30, 90)) if n == "smoke_open_diff.dds" else d) for n, d in files]
+        first_name = root.name
+        second, folder = open_model_from_dct(addon, ctrl, dct, files, host, link, BINDING)
+        check("the model opened again takes the link from the one opened before",
+              host.stored_binding(bpy.data.objects[first_name]) is None)
+        node = next((n for obj in second.children_recursive if obj.type == "MESH" for slot in obj.material_slots
+                     if slot.material is not None and slot.material.node_tree is not None
+                     for n in slot.material.node_tree.nodes if n.name == "DiffuseSampler"), None)
+        image = node.image if node is not None else None
+        rgba = list(image.pixels[:4]) if image is not None else []
+        check("a model opened again with a changed diffuse shows the new diffuse",
+              image is not None and image.packed_file is not None
+              and abs(rgba[0] - 200 / 255) < 0.02 and abs(rgba[1] - 30 / 255) < 0.02 and abs(rgba[2] - 90 / 255) < 0.02,
+              (image and image.name, rgba))
+        scene.dct_link.auto_push = False
+        bpy.ops.object.select_all(action="DESELECT")
+        second.select_set(True)
+        bpy.context.view_layer.objects.active = second
+        bpy.ops.dct_link.model_discard()
+        pump(addon, lambda: ctrl.model.lease is None, what="the second model's discard")
 
-def rgba_dds(width, height):
+
+def open_model_from_dct(addon, ctrl, dct, files, host, link, binding):
+    """Sends ``files`` as Edit in connected app does and waits for the import and the first push. Returns the new
+    Drawable Dictionary and the folder its files were written to."""
+    pushes = len(dct.pushes)
+    objects_before = {obj.session_uid for obj in bpy.data.objects}
+    request_id = dct.open_model(files)
+    pump(addon, lambda: dct.host_result(request_id) is not None, what="the answer to the model")
+    check("DCT hears ok for the model it sent", dct.host_result(request_id)["ok"] is True, dct.host_result(request_id))
+    pump(addon, lambda: len(dct.pushes) > pushes and ctrl.model.lease is not None and not ctrl.model.pushing,
+         timeout=60, what="the push of the opened model")
+    roots = [obj for obj in bpy.data.objects if obj.session_uid not in objects_before and obj.parent is None
+             and getattr(obj, "sollum_type", "") == "sollumz_drawable_dictionary"]
+    check("Sollumz imported the model as a Drawable Dictionary linked to its cloth",
+          len(roots) == 1 and link.same_binding(host.stored_binding(roots[0]), binding), [o.name for o in roots])
+    header = dct.pushes[pushes][0]
+    check("the first push of the opened model names its cloth", header.get("binding") == binding
+          and "lease" not in header, header)
+    base = pathlib.Path(ctrl.data_dir) / link.MODELS_FOLDER
+    folders = [d for d in base.iterdir() if d.name.startswith(request_id + "-")]
+    check("each open of a model gets a folder of its own",
+          len(folders) == 1 and (folders[0] / "smoke_open" / "smoke_open.ydd.xml").is_file(), sorted(base.iterdir()))
+    return roots[0], folders[0]
+
+
+def rgba_dds(width, height, rgb):
     """An uncompressed 32-bit DDS file (what CodeWalker writes for small textures), filled with one colour."""
     import struct
 
     header = struct.pack("<4s7I44x", b"DDS ", 124, 0x100F, height, width, width * 4, 0, 0)
     pixel_format = struct.pack("<8I", 32, 0x41, 0, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
     caps = struct.pack("<5I", 0x1000, 0, 0, 0, 0)
-    return header + pixel_format + caps + bytes((40, 80, 160, 255)) * (width * height)
+    red, green, blue = rgb
+    return header + pixel_format + caps + bytes((blue, green, red, 255)) * (width * height)
 
 
 def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, api):
@@ -755,6 +876,7 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     # Edit in connected app (protocol 2): a normal map DCT sends opens as an image linked to its cloth and its live
     # preview starts at once; a model DCT sends is imported with Sollumz, linked and pushed back bound to its cloth.
     open_from_dct(args, addon, state, package, ctrl, dct, scene, rng)
+    scene = bpy.context.scene  # undo steps there replace the data blocks
 
     # Undo: Push Automatically is read from the scene when it is used.
     try:

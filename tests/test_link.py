@@ -711,25 +711,38 @@ class FakeDocuments:
         self.problem: Optional[strings.Msg] = None
         self.fail: Optional[BaseException] = None
         self.imports: List[Dict[str, object]] = []
+        self.discarded: List[str] = []
+        self.warnings = False
+        #: Runs while the request is handled, before DCT is answered (for example: the link goes away meanwhile).
+        self.meanwhile: Optional[Callable[[], None]] = None
 
     def open_texture(self, document: link.TextureDocument) -> link.OpenedImage:
         if self.fail is not None:
             raise self.fail
+        if self.meanwhile is not None:
+            self.meanwhile()
         rgba = np.frombuffer(bytes(document.pixels), np.uint8).reshape(document.height, document.width, 4).copy()
         image = self.images[document.name] = ArrayImage(document.width, document.height, rgba)
-        return link.OpenedImage(image, document.width, document.height, pixels.Conversion(), document.name)
+        return link.OpenedImage(image, document.width, document.height, pixels.Conversion(), document.name,
+                                created=True)
 
     def keep_texture(self, opened: link.OpenedImage) -> None:
         self.kept.append(opened.document)
 
+    def discard_texture(self, opened: link.OpenedImage) -> None:
+        self.discarded.append(opened.document)
+        self.images.pop(opened.document, None)
+
     def model_problem(self) -> Optional[strings.Msg]:
+        if self.meanwhile is not None:
+            self.meanwhile()
         return self.problem
 
     def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> link.ImportedModel:
         files = {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
         self.imports.append({"folder": folder, "model": model_file, "binding": binding, "files": files})
         name = model_file.split(".", 1)[0]
-        return link.ImportedModel(name, lambda: self.ctrl.model.push(Export(), name, binding=binding))
+        return link.ImportedModel(name, lambda: self.ctrl.model.push(Export(), name, binding=binding), self.warnings)
 
 
 def documents_controller(tmp_path, dct, api, stores) -> tuple:
@@ -916,8 +929,10 @@ def test_a_model_opened_from_dct_is_imported_and_pushed_bound(tmp_path, dct, api
     assert dct.host_result(request_id)["ok"] is True
     (imported,) = documents.imports
     folder = imported["folder"]
-    # The files sit in the add-on's own folder, the textures in a folder named after the model, as Sollumz reads them.
-    assert folder == tmp_path / "user" / link.MODELS_FOLDER / "jbib_003_u" and imported["model"] == "jbib_003_u.ydd.xml"
+    # The files sit in the add-on's own folder, in a folder of this open's own, and the textures in a folder named
+    # after the model, as Sollumz reads them.
+    assert folder.name == "jbib_003_u" and folder.parent.name.startswith(request_id + "-")
+    assert folder.parent.parent == tmp_path / "user" / link.MODELS_FOLDER and imported["model"] == "jbib_003_u.ydd.xml"
     assert imported["files"] == {"jbib_003_u.ydd.xml": b"<DrawableDictionary />",
                                  "jbib_003_u/jbib_diff_003_a_uni.dds": b"DDS " + bytes(12),
                                  "jbib_003_u/jbib_normal_003.dds": b"DDS " + bytes(8)}
@@ -937,7 +952,7 @@ def test_a_model_opened_from_dct_is_imported_and_pushed_bound(tmp_path, dct, api
     assert ctrl.model.status.message.key == "model.saved" and folder.is_dir()
     ctrl.model.discard()
     drive(ctrl, lambda: ctrl.model.lease is None)
-    assert not folder.exists()  # the temporary files go with the model
+    assert not folder.parent.exists()  # the temporary files go with the model
 
 
 def test_a_model_for_another_cloth_replaces_the_one_on_the_ped(tmp_path, dct, api, stores):
@@ -993,3 +1008,99 @@ def test_model_files_stay_inside_the_add_ons_folder(tmp_path):
         with pytest.raises(ValueError):
             link._inside(tmp_path, name)
     assert link._inside(tmp_path, "jbib_000_u.ydd.xml") == tmp_path / "jbib_000_u.ydd.xml"
+
+
+def test_each_open_of_a_model_gets_a_folder_of_its_own(tmp_path, dct, api, stores):
+    """Sollumz takes an image it loaded before when the path is the same: a second open of the same model with a
+    changed diffuse must come from another path."""
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    files = model_files()
+    dct.open_model(files)
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    ctrl.model.discard()
+    drive(ctrl, lambda: ctrl.model.lease is None)
+    files[1] = ("jbib_diff_003_a_uni.dds", b"DDS " + bytes([7]) * 12)
+    dct.open_model(files)
+    drive(ctrl, lambda: len(documents.imports) == 2 and ctrl.model.lease is not None and not ctrl.model.pushing)
+    first, second = (entry["folder"] for entry in documents.imports)
+    assert first != second and first.name == second.name == "jbib_003_u"
+    assert documents.imports[1]["files"]["jbib_003_u/jbib_diff_003_a_uni.dds"] == b"DDS " + bytes([7]) * 12
+
+
+def test_nothing_stays_open_when_dct_no_longer_waits_for_the_answer(tmp_path, dct, api, stores):
+    """accept() sends nothing once the link changed: the image made for the request and the model files go."""
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    documents.meanwhile = lambda: ctrl.session.stop()
+    dct.open_texture(bytes(16 * 16 * 4), 16, 16)
+    drive(ctrl, lambda: bool(documents.discarded))
+    assert documents.images == {} and not ctrl.stream.active
+    assert ctrl.open_notice.message == settings.describe_close_reason("disconnected")
+    ctrl.connect()
+    drive(ctrl, lambda: ctrl.ready)
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.open_notice is not None and ctrl.model.open_notice.level == "WARNING")
+    for _ in range(5):
+        ctrl.poll()
+    assert documents.imports == [] and not any((tmp_path / "user" / link.MODELS_FOLDER).iterdir())
+    assert [m for m in dct.received if m.get("type") == "host.result"] == []
+
+
+def test_import_warnings_are_said(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    documents.warnings = True
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert ctrl.model.open_notice.level == "WARNING"
+    assert ctrl.model.open_notice.message == strings.msg("open.model-warnings", name="jbib_003_u")
+
+
+def make_link(target: pathlib.Path, link_path: pathlib.Path) -> None:
+    """A directory link: a junction on Windows (no privilege needed), a symbolic link elsewhere."""
+    if os.name == "nt":
+        import _winapi
+
+        _winapi.CreateJunction(str(target), str(link_path))
+    else:
+        os.symlink(target, link_path, target_is_directory=True)
+
+
+def stale_model_folder(base: pathlib.Path, name: str, model: bool = True, age: float = 3600.0) -> pathlib.Path:
+    folder = base / name
+    (folder / "jbib_003_u").mkdir(parents=True)
+    if model:
+        (folder / "jbib_003_u" / "jbib_003_u.ydd.xml").write_bytes(b"<DrawableDictionary />")
+    else:
+        (folder / "jbib_003_u" / "notes.txt").write_bytes(b"mine")
+    old = time.time() - age
+    os.utime(folder, (old, old))
+    return folder
+
+
+def test_start_up_removes_only_model_folders_the_add_on_left(tmp_path, dct, api, stores):
+    base = tmp_path / "user" / link.MODELS_FOLDER
+    left = stale_model_folder(base, "om1-0000aaaa")
+    recent = stale_model_folder(base, "om2-0000bbbb", age=0)
+    foreign = stale_model_folder(base, "something-else", model=False)
+    loose = base / "loose.txt"
+    loose.write_bytes(b"x")
+    ctrl = make_controller(tmp_path, dct, api, stores)
+    ctrl.prepare()
+    assert not left.exists() and recent.exists() and foreign.exists() and loose.exists()
+
+
+def test_start_up_leaves_a_linked_models_folder_alone(tmp_path, dct, api, stores):
+    elsewhere = tmp_path / "elsewhere"
+    target = stale_model_folder(elsewhere, "om1-0000aaaa")
+    (tmp_path / "user").mkdir()
+    make_link(elsewhere, tmp_path / "user" / link.MODELS_FOLDER)
+    ctrl = make_controller(tmp_path, dct, api, stores)
+    ctrl.prepare()
+    assert target.exists()  # nothing behind a link is removed
+    dct.on_assist = api.approve
+    ctrl.connect()
+    drive(ctrl, lambda: ctrl.ready)
+    ctrl.documents = FakeDocuments(ctrl)
+    request_id = dct.open_model(model_files())
+    drive(ctrl, lambda: dct.host_result(request_id) is not None)
+    assert dct.host_result(request_id).get("code") == "open-failed"  # and nothing is written through one
+    assert sorted(p.name for p in elsewhere.iterdir()) == ["om1-0000aaaa"]

@@ -111,6 +111,14 @@ TEXT = {
     "open.model-failed": "Impossible d'ouvrir le modèle {name} : {detail}",
     "open.import-failed": "Sollumz n'a pas pu importer le modèle ({detail}). Son journal Info contient les détails.",
     "open.no-dictionary": "Sollumz n'a pas importé de Drawable Dictionary. Son journal Info contient les détails.",
+    "open.import-errors": (
+        "Sollumz a signalé des erreurs pendant l'importation, le modèle n'a donc pas été lié au vêtement. Son journal "
+        "Info contient les détails."
+    ),
+    "open.model-warnings": (
+        "Ouvert depuis Durty Cloth Tool : {name}. Sollumz a signalé des avertissements ; son journal Info contient les "
+        "détails."
+    ),
     "live.off": "Lancez l'aperçu en direct pour voir votre peinture sur le ped.",
     "live.reading": "Lecture de l'image…",
     "live.starting": "Démarrage de l'aperçu en direct…",
@@ -240,6 +248,11 @@ TEXT = {
     "model.wait.tool": "L'envoi automatique attend la fin de l'outil en cours.",
     "model.wait.mode": "L'envoi automatique attend que vous quittiez {mode}.",
     "model.gone": "Le modèle envoyé n'est plus dans ce fichier. Envoyez-le de nouveau.",
+    "model.linked": "Lié à {name}",
+    "model.linked-twice": (
+        "{name} est lié au même vêtement. Supprimez le lien de l'un des deux : chaque vêtement prend un seul modèle."
+    ),
+    "model.not-linked": "Ce Drawable Dictionary n'est lié à aucun vêtement.",
     "model.failed": "L'envoi automatique a échoué : {detail}",
     "model.select": "Sélectionnez le modèle à envoyer : un Drawable Dictionary Sollumz ou un objet qu'il contient.",
     "model.one-root": "Sélectionnez des objets d'un seul Drawable Dictionary.",
@@ -360,6 +373,11 @@ TEXT = {
         "Ouvre cette map du vêtement depuis votre projet comme image dans Blender, liée au vêtement, et lance son "
         "aperçu en direct. Durty Cloth Tool peut aussi envoyer une map : {edit} dans le menu du vêtement."
     ),
+    "info.model-linked": (
+        "Un modèle ouvert depuis Durty Cloth Tool retient son vêtement, aussi dans le fichier .blend enregistré, pour "
+        "être toujours envoyé à ce vêtement. Une copie faite avec Dupliquer garde aussi le lien : supprimez-le sur "
+        "celui qui ne doit pas être lié."
+    ),
     "info.linked": (
         "Une image ouverte depuis Durty Cloth Tool retient son vêtement et sa map, aussi dans le fichier .blend "
         "enregistré, pour que son aperçu en direct aille toujours à ce vêtement. Supprimez le lien sous Aperçu en "
@@ -405,6 +423,10 @@ TEXT = {
     "op.unlink": "Supprimer le lien",
     "op.unlink.desc": (
         "Ne plus lier cette image à son vêtement, pour qu'elle suive votre sélection dans Durty Cloth Tool"
+    ),
+    "op.unlink-model.desc": (
+        "Ne plus lier ce Drawable Dictionary à son vêtement. Son prochain premier envoi va au vêtement sélectionné "
+        "dans Durty Cloth Tool"
     ),
     "op.use-paint-image": "Utiliser l'image peinte",
     "op.use-paint-image.desc": "Utiliser l'image sur laquelle vous peignez, ou celle de l'Image Editor",

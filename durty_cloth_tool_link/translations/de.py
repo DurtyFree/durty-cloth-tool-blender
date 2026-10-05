@@ -106,6 +106,13 @@ TEXT = {
     "open.model-failed": "Das Modell {name} konnte nicht geöffnet werden: {detail}",
     "open.import-failed": "Sollumz konnte das Modell nicht importieren ({detail}). Sein Info-Log zeigt die Details.",
     "open.no-dictionary": "Sollumz hat kein Drawable Dictionary importiert. Sein Info-Log zeigt die Details.",
+    "open.import-errors": (
+        "Sollumz hat beim Importieren Fehler gemeldet, darum wurde das Modell nicht mit dem Kleidungsstück verknüpft. "
+        "Sein Info-Log zeigt die Details."
+    ),
+    "open.model-warnings": (
+        "Aus Durty Cloth Tool geöffnet: {name}. Sollumz hat Warnungen gemeldet; sein Info-Log zeigt die Details."
+    ),
     "live.off": "Starte die Live-Vorschau, um deine Farbe auf dem Ped zu sehen.",
     "live.reading": "Lese das Bild…",
     "live.starting": "Starte die Live-Vorschau…",
@@ -217,6 +224,12 @@ TEXT = {
     "model.wait.tool": "Das automatische Senden wartet, bis das laufende Werkzeug fertig ist.",
     "model.wait.mode": "Das automatische Senden wartet, bis du {mode} verlässt.",
     "model.gone": "Das gesendete Modell ist nicht mehr in dieser Datei. Sende es erneut.",
+    "model.linked": "Verknüpft mit {name}",
+    "model.linked-twice": (
+        "{name} ist mit demselben Kleidungsstück verknüpft. Hebe eine der Verknüpfungen auf: Jedes Kleidungsstück "
+        "nimmt ein Modell."
+    ),
+    "model.not-linked": "Dieses Drawable Dictionary ist mit keinem Kleidungsstück verknüpft.",
     "model.failed": "Das automatische Senden ist fehlgeschlagen: {detail}",
     "model.select": "Wähle das Modell zum Senden: ein Sollumz Drawable Dictionary oder ein Objekt darin.",
     "model.one-root": "Wähle nur Objekte eines Drawable Dictionary.",
@@ -327,6 +340,11 @@ TEXT = {
         "Kleidungsstück, und startet ihre Live-Vorschau. Durty Cloth Tool kann eine Map auch senden: {edit} im Menü "
         "des Kleidungsstücks."
     ),
+    "info.model-linked": (
+        "Ein aus Durty Cloth Tool geöffnetes Modell merkt sich sein Kleidungsstück, auch in der gespeicherten "
+        ".blend-Datei, damit es immer an dieses Kleidungsstück gesendet wird. Eine mit Duplizieren gemachte Kopie "
+        "trägt die Verknüpfung mit: Hebe sie bei dem Modell auf, das nicht verknüpft sein soll."
+    ),
     "info.linked": (
         "Ein aus Durty Cloth Tool geöffnetes Bild merkt sich sein Kleidungsstück und seine Map, auch in der "
         "gespeicherten .blend-Datei, damit seine Live-Vorschau immer zu diesem Kleidungsstück geht. Hebe die "
@@ -371,6 +389,10 @@ TEXT = {
     "op.unlink": "Verknüpfung aufheben",
     "op.unlink.desc": (
         "Dieses Bild nicht mehr mit seinem Kleidungsstück verknüpfen, damit es deiner Auswahl in Durty Cloth Tool folgt"
+    ),
+    "op.unlink-model.desc": (
+        "Dieses Drawable Dictionary nicht mehr mit seinem Kleidungsstück verknüpfen. Sein nächstes erstes Senden geht "
+        "an das in Durty Cloth Tool ausgewählte Kleidungsstück"
     ),
     "op.use-paint-image": "Bemaltes Bild nutzen",
     "op.use-paint-image.desc": "Das Bild nutzen, auf dem du malst, oder das im Image Editor",

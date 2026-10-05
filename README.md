@@ -131,16 +131,22 @@ must be running with the add-on connected; Durty Cloth Tool puts the cloth on th
   example `jbib_003_u A Normal`, and its live preview starts at once. Normal and specular maps are set to
   Non-Color. The image remembers its cloth and map (also in the saved .blend file), so its live preview always goes
   to that cloth, whatever is selected in Durty Cloth Tool; **Unlink** under Linked Cloth lets it follow the
-  selection again. Opening the same map again reuses the image when it holds no unsaved changes; otherwise a new
-  image is made, so unsaved paint is never overwritten. The image is packed into the .blend file. While a live
-  preview runs or saves, Durty Cloth Tool is told that Blender is busy: stop it first.
-- **A model** opens with Sollumz: the add-on writes the `.ydd.xml` and its `.dds` textures into its own user
-  folder (the textures in a folder named after the model, where Sollumz looks for them), imports them with
-  Sollumz's import (your Sollumz import settings, with textures packed into the .blend file), selects the new
-  Drawable Dictionary, links it to its cloth and turns on Push Automatically. Its first push names the cloth;
-  later pushes update that preview. A model of another cloth that was on the ped before is taken off first. Save
-  Model to Cloth and Discard work as for any pushed model. Without Sollumz (or with one that is too old), Durty
-  Cloth Tool is told what is missing and the Model panel says what to install.
+  selection again. Opening the same map again reuses the image only while its pixels are still exactly what was
+  opened into it; otherwise a new image is made, so paint, a saved or repacked file and an appended image are never
+  overwritten. The image is packed into the .blend file. While a live preview runs or saves, Durty Cloth Tool is
+  told that Blender is busy: stop it first.
+- **A model** opens with Sollumz: the add-on writes the `.ydd.xml` and its `.dds` textures into a folder of its
+  own for this open in its user folder (the textures in a folder named after the model, where Sollumz looks for
+  them), imports them with Sollumz's import (your Sollumz import settings, with textures packed into the .blend
+  file), selects the new Drawable Dictionary, links it to its cloth and turns on Push Automatically. Its first push
+  names the cloth; later pushes update that preview. A model of another cloth that was on the ped before is taken
+  off first. Save Model to Cloth and Discard work as for any pushed model. When Sollumz reports errors while
+  importing, the model is not linked and the Model panel says so; warnings are shown with the model. Without
+  Sollumz (or with one that is too old), Durty Cloth Tool is told what is missing and the Model panel says what
+  to install.
+- **The link of a model** shows in the Model panel ("Linked to jbib_003_u A") with **Unlink**. Opening the same
+  cloth's model again moves the link to the new one. A copy made with Duplicate carries the link too: the Model
+  panel says so, and the copy is not pushed until one of the two is unlinked.
 
 The panels say what happened ("Opened from Durty Cloth Tool: ..."); a problem after Blender took the item is shown
 there too.
@@ -240,12 +246,15 @@ sign-in data.
   - `install-id`: a random id for this installation (not a secret).
   - `auth.lock`: an empty file that keeps two Blender windows from renewing the sign-in at the same time.
 - **Exported models:** in a temporary folder named `dct_link_...`, deleted right after each push.
-- **Models opened from Durty Cloth Tool:** in `opened-models` in the add-on's user folder while the model is on the
-  ped. They are deleted when the model is discarded or closed, when the add-on is disabled, and (left over from a
-  Blender that closed) when the add-on starts. Blender keeps what it imported, with the textures packed.
+- **Models opened from Durty Cloth Tool:** in `opened-models` in the add-on's user folder, one folder per open,
+  while the model is on the ped. They are deleted when the model is discarded or closed, when the add-on is
+  disabled, and (left over from a Blender that closed) when the add-on starts; at start-up only folders the add-on
+  made are removed, and nothing when `opened-models` is a link. Blender keeps what it imported, with the textures
+  packed.
 - **Textures opened from Durty Cloth Tool:** packed into the .blend file, with the ids of the cloth and variation
-  and the map as custom properties of the image (`dct_cloth_id`, `dct_texture_id`, `dct_map`). A model opened from
-  Durty Cloth Tool keeps the ids on its Drawable Dictionary.
+  and the map as custom properties of the image (`dct_cloth_id`, `dct_texture_id`, `dct_map`, and `dct_pixels`,
+  the SHA-256 of the pixels it was opened with). A model opened from Durty Cloth Tool keeps the ids on its Drawable
+  Dictionary. Opening and linking each add an undo step, so undo and redo keep the link.
 
 ## Signing out and disconnecting
 
@@ -304,7 +313,8 @@ tools/                   dct_link sync, manifest check, release checks and the B
   user folder. Add `--sollumz <Sollumz extension folder> --sollumz-site <folder with its szio package>` to also
   push through a real Sollumz (and open a model with its import).
 - **Interface screenshots:** `python tools/blender_shots.py --blender <path to blender> --out <folder>` builds the
-  extension, opens a Blender window with a throw-away user folder, walks the DCT tab through its states against
+  extension, opens a Blender window with a throw-away user folder (both tools drop Blender's `BLENDER_USER_*`
+  folder variables, so your own profile is never used), walks the DCT tab through its states against
   the fake Durty Cloth Tool and saves a cropped screenshot of the sidebar for each (`--expanded`, `--language
   de_DE` and `--theme light` for variants). Blender quits by itself.
 - **Build by hand:** `blender --command extension build --source-dir durty_cloth_tool_link --output-dir dist`.
