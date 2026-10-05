@@ -3,7 +3,9 @@
 """The garment fitting tools in Blender, on a synthetic body and synthetic garments (no game files): importing a
 garment, the hosted body from the fake gta.clothing and a body file, markers and presets, the fit check and the
 problem colours, push out, snug, relax, the sculpt session, T-pose to A-pose, the tear check, prepare, combine
-materials, levels of detail, validate, backups, and that nothing else in the scene changes.
+materials, levels of detail, validate, backups, adding the coat to the project open in the fake Durty Cloth Tool
+(the skeleton template, the checks, the export, the add, Cancel and the free limit), and that nothing else in the
+scene changes.
 
 Called by ``smoke_in_blender.py`` while the add-on is signed in to the fake gta.clothing. Only for use inside
 Blender.
@@ -111,7 +113,7 @@ def positions(obj):
     return values.reshape(-1, 3) @ np.array(obj.matrix_world)[:3, :3].T + np.array(obj.matrix_world)[:3, 3]
 
 
-def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything):
+def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything, dct=None, real=False):
     ui_garment = sys.modules[package + ".ui_garment"]
     gh = sys.modules[package + ".garment_host"]
     garment = sys.modules[package + ".garment"]
@@ -133,7 +135,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything)
           all("UNDO" in cls.bl_options for cls in ui_garment.CLASSES
               if getattr(cls, "bl_idname", "").startswith("dct_link.fit_")
               and cls.bl_idname not in ("dct_link.fit_add_body", "dct_link.fit_cancel_body",
-                                        "dct_link.fit_save_preset")))
+                                        "dct_link.fit_save_preset", "dct_link.fit_cancel_add")))
 
     # Import: a garment exported in centimetres on an avatar standing on the ground arrives in metres, in ped space.
     source = panel_garment("smoke_tee_source", "short", 45.0)
@@ -396,7 +398,184 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything)
     check("the Game Ready panel shows the result of Validate",
           any(entry[0] == "label" and ("CLEAN" in entry[1] or "Validate" in entry[1]) for entry in log))
 
+    results = [RESULT, RESULT2, RESULT3, RESULT4]
+    if dct is not None:
+        results.append(add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, tpose,
+                                  real))
+
     # Nothing else in the scene changed.
     check("the user's other objects are untouched", np.abs(positions(users_cube) - users_shape).max() == 0
           and users_cube.name == "users_cube")
-    return [RESULT, RESULT2, RESULT3, RESULT4]
+    return results
+
+
+def png_size(data):
+    """The width and height in a PNG's header (the full pictures are checked by the pytest suite)."""
+    assert bytes(data[:8]) == b"\x89PNG\r\n\x1a\n" and bytes(data[12:16]) == b"IHDR"
+    return int.from_bytes(bytes(data[16:20]), "big"), int.from_bytes(bytes(data[20:24]), "big")
+
+
+def variation_image(name, size, rgb):
+    image = bpy.data.images.new(name, size, size)
+    pixels = np.tile(np.array([*rgb, 1.0], dtype=np.float32), size * size)
+    image.pixels.foreach_set(pixels)
+    image.pack()
+    return image
+
+
+def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, coat, real):
+    """Adding the game-ready coat to the project open in the fake Durty Cloth Tool: the skeleton template, the checks,
+    an empty export refused, the add with a second colour variation, Cancel while Durty Cloth Tool asks, the free
+    limit, and Push Model on the added cloth."""
+    ui_garment = sys.modules[package + ".ui_garment"]
+    gdct = sys.modules[package + ".garment_dct"]
+    gh = sys.modules[package + ".garment_host"]
+    host = sys.modules[package + ".host"]
+    from tests.support.fake_dct import ADDED_BINDING
+    from tests.blender.sollumz_stub import STUB
+
+    scene = bpy.context.scene
+    props = scene.dct_garment
+    dct.skeleton_files = {gender: [(synthetic.skeleton_template_file(gender), synthetic.skeleton_template_xml(gender))]
+                          for gender in ("male", "female")}
+    ctrl.skeletons.forget()
+    props.gender = "female"
+    props.slot = "jbib"
+    props.item_name = "Smoke Coat"
+    old_rig = coat.parent
+
+    def finish_job(what):
+        pump(addon, lambda: ui_garment.job_tick() is None, timeout=30, what=what)
+
+    log = draw_everything(package, state, "garment ready to add")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("Game Ready offers the add with its name, variations and skeleton",
+          "Add to Durty Cloth Tool" in labels and ("operator", "dct_link.fit_add_to_dct") in log
+          and ("operator", "dct_link.fit_use_skeleton") in log and ("prop", "item_name") in log
+          and ("prop", "first_title") in log and "not on the Durty Cloth Tool skeleton" in labels, labels[-600:])
+
+    # Durty Cloth Tool without the game files: the skeleton is refused, and the panel says what to do.
+    dct.fail["skeleton.template"] = "game-required"
+    check("Use Durty Cloth Tool Skeleton runs", "FINISHED" in bpy.ops.dct_link.fit_use_skeleton())
+    finish_job("the refused skeleton")
+    notice = ui_garment.RUNTIME.notice
+    check("a refused skeleton says to set up the game in Durty Cloth Tool",
+          notice is not None and notice.message.key == "add.skeleton.game-required" and gdct.skeleton_of(coat) is None,
+          notice)
+    del dct.fail["skeleton.template"]
+
+    # The skeleton: imported with Sollumz, checked, the coat parented to it with its weights kept.
+    groups_before = sorted(g.name for g in coat.vertex_groups)
+    check("Use Durty Cloth Tool Skeleton runs again", "FINISHED" in bpy.ops.dct_link.fit_use_skeleton())
+    finish_job("the skeleton")
+    skeleton = gdct.skeleton_of(coat)
+    bones = [b.name for b in skeleton.armature.data.bones] if skeleton else []
+    modifiers = [m for m in coat.modifiers if m.type == "ARMATURE"]
+    check("the coat sits on the female Durty Cloth Tool skeleton, its bones in the game's order",
+          skeleton is not None and skeleton.gender == "female" and bones == synthetic.skeleton_names()
+          and coat.parent == skeleton.armature and modifiers and modifiers[0].object == skeleton.armature
+          and coat.sollum_type == "sollumz_drawable_model"
+          and sorted(g.name for g in coat.vertex_groups) == groups_before
+          and skeleton.root.sollum_type == "sollumz_drawable_dictionary" and skeleton.root.name != skeleton.armature.name
+          and old_rig is not None and old_rig.name in bpy.data.objects, (ui_garment.RUNTIME.notice, bones[:4]))
+    check("the template arrived once", dct.templates_sent.count("female") == 1)  # the refusal sends none
+    log = draw_everything(package, state, "garment on the skeleton")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panel shows the skeleton and the next step", "On the Female Durty Cloth Tool skeleton" in labels
+          and "Next: Add to Durty Cloth Tool Project" in labels, labels[labels.find("Garment Fitting"):][:300]
+          + " ... " + labels[labels.find("Freemode Skeleton"):][:300])
+
+    # What blocks the add is listed before anything is sent.
+    stray = coat.vertex_groups.new(name="Group")
+    props.variations.add()
+    check("an add with problems is refused", refused(bpy.ops.dct_link.fit_add_to_dct, "blocked"))
+    keys = [p.key for p in ui_garment.RUNTIME.add_problems]
+    check("the add lists a vertex group that is no bone and a variation without an image",
+          "add.why.unknown-groups" in keys and "add.why.variation-empty" in keys and not dct.item_adds, keys)
+    log = draw_everything(package, state, "add problems")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panel lists what blocks the add", "Fix these first" in labels and "Group" in labels, labels[-500:])
+    coat.vertex_groups.remove(stray)
+    props.variations[0].image = variation_image("smoke_coat_red", 64, (0.8, 0.1, 0.1))
+    check("a picked image names its variation", props.variations[0].title == "smoke_coat_red")
+
+    # Sollumz reports success for an empty dictionary: the add-on reads what it wrote and refuses it.
+    if not real:
+        STUB["mode"] = "empty"
+        check("an empty export is refused", refused(bpy.ops.dct_link.fit_add_to_dct, "without the garment"))
+        STUB["mode"] = "ydd"
+        check("nothing is sent for an empty export", not dct.item_adds)
+
+    # The add: Durty Cloth Tool adds the cloth and answers with its binding and findings.
+    dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING),
+                      "findings": [{"code": "non-power-of-two", "severity": "warning"}]}
+    check("Add to Durty Cloth Tool Project runs", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    pump(addon, lambda: not ctrl.item_add.adding, timeout=30, what="the add")
+    header, files = dct.item_adds[-1]
+    names = [name for name, _ in files]
+    model = bytes(files[0][1])
+    pictures = {name: png_size(data) for name, data in files if name.endswith(".png")}
+    check("the add carries the model without its skeleton, and two variations as PNG",
+          header["drawableType"] == "jbib" and header["gender"] == "female" and header["skin"] is False
+          and header["name"] == "Smoke Coat" and names[0].endswith(".ydd.xml")
+          and b"<DrawableModelsHigh>" in model and b"<Skeleton" not in model
+          and [v["name"] for v in header["variations"]] == [coat.data.materials[0].node_tree.nodes[
+              "DiffuseSampler"].image.name, "smoke_coat_red"]
+          and sorted(pictures.values()) == [(64, 64), (2048, 2048)], (header, names, pictures))
+    if real:
+        check("the real Sollumz exported the coat with the ped shader", b"ped.sps" in model and b"<Geometries>" in model)
+    else:
+        call = STUB["calls"][-1]
+        check("the export used Exclude Skeleton and face corners", call["exclude_skeleton"] is True
+              and call["mesh_domain"] == "FACE_CORNER")
+    material = coat.data.materials[0]
+    check("the coat has the ped shader with its diffuse on every level of detail",
+          material.sollum_type == "sollumz_material_shader" and material.shader_properties.filename == "ped.sps"
+          and material.node_tree.nodes["DiffuseSampler"].image is not None
+          and all(m.materials[0] == material for m in gdct.lod_meshes(coat))
+          and coat.data.uv_layers.get(gh.SOURCE_UV) is not None
+          and all(p.use_smooth for p in coat.data.polygons), [l.name for l in coat.data.uv_layers])
+    status = ctrl.item_add.status
+    check("the added cloth is linked to the Drawable Dictionary for Push Model and Save Model to Cloth",
+          status is not None and status.message.key == "add.result.added"
+          and host.stored_binding(skeleton.root) == ADDED_BINDING and coat.get(gdct.ADDED) == "Smoke Coat", status)
+    work = pathlib.Path(ctrl.data_dir) / gdct.WORK_FOLDER
+    check("the add leaves no files behind", not any(work.iterdir()) if work.is_dir() else True)
+    log = draw_everything(package, state, "garment added")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panel says what was added, with Durty Cloth Tool's checks",
+          "Added Smoke Coat to the project as Top (jbib)." in labels and "power of two" in labels
+          and "Done: the garment is in your Durty Cloth Tool project" in labels, labels[-700:])
+
+    # Cancel while Durty Cloth Tool's dialog is open withdraws the add.
+    dct.hold_adds = True
+    adds = len(dct.item_adds)
+    check("another add runs", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    pump(addon, lambda: len(dct.item_adds) > adds, what="the waiting add")
+    log = draw_everything(package, state, "add waiting in DCT")
+    check("the waiting add shows its progress and Cancel", ("operator", "dct_link.fit_cancel_add") in log
+          and any(entry[0] == "progress" for entry in log))
+    check("Cancel runs", "FINISHED" in bpy.ops.dct_link.fit_cancel_add())
+    pump(addon, lambda: not ctrl.item_add.adding, what="the withdrawn add")
+    check("a withdrawn add changes nothing", ctrl.item_add.status.message.key == "add.result.withdrawn"
+          and dct.add_cancels == [dct.item_adds[-1][0]["id"]])
+    dct.hold_adds = False
+
+    # Durty Cloth Tool's free limit: Durty Cloth Tool decides, the panel says it plainly.
+    dct.fail["item.add"] = "item-limit"
+    check("an add over the limit runs", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    pump(addon, lambda: not ctrl.item_add.adding, what="the refused add")
+    check("the free limit is explained", ctrl.item_add.status.message.key == "add.result.item-limit")
+    del dct.fail["item.add"]
+
+    # Push Model on the added cloth goes to that cloth.
+    pushes = len(dct.pushes)
+    for obj in bpy.context.view_layer.objects:
+        obj.select_set(obj == skeleton.root)
+    bpy.context.view_layer.objects.active = skeleton.root
+    check("Push Model runs on the added cloth", "FINISHED" in bpy.ops.dct_link.model_push())
+    pump(addon, lambda: len(dct.pushes) > pushes and not ctrl.model.pushing, timeout=30, what="the push")
+    check("the push names the added cloth", dct.pushes[-1][0].get("binding") == ADDED_BINDING, dct.pushes[-1][0])
+    check("the template was kept for every add", dct.templates_sent.count("female") == 1, dct.templates_sent)
+    return {"check": "add to Durty Cloth Tool (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True,
+            "detail": f"{len(model)} bytes of XML, files {names}"}

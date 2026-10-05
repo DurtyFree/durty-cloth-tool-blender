@@ -398,12 +398,20 @@ def test_the_next_step_walks_through_the_local_flow():
     state = garment.FlowState()
     steps = []
     for change in ({}, {"garment": True}, {"body": True}, {"markers": 11}, {"checked": True, "inside": 4},
-                   {"prepared": True, "materials": 3}, {"materials": 1}, {"lods": True}, {"validated": True}):
+                   {"prepared": True, "materials": 3}, {"materials": 1}, {"lods": True},
+                   {"findings": "blocking"}, {"validated": True, "findings": "clean"}, {"connected": True},
+                   {"project": True}, {"skeleton": True}, {"adding": True}, {"adding": False, "added": True}):
         state = state._replace(**change)
         steps.append(garment.next_step(state))
     assert steps == ["garment.next.import", "garment.next.body", "garment.next.markers", "garment.next.check",
                      "garment.next.push", "garment.next.combine", "garment.next.lods", "garment.next.validate",
-                     "garment.next.done"]
+                     "garment.next.validate-problems", "garment.next.connect", "garment.next.project",
+                     "garment.next.skeleton", "garment.next.add", "garment.next.adding", "garment.next.done"]
+    # Warnings do not hold the add back; without Sollumz there is nothing to export.
+    warned = garment.FlowState(garment=True, body=True, markers=11, prepared=True, lods=True, findings="warnings",
+                               connected=True, project=True)
+    assert garment.next_step(warned) == "garment.next.skeleton"
+    assert garment.next_step(warned._replace(sollumz=False)) == "garment.next.sollumz"
     tpose = garment.FlowState(garment=True, body=True, markers=11, source_pose="t_pose")
     assert garment.next_step(tpose) == "garment.next.tpose"
     assert garment.next_step(tpose._replace(sculpting=True)) == "garment.next.sculpting"

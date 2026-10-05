@@ -12,7 +12,7 @@ import traceback
 import bpy
 from bpy.app.handlers import persistent
 
-from . import host, link, preferences, settings, state, strings, translations, ui, ui_garment
+from . import garment_dct, host, link, preferences, settings, state, strings, translations, ui, ui_garment
 from .strings import msg
 
 _started = False
@@ -54,6 +54,10 @@ def _start(ctrl: link.LinkController) -> None:
     except Exception as exc:  # noqa: BLE001 - a damaged secret store must not stop the add-on; signing in fixes it
         traceback.print_exc()
         ctrl.notice = link.Notice("ERROR", msg("notice.secrets-unreadable", detail=type(exc).__name__))
+    try:
+        garment_dct.remove_stale_work(ctrl.data_dir)  # left over from a Blender that closed during an add
+    except OSError:
+        traceback.print_exc()
     if prefs is not None and prefs.auto_connect:
         ctrl.connect()
 

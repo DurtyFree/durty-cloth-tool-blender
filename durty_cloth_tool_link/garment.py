@@ -111,6 +111,15 @@ class FlowState(NamedTuple):
     lods: bool = False
     sollumz: bool = True
     validated: bool = False
+    #: What the latest Validate found: ``none`` (not run), ``blocking`` (errors), ``warnings`` or ``clean``.
+    findings: str = "none"
+    #: The add to a Durty Cloth Tool project: connected, a project open there, the garment on the Durty Cloth Tool
+    #: skeleton of its gender, an add running, the garment added.
+    connected: bool = False
+    project: bool = False
+    skeleton: bool = False
+    adding: bool = False
+    added: bool = False
 
 
 def next_step(state: FlowState) -> str:
@@ -136,8 +145,23 @@ def next_step(state: FlowState) -> str:
     if state.sollumz and not state.lods:
         return "garment.next.lods"
     if not state.validated:
-        return "garment.next.validate"
-    return "garment.next.done"
+        if state.findings == "blocking":
+            return "garment.next.validate-problems"
+        if state.findings != "warnings":
+            return "garment.next.validate"
+    if state.added:
+        return "garment.next.done"
+    if state.adding:
+        return "garment.next.adding"
+    if not state.connected:
+        return "garment.next.connect"
+    if not state.project:
+        return "garment.next.project"
+    if not state.sollumz:
+        return "garment.next.sollumz"
+    if not state.skeleton:
+        return "garment.next.skeleton"
+    return "garment.next.add"
 
 
 # --------------------------------------------------------------------------------------------------

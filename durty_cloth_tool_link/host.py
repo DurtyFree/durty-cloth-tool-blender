@@ -442,6 +442,9 @@ def _export_error(key: str, **fields: Any) -> ExportError:
 class ExportResult(NamedTuple):
     #: Sollumz logged warnings or errors during the export.
     warnings: bool
+    #: Sollumz logged errors: part of the model may be missing from the export (``False`` when this Sollumz cannot
+    #: tell; check the exported file then).
+    errors: bool = False
 
 
 def sollumz_operator_properties() -> Optional[Set[str]]:
@@ -525,9 +528,9 @@ def model_open_problem() -> Optional[Msg]:
     return None
 
 
-def _import_settings(properties: Set[str]) -> Dict[str, Any]:
+def _import_settings(properties: Set[str], overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """The user's Sollumz import settings, with the textures packed into the .blend file (the imported files are
-    temporary)."""
+    temporary) and ``overrides`` on top (those this Sollumz has)."""
     if not {"use_custom_settings", "textures_mode"} <= properties:
         return {}  # an older Sollumz imports with its own settings; the textures are packed afterwards
     values: Dict[str, Any] = {}
@@ -538,11 +541,13 @@ def _import_settings(properties: Set[str]) -> Dict[str, Any]:
             name = prop.identifier
             if name in properties and name not in _NOT_COPIED_IMPORT and not prop.is_readonly:
                 values[name] = getattr(prefs, name)
+    values.update({k: v for k, v in (overrides or {}).items() if k in properties})
     values.update(use_custom_settings=True, textures_mode="PACK")
     return values
 
 
-def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Tuple[Any, bool]:
+def import_with_sollumz(folder: pathlib.Path, model_file: str,
+                        overrides: Optional[Dict[str, Any]] = None) -> Tuple[Any, bool]:
     """Imports ``folder/model_file`` (CodeWalker XML of a Drawable Dictionary, its textures in the folder named after
     it) with Sollumz into the active collection of the first window. Returns the new Drawable Dictionary and whether
     Sollumz logged warnings. Every image the import read from ``folder`` is packed into the .blend file, so the files
@@ -554,7 +559,7 @@ def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Tuple[Any, boo
     if problem is not None:
         raise ExportError(problem)
     properties = sollumz_import_properties() or set()
-    arguments = dict(_import_settings(properties), directory=str(folder), files=[{"name": model_file}])
+    arguments = dict(_import_settings(properties, overrides), directory=str(folder), files=[{"name": model_file}])
     window = getattr(bpy.context, "window", None) or first_window()
     override: Dict[str, Any] = {"window": window} if window is not None else {}
     before = {obj.session_uid for obj in bpy.data.objects}
@@ -664,9 +669,9 @@ def drawable_root(objects: Iterable[Any]) -> Any:
     raise _export_error("model.not-sollumz")
 
 
-def _export_settings(properties: Set[str]) -> Dict[str, Any]:
+def _export_settings(properties: Set[str], overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """The operator arguments for this Sollumz version: the user's Sollumz export settings (for example Exclude
-    Skeleton) with the forced settings on top."""
+    Skeleton) with the forced settings and ``overrides`` on top."""
     values: Dict[str, Any] = {}
     addon = _sollumz_addon()
     prefs = getattr(getattr(addon, "preferences", None), "export_settings", None) if addon is not None else None
@@ -676,6 +681,7 @@ def _export_settings(properties: Set[str]) -> Dict[str, Any]:
             if name not in _NOT_COPIED and not prop.is_readonly:
                 values[name] = getattr(prefs, name)
     values.update(FORCED_SETTINGS)
+    values.update(overrides or {})
     if "use_custom_settings" in properties and "target_formats" in properties:
         # Sollumz 2.8.1 and later: the settings are operator properties.
         return dict({k: v for k, v in values.items() if k in properties}, use_custom_settings=True)
@@ -760,14 +766,15 @@ def _consume_updates(window: Optional[Any]) -> None:
             pass  # the view layer went away meanwhile; nothing of it is left to evaluate
 
 
-def export_with_sollumz(root: Any, folder: str) -> ExportResult:
+def export_with_sollumz(root: Any, folder: str, overrides: Optional[Dict[str, Any]] = None) -> ExportResult:
     """Exports ``root`` with Sollumz into ``folder``, in the window whose view layer holds it. Selects only what
-    the export needs and restores the selection afterwards. Reports whether Sollumz logged warnings or errors."""
+    the export needs and restores the selection afterwards. Reports whether Sollumz logged warnings or errors.
+    ``overrides`` are export settings that win over the user's (those this Sollumz has)."""
     ready, problem = sollumz_status()
     if not ready:
         raise ExportError(problem)
     properties = sollumz_operator_properties() or set()
-    arguments = dict(_export_settings(properties), directory=folder, direct_export=True)
+    arguments = dict(_export_settings(properties, overrides), directory=folder, direct_export=True)
 
     override = {}
     window = window_for(root)
@@ -803,8 +810,16 @@ def export_with_sollumz(root: Any, folder: str) -> ExportResult:
     if "FINISHED" not in result:
         raise _export_error("model.not-exported")
     if counter is not None:
-        return ExportResult(counter.problems > 0)
+        return ExportResult(counter.problems > 0, counter.errors > 0)
     return ExportResult(len(windows()) > windows_before or _info_log_count() > logs_before)
+
+
+def sollumz_module(suffix: str) -> Optional[Any]:
+    """A module of the enabled Sollumz (``suffix`` such as ``ydr.shader_materials``), or ``None``."""
+    addon = _sollumz_addon()
+    if addon is None:
+        return None
+    return sys.modules.get(f"{addon.module}.{suffix}")
 
 
 def _restore_selection(layer: Any, chosen: Any, selected: List[Any], active: Any) -> None:

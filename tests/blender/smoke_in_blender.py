@@ -16,9 +16,10 @@ streaming (checking the vertical flip and dirty rectangles), saving and discardi
 through Sollumz's export operator (a stand-in by default, the real Sollumz with ``--sollumz``), an automatic
 push after a mesh change, a skinned model whose export switches the armature to its rest pose and back, a texture
 and a model Durty Cloth Tool sends (the model imported with Sollumz's import operator, with the real Sollumz a round
-trip of its own export), the garment fitting tools on a synthetic body and garments (``garment_smoke.py``), the update
-repository, sign-out and disabling the add-on. Blender's timers do not run in background mode, so the script calls
-the add-on's timer function itself, and evaluates the view layer where Blender's main loop would.
+trip of its own export), the garment fitting tools on a synthetic body and garments (``garment_smoke.py``), adding
+a garment to the open project, the update repository, sign-out and disabling the add-on. Blender's timers do not run
+in background mode, so the script calls the add-on's timer function itself, and evaluates the view layer where
+Blender's main loop would.
 """
 
 from __future__ import annotations
@@ -922,7 +923,8 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     pump(addon, lambda: ctrl.ready, what="connecting again after the disconnect")
 
     # The garment fitting tools, while signed in (the hosted body comes from the fake gta.clothing).
-    RESULTS.extend(garment_smoke.run(package, addon, state, ctrl, api, check, refused, pump, draw_everything))
+    RESULTS.extend(garment_smoke.run(package, addon, state, ctrl, api, check, refused, pump, draw_everything, dct=dct,
+                                     real=bool(args.sollumz)))
 
     # Signing out (the network part runs on a worker thread), then disabling and enabling again.
     check("Sign Out runs", "FINISHED" in bpy.ops.dct_link.sign_out("EXEC_DEFAULT"))

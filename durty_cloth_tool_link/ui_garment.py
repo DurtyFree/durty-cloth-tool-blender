@@ -5,26 +5,29 @@
 The panel sits after Model, with the next step in its first line and four child panels: Setup (gender, slot,
 category, source pose, the garment and the freemode body), Fit (markers, T-pose to A-pose, backups), Fix (push out,
 region tools, problem colours, the fit check, the sculpt session, the tear check) and Game Ready (prepare, combine
-materials, levels of detail, the local checks). Every operator that changes a mesh can be undone; the garment keeps
-up to three backups for Restore Pre-fit.
+materials, levels of detail, the local checks, and Add to Durty Cloth Tool: the freemode skeleton from Durty Cloth Tool
+and the add of the garment as a new cloth of the open project). Every operator that changes a mesh can be undone; the
+garment keeps up to three backups for Restore Pre-fit.
 """
 
 from __future__ import annotations
 
 import math
 import pathlib
+import shutil
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 
 import bpy
-from bpy.props import (BoolProperty, EnumProperty, FloatProperty, FloatVectorProperty, IntProperty, PointerProperty,
-                       StringProperty)
+from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty, FloatVectorProperty, IntProperty,
+                       PointerProperty, StringProperty)
 from bpy.types import Menu, Operator, Panel, PropertyGroup
 
-from . import garment, garment_body, host, link, state, strings, ui
+from . import garment, garment_add, garment_body, host, link, state, strings, ui
+from . import garment_dct as gdct
 from . import garment_host as gh
-from .dct_link import auth
+from .dct_link import auth, protocol
 from .strings import CONTEXT, EN, Msg, UserError, msg, t
 from .ui import GAP, GAP_SMALL, guide, heading, info_button, operator, primary, reason_text, subtext, wrapped
 
@@ -45,6 +48,13 @@ class _Runtime:
         self.tears: Optional[Dict[str, Any]] = None
         #: The garment the tear check result belongs to (its name).
         self.tears_of: Optional[str] = None
+        #: A skeleton or an add that waits for Durty Cloth Tool's skeleton template (:class:`Job`).
+        self.job: Optional["Job"] = None
+        #: What blocks the add (from its checks), and what the add-on advises against without blocking it.
+        self.add_problems: List[Msg] = []
+        self.add_warnings: List[Msg] = []
+        #: The garment the add's checks and outcome belong to (its session uid).
+        self.add_of: Optional[int] = None
         self.redraw: Callable[[], None] = lambda: None
 
 
@@ -117,8 +127,29 @@ def _poll_body(self: Any, obj: Any) -> bool:
     return obj.type == "MESH"
 
 
+def _garment_changed(self: Any, context: Any) -> None:
+    obj = self.garment
+    if obj is not None and not self.item_name.strip():
+        self.item_name = obj.name[: protocol.MAX_TEXT_LENGTH]
+
+
+def _variation_image_changed(self: Any, context: Any) -> None:
+    if self.image is not None and not self.title.strip():
+        self.title = self.image.name[: protocol.MAX_TEXT_LENGTH]
+
+
+class DCTLINK_PG_variation(PropertyGroup):
+    """One more colour variation of the cloth: an image and the name it gets in Durty Cloth Tool."""
+
+    image: PointerProperty(name=EN["add.prop.image"], type=bpy.types.Image, update=_variation_image_changed,
+                           description=EN["add.prop.image.desc"], translation_context=CONTEXT)
+    title: StringProperty(name=EN["add.prop.variation-name"], maxlen=protocol.MAX_TEXT_LENGTH,
+                          description=EN["add.prop.variation-name.desc"], translation_context=CONTEXT)
+
+
 class DCTLINK_PG_garment(PropertyGroup):
     garment: PointerProperty(name=EN["garment.prop.garment"], type=bpy.types.Object, poll=_poll_mesh,
+                             update=_garment_changed,
                              description=EN["garment.prop.garment.desc"], translation_context=CONTEXT)
     body: PointerProperty(name=EN["garment.prop.body"], type=bpy.types.Object, poll=_poll_body,
                           description=EN["garment.prop.body.desc"], translation_context=CONTEXT)
@@ -172,6 +203,13 @@ class DCTLINK_PG_garment(PropertyGroup):
                             description=EN["garment.prop.lod.desc"], translation_context=CONTEXT)
     lod_low: IntProperty(name=EN["garment.prop.lod-low"], default=1000, min=20, max=100000,
                          description=EN["garment.prop.lod.desc"], translation_context=CONTEXT)
+    item_name: StringProperty(name=EN["add.prop.name"], maxlen=protocol.MAX_TEXT_LENGTH,
+                              description=EN["add.prop.name.desc"], translation_context=CONTEXT)
+    skin: BoolProperty(name=EN["add.prop.skin"], default=False, description=EN["add.prop.skin.desc"],
+                       translation_context=CONTEXT)
+    first_title: StringProperty(name=EN["add.prop.variation-name"], maxlen=protocol.MAX_TEXT_LENGTH,
+                                description=EN["add.prop.first-name.desc"], translation_context=CONTEXT)
+    variations: CollectionProperty(type=DCTLINK_PG_variation)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1057,14 +1095,408 @@ class DCTLINK_OT_fit_validate(_MeshOp):
 
 
 # --------------------------------------------------------------------------------------------------
+# Adding the garment to Durty Cloth Tool
+# --------------------------------------------------------------------------------------------------
+
+
+class Job(NamedTuple):
+    """A step that waits for Durty Cloth Tool's skeleton template: ``skeleton`` (Use Durty Cloth Tool Skeleton) or
+    ``add`` (Add to Durty Cloth Tool Project, which then goes on by itself)."""
+
+    kind: str
+    scene: str
+    garment: int  # the garment's session uid
+    gender: str
+
+
+def item_name(context: Any) -> str:
+    """The name the cloth gets in Durty Cloth Tool: the field, or the garment's name while the field is empty."""
+    settings_ = props(context)
+    obj = current_garment(context)
+    return settings_.item_name.strip() or (obj.name if obj is not None else "")
+
+
+def _add_busy() -> Optional[Msg]:
+    """A skeleton or an add that is under way."""
+    ctrl = state.controller
+    if RUNTIME.job is not None:
+        return msg("add.why.fetching")
+    if ctrl is not None and ctrl.item_add.adding:
+        return msg("add.why.adding")
+    return None
+
+
+def _skeleton_reason(context: Any) -> Optional[Msg]:
+    reason = _garment_reason(context)
+    if reason is None and not state.get().ready:
+        reason = msg("add.why.connect")
+    return reason or host.model_open_problem() or _add_busy()
+
+
+def _add_reason(context: Any) -> Optional[Msg]:
+    """Why Add to Durty Cloth Tool Project is unavailable (what its checks find is shown after a click)."""
+    reason = _garment_reason(context)
+    if reason is not None:
+        return reason
+    ctrl = state.get()
+    if not ctrl.ready:
+        return msg("add.why.connect")
+    return host.model_open_problem() or _add_busy() or ctrl.item_add.problem()
+
+
+def _variations(context: Any) -> List[Any]:
+    return list(props(context).variations)
+
+
+def add_checks(context: Any, bones: Optional[List[str]] = None) -> Tuple[List[Msg], List[Msg]]:
+    """The add's checks before anything is sent: the local Validate (its errors block), the name, one material with
+    its diffuse, the variation pictures, and the vertex groups against the skeleton's bones (once they are known).
+    Returns what blocks the add and what is only advice."""
+    settings_ = props(context)
+    obj = current_garment(context)
+    problems: List[Msg] = []
+    warnings: List[Msg] = []
+    reason = _garment_reason(context)
+    if reason is not None or obj is None:
+        return [reason or msg("garment.why.no-garment")], []
+    body = settings_.body if gh.body_problem(context, settings_.body) is None else None
+    findings = garment.validate(gh.validate_stats(obj, body))
+    obj[gh.FINDINGS] = garment.findings_to_json(findings)
+    gh.set_flag(obj, "dct_validated", garment.is_clean(findings))
+    for finding in findings:
+        key = f"garment.finding.{finding.code}"
+        if finding.code in ("no-weights", "materials") or key not in EN:
+            continue  # the vertex groups and the materials are checked for the add below
+        fields = dict(finding.fields)
+        if "level" in fields:
+            fields["level"] = msg(f"garment.level.{fields['level']}")
+        if finding.severity == "error":
+            problems.append(msg(key, **fields))  # its warnings stay under Checks, where Validate lists them
+    name_problem = garment_add.name_problem(item_name(context))
+    if name_problem is not None:
+        problems.append(name_problem)
+    materials = gh.material_count(obj)
+    if materials > 1:
+        problems.append(msg("add.why.combine", count=materials))
+    diffuse = gdct.garment_images(obj)["diffuse"]
+    pictures = [diffuse] if diffuse is not None else []
+    if diffuse is None and materials <= 1:
+        problems.append(msg("add.why.no-diffuse"))
+    for index, variation in enumerate(_variations(context)):
+        if variation.image is None:
+            problems.append(msg("add.why.variation-empty", number=index + 2))
+        else:
+            pictures.append(variation.image)
+    if 1 + len(_variations(context)) > garment_add.MAX_VARIATIONS:
+        problems.append(msg("add.why.too-many", limit=garment_add.MAX_VARIATIONS))
+    seen = set()
+    for image in pictures:
+        if image.session_uid in seen:
+            problems.append(msg("add.why.variation-twice", name=image.name))
+            continue
+        seen.add(image.session_uid)
+        width, height = tuple(image.size)
+        check = garment_add.picture_check(width, height, image.name)
+        if check.blocking is not None:
+            problems.append(check.blocking)
+        warnings.extend(check.warnings)
+    groups = [group.name for group in obj.vertex_groups]
+    if bones is not None:
+        problems.extend(garment_add.group_problems(garment_add.group_report(groups, bones)))
+    elif not [name for name in groups if not garment_add.is_tool_group(name)]:
+        problems.append(msg("add.why.no-weights"))
+    return problems, warnings
+
+
+def _show_checks(obj: Any, problems: List[Msg], warnings: List[Msg]) -> None:
+    RUNTIME.add_problems = list(problems)
+    RUNTIME.add_warnings = list(warnings)
+    RUNTIME.add_of = obj.session_uid if obj is not None else None
+
+
+def ensure_skeleton(context: Any, obj: Any, gender: str) -> gdct.Skeleton:
+    """The garment on the Durty Cloth Tool skeleton of ``gender``: imported from the template when the garment is not
+    on one yet (or on one that does not match it), checked, and the garment attached."""
+    ctrl = state.get()
+    template = ctrl.skeletons.get(gender)
+    bones = ctrl.skeletons.bones(gender)
+    if template is None or bones is None:
+        raise UserError(msg("add.why.no-template"))
+    skeleton = gdct.skeleton_of(obj)
+    if skeleton is None or skeleton.gender != gender or garment_add.armature_problem(
+            gdct.armature_bones(skeleton.armature), bones) is not None:
+        ctrl.prepare()
+        assert ctrl.data_dir is not None
+        skeleton = gdct.import_skeleton(context, template, ctrl.data_dir, bones, gender, obj)
+    gdct.attach(context, obj, skeleton)
+    problem = gdct.skeleton_problem(obj, gender, bones)
+    if problem is not None:
+        raise UserError(problem)
+    return skeleton
+
+
+def use_skeleton(context: Any) -> Msg:
+    obj = current_garment(context)
+    gender = props(context).gender
+    skeleton = ensure_skeleton(context, obj, gender)
+    count = len(state.get().skeletons.bones(gender) or [])
+    return msg("add.done.skeleton", name=skeleton.root.name, gender=msg(f"gender.{gender}"), count=count)
+
+
+def run_add(context: Any) -> Msg:
+    """The add, once the skeleton template is here: the checks against its bones, the garment on the skeleton and set
+    up for Sollumz, the export (refused when empty or partial), the pictures, and ``item.add``. Returns what to show;
+    raises :class:`UserError` with what blocks it."""
+    ctrl = state.get()
+    settings_ = props(context)
+    obj = current_garment(context)
+    gender, slot = settings_.gender, settings_.slot
+    bones = ctrl.skeletons.bones(gender)
+    problems, warnings = add_checks(context, bones)
+    _show_checks(obj, problems, warnings)
+    if problems:
+        raise UserError(msg("add.blocked", count=len(problems)))
+    skeleton = ensure_skeleton(context, obj, gender)
+    images = gdct.prepare_garment(context, obj, skeleton)
+    problem = gdct.skeleton_problem(obj, gender, bones)  # checked again right before the export
+    if problem is not None:
+        raise UserError(problem)
+    ctrl.prepare()
+    assert ctrl.data_dir is not None
+    folder = gdct.work_folder(ctrl.data_dir)
+    try:
+        export = gdct.export_garment(skeleton, folder)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
+    pictures = [garment_add.Variation(garment_add.variation_title(settings_.first_title, images["diffuse"].name),
+                                      gdct.picture(images["diffuse"])[2])]
+    for variation in _variations(context):
+        pictures.append(garment_add.Variation(garment_add.variation_title(variation.title, variation.image.name),
+                                              gdct.picture(variation.image)[2]))
+    files, chosen = garment_add.item_files(export.model, export.textures, pictures)
+    if garment_add.payload_size(files) > protocol.MAX_BINARY_PAYLOAD_BYTES:
+        raise UserError(msg("add.why.too-large", size=protocol.MAX_BINARY_PAYLOAD_BYTES // (1024 * 1024)))
+    if export.warnings:
+        RUNTIME.add_warnings.append(msg("add.export.warnings"))
+    name = item_name(context)
+    root_uid, garment_uid = skeleton.root.session_uid, obj.session_uid
+
+    def added(binding: Dict[str, str]) -> None:
+        root, added_garment = host.find_object(root_uid), host.find_object(garment_uid)
+        if root is None or added_garment is None:
+            raise RuntimeError("the garment or its Drawable Dictionary was removed meanwhile")
+        gdct.store_added(root, added_garment, binding, name)
+        host.push_undo(t("add.op.add"))
+        host.redraw()
+
+    ctrl.item_add.start(slot, gender, bool(settings_.skin), name, chosen, files, on_added=added)
+    return msg("add.sent", name=name, count=len(chosen))
+
+
+def _report_failure(op: Optional[Operator], exc: BaseException) -> None:
+    failure = _failure_message(exc)
+    if op is not None:
+        op.report({"ERROR"}, strings.text(failure))
+    notify("ERROR", failure)
+
+
+def _run_step(context: Any, kind: str, op: Optional[Operator] = None) -> set:
+    """Runs a skeleton or add step now that the template is here; failures are reported and shown in the panel."""
+    try:
+        message = use_skeleton(context) if kind == "skeleton" else run_add(context)
+    except EXPECTED as exc:
+        _report_failure(op, exc)
+        host.redraw()
+        return {"CANCELLED"}
+    if op is not None:
+        op.report({"INFO"}, strings.text(message))
+    if kind == "add":
+        RUNTIME.notice = None  # the add's own status, under Game Ready, follows it from here
+    else:
+        notify("INFO", message)
+    host.redraw()
+    return {"FINISHED"}
+
+
+def _start_step(context: Any, kind: str, op: Operator) -> set:
+    """Runs the step now when the template of the gender is kept, or asks Durty Cloth Tool for it and goes on once it
+    arrives (:func:`job_tick`)."""
+    ctrl = state.get()
+    gender = props(context).gender
+    obj = current_garment(context)
+    if ctrl.skeletons.get(gender) is not None:
+        return _run_step(context, kind, op)
+    try:
+        ctrl.skeletons.fetch(gender)
+    except ui.EXPECTED_FAILURES as exc:
+        _report_failure(op, exc)
+        return {"CANCELLED"}
+    RUNTIME.job = Job(kind, context.scene.name, obj.session_uid, gender)
+    notify("INFO", msg("add.fetching", gender=msg(f"gender.{gender}")))
+    if not bpy.app.timers.is_registered(job_tick):
+        bpy.app.timers.register(job_tick, first_interval=0.1)
+    host.redraw()
+    return {"FINISHED"}
+
+
+def job_tick() -> Optional[float]:
+    """The timer that goes on with a skeleton or add step once Durty Cloth Tool sent the skeleton template."""
+    job = RUNTIME.job
+    ctrl = state.controller
+    if job is None or ctrl is None:
+        RUNTIME.job = None
+        return None
+    if ctrl.skeletons.get(job.gender) is None:
+        if ctrl.skeletons.fetching(job.gender):
+            return 0.2
+        RUNTIME.job = None
+        problem = ctrl.skeletons.problems.get(job.gender)
+        notify(problem.level if problem else "ERROR", problem.message if problem else msg("add.why.no-template"))
+        host.redraw()
+        return None
+    if _busy():
+        return 0.5  # never while the user is in Edit or Sculpt Mode, or in the middle of a tool
+    RUNTIME.job = None
+    scene = bpy.data.scenes.get(job.scene)
+    obj = host.find_object(job.garment)
+    if scene is None or obj is None or scene.dct_garment.garment != obj:
+        notify("WARNING", msg("add.why.garment-changed"))
+        host.redraw()
+        return None
+    window = host.first_window()
+    override: Dict[str, Any] = {"window": window} if window is not None else {}
+    if window is None or window.scene != scene:
+        override.update(scene=scene, view_layer=scene.view_layers[0])
+    try:
+        with bpy.context.temp_override(**override):
+            result = _run_step(bpy.context, job.kind)
+    except Exception as exc:  # noqa: BLE001 - a timer that raises is removed; show the problem instead
+        traceback.print_exc()
+        notify("ERROR", msg("notice.unexpected", detail=f"{type(exc).__name__}: {exc}"))
+        host.redraw()
+        return None
+    if "FINISHED" in result:
+        host.push_undo(t("add.op.add" if job.kind == "add" else "add.op.skeleton"))
+    return None
+
+
+class DCTLINK_OT_fit_use_skeleton(_Op):
+    bl_idname = "dct_link.fit_use_skeleton"
+    bl_label = EN["add.op.skeleton"]
+    bl_description = EN["add.op.skeleton.desc"]
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _skeleton_reason(context) if state.controller is not None else msg("notice.not-ready"))
+
+    def execute(self, context):
+        return _start_step(context, "skeleton", self)
+
+
+class DCTLINK_OT_fit_add_to_dct(_Op):
+    bl_idname = "dct_link.fit_add_to_dct"
+    bl_label = EN["add.op.add"]
+    bl_description = EN["add.op.add.desc"]
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _add_reason(context) if state.controller is not None else msg("notice.not-ready"))
+
+    def execute(self, context):
+        obj = current_garment(context)
+        ctrl = state.get()
+        ctrl.item_add.forget()
+        problems, warnings = add_checks(context, ctrl.skeletons.bones(props(context).gender))
+        _show_checks(obj, problems, warnings)
+        if problems:
+            message = msg("add.blocked", count=len(problems))
+            self.report({"ERROR"}, strings.text(message))
+            notify("ERROR", message)
+            host.redraw()
+            return {"CANCELLED"}
+        return _start_step(context, "add", self)
+
+
+class DCTLINK_OT_fit_cancel_add(_Op):
+    bl_idname = "dct_link.fit_cancel_add"
+    bl_label = EN["op.cancel-sign-in"]
+    bl_description = EN["add.op.cancel.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        ctrl = state.controller
+        running = RUNTIME.job is not None or (ctrl is not None and ctrl.item_add.adding)
+        if running and ctrl is not None and ctrl.item_add.withdrawing:
+            return _refuse(cls, msg("add.withdrawing"))
+        return _refuse(cls, None if running else msg("add.why.nothing-running"))
+
+    def execute(self, context):
+        ctrl = state.get()
+        if RUNTIME.job is not None:
+            RUNTIME.job = None
+            notify("INFO", msg("error.cancelled"))
+        elif ctrl.item_add.adding:
+            ctrl.item_add.cancel()
+        host.redraw()
+        return {"FINISHED"}
+
+
+class DCTLINK_OT_fit_add_variation(_Op):
+    bl_idname = "dct_link.fit_add_variation"
+    bl_label = EN["add.op.add-variation"]
+    bl_description = EN["add.op.add-variation.desc"]
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        reason = None if state.controller is not None else msg("notice.not-ready")
+        if reason is None and 1 + len(props(context).variations) >= garment_add.MAX_VARIATIONS:
+            reason = msg("add.why.too-many", limit=garment_add.MAX_VARIATIONS)
+        return _refuse(cls, reason)
+
+    def execute(self, context):
+        props(context).variations.add()
+        return {"FINISHED"}
+
+
+class DCTLINK_OT_fit_remove_variation(_Op):
+    bl_idname = "dct_link.fit_remove_variation"
+    bl_label = EN["add.op.remove-variation"]
+    bl_description = EN["add.op.remove-variation.desc"]
+    bl_options = {"REGISTER", "UNDO"}
+
+    index: IntProperty(options={"HIDDEN", "SKIP_SAVE"})
+
+    def execute(self, context):
+        variations = props(context).variations
+        if 0 <= self.index < len(variations):
+            variations.remove(self.index)
+        return {"FINISHED"}
+
+
+# --------------------------------------------------------------------------------------------------
 # Drawing
 # --------------------------------------------------------------------------------------------------
+
+
+def findings_state(obj: Optional[Any]) -> str:
+    """What the garment's latest Validate found: ``none``, ``blocking``, ``warnings`` or ``clean``."""
+    findings = garment.findings_from_json(gh.stored_text(obj, gh.FINDINGS))
+    if findings is None:
+        return "none"
+    if any(f.severity == "error" for f in findings):
+        return "blocking"
+    return "clean" if garment.is_clean(findings) else "warnings"
 
 
 def flow_state(context: Any) -> garment.FlowState:
     settings_ = props(context)
     obj = current_garment(context)
     report = garment.FitReport.from_json(gh.stored_text(obj, gh.FIT_REPORT))
+    ctrl = state.controller
+    skeleton = gdct.skeleton_of(obj)
     return garment.FlowState(
         garment=obj is not None,
         body=gh.body_problem(context, settings_.body) is None,
@@ -1080,6 +1512,12 @@ def flow_state(context: Any) -> garment.FlowState:
         lods=gh.flag(obj, "dct_lods"),
         sollumz=gh.sollumz_lods_available(),
         validated=gh.flag(obj, "dct_validated"),
+        findings=findings_state(obj),
+        connected=ctrl is not None and ctrl.ready,
+        project=ctrl is not None and ctrl.project is not None,
+        skeleton=skeleton is not None and skeleton.gender == settings_.gender,
+        adding=RUNTIME.job is not None or (ctrl is not None and ctrl.item_add.adding),
+        added=bool(obj is not None and gh.stored_text(obj, gdct.ADDED)),
     )
 
 
@@ -1332,6 +1770,12 @@ def draw_ready(layout: Any, context: Any) -> None:
     layout.separator(factor=GAP)
     heading(layout, context, "garment.heading.validate", "CHECKMARK", info="garment.info.validate")
     operator(layout, DCTLINK_OT_fit_validate.bl_idname, "garment.op.validate", "CHECKMARK")
+    draw_findings(layout, context)
+    layout.separator(factor=GAP)
+    draw_add(layout, context)
+
+
+def draw_findings(layout: Any, context: Any) -> None:
     findings = garment.findings_from_json(gh.stored_text(current_garment(context), gh.FINDINGS))
     if findings is None:
         return
@@ -1347,6 +1791,119 @@ def draw_ready(layout: Any, context: Any) -> None:
         key = f"garment.finding.{finding.code}"
         text = t(key, **fields) if key in EN else finding.code
         wrapped(layout, context, text, SEVERITY_ICONS.get(finding.severity, "INFO"))
+
+
+#: The steps of an add, for its progress bar: the skeleton, Durty Cloth Tool's dialog, the cloth added.
+ADD_STEPS = 3
+
+
+def _skeleton_line(layout: Any, context: Any, obj: Any) -> None:
+    gender = props(context).gender
+    skeleton = gdct.skeleton_of(obj)
+    bones = state.get().skeletons.bones(gender)
+    problem = gdct.skeleton_problem(obj, gender, bones)
+    if skeleton is not None and problem is None:
+        wrapped(layout, context, t("add.skeleton.ready", name=skeleton.root.name, gender=t(f"gender.{gender}"),
+                                   count=len(gdct.armature_bones(skeleton.armature))), "CHECKMARK")
+    else:
+        wrapped(layout, context, strings.text(problem or msg("add.skeleton.missing")), "INFO")
+
+
+def draw_add(layout: Any, context: Any) -> None:
+    """Add to Durty Cloth Tool: the cloth's name, slot and gender (from Setup), Shows Skin, the colour variations, the
+    skeleton, the button, its progress and Durty Cloth Tool's answer."""
+    settings_ = props(context)
+    ctrl = state.get()
+    obj = current_garment(context)
+    heading(layout, context, "add.heading", "EXPORT", info="add.info")
+    if not ctrl.ready:
+        wrapped(layout, context, t("add.why.connect"), "UNLINKED")
+    elif ctrl.project is None:
+        wrapped(layout, context, t("add.why.no-project"), "INFO")
+    else:
+        wrapped(layout, context, t("linked.project", name=str(ctrl.project.get("name") or "")), "FILE_BLEND")
+    if ui._measure(context)(t("add.prop.name")) + 12 * ui._scale(context) <= 0.4 * ui.content_width(context):
+        labelled(layout, context, settings_, "item_name", "add.prop.name")
+    else:  # a long label (in some languages) goes above the field instead of being cut off
+        column = layout.column(align=True)
+        wrapped(column, context, t("add.prop.name"))
+        column.prop(settings_, "item_name", text="")
+    subtext(layout, context, "add.target", slot=t(f"garment.slot.{settings_.slot}"),
+            gender=t(f"gender.{settings_.gender}"))
+    ui.checkbox(layout, context, settings_, "skin", "add.prop.skin")
+
+    layout.separator(factor=GAP_SMALL)
+    heading(layout, context, "add.heading.variations", "IMAGE_DATA", info="add.info.variations")
+    diffuse = gdct.garment_images(obj)["diffuse"] if obj is not None else None
+    column = layout.column(align=True)
+    row = column.row(align=True)
+    split = row.split(factor=0.45, align=True)
+    split.label(text=diffuse.name if diffuse is not None else t("add.variation.none"),
+                icon="IMAGE_DATA" if diffuse is not None else "ERROR", translate=False)
+    split.prop(settings_, "first_title", text="")
+    for index, variation in enumerate(settings_.variations):
+        row = column.row(align=True)
+        split = row.split(factor=0.45, align=True)
+        split.prop(variation, "image", text="")
+        split.prop(variation, "title", text="")
+        operator(row, DCTLINK_OT_fit_remove_variation.bl_idname, None, "X", text="", index=index)
+    operator(layout, DCTLINK_OT_fit_add_variation.bl_idname, "add.op.add-variation", "ADD")
+    subtext(layout, context, "add.variations.subtext", count=1 + len(settings_.variations),
+            limit=garment_add.MAX_VARIATIONS)
+
+    layout.separator(factor=GAP_SMALL)
+    heading(layout, context, "add.heading.skeleton", "ARMATURE_DATA", info="add.info.skeleton")
+    if obj is not None:
+        _skeleton_line(layout, context, obj)
+    operator(layout, DCTLINK_OT_fit_use_skeleton.bl_idname, "add.op.skeleton", "ARMATURE_DATA")
+
+    layout.separator(factor=GAP)
+    adding = ctrl.item_add.adding
+    job = RUNTIME.job
+    if job is not None or adding:
+        # The step the add is at (the skeleton, then Durty Cloth Tool's answer), and what happens now.
+        step = 1 if job is not None else 2
+        if hasattr(layout, "progress"):
+            layout.progress(factor=step / ADD_STEPS, text=f"{step} / {ADD_STEPS}")
+        text = t("add.progress.skeleton") if job is not None else (
+            t("add.withdrawing") if ctrl.item_add.withdrawing else t("add.waiting"))
+        wrapped(layout, context, text, "SORTTIME")
+        if job is None:
+            subtext(layout, context, "add.waiting.subtext")
+        operator(layout, DCTLINK_OT_fit_cancel_add.bl_idname, "op.cancel-sign-in", "X")
+    else:
+        primary(layout, DCTLINK_OT_fit_add_to_dct.bl_idname, "add.op.add", "EXPORT")
+        reason = _add_reason(context) if obj is not None else None
+        if reason is not None and reason.key not in ("add.why.connect", "add.why.no-project"):
+            reason_text(layout, context, reason)  # the connection and the project are said above already
+    draw_add_outcome(layout, context, obj)
+
+
+def draw_add_outcome(layout: Any, context: Any, obj: Optional[Any]) -> None:
+    """What the add's checks found, and Durty Cloth Tool's answer with its findings."""
+    ctrl = state.get()
+    if obj is not None and RUNTIME.add_of == obj.session_uid:
+        if RUNTIME.add_problems:
+            layout.separator(factor=GAP_SMALL)
+            wrapped(layout, context, t("add.problems", count=len(RUNTIME.add_problems)), "CANCEL", alert=True)
+            for problem in RUNTIME.add_problems:
+                wrapped(layout, context, strings.text(problem), "BLANK1")
+        for warning in RUNTIME.add_warnings:
+            wrapped(layout, context, strings.text(warning), "ERROR")
+    status = ctrl.item_add.status
+    if status is None or ctrl.item_add.adding:
+        return  # while Durty Cloth Tool asks, the step above says it
+    layout.separator(factor=GAP_SMALL)
+    ui.draw_notice(layout, context, status)
+    findings = ctrl.item_add.findings
+    if findings:
+        wrapped(layout, context, t("add.findings", count=len(findings)), "INFO")
+        for finding in findings:
+            severity = str(finding.get("severity"))
+            wrapped(layout, context, t(f"severity.{severity}") + ": " + strings.text(
+                garment_add.finding_text(str(finding.get("code")))), SEVERITY_ICONS.get(severity, "INFO"), indent=True)
+    if ctrl.item_add.added is not None:
+        subtext(layout, context, "add.added.subtext")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1409,6 +1966,7 @@ class DCTLINK_PT_garment_ready(_GarmentChild, Panel):
 
 
 CLASSES = (
+    DCTLINK_PG_variation,
     DCTLINK_PG_garment,
     DCTLINK_OT_fit_use_garment,
     DCTLINK_OT_fit_import_garment,
@@ -1436,6 +1994,11 @@ CLASSES = (
     DCTLINK_OT_fit_combine,
     DCTLINK_OT_fit_lods,
     DCTLINK_OT_fit_validate,
+    DCTLINK_OT_fit_use_skeleton,
+    DCTLINK_OT_fit_add_to_dct,
+    DCTLINK_OT_fit_cancel_add,
+    DCTLINK_OT_fit_add_variation,
+    DCTLINK_OT_fit_remove_variation,
     DCTLINK_PT_garment,
     DCTLINK_PT_garment_setup,
     DCTLINK_PT_garment_fit,
@@ -1456,6 +2019,9 @@ def unregister() -> None:
         RUNTIME.download = None
     if bpy.app.timers.is_registered(body_tick):
         bpy.app.timers.unregister(body_tick)
+    RUNTIME.job = None
+    if bpy.app.timers.is_registered(job_tick):
+        bpy.app.timers.unregister(job_tick)
     del bpy.types.Scene.dct_garment
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
@@ -1468,3 +2034,7 @@ def on_load_pre() -> None:
         RUNTIME.download = None
     RUNTIME.notice = None
     RUNTIME.tears = RUNTIME.tears_of = None
+    RUNTIME.job = None
+    RUNTIME.add_problems, RUNTIME.add_warnings, RUNTIME.add_of = [], [], None
+    if state.controller is not None:
+        state.controller.item_add.forget()
