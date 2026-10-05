@@ -1,8 +1,9 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
 """A fake of gta.clothing's public Creator Link sign-in routes on 127.0.0.1 for tests: device sign-in, token
-rotation, sign-in assertions and logout. It is strict where the real service is strict (a spent refresh token
-revokes the session).
+rotation, sign-in assertions and logout, and the link origin's channel manifest, panel tickets and hosted body. It is
+strict where the real service is strict (a spent refresh token revokes the session, a ticket opens only the body of
+the version the manifest names).
 
 Adapted from the dct_link test suite (MIT, like dct_link itself), reduced to the routes the add-on calls.
 Standard library only, so the Blender smoke can use it too.
@@ -74,6 +75,13 @@ class FakeLinkApi:
         self.logout_failure: Optional[int] = None  # an HTTP status for every logout, to test a failed sign-out
         #: The link protocol the add-on must report (the interface screenshots of an older version change it).
         self.protocol = "2.0"
+        #: The channel manifest the link origin serves (``None``: 404), the hosted body files of its body version,
+        #: whether the account may download the body, and the tickets handed out.
+        self.manifest: Optional[Dict[str, Any]] = {"schema": 1, "panel": {"version": "1.2.0"},
+                                                   "body": {"version": "2026.10.03.1"}}
+        self.body_files: Dict[str, bytes] = {}
+        self.body_entitled = True
+        self.tickets: List[str] = []
         self.thread = threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
         self.thread.start()
 
@@ -111,6 +119,13 @@ class FakeLinkApi:
                 "user": {"id": "u1", "name": "Durty", "avatarUrl": "https://cdn.discordapp.com/x.png"},
                 "entitlement": {"tier": "ultimate", "featureTableVersion": "0.1", "features": []}}
 
+    def _send_bytes(self, handler: BaseHTTPRequestHandler, data: bytes, content_type: str) -> None:
+        handler.send_response(200)
+        handler.send_header("Content-Length", str(len(data)))
+        handler.send_header("Content-Type", content_type)
+        handler.end_headers()
+        handler.wfile.write(data)
+
     def _send(self, handler: BaseHTTPRequestHandler, status: int, body: Any = None) -> None:
         data = json.dumps(body).encode() if body is not None else b""
         handler.send_response(status)
@@ -146,6 +161,14 @@ class FakeLinkApi:
                 if entry:
                     self.revoked_sessions.add(entry["session"])
             return self._send(handler, 204)
+        if method == "GET" and path.startswith("/link/manifest/") and path.endswith(".json"):
+            if self.manifest is None:
+                return self._fail(handler, 404, "not_found")
+            return self._send(handler, 200, self.manifest)
+        if method == "POST" and path == "/link/panel/ticket":
+            return self._ticket(handler, headers, body or {})
+        if method == "GET" and path.startswith("/link/assets/body/"):
+            return self._body(handler, headers, path[len("/link/assets/body/"):])
         if method == "POST" and path == "/link/api/assertions":
             if self.account_locked:
                 return self._fail(handler, 403, "account_locked")
@@ -161,6 +184,34 @@ class FakeLinkApi:
                 self.assertions[assertion] = nonce
             return self._send(handler, 200, {"assertion": assertion, "expiresIn": 120})
         self._send(handler, 404)
+
+    def _ticket(self, handler: BaseHTTPRequestHandler, headers: Dict[str, str], body: Dict[str, Any]) -> None:
+        authorization = headers.get("authorization", "")
+        token = authorization[7:] if authorization.startswith("Bearer ") else ""
+        if token not in self.access_tokens:
+            return self._fail(handler, 401, "session_invalid")
+        panel = (self.manifest or {}).get("panel") or {}
+        if body.get("channel") not in ("release", "experimental") or not isinstance(body.get("version"), str):
+            return self._fail(handler, 400, "invalid_request")
+        if body["version"] != panel.get("version"):
+            return self._fail(handler, 426, "plugin_update_required")
+        if not self.body_entitled:
+            return self._fail(handler, 403, "feature_not_entitled")
+        ticket = "v1." + base64.urlsafe_b64encode(os.urandom(40)).rstrip(b"=").decode()
+        with self.lock:
+            self.tickets.append(ticket)
+        self._send(handler, 200, {"ticket": ticket, "expiresAtUtc": "2026-10-05T12:30:00Z",
+                                  "base": f"/link/panel/{body['channel']}/{body['version']}/app/{ticket}/"})
+
+    def _body(self, handler: BaseHTTPRequestHandler, headers: Dict[str, str], rest: str) -> None:
+        authorization = headers.get("authorization", "")
+        ticket = authorization[7:] if authorization.startswith("Ticket ") else ""
+        if ticket not in self.tickets:
+            return self._fail(handler, 401, "ticket_invalid")
+        version, _, name = rest.partition("/")
+        if version != ((self.manifest or {}).get("body") or {}).get("version") or name not in self.body_files:
+            return self._fail(handler, 404, "not_found")
+        self._send_bytes(handler, self.body_files[name], "model/gltf-binary")
 
     def _device(self, handler: BaseHTTPRequestHandler, body: Dict[str, Any]) -> None:
         if body.get("clientId") != "dct-link-blender" or body.get("protocol") != self.protocol:
