@@ -14,7 +14,9 @@ running, signing in, connected, live preview, saving, a pushed model, items open
 no project, disconnected in Durty Cloth Tool, a Durty Cloth Tool that is too old, and signed out. ``--scenario
 garment`` walks Garment Fitting (Experimental) instead, on a synthetic garment and body: Setup before and after a
 garment and the hosted body are added, Fit with markers, Fix with the fit check and the problem colours, a sculpt
-session, the tear check, and Game Ready after the local steps. Each state is saved as
+session, the tear check, Game Ready after the local steps, and Add to Durty Cloth Tool (the skeleton missing and
+in place, what blocks an add, Durty Cloth Tool asking, the cloth added, the free limit, no project open, not
+connected). Each state is saved as
 ``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run. Blender
 quits by itself at the end (and is ended after ``--timeout`` seconds otherwise). Your Blender settings and
@@ -442,6 +444,77 @@ class Shots:
         self.show_garment(garment_ui, "DCTLINK_PT_garment_ready")
         yield from self.wait(lambda: True, 5)
         self.shot("garment-ready")
+        yield from self.garment_add_states(garment_ui, ctrl, dct, tpose, props)
+
+    def garment_add_states(self, garment_ui, ctrl, dct, coat, props):
+        """Add to Durty Cloth Tool, at the end of Game Ready, against the fake Durty Cloth Tool."""
+        from tests.blender import garment_smoke
+        from tests.support import synthetic
+        from tests.support.fake_dct import ADDED_BINDING
+
+        dct.skeleton_files = {g: [(synthetic.skeleton_template_file(g), synthetic.skeleton_template_xml(g))]
+                              for g in ("male", "female")}
+        props.item_name = "Long Coat"
+        if not ctrl.ready:  # the long steps before can outlast the connection; it comes back by itself
+            ctrl.connect()
+            yield from self.wait(lambda: ctrl.ready and ctrl.project is not None, 30, "the connection")
+
+        def show(name, pages=2):
+            self.show_garment(garment_ui, "DCTLINK_PT_garment_ready")
+            yield from self.wait(lambda: True, 5)
+            self.scroll(pages)
+            yield from self.wait(lambda: True, 5)
+            self.shot(name)
+
+        def run(call):
+            try:
+                self.operator(call)
+            except RuntimeError:
+                pass  # an operator that reports why it refused (the panel shows it)
+
+        # 8. The garment is not on the Durty Cloth Tool skeleton yet.
+        yield from show("garment-add-skeleton-missing")
+        # 9. The skeleton from Durty Cloth Tool, then what blocks an add.
+        run(lambda: bpy.ops.dct_link.fit_use_skeleton())
+        yield from self.wait(lambda: garment_ui.RUNTIME.job is None and coat.parent is not None
+                             and coat.parent.get("dct_skeleton"), 30, "the skeleton")
+        yield from show("garment-add-skeleton-ready")
+        stray = coat.vertex_groups.new(name="Group")
+        props.variations.add()
+        run(lambda: bpy.ops.dct_link.fit_add_to_dct())
+        yield from show("garment-add-problems")
+        coat.vertex_groups.remove(stray)
+        props.variations[0].image = garment_smoke.variation_image("coat_blue", 1024, (0.1, 0.2, 0.7))
+        props.variations[0].title = "Blue"
+        props.first_title = "Sand"
+        # 10. Durty Cloth Tool shows the cloth and asks; then the user chooses Add to project.
+        dct.hold_adds = True
+        run(lambda: bpy.ops.dct_link.fit_add_to_dct())
+        yield from self.wait(lambda: bool(dct.item_adds) and ctrl.item_add.adding, 30, "the waiting add")
+        yield from show("garment-add-waiting")
+        dct.release_adds({"ok": True, "binding": dict(ADDED_BINDING),
+                          "findings": [{"code": "non-power-of-two", "severity": "warning"},
+                                       {"code": "rig-unchecked", "severity": "info"}]})
+        yield from self.wait(lambda: not ctrl.item_add.adding, 20, "the added cloth")
+        yield from show("garment-add-added")
+        yield from show("garment-add-added-top", pages=-20)
+        dct.hold_adds = False
+        # 11. Durty Cloth Tool's free limit.
+        dct.fail["item.add"] = "item-limit"
+        run(lambda: bpy.ops.dct_link.fit_add_to_dct())
+        yield from self.wait(lambda: not ctrl.item_add.adding and ctrl.item_add.status is not None
+                             and ctrl.item_add.status.message.key == "add.result.item-limit", 20, "the free limit")
+        yield from show("garment-add-item-limit")
+        del dct.fail["item.add"]
+        # 12. No project open in Durty Cloth Tool, then not connected (the next step says what to do).
+        del coat["dct_added"]
+        ctrl.item_add.forget()
+        dct.connections_ready[-1].send({"type": "event.project", "id": "prjg", "project": None})  # the live one
+        yield from self.wait(lambda: ctrl.project is None, 10, "no project")
+        yield from show("garment-add-no-project", pages=-20)
+        ctrl.disconnect()
+        yield from self.wait(lambda: not ctrl.ready, 10, "the disconnect")
+        yield from show("garment-add-not-connected", pages=-20)
 
     def states(self, ctrl, dct, api, ui, link, stub, new, dead_port):
         # 1. Durty Cloth Tool is not running: the add-on keeps looking.
