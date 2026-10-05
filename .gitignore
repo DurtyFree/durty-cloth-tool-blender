@@ -25,11 +25,9 @@ smoke-report*.json
 tmp/
 temp/
 
-# Editors, assistants and operating systems
+# Editors and operating systems
 .vscode/
 .idea/
-.claude/
-.impeccable/
 *.swp
 *~
 .DS_Store
