@@ -15,6 +15,10 @@ computer, so you see your work on the freemode ped in Durty Cloth Tool's 3D prev
 - **Linked Cloth.** The panel shows the open project and the cloth with its picture, variation, drawable type,
   gender, collection and number, and opens the cloth's diffuse, normal or specular map in Blender.
 - **Texture Checks.** Durty Cloth Tool checks the image against what GTA V and the cloth need, before you save.
+- **Garment Fitting (Experimental).** Bring a garment from Marvelous Designer (or any FBX, OBJ or glTF) towards a
+  game-ready freemode cloth: markers, fit checks against the freemode body, fixes by region or by hand, and the
+  game-ready steps (seams, one texture, levels of detail, checks). See
+  [Garment fitting (experimental)](#garment-fitting-experimental).
 
 Nothing is saved in your project until you choose to save, and every save can be undone in the cloth's History in
 Durty Cloth Tool. The add-on speaks Blender's interface language: English, German, French, Russian, Spanish,
@@ -30,8 +34,8 @@ Brazilian Portuguese, Simplified Chinese, Hindi and Arabic. It is open source un
 - A Durty Cloth Tool account (you sign in with Discord on gta.clothing). Blender and Durty Cloth Tool must use
   the same account. Some features are included in a Durty Cloth Tool plan; the panels say when yours does not
   include one.
-- [Sollumz](https://docs.sollumz.org) 2.8.0 or later for opening and pushing models (tested with Sollumz 2.9.0).
-  Textures work without it.
+- [Sollumz](https://docs.sollumz.org) 2.8.0 or later for opening and pushing models and for Generate LODs (tested with
+  Sollumz 2.9.0). Textures and the other garment fitting tools work without it.
 - Blender's **Allow Online Access** (Edit > Preferences > System > Network). The connection to Durty Cloth Tool
   stays on your computer, but each connection is confirmed with your gta.clothing sign-in, so without online
   access the add-on can neither sign in nor connect. The DCT tab says so while it is off.
@@ -67,6 +71,7 @@ Open the 3D View sidebar (N) and the **DCT** tab. It has these panels, in this o
 | Linked Cloth | The project and the cloth: the one selected in Durty Cloth Tool, or the one the chosen image is linked to, with its picture, variation and details, and buttons that open its maps in Blender. |
 | Live Preview | The image and the map it replaces; start, pause and stop the live preview; Save to Cloth, Save as New Variation, Discard Changes; while it runs, the Texture Checks with Durty Cloth Tool's findings for the image. |
 | Model | Push Model, Push Automatically, Save Model to Cloth, Discard, and the Sollumz status. |
+| Garment Fitting (Experimental) | The next step in one line, and the panels Setup, Fit, Fix and Game Ready (all but Setup closed by default). See [Garment fitting (experimental)](#garment-fitting-experimental). |
 | Settings | Connection, Account, Models (Automatic Push Delay), Updates and Privacy (closed by default). The add-on preferences show the same groups. |
 
 The small **?** buttons explain a step or option: hover for the tooltip, or click for a popup. A greyed-out button
@@ -175,6 +180,84 @@ Texture and model file names may only use letters, digits, `_`, `-` and `.`, and
 At most 255 textures and 64 MiB per model can be sent. GLB models are not pushed; add them in Durty Cloth Tool
 with Add clothing instead.
 
+## Garment fitting (experimental)
+
+Garment Fitting (Experimental) in the DCT tab takes a garment made elsewhere, for example in Marvelous Designer,
+and works it towards a cloth the game can wear. Its first line always says what to do next. In this version every
+tool runs in Blender on your computer; only the freemode body is downloaded (see below). Fitting the garment to the
+GTA pose, giving it weights and adding it to a Durty Cloth Tool project come in a later version and will use
+gta.clothing, with a daily limit for each account.
+
+The tools change only the garment chosen under Setup, the markers and the body they added. Every step that changes
+the garment can be undone with Ctrl+Z, and the garment keeps up to three backups of its mesh in the .blend file (the
+shape before the first fitting step and the newest ones) for **Restore Pre-fit**.
+
+**Setup**
+
+- **Gender, Slot, Category, Source Pose.** Male or Female; the slot (Top `jbib`, Undershirt `accs`, Legs `lowr`,
+  Shoes `feet`) and its categories (Vest, T-shirt, Long Sleeve, Long Jacket or Tunic, Pants, Shorts, Shoes); and the
+  pose the garment was made in (A-pose, T-pose or Custom).
+- **Import Garment** reads FBX, OBJ, GLB and glTF files, converts centimetres and millimetres to metres and joins
+  the parts into one object. **Avatar Stood on the Ground** (on by default) moves a garment made on an avatar
+  standing at height 0, as in Marvelous Designer, down to the ped. **Use Selected Garment** works on a mesh that is
+  already in the scene.
+- **Add Freemode Body** downloads the freemode body of the chosen gender from gta.clothing for your signed-in
+  account and adds it as its own object. Each body version is downloaded once and kept in the add-on's user folder,
+  so it also works offline afterwards. **Use a Body File** adds a body from a GLB, glTF, FBX or OBJ file instead (in
+  metres and in the game's pose). The hosted body is compressed in a way that Blender 5.2 reads; older Blender
+  versions get an uncompressed copy when gta.clothing offers one, otherwise use a body file.
+
+**Fit**
+
+- **Auto Markers** places eleven joint markers (neck, chest, pelvis, shoulders, elbows, wrists, hips; for trousers
+  the pelvis and hips) on the garment. Move any marker that is off. **Mirror L to R** copies the ped's left side to
+  its right. **Save Pose Preset** and **Load Pose Preset** keep marker layouts in the add-on's user folder for similar
+  garments. **Marker Size** changes how large they are drawn.
+- **T-pose to A-pose** lowers the arms of a garment made in T-pose to the **Arm Angle**, using the markers; the
+  markers follow.
+- **Restore Pre-fit** puts back the shape from before the first fitting step.
+
+**Fix**
+
+- **Push Out of Body** moves everything inside the body, or closer than the gap, to the gap outside it.
+- **Snug to Body** brings a region (Shoulders, Upper Arms, Chest, Back, Waist, Hips, Neck, Legs) closer to the
+  body, down to its gap, by the amount you choose. **Relax Stretched** eases stretched parts of a region back towards
+  their original size.
+- **Show Problems** colours the garment: red inside the body, yellow too close, purple stretched, blue a floating
+  shoulder. The refresh button colours it again after a change; selecting Show Problems again removes the colours.
+- **Run Fit Check** measures how far each region stands off the body, in millimetres (the middle value and the
+  range of most of its vertices). The usual range of game clothing for each region comes with the fitting service.
+- **Start Sculpting** opens Sculpt Mode with the Grab brush (radius, strength, Mirror X), the body shown as a
+  wireframe. **Accept** keeps the shape and reports how many vertices moved and how many are inside the body before
+  and after; with **Keep Out of Body** on, what you pushed into the body goes back out along your stroke. **Cancel**
+  puts back the shape from before the session.
+- **Check Tears** poses the garment's armature through a few test poses (arms up, arms forward, legs forward, a
+  twist) and reports where seams between panels open; the vertices go into the vertex group `DCT Tears`. It needs an
+  armature and weights on the garment, which come with the fit.
+
+**Game Ready**
+
+- **Prepare Garment** joins the seams between panels within the **Weld Distance** (never a lining onto its shell),
+  removes loose parts, triangulates, shades smooth and adds the ped shader's vertex colours as Sollumz names them:
+  `Color 1` #FF8000 (the light the garment receives; #FFBAFF lets emissive materials glow) and `Color 2` black
+  without alpha (no vertex wind, no sweat), as Sollumz's clothing tutorial recommends for most clothing. Both values
+  can be changed, and existing ones are kept unless you choose to replace them.
+- **Combine Materials** packs all UV islands into one layout (long thin strips such as hems are cut into pieces
+  first, so the rest gets more of the texture) and bakes the colour of every material into one 2048 or 4096 pixel
+  texture, which becomes the garment's only material. The new layout is `UVMap 0`; the original one is kept as
+  `DCT Source UV`. Transparency is not baked.
+- **Generate LODs** fills Sollumz's Medium and Low LOD slots with copies decimated to the triangle budgets you set;
+  their weights come from the High level. It needs Sollumz.
+- **Validate** checks weights (unweighted vertices, more than four bones per vertex), broken coordinates, the UV
+  layout, the vertex colours, the vertices of each level of detail against what game clothing usually has, and how
+  much of the garment is inside the body. It says CLEAN, or lists what to look at.
+
+What the garment tools keep: the backups as meshes with a fake user, the latest fit check and validation, and a few
+markers of progress as custom properties of the garment (`dct_garment`, `dct_fit_backups`, `dct_fit_report`,
+`dct_findings`, `dct_prepared` and similar); the markers as empties in the collection `DCT Garment Markers`; the
+body in `DCT Freemode Body`; the problem colours as the colour attribute `DCT Problems`; and, during a sculpt
+session, the shape it started from as the attribute `dct_presculpt`.
+
 ## What the add-on sends, and where
 
 ### To Durty Cloth Tool, on this computer
@@ -219,6 +302,15 @@ Blender does not wait for them.
 | `POST /link/api/assertions` | every connection to Durty Cloth Tool | your sign-in (as `Authorization: Bearer`) and the random number Durty Cloth Tool chose for this connection |
 | `POST /link/api/auth/logout` | Sign Out, when online access is allowed | the renewal token, to end the session |
 
+For **Add Freemode Body** (Garment Fitting) the add-on calls gta.clothing's link origin `https://link.gta.clothing`,
+as Creator Link's hosted panel does:
+
+| Route | When | What is sent |
+|---|---|---|
+| `GET /link/manifest/<channel>.json` | Add Freemode Body | nothing (it names the current body version) |
+| `POST /link/panel/ticket` | Add Freemode Body, when that body version is not kept yet | your sign-in (as `Authorization: Bearer`), the channel and the current panel version |
+| `GET /link/assets/body/<version>/freemode_<gender>.glb` | right after the ticket | the short-lived ticket (as `Authorization: Ticket`) |
+
 Every request carries the header `X-DCT-Link-Client: blender/<add-on version> (protocol 2.0; channel <channel>)`
 (also used as the User-Agent). The add-on opens these pages in your browser when you ask it to: the sign-in
 approval page `https://gta.clothing/account/link/`, the plugins page `https://gta.clothing/account/plugins/`, the
@@ -230,9 +322,10 @@ and the add-on archive it names.
 
 ### What leaves your computer
 
-Your pixels and models go only to Durty Cloth Tool on this computer. gta.clothing sees your sign-in and its
-renewals, a sign-in assertion request each time Blender connects to Durty Cloth Tool, your sign-out, and
-Blender's update checks. Nothing else is sent anywhere, and the add-on does not collect usage data. **Copy
+Your pixels and models go only to Durty Cloth Tool on this computer; the garment fitting tools of this version send
+nothing of your garment anywhere. gta.clothing sees your sign-in and its renewals, a sign-in assertion request each
+time Blender connects to Durty Cloth Tool, your sign-out, the download of the freemode body (once per body version)
+and Blender's update checks. Nothing else is sent anywhere, and the add-on does not collect usage data. **Copy
 Diagnostics** copies versions and status codes to the clipboard for support; it contains no file paths, names or
 sign-in data.
 
@@ -245,6 +338,9 @@ sign-in data.
     plan. After you sign out it only records that you signed out.
   - `install-id`: a random id for this installation (not a secret).
   - `auth.lock`: an empty file that keeps two Blender windows from renewing the sign-in at the same time.
+  - `body\<version>\freemode_<gender>.glb`: the freemode body Add Freemode Body downloaded, one folder per body
+    version.
+  - `garment-presets\<name>.json`: the pose presets you saved (marker positions, category and source pose).
 - **Exported models:** in a temporary folder named `dct_link_...`, deleted right after each push.
 - **Models opened from Durty Cloth Tool:** in `opened-models` in the add-on's user folder, one folder per open,
   while the model is on the ped. They are deleted when the model is discarded or closed, when the add-on is
@@ -304,19 +400,23 @@ tools/                   dct_link sync, manifest check, release checks and the B
   They cover pixel conversion and the vertical flip, colour handling, dirty rectangles, capture scheduling,
   collecting Sollumz exports, settings, the nine languages, the manifest, the vendored copy, and the whole link
   flow against a fake Durty Cloth Tool and a fake gta.clothing on `127.0.0.1`, including the textures and models
-  Durty Cloth Tool sends.
+  Durty Cloth Tool sends. The garment fitting tools' arithmetic (markers on synthetic garments, regions, the fit
+  check, problem colours, seams, UV strips, validation, presets) and the hosted body download are tested the same
+  way (`tests/test_garment.py`, `tests/test_garment_body.py`).
 - **Texts:** every text the add-on shows is in `durty_cloth_tool_link/strings.py` (English) and
   `durty_cloth_tool_link/translations/` (one module per language, Blender locale names). Add a key in all nine
   languages at once; the tests fail when one is missing or its `{fields}` differ.
 - **Blender smoke:** `python tools/blender_smoke.py --blender <path to blender>` validates and builds the
   extension into `dist/` and runs `tests/blender/smoke_in_blender.py` in a background Blender with a throw-away
   user folder. Add `--sollumz <Sollumz extension folder> --sollumz-site <folder with its szio package>` to also
-  push through a real Sollumz (and open a model with its import).
+  push through a real Sollumz (and open a model with its import). The smoke also runs every garment fitting tool on
+  a synthetic garment and body (`tests/blender/garment_smoke.py`; no game files are used or needed).
 - **Interface screenshots:** `python tools/blender_shots.py --blender <path to blender> --out <folder>` builds the
   extension, opens a Blender window with a throw-away user folder (both tools drop Blender's `BLENDER_USER_*`
   folder variables, so your own profile is never used), walks the DCT tab through its states against
   the fake Durty Cloth Tool and saves a cropped screenshot of the sidebar for each (`--expanded`, `--language
-  de_DE` and `--theme light` for variants). Blender quits by itself.
+  de_DE` and `--theme light` for variants; `--scenario garment` walks Garment Fitting instead). Blender quits by
+  itself.
 - **Build by hand:** `blender --command extension build --source-dir durty_cloth_tool_link --output-dir dist`.
 - **Release:** set the new version in `blender_manifest.toml` and `VERSION` in `settings.py` (`X.Y.Z`, or
   `X.Y.Z-experimental.N` with N from 1 for an Experimental release), then push the tag `v<version>` from the
