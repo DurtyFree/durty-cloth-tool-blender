@@ -2,12 +2,14 @@
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
 """A fake Durty Cloth Tool link server for tests: an independent server-side RFC 6455 implementation on a thread
 per connection, plus enough DCT behaviour (hello, challenge, auth, account assist, disconnecting an app, live
-surfaces, models and services) to drive the add-on end to end.
+surfaces, models, services, thumbnails and opening items in the plugin) to drive the add-on end to end.
 
 Adapted from the dct_link test suite (MIT, like dct_link itself). Changes: the protocol module is passed in, so the
 same file serves pytest and the Blender smoke (which uses the add-on's vendored copy); a ``glb`` model push is
 answered with ``unsupported-format`` as Durty Cloth Tool does today; ``save_busy`` makes ``model.save`` answer
-``busy`` that many times. Standard library only.
+``busy`` that many times; ``texture.read`` answers for the cloth and map asked for; ``open_texture`` and
+``open_model`` send ``host.openTexture`` and ``host.openModel`` as Durty Cloth Tool's "Edit in connected app" does.
+Standard library only.
 """
 
 from __future__ import annotations
@@ -43,6 +45,17 @@ def assertion_claims(assertion: str) -> Dict[str, Any]:
     except (ValueError, IndexError):
         return {}
 BINDING = {"clothId": "3f2b8c1e-7a4d-4e8b-9c1f-2d6e5a7b8c90", "textureId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"}
+#: The features DCT enforces itself and reports in welcome and event.entitlement, in DCT's order (the rows with
+#: enforcedBy "dct" in plugins/protocol/features.json).
+DCT_FEATURES = ("dct.link.connect", "dct.link.context", "dct.link.liveTexture", "dct.link.save", "dct.link.model",
+                "dct.link.services", "dct.studio.edit", "dct.studio.materials")
+#: The request types DCT checks against a feature before it does anything (answered with needs-license or
+#: needs-ultimate otherwise).
+GATED_REQUESTS = {"live.open": "dct.link.liveTexture", "live.save": "dct.link.save",
+                  "texture.read": "dct.link.services", "texture.validate": "dct.link.services",
+                  "uv.layout": "dct.link.services", "model.glb": "dct.link.services", "body.glb": "dct.link.services",
+                  "item.thumbnail": "dct.link.services", "model.save": "dct.link.model"}
+REFUSALS = {"needsLicense": "needs-license", "needsUltimate": "needs-ultimate"}
 
 
 def b64u(data: bytes) -> str:
@@ -156,6 +169,10 @@ class Connection:
     def send_binary(self, header: Dict[str, Any], payload: bytes) -> None:
         self.send_message(0x2, p.encode_binary(header, payload))
 
+    def send_raw(self, frame: bytes) -> None:
+        """A binary frame exactly as given (no codec), for example a malformed one from the shared fixtures."""
+        self.send_message(0x2, frame)
+
     def close(self, code: int, reason: str = "") -> None:
         if not self.closed:
             self.closed = True
@@ -254,9 +271,14 @@ class Connection:
         server = self.server
         kind = m["type"]
         if kind == "hello":
+            if server.major_one:
+                # A DCT of protocol 1 cannot read this hello: it refuses it in its own major and closes.
+                self.send_message(0x1, b'{"v":1,"type":"error","id":"e1","code":"unsupported-protocol"}')
+                self.close(1008, "unsupported protocol")
+                return
             if server.incompatible:
                 self.reply(m, {"type": "incompatible", "code": "plugin-too-old",
-                               "dct": {"version": "4.1.0", "protocol": {"min": 1, "max": 1}},
+                               "dct": {"version": "4.1.0", "protocol": {"min": 3, "max": 3}},
                                "minimumPluginVersion": "9.0.0", "updateUrl": "https://gta.clothing/account/plugins/"})
                 self.close(4001, "incompatible")
                 return
@@ -272,8 +294,11 @@ class Connection:
             if kind == "account.assist":
                 server.assisted_codes.append(m["userCode"])
                 ok = server.on_assist(m["userCode"]) if server.on_assist else True
-                if isinstance(ok, str):  # an error code, for example busy or rate-limited
-                    self.reply(m, {"type": "error", "code": ok})
+                if isinstance(ok, str):  # a refusal code, for example busy or rate-limited
+                    if server.assist_refusal_as_error:
+                        self.reply(m, {"type": "error", "code": ok})
+                    else:  # what DCT sends: account.assistResult with ok false and the code
+                        self.reply(m, {"type": "account.assistResult", "ok": False, "code": ok})
                     return
                 result = {"type": "account.assistResult", "ok": bool(ok)}
                 if not ok:
@@ -304,10 +329,9 @@ class Connection:
                 return
             self.authenticated = True
             server.connections_ready.append(self)  # before the welcome, so a test can broadcast right after it
-            self.reply(m, {"type": "welcome", "dct": {"version": "4.0.60"}, "protocol": {"major": 1, "minor": 0},
-                           "account": {"userName": server.account},
-                           "features": [{"id": "dct.link.connect", "state": "entitled"},
-                                        {"id": "dct.link.liveTexture", "state": "entitled"}]})
+            self.reply(m, {"type": "welcome", "dct": {"version": "4.0.60"},
+                           "protocol": {"major": p.PROTOCOL_MAJOR, "minor": p.PROTOCOL_MINOR},
+                           "account": {"userName": server.account}, "features": server.feature_rows()})
         elif not self.authenticated:
             self.reply(m, {"type": "error", "code": "not-authenticated"})
         elif kind in server.ignore:
@@ -316,13 +340,26 @@ class Connection:
             server.held.append((self, m))
         elif kind in server.fail:
             self.reply(m, {"type": "error", "code": server.fail[kind], "message": "refused by the fake"})
+        elif server.refusal(kind) is not None:
+            # DCT enforces every gated action itself, whatever the plugin believes.
+            self.reply(m, {"type": "error", "code": server.refusal(kind)})
         elif kind == "context.get":
-            self.reply(m, {"type": "context.snapshot", "project": {"name": "FS Studio Clothing"},
-                           "focused": {"clothId": BINDING["clothId"], "name": "jbib_003_u",
-                                       "selectedTextureId": BINDING["textureId"],
-                                       "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni",
-                                                     "width": 2048, "height": 2048}],
-                                       "targets": ["diffuse", "normal", "specular"]}})
+            focused = server.focused or {"clothId": BINDING["clothId"], "name": "jbib_003_u",
+                                         "selectedTextureId": BINDING["textureId"],
+                                         "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni",
+                                                       "width": 2048, "height": 2048}],
+                                         "targets": ["diffuse", "normal", "specular"]}
+            self.reply(m, {"type": "context.snapshot", "project": {"name": "FS Studio Clothing"}, "focused": focused})
+        elif kind == "host.result":
+            server.host_results.append(m)  # the answer to host.openTexture or host.openModel; nothing goes back
+        elif kind == "item.thumbnail":
+            # DCT's picture: its longest edge is at most the size asked for (here 2:1, at most 8 wide).
+            reply = server.thumbnail_reply or {}
+            width = reply.get("width") or min(m["size"], 8)
+            height = reply.get("height") or max(1, width // 2)
+            header = {"type": "item.thumbnail.data", "binding": reply.get("binding") or m.get("binding") or BINDING,
+                      "width": width, "height": height, "format": "rgba8", "re": m["id"]}
+            self.send_binary(header, bytes(i % 251 for i in range(width * height * 4)))
         elif kind == "live.open":
             lease = "L%d" % next(server.lease_numbers)  # unique on the server, like DCT's opaque ids
             self.leases[lease] = {"width": m["width"], "height": m["height"],
@@ -350,9 +387,12 @@ class Connection:
             self.leases.pop(m["lease"], None)
             self.reply(m, {"type": "live.closed", "lease": m["lease"], "reason": "closed"})
         elif kind == "texture.read":
-            header = {"type": "texture.data", "binding": BINDING, "target": m["target"], "name": "jbib_diff_003_a_uni",
-                      "width": 2, "height": 2, "format": "rgba8", "re": m["id"]}
-            self.send_binary(header, bytes(range(16)))
+            server.texture_reads.append(m)
+            width, height = server.texture_size
+            name = {"diffuse": "jbib_diff_003_a_uni", "normal": "jbib_normal_003", "specular": "jbib_spec_003"}[m["target"]]
+            header = {"type": "texture.data", "binding": m.get("binding") or BINDING, "target": m["target"],
+                      "name": name, "width": width, "height": height, "format": "rgba8", "re": m["id"]}
+            self.send_binary(header, bytes(i % 251 for i in range(width * height * 4)))
         elif kind == "texture.validate":
             self.reply(m, {"type": "texture.findings", "binding": BINDING, "target": m["target"],
                            "findings": [{"code": "non-power-of-two", "severity": "warning"}]})
@@ -376,6 +416,7 @@ class Connection:
             server.model_saves.append(m["lease"])
             self.reply(m, {"type": "model.saveResult", "lease": m["lease"], "ok": True})
         elif kind == "model.discard":
+            server.model_discards.append(m["lease"])
             self.reply(m, {"type": "model.closed", "lease": m["lease"], "reason": "closed"})
         elif kind == "bye":
             server.byes += 1
@@ -424,7 +465,7 @@ class Connection:
                 offset += entry["length"]
             server.pushes.append((header, files))
             self.model_revision += 1
-            lease = header.get("lease") or "M1"
+            lease = header.get("lease") or "M%d" % next(server.model_numbers)  # opaque, unique like DCT's
             applied = {"type": "model.applied", "lease": lease, "revision": self.model_revision,
                        "binding": header.get("binding") or BINDING, "findings": []}
             if "id" in header:
@@ -466,6 +507,13 @@ class FakeDct:
         self.check_assertion: Callable[[str, str], bool] = self._check_assertion
         self.account = "Durty"
         self.incompatible = False
+        #: Behave like a DCT of protocol 1 (the published 4.0.2-experimental.54), which cannot read a protocol 2 hello.
+        self.major_one = False
+        #: The focused item context.get reports (default: one without the optional metadata).
+        self.focused: Optional[Dict[str, Any]] = None
+        #: Answer item.thumbnail with a picture of this width, height or binding, whatever was asked for.
+        self.thumbnail_reply: Optional[Dict[str, Any]] = None
+        self.host_results: List[Dict[str, Any]] = []
         self.fragment_size = 0
         self.frame_delay = 0.0
         self.handshake_extra_header = ""
@@ -484,10 +532,16 @@ class FakeDct:
         self.signed_out_auths = 0
         self.auth_error_codes: List[str] = []
         self.handshake_delay = 0.0
+        self.drop_connections = 0
         self.all_connections: List[Connection] = []
         self.model_saves: List[str] = []
+        self.model_discards: List[str] = []
+        self.model_numbers = itertools.count(1)
         self.save_busy = 0
         self.busy_saves = 0
+        #: The size of the picture texture.read answers with.
+        self.texture_size = (2, 2)
+        self.texture_reads: List[Dict[str, Any]] = []
         self.scenario: Optional[Callable[[Connection], None]] = None
         self.on_assist: Optional[Callable[[str], bool]] = None
         self.received: List[Dict[str, Any]] = []
@@ -496,6 +550,13 @@ class FakeDct:
         self.pushes: List[Any] = []
         self.discards: List[str] = []
         self.assist_declined_code = "request-denied"
+        #: An on_assist answer that is a code is sent as account.assistResult (like DCT); True sends an error.
+        self.assist_refusal_as_error = False
+        #: What DCT's licence allows: feature id to state. welcome and event.entitlement report these rows, and
+        #: gated requests are refused accordingly.
+        self.feature_states: Dict[str, str] = {feature: "entitled" for feature in DCT_FEATURES}
+        #: Features welcome and event.entitlement leave out (DCT still enforces them).
+        self.unreported_features: set = set()
         self.assisted_codes: List[str] = []
         self.assertions_seen: List[str] = []
         self.raw_frames: List[bytes] = []
@@ -518,6 +579,10 @@ class FakeDct:
             except OSError:
                 return
             self.connections += 1
+            if self.drop_connections > 0:  # DCT not ready yet: the connection closes at once
+                self.drop_connections -= 1
+                sock.close()
+                continue
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             connection = Connection(self, sock)
             self.all_connections.append(connection)
@@ -532,6 +597,28 @@ class FakeDct:
             return False
         self.used_jti.add(claims.get("jti"))
         return True
+
+    def report_no_features(self) -> None:
+        """Behaves like the published Durty Cloth Tool 4.0.2-experimental.54: welcome and event.entitlement carry
+        ``"features": []`` (its protected build loses the list), while every gated request is still enforced."""
+        self.unreported_features = set(DCT_FEATURES)
+
+    def feature_rows(self) -> List[Dict[str, str]]:
+        """The feature states as DCT sends them in welcome and event.entitlement."""
+        return [{"id": feature, "state": state} for feature, state in self.feature_states.items()
+                if feature not in self.unreported_features]
+
+    def refusal(self, kind: str) -> Optional[str]:
+        """The error code DCT answers a gated request with, or None when the licence allows it."""
+        return REFUSALS.get(self.feature_states.get(GATED_REQUESTS.get(kind, ""), "entitled"))
+
+    def set_features(self, **states: str) -> None:
+        """The licence changed in DCT: ``set_features(liveTexture="needsUltimate")`` changes ``dct.link.liveTexture``
+        and tells every connected plugin (event.entitlement), as DCT does."""
+        for name, state in states.items():
+            matches = [feature for feature in DCT_FEATURES if feature.rsplit(".", 1)[-1] == name]
+            self.feature_states[matches[0]] = state
+        self.broadcast({"type": "event.entitlement", "id": "ent" + secrets.token_hex(3), "features": self.feature_rows()})
 
     def release_held(self) -> int:
         """Answers every held service request (in the order received)."""
@@ -551,6 +638,35 @@ class FakeDct:
     def broadcast_binary(self, header: Dict[str, Any], payload: bytes) -> None:
         for connection in list(self.connections_ready):
             connection.send_binary(header, payload)
+
+    def broadcast_raw(self, frame: bytes) -> None:
+        for connection in list(self.connections_ready):
+            connection.send_raw(frame)
+
+    def open_texture(self, rgba: bytes, width: int, height: int, *, target: str = "diffuse",
+                     binding: Optional[Dict[str, str]] = None, name: str = "jbib_diff_003_a_uni",
+                     request_id: Optional[str] = None) -> str:
+        """Edit in connected app for a texture map: ``host.openTexture`` with RGBA8 rows top to bottom. Returns the
+        request id the plugin's ``host.result`` names."""
+        request_id = request_id or "ot" + secrets.token_hex(3)
+        header = {"type": "host.openTexture", "id": request_id, "binding": binding or BINDING, "target": target,
+                  "name": name, "width": width, "height": height, "format": "rgba8"}
+        self.connections_ready[-1].send_binary(header, rgba)
+        return request_id
+
+    def open_model(self, files: List[Any], *, binding: Optional[Dict[str, str]] = None, name: str = "jbib_003_u",
+                   request_id: Optional[str] = None) -> str:
+        """Edit in connected app for a model: ``host.openModel`` with ``files`` as ``(name, bytes)``, the
+        ``*.ydd.xml`` first. Returns the request id."""
+        request_id = request_id or "om" + secrets.token_hex(3)
+        header = {"type": "host.openModel", "id": request_id, "binding": binding or BINDING, "name": name,
+                  "format": "ydd-xml", "files": [{"name": n, "length": len(data)} for n, data in files]}
+        self.connections_ready[-1].send_binary(header, b"".join(bytes(data) for _, data in files))
+        return request_id
+
+    def host_result(self, request_id: str) -> Optional[Dict[str, Any]]:
+        """The plugin's answer to one of the requests above, once it arrived."""
+        return next((m for m in self.host_results if m.get("re") == request_id), None)
 
     def drop_all(self) -> None:
         """Simulates DCT going away without a close frame."""

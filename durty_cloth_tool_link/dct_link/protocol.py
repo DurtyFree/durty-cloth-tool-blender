@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
-"""Creator Link v1 wire format: constants, validation and the frame codecs.
+"""Creator Link protocol 2 wire format: constants, validation and the frame codecs.
 
 Everything a peer sends is untrusted. Decoding follows the same order as DCT's reference codec:
 
@@ -63,9 +63,9 @@ __all__ = [
 CONSTANTS: Dict[str, Any] = {
     "protocol": {
         "name": "dct-creator-link",
-        "major": 1,
+        "major": 2,
         "minor": 0,
-        "supportedMajors": {"min": 1, "max": 1},
+        "supportedMajors": {"min": 2, "max": 2},
     },
     "transport": {
         "path": "/dct/link/v1",
@@ -99,6 +99,11 @@ CONSTANTS: Dict[str, Any] = {
         "userCodeLength": 8,
         "maxSwapMaterials": 64,
         "maxMaterialIndex": 1023,
+        "maxThumbnailEdge": 256,
+        "minThumbnailEdge": 16,
+        "maxDrawableNumber": 65535,
+        "openTextureAnswerSeconds": 20,
+        "openModelAnswerSeconds": 60,
     },
     "values": {
         "pluginKinds": ["photoshop", "photopea", "blender", "gimp", "krita", "substance"],
@@ -125,6 +130,34 @@ CONSTANTS: Dict[str, Any] = {
             "bc1-alpha",
         ],
         "modelCloseReasons": ["closed", "replaced", "itemRemoved", "projectClosed", "entitlementLost", "signedOut"],
+        "hostResultCodes": ["open-failed", "not-supported", "dependency-missing", "busy"],
+        "drawableTypes": [
+            "head",
+            "berd",
+            "hair",
+            "uppr",
+            "lowr",
+            "hand",
+            "feet",
+            "teef",
+            "accs",
+            "task",
+            "decl",
+            "jbib",
+            "p_head",
+            "p_eyes",
+            "p_ears",
+            "p_mouth",
+            "p_lhand",
+            "p_rhand",
+            "p_lwrist",
+            "p_rwrist",
+            "p_hip",
+            "p_lfoot",
+            "p_rfoot",
+            "p_unk1",
+            "p_unk2",
+        ],
     },
     "errorCodes": [
         "malformed-message",
@@ -214,6 +247,12 @@ MIN_UV_LAYOUT_SIZE: int = _L["minUvLayoutSize"]
 USER_CODE_LENGTH: int = _L["userCodeLength"]
 MAX_SWAP_MATERIALS: int = _L["maxSwapMaterials"]
 MAX_MATERIAL_INDEX: int = _L["maxMaterialIndex"]
+MAX_THUMBNAIL_EDGE: int = _L["maxThumbnailEdge"]
+MIN_THUMBNAIL_EDGE: int = _L["minThumbnailEdge"]
+MAX_DRAWABLE_NUMBER: int = _L["maxDrawableNumber"]
+#: How long DCT waits for the ``host.result`` that answers a ``host.openTexture`` or a ``host.openModel``.
+OPEN_TEXTURE_ANSWER_SECONDS: int = _L["openTextureAnswerSeconds"]
+OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
 
 # Values the C# codec defines beside constants.json.
 MAX_REVISION: int = 9007199254740991  # JavaScript's largest safe integer
@@ -237,6 +276,10 @@ GENDERS: Tuple[str, ...] = tuple(_V["genders"])
 FINDING_SEVERITIES: Tuple[str, ...] = tuple(_V["findingSeverities"])
 FINDING_CODES: Tuple[str, ...] = tuple(_V["findingCodes"])
 MODEL_CLOSE_REASONS: Tuple[str, ...] = tuple(_V["modelCloseReasons"])
+#: Why a plugin could not open what DCT sent (``host.result.code``, protocol 1.1).
+HOST_RESULT_CODES: Tuple[str, ...] = tuple(_V["hostResultCodes"])
+#: The game's tokens for components and props (``focused.drawableType``, protocol 1.1).
+DRAWABLE_TYPES: Tuple[str, ...] = tuple(_V["drawableTypes"])
 ERROR_CODES: Tuple[str, ...] = tuple(CONSTANTS["errorCodes"])
 CLOSE_CODES: Dict[str, int] = dict(CONSTANTS["closeCodes"])
 
@@ -263,12 +306,14 @@ _ERROR_CODE_SET = frozenset(ERROR_CODES)
 
 
 class ProtocolError(Exception):
-    """A frame or message that breaks the Creator Link rules. ``code`` is a stable error code."""
+    """A frame or message that breaks the Creator Link rules. ``code`` is a stable error code. For
+    ``unsupported-protocol``, ``version`` is the major the frame was written in."""
 
-    def __init__(self, code: str, detail: str = "") -> None:
+    def __init__(self, code: str, detail: str = "", version: Optional[int] = None) -> None:
         super().__init__(f"{code}: {detail}" if detail else code)
         self.code = code
         self.detail = detail
+        self.version = version
 
 
 class BinaryMessage(NamedTuple):
@@ -287,6 +332,8 @@ _GUID_RE = re.compile(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]
 _BYTES32_RE = re.compile(r"[A-Za-z0-9_-]{43}")
 _USER_CODE_RE = re.compile(r"[BCDFGHJKLMNPQRSTVWXZ]{8}")
 _FILE_NAME_RE = re.compile(r"[A-Za-z0-9_-][A-Za-z0-9_.-]{0,127}")
+#: Windows device names: a file whose name before the first ``.`` is one of them cannot be written.
+_RESERVED_NAME_RE = re.compile(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\.|$)", re.IGNORECASE | re.ASCII)
 _SEMVER_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?")
 _HOST_VERSION_RE = re.compile(r"[0-9A-Za-z._+ -]{1,64}")
 _ACCESS_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
@@ -316,8 +363,15 @@ def is_user_code(value: Any) -> bool:
 
 
 def is_file_name(value: Any) -> bool:
-    """A bare file name: letters, digits, ``_ - .``, not starting with ``.``, no ``..``, 1 to 128 chars."""
-    return isinstance(value, str) and ".." not in value and _FILE_NAME_RE.fullmatch(value) is not None
+    """A bare file name: letters, digits, ``_ - .``, not starting with ``.``, no ``..``, 1 to 128 chars, and the part
+    before the first ``.`` is not a Windows reserved device name (``CON``, ``PRN``, ``AUX``, ``NUL``, ``COM1`` to
+    ``COM9``, ``LPT1`` to ``LPT9``, any case)."""
+    return (
+        isinstance(value, str)
+        and ".." not in value
+        and _FILE_NAME_RE.fullmatch(value) is not None
+        and _RESERVED_NAME_RE.match(value) is None
+    )
 
 
 def is_install_id(value: Any) -> bool:
@@ -574,8 +628,13 @@ _FOCUSED = _obj(
         "selectedTextureId": _STR,
         "textures": _list(_obj({"textureId": _STR, "name": _STR, "width": _INT32, "height": _INT32})),
         "targets": _list(_STR),
+        "drawableType": _STR,
+        "gender": _STR,
+        "collection": _STR,
+        "number": _INT32,
     }
 )
+_MODEL_FILES = _list(_obj({"name": _STR, "length": _INT64}))
 
 
 # --------------------------------------------------------------------------------------------------
@@ -633,6 +692,16 @@ def _focused_ok(item: Any) -> bool:
     selected = item.get("selectedTextureId")
     if selected is not None and not is_guid(selected):
         return False
+    # Protocol 1.1 metadata: each optional, each valid when present.
+    drawable_type, gender = item.get("drawableType"), item.get("gender")
+    collection, number = item.get("collection"), item.get("number")
+    if (
+        (drawable_type is not None and not _one_of(drawable_type, DRAWABLE_TYPES))
+        or (gender is not None and not _one_of(gender, GENDERS))
+        or (collection is not None and not is_text(collection))
+        or (number is not None and not _in_range(number, 0, MAX_DRAWABLE_NUMBER))
+    ):
+        return False
     textures = item.get("textures")
     if textures is None or len(textures) > MAX_FOCUSED_TEXTURES:
         return False
@@ -658,13 +727,13 @@ def _focused_ok(item: Any) -> bool:
     return True
 
 
-def _ok_code_ok(message: Mapping[str, Any]) -> bool:
-    """``code`` is present exactly when ``ok`` is false."""
+def _ok_code_ok(message: Mapping[str, Any], codes: Iterable[str] = _ERROR_CODE_SET) -> bool:
+    """``code`` is present exactly when ``ok`` is false, and is one of ``codes``."""
     ok = message.get("ok")
     if ok is None:
         return False
     code = message.get("code")
-    return code is None if ok else _one_of(code, _ERROR_CODE_SET)
+    return code is None if ok else _one_of(code, codes)
 
 
 def _payload_in(message: Mapping[str, Any], minimum: int) -> bool:
@@ -724,10 +793,16 @@ def model_push_problem(fmt: Any, files: Any, lease: Any = None, binding: Any = N
         or (binding is not None and not _binding_ok(binding))
         or (lease is not None and binding is not None)
         or not _one_of(fmt, MODEL_FORMATS)
-        or files is None
-        or len(files) == 0
-        or len(files) > MAX_MODEL_FILES
     ):
+        return INVALID_MESSAGE
+    return model_files_problem(fmt, files)
+
+
+def model_files_problem(fmt: str, files: Any) -> Optional[str]:
+    """The file rules of a model frame (``model.push``, ``host.openModel``): bare names, unique ignoring case,
+    exactly one model file of the format and otherwise only ``*.dds`` (nothing beside a GLB). Returns ``None`` or
+    ``invalid-message``; the caller checks the lengths against the payload."""
+    if files is None or len(files) == 0 or len(files) > MAX_MODEL_FILES:
         return INVALID_MESSAGE
     names = set()
     models = 0
@@ -758,6 +833,34 @@ def _model_push(m: Mapping[str, Any]) -> Optional[str]:
         return problem
     total = sum(entry["length"] for entry in files)
     return None if total == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def _host_open_model(m: Mapping[str, Any]) -> Optional[str]:
+    """Always with an id (what ``host.result`` answers), XML drawables only, the file rules of ``model.push``."""
+    if (
+        not is_id(m.get("id"))
+        or not _payload_in(m, 1)
+        or not _binding_ok(m.get("binding"))
+        or not is_text(m.get("name"))
+        or m.get("format") != MODEL_YDD_XML
+    ):
+        return INVALID_MESSAGE
+    files = m.get("files")
+    problem = model_files_problem(MODEL_YDD_XML, files)
+    if problem is not None:
+        return problem
+    total = sum(entry["length"] for entry in files)
+    return None if total == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def _thumbnail_image(m: Mapping[str, Any]) -> Optional[str]:
+    if (
+        _binding_ok(m.get("binding"))
+        and _in_range(m.get("width"), 1, MAX_THUMBNAIL_EDGE)
+        and _in_range(m.get("height"), 1, MAX_THUMBNAIL_EDGE)
+    ):
+        return _image_code(m)
+    return INVALID_MESSAGE
 
 
 def _model_glb_data(m: Mapping[str, Any]) -> Optional[str]:
@@ -888,16 +991,23 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     "body.glb": _text(TO_DCT, {"gender": _STR}, lambda m: _check(_one_of(m.get("gender"), GENDERS))),
     "model.push": _binary(
         TO_DCT,
-        {
-            "lease": _STR,
-            "binding": _BINDING,
-            "format": _STR,
-            "files": _list(_obj({"name": _STR, "length": _INT64})),
-        },
+        {"lease": _STR, "binding": _BINDING, "format": _STR, "files": _MODEL_FILES},
         _model_push,
     ),
     "model.save": _text(TO_DCT, {"lease": _STR}, lambda m: _check(is_id(m.get("lease")))),
     "model.discard": _text(TO_DCT, {"lease": _STR}, lambda m: _check(is_id(m.get("lease")))),
+    "host.result": _text(
+        TO_DCT,
+        {"ok": _BOOL, "code": _STR},
+        lambda m: _check(is_id(m.get("re")) and _ok_code_ok(m, HOST_RESULT_CODES)),
+    ),
+    "item.thumbnail": _text(
+        TO_DCT,
+        {"binding": _BINDING, "size": _INT32},
+        lambda m: _check(
+            _optional_binding_ok(m.get("binding")) and _in_range(m.get("size"), MIN_THUMBNAIL_EDGE, MAX_THUMBNAIL_EDGE)
+        ),
+    ),
     "bye": _text(TO_DCT, {}, lambda m: None),
     # DCT to plugin
     "challenge": _text(TO_CLIENT, {"serverNonce": _STR}, lambda m: _check(is_bytes32(m.get("serverNonce")))),
@@ -1014,7 +1124,18 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     "host.openTexture": _binary(
         TO_CLIENT,
         {"binding": _BINDING, "target": _STR, "name": _STR, "width": _INT32, "height": _INT32, "format": _STR},
-        _textured_image,
+        # Always with an id: the plugin's host.result names it.
+        lambda m: _textured_image(m) if is_id(m.get("id")) else INVALID_MESSAGE,
+    ),
+    "host.openModel": _binary(
+        TO_CLIENT,
+        {"binding": _BINDING, "name": _STR, "format": _STR, "files": _MODEL_FILES},
+        _host_open_model,
+    ),
+    "item.thumbnail.data": _binary(
+        TO_CLIENT,
+        {"binding": _BINDING, "width": _INT32, "height": _INT32, "format": _STR},
+        _thumbnail_image,
     ),
     "error": _text(
         TO_CLIENT,
@@ -1025,7 +1146,10 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
 }
 
-#: Every Creator Link v1 message by wire type.
+#: hello and incompatible: the negotiation, read in any major so peers of different majors can say why.
+_NEGOTIATION = frozenset({"hello", "incompatible"})
+
+#: Every Creator Link protocol 2 message by wire type.
 MESSAGES: Dict[str, MessageDef] = {name: MessageDef(name, *spec) for name, spec in _DEFS.items()}
 
 
@@ -1057,8 +1181,9 @@ def _decode_message(json_bytes: bytes, direction: str, frame: str) -> Dict[str, 
     if "re" in root and not is_id(root["re"]):
         raise ProtocolError(MALFORMED_MESSAGE, "re")
 
-    if version != PROTOCOL_MAJOR:
-        raise ProtocolError(UNSUPPORTED_PROTOCOL, f"v={version}")
+    # hello and incompatible, the negotiation, are read in any major; everything else only in the current one.
+    if version != PROTOCOL_MAJOR and not (message_type in _NEGOTIATION and 1 <= version <= MAX_PROTOCOL_MAJOR):
+        raise ProtocolError(UNSUPPORTED_PROTOCOL, f"v={version}", version=version)
     definition = MESSAGES.get(message_type)
     if definition is None:
         raise ProtocolError(UNKNOWN_MESSAGE_TYPE, "unknown type")
@@ -1135,7 +1260,10 @@ def _ordered(message: Mapping[str, Any], frame: str) -> Tuple[str, Dict[str, Any
         raise ProtocolError(UNKNOWN_MESSAGE_TYPE, f"cannot encode {message_type!r}")
     if definition.frame != frame:
         raise ProtocolError(UNEXPECTED_MESSAGE, f"{message_type} is not a {frame} message")
-    ordered: Dict[str, Any] = {"v": PROTOCOL_MAJOR, "type": message_type}
+    # An incompatible answer is written in the major of the hello it answers when the sender names one.
+    given = message.get("v")
+    keep = message_type == "incompatible" and _is_integer(given) and 1 <= given <= MAX_PROTOCOL_MAJOR
+    ordered: Dict[str, Any] = {"v": given if keep else PROTOCOL_MAJOR, "type": message_type}
     for key in ("id", "re"):
         if message.get(key) is not None:
             ordered[key] = message[key]

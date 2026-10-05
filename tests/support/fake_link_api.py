@@ -19,7 +19,11 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any, Dict, List, Optional
 
-HEADER_PATTERN = re.compile(r"blender/[0-9]+\.[0-9]+\.[0-9]+\S* \(protocol 1\.0; channel (release|experimental|development)\)")
+
+def header_pattern(protocol: str) -> "re.Pattern[str]":
+    """The X-DCT-Link-Client header of the Blender add-on speaking ``protocol`` (for example "2.0")."""
+    return re.compile(r"blender/[0-9]+\.[0-9]+\.[0-9]+\S* \(protocol " + re.escape(protocol)
+                      + r"; channel (release|experimental|development)\)")
 
 
 def _token(prefix: str) -> str:
@@ -68,6 +72,8 @@ class FakeLinkApi:
         self.assertions: Dict[str, str] = {}
         self.logouts = 0
         self.logout_failure: Optional[int] = None  # an HTTP status for every logout, to test a failed sign-out
+        #: The link protocol the add-on must report (the interface screenshots of an older version change it).
+        self.protocol = "2.0"
         self.thread = threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.05}, daemon=True)
         self.thread.start()
 
@@ -125,7 +131,7 @@ class FakeLinkApi:
         headers = {k.lower(): v for k, v in handler.headers.items()}
         with self.lock:
             self.requests.append({"method": method, "path": path, "headers": headers, "body": body})
-        if not HEADER_PATTERN.fullmatch(headers.get("x-dct-link-client", "")):
+        if not header_pattern(self.protocol).fullmatch(headers.get("x-dct-link-client", "")):
             return self._fail(handler, 400, "bad_client_header")
         if method == "POST" and path == "/link/api/auth/device":
             return self._device(handler, body or {})
@@ -157,7 +163,7 @@ class FakeLinkApi:
         self._send(handler, 404)
 
     def _device(self, handler: BaseHTTPRequestHandler, body: Dict[str, Any]) -> None:
-        if body.get("clientId") != "dct-link-blender" or body.get("protocol") != "1.0":
+        if body.get("clientId") != "dct-link-blender" or body.get("protocol") != self.protocol:
             return self._fail(handler, 400, "invalid_request")
         if not re.fullmatch(r"[0-9a-f-]{36}", str(body.get("installId"))):
             return self._fail(handler, 400, "invalid_request")

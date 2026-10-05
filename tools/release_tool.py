@@ -16,8 +16,8 @@ file's local modification time, and the stamp makes that read as the commit time
 ``archive`` checks the archive Blender built: its name, the manifest inside it, the licence and notice files, the
 logo, and that nothing excluded slipped in; it prints its size and SHA-256. ``notes`` prints the release notes.
 
-Durty Cloth Tool's plugin release pins this archive by version, URL, size and SHA-256, so a published asset is
-never replaced. Standard library only (Python 3.11 or later).
+Durty Cloth Tool's plugin release pins this archive by version, URL, size and SHA-256 (its plugins/release/
+blender.json), so a published asset is never replaced. Standard library only (Python 3.11 or later).
 """
 
 from __future__ import annotations

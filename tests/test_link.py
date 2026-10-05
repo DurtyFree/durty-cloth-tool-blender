@@ -89,7 +89,7 @@ def test_sign_in_through_dct(tmp_path, dct, api, stores):
     device_request = next(r for r in api.requests if r["path"] == "/link/api/auth/device")
     assert device_request["body"]["deviceName"] == "TEST-PC"
     assert device_request["body"]["channel"] == settings.CHANNEL
-    expected_header = f"blender/{settings.VERSION} (protocol 1.0; channel {settings.CHANNEL})"
+    expected_header = f"blender/{settings.VERSION} (protocol 2.0; channel {settings.CHANNEL})"
     assert device_request["headers"]["x-dct-link-client"] == expected_header
     # Access and refresh tokens never go to DCT; only the connection-bound assertion does.
     sent_to_dct = json.dumps(dct.received)

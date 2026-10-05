@@ -55,6 +55,11 @@ __all__ = [
     "Request",
     "LiveSurface",
     "ModelBundle",
+    "HostRequest",
+    "HostOpenTexture",
+    "HostOpenModel",
+    "Thumbnail",
+    "ThumbnailRefusal",
     "SignInPrompt",
     "DiscoveredEndpoint",
     "ASSERTION_AUDIENCE",
@@ -238,7 +243,7 @@ def read_discovery_file(
     """Reads DCT's discovery file. It is a hint and untrusted input: anything unexpected yields ``None`` and the
     plugin probes the port range instead.
 
-    Expected content: ``{"port": 47820, "pid": 1234, "path": "/dct/link/v1", "protocolMin": 1, "protocolMax": 1}``.
+    Expected content: ``{"port": 47820, "pid": 1234, "path": "/dct/link/v1", "protocolMin": 2, "protocolMax": 2}``.
     The file is at most 4 KiB, the port is one of ``ports`` (the link range), the path is the link path, the
     protocol range includes a major this client speaks, and the process is still running.
     """
@@ -463,7 +468,9 @@ class Request:
 
 #: Requests DCT runs as services: at most ``MAX_SERVICE_IN_FLIGHT`` of them (model pushes included) are in
 #: flight per connection; DCT answers more with ``busy``, so the session queues the rest.
-SERVICE_TYPES = frozenset({"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push"})
+SERVICE_TYPES = frozenset(
+    {"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push", "item.thumbnail"}
+)
 MAX_SERVICE_IN_FLIGHT = 2
 
 # Which response types finish which request types (always matched by `re`).
@@ -481,6 +488,7 @@ _RESPONSES: Dict[str, Tuple[str, ...]] = {
     "model.push": ("model.applied",),
     "model.save": ("model.saveResult",),
     "model.discard": ("model.closed",),
+    "item.thumbnail": ("item.thumbnail.data",),
 }
 
 
@@ -781,6 +789,139 @@ class ModelBundle:
 
 
 # --------------------------------------------------------------------------------------------------
+# Requests from DCT and thumbnails
+# --------------------------------------------------------------------------------------------------
+
+class HostRequest:
+    """Something DCT asked this plugin to open (``host.openTexture`` or ``host.openModel``) and the way to answer it.
+
+    Call :meth:`accept` as soon as the plugin has taken the item and started opening it (not after a long import),
+    or :meth:`refuse` with a code from :data:`protocol.HOST_RESULT_CODES` as soon as it knows it cannot. DCT waits
+    :data:`protocol.OPEN_TEXTURE_ANSWER_SECONDS` (20) for a texture and :data:`protocol.OPEN_MODEL_ANSWER_SECONDS`
+    (60) for a model, then tells the user the app did not answer; a failure after :meth:`accept` is the plugin's to
+    show. Only the first call counts, and either may be called from any thread, also after the handler returned.
+
+    The session answers by itself in two cases: with no handler for the event it refuses with ``not-supported`` at
+    once, and when a handler raises before anything answered it refuses with ``open-failed``. A handler that
+    returns without answering is left alone; it must answer later.
+
+    ``header`` and ``payload`` are the frame as received (``payload`` is a view of it). ``request_id`` is DCT's
+    message id, which ``host.result`` names.
+    """
+
+    def __init__(self, session: "LinkSession", header: Dict[str, Any], payload: memoryview, epoch: int) -> None:
+        self.header = header
+        self.payload = payload
+        self.binding: Dict[str, str] = dict(header["binding"])
+        self.name: str = header["name"]
+        self.request_id: str = header["id"]
+        self._session = session
+        self._epoch = epoch
+        self._lock = threading.Lock()
+        self._answered = False
+
+    @property
+    def answered(self) -> bool:
+        """``accept`` or ``refuse`` was called (by the host, or by the session in the cases above)."""
+        return self._answered
+
+    def accept(self) -> bool:
+        """The document opened. True when a ``host.result`` was sent."""
+        return self._answer(None)
+
+    def refuse(self, code: str) -> bool:
+        """The document did not open; ``code`` is one of :data:`protocol.HOST_RESULT_CODES` (``ValueError``
+        otherwise). True when a ``host.result`` was sent."""
+        if code not in protocol.HOST_RESULT_CODES:
+            raise ValueError(f"{code!r} is not a host.result code")
+        return self._answer(code)
+
+    def _answer(self, code: Optional[str]) -> bool:
+        with self._lock:
+            if self._answered:
+                return False
+            self._answered = True
+        return self._session._answer_host_request(self._epoch, self.request_id, code)
+
+    def _handler_failed(self) -> None:
+        if not self._answered:
+            self._answer("open-failed")
+
+
+class HostOpenTexture(HostRequest):
+    """``host.openTexture``: a texture to open as a new document bound to its cloth. ``pixels`` (the same view as
+    ``payload``) is RGBA8, ``width * height * 4`` bytes, rows top to bottom; ``target`` is the map DCT chose."""
+
+    def __init__(self, session: "LinkSession", header: Dict[str, Any], payload: memoryview, epoch: int) -> None:
+        super().__init__(session, header, payload, epoch)
+        self.target: str = header["target"]
+        self.width: int = header["width"]
+        self.height: int = header["height"]
+        self.pixels = payload
+
+
+class HostOpenModel(HostRequest):
+    """``host.openModel``: a cloth's model to open. ``files`` lists ``(name, data)`` in DCT's
+    order: one ``*.ydd.xml`` and its ``*.dds`` textures, among them the variation's diffuse; each ``data`` is a view
+    of the payload. ``format`` is ``ydd-xml``."""
+
+    def __init__(self, session: "LinkSession", header: Dict[str, Any], payload: memoryview, epoch: int) -> None:
+        super().__init__(session, header, payload, epoch)
+        self.format: str = header["format"]
+        self.files: List[Tuple[str, memoryview]] = []
+        offset = 0
+        for entry in header["files"]:  # the codec checked the names and that the lengths add up
+            self.files.append((entry["name"], payload[offset : offset + entry["length"]]))
+            offset += entry["length"]
+
+
+class Thumbnail(NamedTuple):
+    """A small picture of a cloth (``item.thumbnail.data``). ``binding`` is the cloth and variation
+    DCT pictured (the focused one when the request named none); ``pixels`` is RGBA8, ``width * height * 4`` bytes,
+    rows top to bottom."""
+
+    binding: Dict[str, str]
+    width: int
+    height: int
+    pixels: bytes
+    ok: bool = True
+
+
+class ThumbnailRefusal(NamedTuple):
+    """Why :meth:`LinkSession.request_thumbnail` got no picture: DCT's error code (for example ``item-refused``,
+    ``needs-ultimate``, ``no-focused-item``)."""
+
+    code: str
+    ok: bool = False
+
+
+def _thumbnail_answer(size: int, binding: Optional[Dict[str, str]]) -> Callable[[Any], Union[Thumbnail, ThumbnailRefusal]]:
+    """Turns DCT's answer to one ``item.thumbnail`` into its result. A picture larger than ``size`` or of another
+    cloth than ``binding`` does not answer the request: ``protocol-violation``."""
+
+    def result(answer: Any) -> Union[Thumbnail, ThumbnailRefusal]:
+        if isinstance(answer, ThumbnailRefusal):
+            return answer
+        header = answer.header
+        if max(header["width"], header["height"]) > size or (
+            binding is not None and not _same_binding(header["binding"], binding)
+        ):
+            raise LinkError("protocol-violation", "DCT answered item.thumbnail with a picture it was not asked for")
+        return Thumbnail(dict(header["binding"]), header["width"], header["height"], bytes(answer.payload))
+
+    return result
+
+
+def _same_binding(a: Dict[str, str], b: Dict[str, str]) -> bool:
+    """The same cloth and variation (GUIDs compare without regard to case)."""
+    return a["clothId"].lower() == b["clothId"].lower() and a["textureId"].lower() == b["textureId"].lower()
+
+
+def _is_binding(value: Any) -> bool:
+    return isinstance(value, dict) and protocol.is_guid(value.get("clothId")) and protocol.is_guid(value.get("textureId"))
+
+
+# --------------------------------------------------------------------------------------------------
 # The session
 # --------------------------------------------------------------------------------------------------
 
@@ -789,9 +930,16 @@ _BACKOFF = (0.5, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0)
 _MAX_RETRY_AFTER = 300.0
 #: How long a request that timed out locally keeps its service slot while DCT has not answered it yet.
 _SLOT_HOLD_SECONDS = 120.0
+#: How many answered DCT requests a connection remembers, so a second answer to one of them is not sent.
+_MAX_ANSWERED_HOST_REQUESTS = 256
 #: When DCT answers ``auth`` with ``busy`` (it cannot reach the account service) the connection stays; the session
 #: sends a fresh assertion after these waits, one after another.
 _AUTH_BUSY_WAITS = (2.0, 4.0, 8.0, 15.0)
+#: When DCT answers ``account.assist`` with ``busy`` or ``rate-limited`` (another question is open, or the last one
+#: just ended) the session asks again for the same device sign-in after these waits, one after another, before it
+#: settles on the browser code.
+_ASSIST_RETRY_WAITS = (3.0, 10.0)
+_ASSIST_RETRY_CODES = frozenset({"busy", "rate-limited"})
 #: While DCT answers ``dct-signed-out``, each try mints an assertion with gta.clothing: wait longer each time, up to
 #: about five minutes. start() (a user action) tries at once and starts over.
 _SIGNED_OUT_WAITS = (30.0, 60.0, 120.0, 240.0, 300.0)
@@ -833,7 +981,8 @@ class LinkSession:
     known to run in another Windows session.
 
     Events (``session.on(name, handler)``): ``state(state)``, ``ready(welcome)``, ``sign-in(SignInPrompt)``,
-    ``selection(message)``, ``project(message)``, ``entitlement(message)``, ``open-texture(BinaryMessage)``,
+    ``selection(message)``, ``project(message)``, ``entitlement(message)``, ``open-texture(HostOpenTexture)``,
+    ``open-model(HostOpenModel)`` (answer both through the :class:`HostRequest`),
     ``live-status(surface, message)``, ``live-closed(surface, reason)``, ``live-error(surface, LinkError)``,
     ``model-applied(message)``, ``model-closed(message)``, ``incompatible(message)`` (``updateUrl`` only when it
     is a trusted link), ``signed-out()`` (the user signed out; call :meth:`sign_in` when they want to sign in
@@ -924,6 +1073,8 @@ class LinkSession:
         self._discovered: Optional[DiscoveredEndpoint] = None  # the discovery file read for this connection
         self._sign_in_requested = False  # sign_in() was called; the next sign-in check clears a remembered sign-out
         self._assisted_flow: Any = None  # the device sign-in DCT was already asked to approve
+        self._assist_retry_at: Optional[float] = None  # DCT could not ask just now: ask again then
+        self._assist_retries = 0  # how often DCT was asked again for this device sign-in
         self._dct_signed_out = False
         self._slot_release_at: Dict[str, float] = {}  # timed-out service requests DCT has not answered yet
         self._push_id: Optional[str] = None  # the model push DCT has not answered yet
@@ -932,6 +1083,8 @@ class LinkSession:
         self._reauth_at: Optional[float] = None  # DCT answered auth with busy: sign in again then
         self._busy_auths = 0
         self._signed_out_tries = 0  # dct-signed-out answers in a row (for the growing wait)
+        # DCT requests answered with host.result on one connection (its epoch), oldest first.
+        self._answered_host_requests: Tuple[int, "collections.OrderedDict[str, None]"] = (-1, collections.OrderedDict())
 
     # ---- events and host calls ---------------------------------------------------------------------
 
@@ -992,6 +1145,19 @@ class LinkSession:
         self.last_error = error
         self._emit("error", error)
 
+    def feature_states(self) -> Dict[str, str]:
+        """What DCT last said about its features (``welcome``, then every ``event.entitlement``): feature id to
+        ``entitled``, ``needsLicense`` or ``needsUltimate``. A feature DCT did not name is missing. A copy, safe to
+        read from any thread."""
+        with self._lock:
+            return dict(self.features)
+
+    @property
+    def endpoint_source(self) -> Optional[str]:
+        """How the current (or last) endpoint was found: ``discovery`` (DCT's discovery file), ``probe`` (the port
+        range was tried) or ``fixed`` (the ``port`` option); ``None`` before the first connection."""
+        return self._endpoint_source if self.endpoint_port is not None else None
+
     # ---- lifecycle -----------------------------------------------------------------------------------
 
     def start(self) -> None:
@@ -1051,6 +1217,8 @@ class LinkSession:
         with self._lock:
             self._sign_in_requested = True
             self._assisted_flow = None
+            self._assist_retry_at = None
+            self._assist_retries = 0
         self.start()
 
     def start_thread(self, name: str = "dct-link") -> threading.Thread:
@@ -1098,7 +1266,7 @@ class LinkSession:
             busy = self._has_live_work()
             if self._reauth_at is not None:
                 timeout = min(timeout, max(0.0, self._reauth_at - self._clock()))
-            # Sign-in work polls a socket of its own: come back soon.
+            # Sign-in work polls a socket of its own: come back soon (this also keeps an assist retry on time).
             if self._token_task is not None or (self.state == SIGNING_IN and self._sign_in is not None):
                 timeout = min(timeout, 0.02)
         if busy:
@@ -1162,6 +1330,8 @@ class LinkSession:
         if self._reauth_at is not None and self.state == AUTHENTICATING and self._clock() >= self._reauth_at:
             self._reauth_at = None
             self._begin_auth()  # a fresh assertion for the same connection
+        if self._assist_retry_at is not None and self._clock() >= self._assist_retry_at:
+            self._retry_assist()
         self._expire_requests(self._clock())
         if self.state == READY:
             self._pump_services()
@@ -1528,6 +1698,8 @@ class LinkSession:
                         return
                     self._sign_in = None
                     self._assisted_flow = None
+                    self._assist_retry_at = None
+                    self._assist_retries = 0
                     try:
                         if error is not None:
                             self._fail_sign_in(error)
@@ -1592,11 +1764,41 @@ class LinkSession:
             # DCT is asked once per device sign-in (until the user asks again with sign_in()): a user who declined
             # in DCT is not asked again on every reconnect.
             self._assisted_flow = flow
+            self._assist_retry_at = None
+            self._assist_retries = 0
             self._send_handshake("account.assist", {"userCode": flow.user_code})
         self._emit(
             "sign-in",
             SignInPrompt(flow.user_code, flow.verification_uri, getattr(flow, "verification_uri_complete", None)),
         )
+
+    def _assist_answered(self, ok: bool, code: Optional[str]) -> None:
+        """DCT answered ``account.assist``. ``busy`` and ``rate-limited`` mean DCT could not ask just now (another
+        question is open, or the last one just ended): ask again for the same device sign-in after 3 and then 10
+        seconds. Any other refusal, and a third one of these, leaves the sign-in to the browser code."""
+        flow = self._sign_in
+        if flow is None or self.state != SIGNING_IN:
+            return
+        if not ok and code in _ASSIST_RETRY_CODES and self._assist_retries < len(_ASSIST_RETRY_WAITS):
+            self._assist_retry_at = self._clock() + _ASSIST_RETRY_WAITS[self._assist_retries]
+            self._assist_retries += 1
+            return  # the prompt keeps saying that DCT is being asked
+        self._assist_retry_at = None
+        self._emit("sign-in", SignInPrompt(flow.user_code, flow.verification_uri,
+                                           getattr(flow, "verification_uri_complete", None), ok))
+
+    def _retry_assist(self) -> None:
+        """Asks DCT again to approve the running device sign-in (a wait after ``busy`` or ``rate-limited`` ended).
+        Without a connection in the sign-in step the retry waits for the next one."""
+        flow = self._sign_in
+        if flow is None or flow is not self._assisted_flow or getattr(flow, "cancelled", False):
+            self._assist_retry_at = None
+            return
+        ws = self._ws
+        if self.state != SIGNING_IN or ws is None or not ws.is_open:
+            return
+        self._assist_retry_at = None
+        self._send_handshake("account.assist", {"userCode": flow.user_code})
 
     def _send_auth(self, assertion: str) -> None:
         claims = _assertion_claims(assertion)
@@ -1629,7 +1831,10 @@ class LinkSession:
         self._sign_in_requested = False
         if self.endpoint_port is not None:
             self._skip_ports.discard(self.endpoint_port)
+        self._assist_retry_at = None
+        self._assist_retries = 0
         self.welcome = message
+        # Replaced as a whole, never changed in place: another thread reading it sees the old or the new states.
         self.features = {f["id"]: f["state"] for f in message["features"]}
         self.account_name = message["account"]["userName"]
         self._attempt = 0
@@ -1646,12 +1851,9 @@ class LinkSession:
             self._untrusted_endpoint(LinkError("untrusted-endpoint", "an endpoint sent disconnected before welcome"))
             return
         if answered == "account.assist":
-            # DCT could not prompt now (busy, rate-limited, another prompt open). The device sign-in goes on; the
-            # user can approve it in the browser.
-            flow = self._sign_in
-            if flow is not None and self.state == SIGNING_IN:
-                self._emit("sign-in", SignInPrompt(flow.user_code, flow.verification_uri,
-                                                   getattr(flow, "verification_uri_complete", None), False))
+            # DCT could not prompt now (busy, rate-limited, another prompt open). The device sign-in goes on: DCT is
+            # asked again a little later, and the user can approve it in the browser meanwhile.
+            self._assist_answered(False, code)
             return
         if answered == "auth" and code == "busy":
             # DCT cannot reach the account service right now and keeps the connection: sign in again a little later.
@@ -1682,7 +1884,19 @@ class LinkSession:
         try:
             message = protocol.decode_text(data, protocol.TO_CLIENT)
         except ProtocolError as exc:
-            if self.state != READY:
+            if (
+                self.state != READY
+                and exc.code == protocol.UNSUPPORTED_PROTOCOL
+                and exc.version is not None
+                and 1 <= exc.version <= protocol.MAX_PROTOCOL_MAJOR
+            ):
+                # A DCT of another major cannot read this hello and refuses it in its own major: it is incompatible.
+                older = exc.version < protocol.PROTOCOL_MAJOR
+                self._on_handshake_message("incompatible", {
+                    "type": "incompatible", "code": "dct-too-old" if older else "plugin-too-old",
+                    "dct": {"protocol": {"min": exc.version, "max": exc.version}},
+                })
+            elif self.state != READY:
                 self._untrusted_endpoint(LinkError(exc.code, "DCT sent an unreadable message"))
             else:
                 self._report(LinkError(exc.code, "ignored an unreadable message from DCT"))
@@ -1699,7 +1913,11 @@ class LinkSession:
         if kind == "error":
             if request is not None:
                 self._pending.pop(re_id, None)
-                self._finish_request(request, error=LinkError(message["code"], message.get("message") or ""))
+                if request.type == "item.thumbnail":
+                    # DCT refused the picture: an answer, not a failure of the request.
+                    self._finish_request(request, result=ThumbnailRefusal(message["code"]))
+                else:
+                    self._finish_request(request, error=LinkError(message["code"], message.get("message") or ""))
             else:
                 if message["code"] in ("dct-signed-out", "account-mismatch", "disconnected"):
                     self._close_hint = message["code"]  # DCT closes with 4003 next
@@ -1746,13 +1964,7 @@ class LinkSession:
             self._deadline = None
             self._on_challenge(message)
         elif answered == "account.assist" and kind == "account.assistResult":
-            flow = self._sign_in
-            if flow is not None and self.state == SIGNING_IN:
-                self._emit(
-                    "sign-in",
-                    SignInPrompt(flow.user_code, flow.verification_uri,
-                                 getattr(flow, "verification_uri_complete", None), bool(message["ok"])),
-                )
+            self._assist_answered(bool(message["ok"]), message.get("code"))
         elif answered == "auth" and kind == "welcome" and self.state == AUTHENTICATING:
             self._on_welcome(message)
         else:
@@ -1778,7 +1990,64 @@ class LinkSession:
             self._finish_request(request, result=frame)
             return
         if kind == "host.openTexture":
-            self._emit("open-texture", frame)
+            self._emit_host_request("open-texture", HostOpenTexture(self, header, frame.payload, self._epoch))
+        elif kind == "host.openModel":
+            self._emit_host_request("open-model", HostOpenModel(self, header, frame.payload, self._epoch))
+
+    def _emit_host_request(self, event: str, request: HostRequest) -> None:
+        """Raises a request from DCT. Without a handler DCT hears ``not-supported`` at once; a handler that raises
+        before anything answered makes it ``open-failed``. Any other handler answers itself."""
+        handlers = list(self._handlers.get(event, []))
+        if not handlers:
+            request._answer("not-supported")
+            return
+        for handler in handlers:
+            self._calls.append((_answering_on_failure(handler), (request,)))
+
+    def _answer_host_request(self, epoch: int, request_id: str, code: Optional[str]) -> bool:
+        """Sends ``host.result`` on the connection the request came from, while it is the current one, once per
+        request id."""
+        with self._lock:
+            if epoch != self._epoch or self.state != READY:
+                return False
+            answered = self._answered_host_requests
+            if answered[0] != epoch:  # a new connection remembers nothing of the last one
+                answered = self._answered_host_requests = (epoch, collections.OrderedDict())
+            if request_id in answered[1]:
+                return False
+            message: Dict[str, Any] = {"type": "host.result", "id": self._new_id(), "re": request_id, "ok": code is None}
+            if code is not None:
+                message["code"] = code
+            try:
+                self._send(message)
+            except LinkError as exc:
+                if exc.code != "disconnected":
+                    self._report(exc)
+                return False
+            answered[1][request_id] = None
+            if len(answered[1]) > _MAX_ANSWERED_HOST_REQUESTS:
+                answered[1].popitem(last=False)
+            return True
+
+    def send_host_result(self, request_id: str, ok: bool, code: Optional[str] = None) -> bool:
+        """Answers DCT's ``host.openTexture`` or ``host.openModel`` (``request_id`` is its ``id``) with
+        ``host.result``: ``ok`` true without a code, or false with one of :data:`protocol.HOST_RESULT_CODES`. The
+        events hand out a :class:`HostRequest` that does this; call it directly only for a request kept elsewhere.
+        Raises ``ValueError`` for an invalid id or code. Returns ``True`` when it was sent, ``False`` when nothing was
+        sent: the link is not ready, or this connection already answered that id."""
+        if not protocol.is_id(request_id):
+            raise ValueError("a request id is 1 to 64 of A-Z a-z 0-9 _ -")
+        if ok and code is not None:
+            raise ValueError("an accepted request carries no code")
+        if not ok and code not in protocol.HOST_RESULT_CODES:
+            raise ValueError(f"{code!r} is not a host.result code")
+        with self._lock:
+            return self._answer_host_request(self._epoch, request_id, None if ok else code)
+
+    def _on_entitlement(self, message: Dict[str, Any]) -> None:
+        # A new dict, never an update in place (see _on_welcome). Features the event does not name keep their state.
+        self.features = dict(self.features, **{f["id"]: f["state"] for f in message["features"]})
+        self._emit("entitlement", message)
 
     def _on_live_status(self, message: Dict[str, Any]) -> None:
         surface = self._surfaces.get(message["lease"])
@@ -1941,6 +2210,20 @@ class LinkSession:
     def body_glb(self, gender: str, timeout: Optional[float] = 120.0) -> Request:
         """``body.glb``: resolves with a :class:`protocol.BinaryMessage` (``body.glb.data``)."""
         return self.request("body.glb", {"gender": gender}, timeout=timeout)
+
+    def request_thumbnail(self, size: int = 128, binding: Optional[Dict[str, str]] = None,
+                          timeout: Optional[float] = 30.0) -> Request:
+        """``item.thumbnail``: a small RGBA8 picture of a cloth, the focused item without ``binding``. ``size`` is the
+        longest edge wanted, 16 to 256 (``ValueError`` otherwise). Resolves with a :class:`Thumbnail`, or with a
+        :class:`ThumbnailRefusal` when DCT refused (its error code). Fails with :class:`LinkError` when the request
+        itself failed (``timeout``, ``disconnected``), and with ``protocol-violation`` when DCT's picture is larger
+        than ``size`` or of another cloth than ``binding``. It counts as a service request (two at a time)."""
+        if type(size) is not int or not protocol.MIN_THUMBNAIL_EDGE <= size <= protocol.MAX_THUMBNAIL_EDGE:
+            raise ValueError("a thumbnail is 16 to 256 pixels on its longest edge")
+        if binding is not None and not _is_binding(binding):
+            raise ValueError("a binding names a cloth and a texture variation by their ids (8-4-4-4-12 hex digits)")
+        return self.request("item.thumbnail", {"size": size, "binding": binding}, timeout=timeout,
+                            transform=_thumbnail_answer(size, binding))
 
     # ---- live textures -------------------------------------------------------------------------------
 
@@ -2175,6 +2458,20 @@ class LinkSession:
         return self.request("model.discard", {"lease": lease}, timeout=timeout)
 
 
+def _answering_on_failure(handler: Handler) -> Handler:
+    """Runs a host request handler; when it raises before anything answered, DCT hears ``open-failed``. The error is
+    raised on, so the session logs and reports it like any failing callback."""
+
+    def call(request: HostRequest) -> None:
+        try:
+            handler(request)
+        except Exception:
+            request._handler_failed()
+            raise
+
+    return call
+
+
 def _signed_out_check(source: Any, requested: bool) -> bool:
     """On a worker: after sign_in() clear a remembered sign-out; otherwise say whether the user signed out."""
     if requested:
@@ -2199,10 +2496,7 @@ class _FailedTask:
 _EVENT_HANDLERS: Dict[str, Callable[[LinkSession, Dict[str, Any]], None]] = {
     "event.selection": lambda s, m: s._emit("selection", m),
     "event.project": lambda s, m: s._emit("project", m),
-    "event.entitlement": lambda s, m: (
-        s.features.update({f["id"]: f["state"] for f in m["features"]}),
-        s._emit("entitlement", m),
-    ),
+    "event.entitlement": LinkSession._on_entitlement,
     "live.status": LinkSession._on_live_status,
     "live.closed": LinkSession._on_live_closed,
     "model.applied": LinkSession._on_model_applied,

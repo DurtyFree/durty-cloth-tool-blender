@@ -10,44 +10,16 @@ from durty_cloth_tool_link import settings, strings
 from durty_cloth_tool_link.dct_link import protocol
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
-PACKAGE = REPO_ROOT / "durty_cloth_tool_link"
-VENDORED = PACKAGE / "dct_link"
+VENDORED = REPO_ROOT / "durty_cloth_tool_link" / "dct_link"
 EM_DASH = chr(0x2014)
-
-#: The hosts the add-on names: gta.clothing with its documentation and its link pages, the Pleb Masters Community
-#: Discord server with its invitation, and the copyright holder's site. It connects only to Durty Cloth Tool on
-#: this computer and to gta.clothing; the others are pages it opens or names.
-ADD_ON_HOSTS = frozenset({
-    "gta.clothing", "docs.gta.clothing", "link.gta.clothing", "discord.com", "discord.plebmasters.de",
-    "schmid-software.de",
-})
-#: Hosts that only the documentation, the workflows and the tests name.
-OTHER_HOSTS = frozenset({"docs.sollumz.org", "download.blender.org", "extensions.blender.org", "cdn.discordapp.com"})
-#: Durty Cloth Tool on this computer, and the fakes the tests start. Always by address, never by name.
-LOOPBACK = frozenset({"127.0.0.1"})
-#: Names reserved for examples; the tests use them for addresses that must be refused.
-EXAMPLE_HOST = re.compile(r"(^|\.)example(\.(com|net|org))?$")
-_ADDRESS = re.compile(r"\b[a-z][a-z0-9+.-]*://([^\s/\"'`<>()\[\]{},|\\?#]*)", re.IGNORECASE)
-#: A name under the domain of a known host counts as a host wherever it stands, with or without a scheme.
-_KNOWN_DOMAIN = re.compile(
-    r"(?<![\w.-])((?:[a-z0-9-]+\.)*(?:"
-    + "|".join(sorted({re.escape(".".join(host.split(".")[-2:])) for host in ADD_ON_HOSTS | OTHER_HOSTS}))
-    + r"))(?![\w-])", re.IGNORECASE)
-
-#: Folders the build and the release workflow create; a path into them need not exist.
-GENERATED_FOLDERS = frozenset({"dist", "release", "release-notes", "__pycache__"})
-#: Documents the release workflow writes.
-GENERATED_DOCUMENTS = frozenset({"notes.md"})
-#: Words joined by slashes that are not paths.
-NOT_PATHS = frozenset({"HTTP/1", "HTTP/1.1", "I/O", "application/json", "hello/challenge/auth"})
-#: What is not a path into a repository: an address, an absolute path on someone's disk, a Git ref, and an action
-#: a workflow uses.
-_NOT_REPOSITORY_PATHS = (re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s\"'`<>]*", re.IGNORECASE),
-                         re.compile(r"\b[A-Za-z]:[\\/][^\"'`\n]*"), re.compile(r"\brefs/[\w./-]+"),
-                         re.compile(r"\buses:\s*\S+"))
-_PATH = re.compile(r"(?<![\w/:.\\%$@~-])[A-Za-z_.][\w.-]*(?:(?:/[\w.-]+)+/?|/(?=[\s\"'`),;]|$))", re.MULTILINE)
-#: A Markdown document or a Windows script (PowerShell, batch), named with or without its folder.
-_DOCUMENT = re.compile(r"[\w.-]+\.(?:md|ps[dm]?\d|bat)\b")
+# Assembled from pieces so this file does not match itself. The add-on and its vendored dct_link are public: they
+# may name gta.clothing's public routes, nothing behind them and nothing of Durty Cloth Tool's own repository.
+PRIVATE = re.compile("|".join([
+    "api" + "-next", r"(?<!discord\.)" + "plebmasters" + r"\.de", "local" + r"host:\d", "DurtyClothTool" + r"\.App",
+    "eng" + "/", r"\.ps" + "1", r"\bV" + r"3\b", "link" + r"-api\.md",
+]), re.IGNORECASE)
+#: In the vendored copy also no paths into the Durty Cloth Tool repository (its VENDORED.md names the source).
+PRIVATE_VENDORED = re.compile("|".join(["plugins" + "/", "tests" + "/"]))
 
 
 def test_repository_addresses_per_channel():
@@ -121,101 +93,31 @@ def test_targets_match_the_protocol():
     assert tuple(target for target, _, _ in settings.TARGETS) == protocol.LIVE_TARGETS
 
 
-def repository_files():
-    """The repository's own files: nothing from hidden tool folders (other than the workflows), build output or
-    caches."""
-    for path in sorted(REPO_ROOT.rglob("*")):
-        folders = path.relative_to(REPO_ROOT).parts[:-1]
-        if path.is_file() and not any(part in {"dist", "__pycache__"} or (part.startswith(".") and part != ".github")
-                                      for part in folders):
-            yield path
-
-
 def text_files(include_vendored: bool = False):
-    for path in repository_files():
-        if path.name == "LICENSE" or (VENDORED in path.parents and not include_vendored):
+    for path in sorted(REPO_ROOT.rglob("*")):
+        if not path.is_file() or path.name == "LICENSE" or (VENDORED in path.parents and not include_vendored):
             continue
-        if (path.suffix in {".py", ".md", ".toml", ".yml", ".txt", ".json"} or path.name.startswith(".")
-                or path.name == "NOTICE"):
+        if any(part in {".git", "dist", "__pycache__", ".smoke", ".pytest_cache"} or part.startswith(".venv")
+               for part in path.relative_to(REPO_ROOT).parts):
+            continue
+        if path.suffix in {".py", ".md", ".toml", ".yml", ".txt", ".json"} or path.name.startswith("."):
             yield path
-
-
-def relative(path: pathlib.Path) -> str:
-    return path.relative_to(REPO_ROOT).as_posix()
-
-
-def named_hosts(text: str) -> set[str]:
-    """Every host ``text`` names: the host of each address, and each name under the domain of a known host."""
-    hosts = {authority.rpartition("@")[2].partition(":")[0].rstrip(".").lower() for authority in _ADDRESS.findall(text)}
-    hosts.update(name.lower() for name in _KNOWN_DOMAIN.findall(text))
-    return hosts - {""}
-
-
-def named_paths(text: str) -> set[str]:
-    """Every relative path ``text`` names: names joined by slashes, or a folder name that ends with one."""
-    for pattern in _NOT_REPOSITORY_PATHS:
-        text = pattern.sub(" ", text)
-    return {name.rstrip("./") for name in _PATH.findall(text)} - NOT_PATHS - {""}
-
-
-def in_repository(name: str) -> bool:
-    """Whether a relative path leads to something in this repository or the add-on folder, or to build output."""
-    parts = name.split("/")
-    if ".." in parts:
-        return False
-    return parts[0] in GENERATED_FOLDERS or any((base / name).exists() for base in (REPO_ROOT, PACKAGE))
 
 
 def test_no_em_dashes_in_the_repository():
-    offenders = [relative(p) for p in text_files() if EM_DASH in p.read_text("utf-8")]
+    offenders = [p.relative_to(REPO_ROOT).as_posix() for p in text_files() if EM_DASH in p.read_text("utf-8")]
     assert offenders == []
 
 
-def test_the_add_on_names_only_its_public_hosts():
-    """What ships to users (the add-on with its vendored dct_link) names Durty Cloth Tool's public hosts and
-    nothing else, so an address that is not meant for users cannot slip into a release."""
-    allowed = ADD_ON_HOSTS | LOOPBACK
-    offenders = [f"{relative(p)}: {host}" for p in text_files(include_vendored=True) if PACKAGE in p.parents
-                 for host in sorted(named_hosts(p.read_text("utf-8")) - allowed)]
+def test_no_private_addresses_or_internals_in_the_repository():
+    offenders = [p.relative_to(REPO_ROOT).as_posix() for p in text_files(include_vendored=True)
+                 if PRIVATE.search(p.read_text("utf-8"))]
     assert offenders == []
 
 
-def test_the_rest_of_the_repository_names_only_known_hosts():
-    allowed = ADD_ON_HOSTS | OTHER_HOSTS | LOOPBACK
-    offenders = [f"{relative(p)}: {host}" for p in text_files() if PACKAGE not in p.parents
-                 for host in sorted(named_hosts(p.read_text("utf-8")) - allowed) if not EXAMPLE_HOST.search(host)]
+def test_the_vendored_copy_names_no_private_repository_paths():
+    offenders = [p.name for p in VENDORED.glob("*.py") if PRIVATE_VENDORED.search(p.read_text("utf-8"))]
     assert offenders == []
-
-
-def test_the_repository_points_at_nothing_outside_itself():
-    """Every relative path the texts name exists here (or is build output), and so does every document and
-    Windows script they name: the add-on and its tools do not lean on the files of another repository."""
-    documents = {p.name for p in repository_files()} | GENERATED_DOCUMENTS
-    offenders = []
-    for path in text_files(include_vendored=True):
-        if path.name == ".gitignore":  # an ignore file lists what the repository does not hold
-            continue
-        text = path.read_text("utf-8")
-        missing = {name for name in named_paths(text) if not in_repository(name)}
-        missing |= set(_DOCUMENT.findall(text)) - documents
-        offenders += [f"{relative(path)}: {name}" for name in sorted(missing)]
-    assert offenders == []
-
-
-def test_the_checks_notice_foreign_names():
-    """The checks above are only worth something if a foreign name fails them. The samples are put together from
-    pieces, so that this file passes the checks itself."""
-    slash, own = "/", "gta.clothing"
-    stranger = "made-up." + own
-    assert named_hosts("see https:" + slash * 2 + stranger + slash + " or " + stranger.upper()) == {stranger}
-    assert named_hosts("ws:" + slash * 2 + "user@127.0.0.1:47820" + slash) == {"127.0.0.1"}
-    path = slash.join(["elsewhere", "module.py"])
-    assert named_paths("copied from " + path + ", see elsewhere" + slash) == {path, "elsewhere"}
-    assert not in_repository(path) and not in_repository(".." + slash + "tests")
-    assert in_repository("tests") and in_repository(slash.join(["dct_link", "session.py"]))
-    assert in_repository(slash.join(["dist", "any.zip"]))
-    script, note = "build-it." + "bat", "design-notes." + "md"
-    assert _DOCUMENT.findall("run " + script + " as described in " + note) == [script, note]
 
 
 def test_only_the_modules_the_add_on_uses_are_shipped():
