@@ -6,16 +6,16 @@
     python tools/sync_dct_link.py <path to the Durty Cloth Tool checkout>
     python tools/sync_dct_link.py --check [<path to the Durty Cloth Tool checkout>]
 
-The first form replaces ``durty_cloth_tool_link/dct_link`` with the modules the add-on uses from
-``plugins/python/dct_link`` in the checkout: the allowlist in ``ROOT_MODULES`` plus every module they import.
-The self-update modules (updater, loader, signed manifests and their keys) are left out because Blender updates
-the add-on itself. The MIT ``LICENSE`` is copied next to them and ``VENDORED.md`` records the SHA-256 of every
-copied file. Each file is copied byte for byte: never edit the vendored files by hand, change dct_link upstream
-and sync again.
+The first form replaces ``durty_cloth_tool_link/dct_link`` with the modules the add-on uses from the dct_link
+package in the checkout: the allowlist in ``ROOT_MODULES`` plus every module they import, nothing else. The
+package is the one folder named dct_link that the checkout tracks in Git; the path of that folder works in place of
+the checkout. The MIT ``LICENSE`` beside the package is copied next to the modules and ``VENDORED.md`` records the
+SHA-256 of every copied file. Each file is copied byte for byte: never edit the vendored files by hand, change
+dct_link upstream and sync again.
 
 ``--check`` verifies the vendored copy against ``VENDORED.md`` (the test suite runs the same check), and also
-against the upstream files when a Durty Cloth Tool checkout is given or sits beside this repository
-(``../durty-cloth-tool``), so a change upstream that was not synced yet is caught.
+against the upstream files when a Durty Cloth Tool checkout is given or sits beside this repository, so a change
+upstream that was not synced yet is caught.
 
 Standard library only.
 """
@@ -34,15 +34,14 @@ from typing import Dict, List, Optional, Tuple
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 VENDOR_DIR = REPO_ROOT / "durty_cloth_tool_link" / "dct_link"
 RECORD_NAME = "VENDORED.md"
-SOURCE_PACKAGE = pathlib.PurePosixPath("plugins/python/dct_link")
-SOURCE_LICENSE = pathlib.PurePosixPath("plugins/python/LICENSE")
+PACKAGE_NAME = "dct_link"
 #: The modules the add-on imports; whatever they import from dct_link is added automatically.
 ROOT_MODULES = ("__init__", "protocol", "ws", "session", "auth", "tokens")
 SPDX_MIT = "# SPDX-License-Identifier: MIT"
 #: Where a Durty Cloth Tool checkout usually sits: next to this repository.
 SIBLING_CHECKOUT = REPO_ROOT.parent / "durty-cloth-tool"
-NOT_RECORDED = ("not recorded yet: the sync records the Durty Cloth Tool commit once plugins/python/dct_link is "
-                "committed there unchanged")
+NOT_RECORDED = ("not recorded yet: the sync records the Durty Cloth Tool commit once dct_link is committed there "
+                "unchanged")
 _ROW = re.compile(r"^\| `([^`]+)` \| `([0-9a-f]{64})` \|$")
 _RELATIVE_IMPORT = re.compile(r"^[ \t]*from[ \t]+\.(\w*)[ \t]+import[ \t]+(\([^)]*\)|[\w \t,]+)", re.MULTILINE)
 
@@ -53,6 +52,38 @@ class SyncError(Exception):
 
 def sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def find_package(source: pathlib.Path) -> pathlib.Path:
+    """The dct_link package folder for ``source``: that folder itself, or the one a Durty Cloth Tool checkout
+    tracks. Git is asked where it is, so the tool does not depend on the layout of the checkout."""
+    source = source.resolve()
+    if source.name == PACKAGE_NAME and (source / "__init__.py").is_file():
+        package = source
+    else:
+        patterns = [f"{PACKAGE_NAME}/__init__.py", f"*/{PACKAGE_NAME}/__init__.py"]
+        try:
+            listed = subprocess.run(["git", "-C", str(source), "ls-files", "-z", "--", *patterns],
+                                    capture_output=True, text=True, check=True, timeout=30).stdout
+        except (OSError, subprocess.SubprocessError):
+            raise SyncError(f"{source} is neither the dct_link package nor a Git checkout") from None
+        found = [name for name in listed.split("\0") if name]
+        if len(found) != 1:
+            raise SyncError(f"{source} tracks {len(found)} dct_link packages; pass the folder of the one to vendor")
+        package = (source / found[0]).parent.resolve()
+    if package == VENDOR_DIR.resolve():
+        raise SyncError(f"{package} is the vendored copy itself, not its source")
+    return package
+
+
+def sibling_package() -> Optional[pathlib.Path]:
+    """The dct_link package of a Durty Cloth Tool checkout beside this repository, when there is one."""
+    if not SIBLING_CHECKOUT.is_dir():
+        return None
+    try:
+        return find_package(SIBLING_CHECKOUT)
+    except SyncError:
+        return None
 
 
 def imported_modules(source: str) -> List[str]:
@@ -101,14 +132,15 @@ def package_version(init_file: pathlib.Path) -> str:
     return match.group(1)
 
 
-def source_revision(checkout: pathlib.Path) -> str:
-    """The checkout's commit when the package is committed there unchanged, otherwise a plain note."""
+def source_revision(package: pathlib.Path) -> str:
+    """The commit of the checkout that holds ``package`` when the package is committed there unchanged, otherwise
+    a plain note."""
     try:
-        head = subprocess.run(["git", "-C", str(checkout), "rev-parse", "HEAD"], capture_output=True, text=True,
+        head = subprocess.run(["git", "-C", str(package), "rev-parse", "HEAD"], capture_output=True, text=True,
                               check=True, timeout=30).stdout.strip()
-        tracked = subprocess.run(["git", "-C", str(checkout), "ls-files", "--", str(SOURCE_PACKAGE)],
+        tracked = subprocess.run(["git", "-C", str(package), "ls-files", "--", "."],
                                  capture_output=True, text=True, check=True, timeout=30).stdout.strip()
-        changes = subprocess.run(["git", "-C", str(checkout), "status", "--porcelain", "--", str(SOURCE_PACKAGE)],
+        changes = subprocess.run(["git", "-C", str(package), "status", "--porcelain", "--", "."],
                                  capture_output=True, text=True, check=True, timeout=30).stdout.strip()
     except (OSError, subprocess.SubprocessError):
         return NOT_RECORDED
@@ -117,40 +149,22 @@ def source_revision(checkout: pathlib.Path) -> str:
     return head
 
 
-def left_out_files(package: pathlib.Path, shipped: List[pathlib.Path]) -> List[str]:
-    """The package's modules and data files that are not vendored (the self-update parts)."""
-    names = {path.name for path in shipped}
-    return sorted(
-        path.name
-        for path in package.iterdir()
-        if path.is_file() and path.suffix in (".py", ".json") and path.name not in names
-    )
-
-
-def render_record(version: str, revision: str, hashes: List[Tuple[str, str]], left_out: List[str]) -> str:
+def render_record(version: str, revision: str, hashes: List[Tuple[str, str]]) -> str:
     lines = [
         "# Vendored dct_link",
         "",
         "This folder holds byte-for-byte copies of the `dct_link` modules the add-on uses. `dct_link` is the Creator",
-        "Link client. It is developed in the Durty Cloth Tool repository and synced into this folder with",
-        "`tools/sync_dct_link.py`; its self-update modules are left out because Blender updates the add-on. It is MIT",
-        "licensed (see `LICENSE` in this folder); every module keeps its SPDX header. The rest of the add-on is",
-        "GPL-3.0-or-later.",
+        "Link client. It is developed together with Durty Cloth Tool and synced into this folder with",
+        "`tools/sync_dct_link.py`. It is MIT licensed (see `LICENSE` in this folder); every module keeps its SPDX",
+        "header. The rest of the add-on is GPL-3.0-or-later.",
         "",
-        "Do not edit these files by hand. Change dct_link in the Durty Cloth Tool repository, then run",
+        "Do not edit these files by hand. Change dct_link upstream, then run",
         "`python tools/sync_dct_link.py <Durty Cloth Tool checkout>`, which rewrites this folder and this record.",
         "`python tools/sync_dct_link.py --check` and the test suite verify the hashes below.",
         "",
-        f"- Source: `{SOURCE_PACKAGE}` and `{SOURCE_LICENSE}` in the Durty Cloth Tool repository",
+        "- Source: the `dct_link` package and its `LICENSE` in the Durty Cloth Tool repository",
         f"- dct_link version: {version}",
         f"- Source revision: {revision}",
-    ]
-    if left_out:
-        lines += [
-            "- Left out: " + ", ".join(f"`{name}`" for name in left_out) + " (the modules for self-updating hosts;",
-            "  Blender updates the add-on, and nothing in the add-on imports them).",
-        ]
-    lines += [
         "",
         "| File | SHA-256 |",
         "|---|---|",
@@ -198,15 +212,15 @@ def verify(vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
     return problems
 
 
-def verify_upstream(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
+def verify_upstream(source: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
     """Differences between the vendored copy and the dct_link files in a Durty Cloth Tool checkout (empty when the
     copy is up to date): changed or missing files, and modules the add-on now needs or no longer needs."""
-    package = checkout / SOURCE_PACKAGE
     try:
+        package = find_package(source)
         wanted = {path.name: path for path in source_files(package)}
     except SyncError as exc:
         return [str(exc)]
-    wanted["LICENSE"] = checkout / SOURCE_LICENSE
+    wanted["LICENSE"] = package.parent / "LICENSE"
     vendored = {path.name: path for path in vendor_dir.iterdir() if path.is_file() and path.name != RECORD_NAME}
     problems = []
     for name, upstream in sorted(wanted.items()):
@@ -214,20 +228,19 @@ def verify_upstream(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DI
         if copy is None:
             problems.append(f"{name} is needed upstream but not vendored; sync again")
         elif not upstream.is_file() or upstream.read_bytes() != copy.read_bytes():
-            problems.append(f"{name} differs from {checkout.name}/{SOURCE_PACKAGE.parent}; sync again")
+            problems.append(f"{name} differs from the upstream file; sync again")
     for name in sorted(vendored):
         problems.append(f"{name} is vendored but no longer needed upstream; sync again")
     return problems
 
 
-def sync(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[Tuple[str, str]]:
-    checkout = checkout.resolve()
-    package = checkout / SOURCE_PACKAGE
-    license_file = checkout / SOURCE_LICENSE
+def sync(source: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[Tuple[str, str]]:
+    package = find_package(source)
+    license_file = package.parent / "LICENSE"
     files = source_files(package)
     check_source(files, license_file)
     version = package_version(package / "__init__.py")
-    revision = source_revision(checkout)
+    revision = source_revision(package)
 
     if vendor_dir.exists():
         shutil.rmtree(vendor_dir)
@@ -241,27 +254,28 @@ def sync(checkout: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[
             raise SyncError(f"copying {path.name} changed its bytes")
         hashes.append((path.name, digest))
     hashes.sort()
-    record = render_record(version, revision, hashes, left_out_files(package, files))
+    record = render_record(version, revision, hashes)
     (vendor_dir / RECORD_NAME).write_bytes(record.encode("utf-8"))
     return hashes
 
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("checkout", nargs="?", type=pathlib.Path, help="the Durty Cloth Tool checkout")
+    parser.add_argument("checkout", nargs="?", type=pathlib.Path,
+                        help="the Durty Cloth Tool checkout, or the dct_link package folder in it")
     parser.add_argument("--check", action="store_true",
                         help="verify the vendored copy against VENDORED.md and, when available, the checkout")
     args = parser.parse_args(argv)
     try:
         if args.check:
             problems = verify()
-            checkout = args.checkout or (SIBLING_CHECKOUT if (SIBLING_CHECKOUT / SOURCE_PACKAGE).is_dir() else None)
-            if checkout is not None:
-                problems += verify_upstream(checkout.resolve())
+            source = args.checkout.resolve() if args.checkout is not None else sibling_package()
+            if source is not None:
+                problems += verify_upstream(source)
             for problem in problems:
                 print(f"error: {problem}", file=sys.stderr)
             if not problems:
-                against = f" and {checkout.resolve()}" if checkout is not None else ""
+                against = f" and {source}" if source is not None else ""
                 print(f"dct_link matches VENDORED.md{against}")
             return 1 if problems else 0
         if args.checkout is None:

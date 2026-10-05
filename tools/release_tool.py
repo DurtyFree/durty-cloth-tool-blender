@@ -16,8 +16,8 @@ file's local modification time, and the stamp makes that read as the commit time
 ``archive`` checks the archive Blender built: its name, the manifest inside it, the licence and notice files, the
 logo, and that nothing excluded slipped in; it prints its size and SHA-256. ``notes`` prints the release notes.
 
-Durty Cloth Tool's plugin release pins this archive by version, URL, size and SHA-256 (its plugins/release/
-blender.json), so a published asset is never replaced. Standard library only (Python 3.11 or later).
+A published archive is never replaced: its download is checked by size and SHA-256, so a fix is a new version.
+Standard library only (Python 3.11 or later).
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from tools import check_manifest  # noqa: E402
 
 EXTENSION_ID = check_manifest.EXPECTED["id"]
-MAX_ARCHIVE_BYTES = 256 * 1024 * 1024  # what Durty Cloth Tool's pin accepts
+MAX_ARCHIVE_BYTES = 256 * 1024 * 1024  # the largest archive a release may publish
 #: Files every archive must carry at its root (Blender extensions keep the manifest at the root).
 REQUIRED_FILES = ("blender_manifest.toml", "__init__.py", "LICENSE", "NOTICE", "icons/dct-mark.png",
                   "dct_link/LICENSE", "translations/__init__.py")

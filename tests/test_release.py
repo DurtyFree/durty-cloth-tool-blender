@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The release checks (tools/release_tool.py) the release workflow relies on. Durty Cloth Tool pins a released
-archive by version, URL, size and SHA-256, so a release under the wrong version, a wrong archive or a build that
-depends on the checkout time would break or poison that pin."""
+"""The release checks (tools/release_tool.py) the release workflow relies on. A published archive is checked by
+size and SHA-256 wherever it is downloaded, so a release under the wrong version, a wrong archive or a build that
+depends on the checkout time must never be published."""
 
 from __future__ import annotations
 

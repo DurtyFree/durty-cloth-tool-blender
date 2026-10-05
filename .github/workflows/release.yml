@@ -3,8 +3,8 @@ name: Release
 # Pushing the tag v<version> releases the add-on: the tests run, the official Blender pinned below builds and
 # validates durty_cloth_tool_link-<version>.zip, and the publish job creates the GitHub release with that archive
 # and its SHA-256. <version> is the version in blender_manifest.toml (X.Y.Z, or X.Y.Z-experimental.N for an
-# Experimental release); any other tag is refused. Durty Cloth Tool's plugin release pins the published archive by
-# URL, size and SHA-256, so an existing release is never replaced: fix it with a new version.
+# Experimental release); any other tag is refused. A published archive is checked by size and SHA-256 wherever it
+# is downloaded, so an existing release is never replaced: fix it with a new version.
 
 on:
   push:

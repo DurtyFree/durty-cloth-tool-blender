@@ -22,8 +22,8 @@ REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 PACKAGE_DIR = REPO_ROOT / "durty_cloth_tool_link"
 MANIFEST = PACKAGE_DIR / "blender_manifest.toml"
 
-#: What the Durty Cloth Tool extension repository on gta.clothing lists for this add-on (BLENDER_EXTENSION in the
-#: website's worker/link/hosts.js; the website's tests compare every field with this manifest).
+#: What the Durty Cloth Tool extension repository on gta.clothing lists for this add-on. The listing and the
+#: manifest must agree in every field.
 EXPECTED: Dict[str, Any] = {
     "schema_version": "1.0.0",
     "id": "durty_cloth_tool_link",
