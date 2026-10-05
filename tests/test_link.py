@@ -2,7 +2,9 @@
 """The add-on's link flows against a fake Durty Cloth Tool and a fake gta.clothing, without Blender: connecting
 and both ways of signing in, a disconnect in Durty Cloth Tool, a remembered sign-out, renewing the sign-in on
 connect, texture streaming (byte and float images, with the vertical flip end to end), capture scheduling, model
-pushes, automatic pushes and signing out. Everything is driven by polling, as Blender's timer does."""
+pushes, automatic pushes, signing out, and protocol 2: Sign In through Durty Cloth Tool first, textures and models
+Durty Cloth Tool sends, the maps and picture of the linked cloth. Everything is driven by polling, as Blender's timer
+does."""
 
 from __future__ import annotations
 
@@ -18,7 +20,7 @@ import pytest
 from durty_cloth_tool_link import link, pixels, settings, strings
 from durty_cloth_tool_link.dct_link import auth, tokens
 from durty_cloth_tool_link.dct_link.session import READY, STOPPED, LinkError
-from tests.support.fake_dct import FakeDct
+from tests.support.fake_dct import BINDING, FakeDct
 from tests.support.fake_link_api import FakeLinkApi
 
 
@@ -80,8 +82,9 @@ def test_sign_in_through_dct(tmp_path, dct, api, stores):
     ctrl = ready_controller(tmp_path, dct, api, stores)
     assert ctrl.account_name == "Durty" and ctrl.user_name == "Durty"
     assert ctrl.project == {"name": "FS Studio Clothing"}
-    assert ctrl.focus_info() == link.FocusInfo("jbib_003_u", "A", "jbib_diff_003_a_uni", 2048, 2048,
-                                               ("diffuse", "normal", "specular"))
+    info = ctrl.focus_info()
+    assert info[:6] == ("jbib_003_u", "A", "jbib_diff_003_a_uni", 2048, 2048, ("diffuse", "normal", "specular"))
+    assert info.binding == BINDING and not info.linked and info.drawable_type is None  # DCT sent no details
     assert ctrl.focus_label() == "jbib_003_u A"
     assert ctrl.chip() == "connected" and not ctrl.setup_needed
     assert len(dct.assisted_codes) == 1 and len(dct.assertions_seen) == 1
@@ -225,7 +228,7 @@ def test_a_sign_out_is_remembered_until_the_user_signs_in(tmp_path, dct, api, st
     assert strings.english(again.status()) == "Signed out" and again.chip() == "action"
     assert len([r for r in api.requests if r["path"] == "/link/api/auth/device"]) == devices  # nothing started
     dct.on_assist = api.approve
-    again.sign_in_with_dct()
+    again.sign_in()
     drive(again, lambda: again.ready)
     assert not again.signed_out
 
@@ -233,8 +236,10 @@ def test_a_sign_out_is_remembered_until_the_user_signs_in(tmp_path, dct, api, st
 class ArrayImage:
     """A Blender image stand-in: RGBA8 pixels top to bottom, served bottom-up as floats like Image.pixels."""
 
-    def __init__(self, width: int, height: int) -> None:
-        self.rgba = np.random.default_rng(3).integers(0, 256, size=(height, width, 4), dtype=np.uint8)
+    def __init__(self, width: int, height: int, rgba: Optional[np.ndarray] = None) -> None:
+        if rgba is None:
+            rgba = np.random.default_rng(3).integers(0, 256, size=(height, width, 4), dtype=np.uint8)
+        self.rgba = rgba
         self.dirty = False
         self.stroke = False
         self.removed = False
@@ -684,3 +689,307 @@ def test_the_windows_secret_store_keeps_the_sign_in_protected(tmp_path, dct, api
     again.connect()
     drive(again, lambda: again.ready)  # the protected files are read back, and the refresh lock works
     again.disconnect()
+
+
+# ---- protocol 2: signing in, opening what Durty Cloth Tool sends, the linked cloth card -----------------------
+
+OTHER = {"clothId": "0d9e8f7a-6b5c-4d3e-8f1a-2b3c4d5e6f70", "textureId": "1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b"}
+FOCUSED = {"clothId": BINDING["clothId"], "name": "jbib_003_u", "selectedTextureId": BINDING["textureId"],
+           "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni", "width": 64, "height": 64}],
+           "targets": ["diffuse", "normal"], "drawableType": "jbib", "gender": "female",
+           "collection": "mp_f_freemode_01", "number": 3}
+
+
+class FakeDocuments:
+    """Blender's side of opening items from DCT, without Blender: images are :class:`ArrayImage` objects, an import
+    records what was written for it and pushes like the Blender side does (bound to the cloth)."""
+
+    def __init__(self, ctrl: link.LinkController) -> None:
+        self.ctrl = ctrl
+        self.images: Dict[str, ArrayImage] = {}
+        self.kept: List[str] = []
+        self.problem: Optional[strings.Msg] = None
+        self.fail: Optional[BaseException] = None
+        self.imports: List[Dict[str, object]] = []
+
+    def open_texture(self, document: link.TextureDocument) -> link.OpenedImage:
+        if self.fail is not None:
+            raise self.fail
+        rgba = np.frombuffer(bytes(document.pixels), np.uint8).reshape(document.height, document.width, 4).copy()
+        image = self.images[document.name] = ArrayImage(document.width, document.height, rgba)
+        return link.OpenedImage(image, document.width, document.height, pixels.Conversion(), document.name)
+
+    def keep_texture(self, opened: link.OpenedImage) -> None:
+        self.kept.append(opened.document)
+
+    def model_problem(self) -> Optional[strings.Msg]:
+        return self.problem
+
+    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> link.ImportedModel:
+        files = {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+        self.imports.append({"folder": folder, "model": model_file, "binding": binding, "files": files})
+        name = model_file.split(".", 1)[0]
+        return link.ImportedModel(name, lambda: self.ctrl.model.push(Export(), name, binding=binding))
+
+
+def documents_controller(tmp_path, dct, api, stores) -> tuple:
+    dct.focused = FOCUSED
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    documents = FakeDocuments(ctrl)
+    ctrl.documents = documents
+    return ctrl, documents
+
+
+def opened_live_opens(dct: FakeDct) -> List[Dict[str, object]]:
+    return [m for m in dct.received if m.get("type") == "live.open"]
+
+
+def test_sign_in_asks_durty_cloth_tool_first(tmp_path, dct, api, stores):
+    """Sign In goes through Durty Cloth Tool's approval window whenever Durty Cloth Tool is there; no browser."""
+    opened: List[str] = []
+    ctrl = make_controller(tmp_path, dct, api, stores, opened=opened)
+    dct.on_assist = api.approve
+    ctrl.sign_in()
+    drive(ctrl, lambda: ctrl.ready)
+    assert len(dct.assisted_codes) == 1 and opened == [] and ctrl.user_name == "Durty"
+
+
+def test_sign_in_shows_the_browser_code_when_durty_cloth_tool_is_not_running(tmp_path, dct, api, stores):
+    opened: List[str] = []
+    ctrl = make_controller(tmp_path, dct, api, stores, opened=opened)
+    ctrl.port_override = dead_port()
+    ctrl.BROWSER_FALLBACK_SECONDS = 0.3
+    ctrl.sign_in()
+    assert ctrl.finding_for_sign_in
+    drive(ctrl, lambda: ctrl.active_sign_in() is not None)
+    code, url = ctrl.active_sign_in()
+    assert opened == [] and url.startswith(api.base_url)  # shown with its code; the user opens the page
+    assert not ctrl.finding_for_sign_in and len([r for r in api.requests if r["path"] == "/link/api/auth/device"]) == 1
+    api.approve(code)
+    drive(ctrl, lambda: ctrl.user_name == "Durty")
+    ctrl.disconnect()
+
+
+def test_the_browser_choice_and_the_session_share_one_sign_in(tmp_path, dct, api, stores):
+    """Sign In in the Browser while the session starts its own device sign-in: one code, not two."""
+    ctrl = make_controller(tmp_path, dct, api, stores, opened=[])
+    ctrl._ensure_setup()
+    first = ctrl.token_source.begin_device_sign_in()
+    second = ctrl.token_source.begin_device_sign_in()
+    drive(ctrl, lambda: first.poll() and second.poll())
+    assert first.result() is second.result()
+    assert len([r for r in api.requests if r["path"] == "/link/api/auth/device"]) == 1
+
+
+def dead_port() -> int:
+    import socket
+
+    probe = socket.socket()
+    probe.bind(("127.0.0.1", 0))
+    port = probe.getsockname()[1]
+    probe.close()
+    return port
+
+
+def test_an_older_durty_cloth_tool_is_told_apart(tmp_path, dct, api, stores):
+    """A Durty Cloth Tool of link protocol 1 cannot read this add-on's hello: the add-on says to update it."""
+    first = ready_controller(tmp_path, dct, api, stores)
+    first.disconnect()
+    dct.major_one = True
+    ctrl = make_controller(tmp_path, dct, api, stores)
+    ctrl.connect()
+    drive(ctrl, lambda: ctrl.incompatible is not None and ctrl.state == STOPPED)
+    assert ctrl.incompatible["code"] == "dct-too-old" and ctrl.chip() == "problem"
+    assert "Update Durty Cloth Tool" in strings.english(settings.describe_error("dct-too-old"))
+
+
+def test_the_linked_cloth_card_shows_dcts_details_and_picture(tmp_path, dct, api, stores):
+    ctrl, _ = documents_controller(tmp_path, dct, api, stores)
+    shown = []
+    ctrl.on_thumbnail = shown.append
+    info = ctrl.card_info()
+    assert (info.name, info.letter, info.drawable_type, info.gender, info.collection, info.number, info.linked) == (
+        "jbib_003_u", "A", "jbib", "female", "mp_f_freemode_01", 3, False)
+    assert info.targets == ("diffuse", "normal")
+    drive(ctrl, lambda: ctrl.thumbnail is not None)
+    request = next(m for m in dct.received if m.get("type") == "item.thumbnail")
+    assert request["size"] == ctrl.THUMBNAIL_SIZE and request["binding"] == BINDING
+    assert shown == [ctrl.thumbnail] and len(ctrl.thumbnail.pixels) == ctrl.thumbnail.width * ctrl.thumbnail.height * 4
+
+    # An image linked to another cloth: the card shows that cloth (once seen) and asks for its picture.
+    other = dict(FOCUSED, clothId=OTHER["clothId"], name="uppr_001_u", selectedTextureId=OTHER["textureId"],
+                 textures=[{"textureId": OTHER["textureId"], "name": "uppr_diff_001_a_uni"}], gender="male")
+    dct.broadcast({"type": "event.selection", "id": "sel2", "focused": other})
+    drive(ctrl, lambda: ctrl.focused is not None and ctrl.focused["name"] == "uppr_001_u")
+    dct.broadcast({"type": "event.selection", "id": "sel3", "focused": FOCUSED})
+    drive(ctrl, lambda: ctrl.focused["name"] == "jbib_003_u")
+    ctrl.linked_binding = lambda: OTHER
+    info = ctrl.card_info()
+    assert info.linked and info.name == "uppr_001_u" and info.gender == "male"
+    drive(ctrl, lambda: ctrl.thumbnail is not None and ctrl.thumbnail.binding == OTHER)
+    ctrl.linked_binding = lambda: {"clothId": "99999999-9999-4999-8999-999999999999", "textureId": OTHER["textureId"]}
+    assert ctrl.card_info().linked and ctrl.card_info().name == ""  # never selected: the card says so
+
+
+def test_a_texture_opened_from_dct_is_accepted_bound_and_streamed(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    rgba = np.random.default_rng(9).integers(0, 256, size=(32, 64, 4), dtype=np.uint8)
+    request_id = dct.open_texture(rgba.tobytes(), 64, 32, target="normal", binding=BINDING, name="jbib_normal_003")
+    drive(ctrl, lambda: dct.host_result(request_id) is not None and len(dct.frames) == 1)
+    assert dct.host_result(request_id)["ok"] is True and "code" not in dct.host_result(request_id)
+    assert list(documents.images) == ["jbib_003_u A Normal"]  # named after the cloth, variation and map
+    (live_open,) = opened_live_opens(dct)
+    assert live_open["binding"] == BINDING and live_open["target"] == "normal" and live_open["width"] == 64
+    assert canvas(dct) == rgba.tobytes()  # what DCT sent arrives back unchanged
+    assert ctrl.open_notice.message == strings.msg("open.opened", name="jbib_003_u A Normal")
+    assert ctrl.stream.binding == BINDING and ctrl.card_info().linked
+    drive(ctrl, lambda: documents.kept == ["jbib_003_u A Normal"])  # kept with the file after DCT heard ok
+
+    # While that live preview runs, the next texture is refused as busy and the panel says why.
+    second = dct.open_texture(rgba.tobytes(), 64, 32, target="diffuse")
+    drive(ctrl, lambda: dct.host_result(second) is not None)
+    assert dct.host_result(second) == dict(dct.host_result(second), ok=False, code="busy")
+    assert ctrl.open_notice.message.key == "open.texture-busy" and len(opened_live_opens(dct)) == 1
+
+    # Saving names the bound cloth.
+    ctrl.stream.save("replace")
+    drive(ctrl, lambda: not ctrl.stream.saving)
+    assert ctrl.stream.status.text == "Saved to jbib_003_u A. You can undo it in History."
+
+
+def test_a_bound_image_stays_linked_after_a_reconnect(tmp_path, dct, api, stores):
+    """The stream always sends the image's stored binding, also when the selection in DCT changed meanwhile."""
+    ctrl, _ = documents_controller(tmp_path, dct, api, stores)
+    image = ArrayImage(16, 16)
+    ctrl.stream.start(image, "specular", 16, 16, binding=OTHER)
+    drive(ctrl, lambda: len(dct.frames) == 1)
+    dct.drop_all()
+    drive(ctrl, lambda: not ctrl.stream.active)
+    drive(ctrl, lambda: ctrl.ready, timeout=20)
+    ctrl.stream.start(image, "specular", 16, 16, binding=OTHER)
+    drive(ctrl, lambda: len(dct.frames) == 2)
+    assert [m["binding"] for m in opened_live_opens(dct)] == [OTHER, OTHER]
+    checks = [m for m in dct.received if m.get("type") == "texture.validate"]
+    assert checks and all(m.get("binding") == OTHER for m in checks)
+
+
+def test_a_texture_that_cannot_be_opened_is_refused(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    documents.fail = MemoryError()
+    request_id = dct.open_texture(bytes(16 * 16 * 4), 16, 16)
+    drive(ctrl, lambda: dct.host_result(request_id) is not None)
+    assert dct.host_result(request_id)["code"] == "open-failed" and not ctrl.stream.active
+    assert ctrl.open_notice.level == "ERROR" and ctrl.open_notice.message.key == "open.texture-failed"
+    ctrl.documents = None  # an add-on without Blender's side cannot open anything
+    request_id = dct.open_texture(bytes(16 * 16 * 4), 16, 16)
+    drive(ctrl, lambda: dct.host_result(request_id) is not None)
+    assert dct.host_result(request_id)["code"] == "not-supported"
+
+
+def test_a_map_of_the_card_is_read_from_dct_and_opened_bound(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    dct.texture_size = (8, 4)
+    with pytest.raises(ValueError, match="no specular map"):
+        ctrl.open_map("specular")  # the cloth has no specular map
+    ctrl.open_map("normal")
+    assert ctrl.open_map_problem("diffuse").key == "open.reading"
+    drive(ctrl, lambda: ctrl.stream.is_open and len(dct.frames) == 1)
+    (read,) = dct.texture_reads
+    assert read["target"] == "normal" and read["binding"] == BINDING
+    assert list(documents.images) == ["jbib_003_u A Normal"] and opened_live_opens(dct)[0]["binding"] == BINDING
+    assert ctrl.open_map_problem("diffuse").key == "open.stop-live-first"
+    dct.set_features(services="needsUltimate")
+    drive(ctrl, lambda: ctrl.session.features.get("dct.link.services") == "needsUltimate")
+    ctrl.stream.stop()
+    assert ctrl.open_map_problem("diffuse").key == "open.map-upsell"
+
+
+def model_files(name: str = "jbib_003_u") -> List[tuple]:
+    return [(f"{name}.ydd.xml", b"<DrawableDictionary />"), ("jbib_diff_003_a_uni.dds", b"DDS " + bytes(12)),
+            ("jbib_normal_003.dds", b"DDS " + bytes(8))]
+
+
+def test_a_model_opened_from_dct_is_imported_and_pushed_bound(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    request_id = dct.open_model(model_files(), binding=OTHER)
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert dct.host_result(request_id)["ok"] is True
+    (imported,) = documents.imports
+    folder = imported["folder"]
+    # The files sit in the add-on's own folder, the textures in a folder named after the model, as Sollumz reads them.
+    assert folder == tmp_path / "user" / link.MODELS_FOLDER / "jbib_003_u" and imported["model"] == "jbib_003_u.ydd.xml"
+    assert imported["files"] == {"jbib_003_u.ydd.xml": b"<DrawableDictionary />",
+                                 "jbib_003_u/jbib_diff_003_a_uni.dds": b"DDS " + bytes(12),
+                                 "jbib_003_u/jbib_normal_003.dds": b"DDS " + bytes(8)}
+    # DCT heard ok before the import ran.
+    answered = next(i for i, m in enumerate(dct.received) if m.get("type") == "host.result")
+    pushed = next(i for i, m in enumerate(dct.received) if m.get("type") == "model.push")
+    assert answered < pushed
+    first, = (header for header, _ in dct.pushes)
+    assert first["binding"] == OTHER and "lease" not in first  # the first push names the cloth
+    assert ctrl.model.open_notice.message == strings.msg("open.opened", name="jbib_003_u")
+    ctrl.model.push(Export(b"DDS 2"), "jbib_003_u", binding=OTHER)
+    drive(ctrl, lambda: len(dct.pushes) == 2 and not ctrl.model.pushing)
+    assert dct.pushes[1][0]["lease"] == ctrl.model.lease and "binding" not in dct.pushes[1][0]  # later: the lease
+    assert folder.is_dir()
+    ctrl.model.save()
+    drive(ctrl, lambda: ctrl.model.busy is None)
+    assert ctrl.model.status.message.key == "model.saved" and folder.is_dir()
+    ctrl.model.discard()
+    drive(ctrl, lambda: ctrl.model.lease is None)
+    assert not folder.exists()  # the temporary files go with the model
+
+
+def test_a_model_for_another_cloth_replaces_the_one_on_the_ped(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    ctrl.model.push(Export(), "smoke_ydd")  # the user's own model, on the focused cloth
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    old = ctrl.model.lease
+    dct.open_model(model_files(), binding=OTHER)
+    drive(ctrl, lambda: ctrl.model.lease not in (None, old) and not ctrl.model.pushing)
+    assert dct.model_discards == [old]  # taken off the ped first
+    assert dct.pushes[-1][0]["binding"] == OTHER and "lease" not in dct.pushes[-1][0]
+    assert link.same_binding(ctrl.model.lease_binding, OTHER)
+
+
+def test_a_model_without_sollumz_is_refused_with_what_to_install(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    documents.problem = strings.msg("sollumz.missing", version=settings.SOLLUMZ_MINIMUM)
+    request_id = dct.open_model(model_files())
+    drive(ctrl, lambda: dct.host_result(request_id) is not None)
+    assert dct.host_result(request_id)["code"] == "dependency-missing"
+    assert ctrl.model.open_notice.text == ("Durty Cloth Tool sent the model jbib_003_u. Install and enable Sollumz "
+                                           f"{settings.SOLLUMZ_MINIMUM} or later to open and push models.")
+    assert documents.imports == [] and not (tmp_path / "user" / link.MODELS_FOLDER).exists()
+
+
+def test_a_model_is_refused_while_another_is_pushed(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    dct.push_delay = 1.0
+    ctrl.model.push(Export(), "smoke_ydd")
+    request_id = dct.open_model(model_files())
+    drive(ctrl, lambda: dct.host_result(request_id) is not None)
+    assert dct.host_result(request_id)["code"] == "busy" and ctrl.model.open_notice.message.key == "open.model-busy"
+
+
+def test_a_failed_import_and_unloading_remove_the_files(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    documents.import_model = lambda *args: (_ for _ in ()).throw(strings.UserError(strings.msg("open.no-dictionary")))
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.open_notice is not None and ctrl.model.open_notice.level == "ERROR")
+    assert ctrl.model.open_notice.message.key == "open.model-failed"
+    base = tmp_path / "user" / link.MODELS_FOLDER
+    assert not any(base.iterdir())
+    documents.import_model = FakeDocuments.import_model.__get__(documents)
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert any(base.iterdir())
+    ctrl.shutdown()  # the add-on is disabled
+    assert not any(base.iterdir())
+
+
+def test_model_files_stay_inside_the_add_ons_folder(tmp_path):
+    for name in ("..", "../escape.dds", "a/b.dds", "CON.dds", ".hidden"):
+        with pytest.raises(ValueError):
+            link._inside(tmp_path, name)
+    assert link._inside(tmp_path, "jbib_000_u.ydd.xml") == tmp_path / "jbib_000_u.ydd.xml"

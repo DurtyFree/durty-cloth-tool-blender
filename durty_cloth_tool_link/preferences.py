@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
 """The add-on preferences: the same groups as the sidebar's Settings (Connection, Account, Models, Updates,
-Privacy, About), and the setup steps while setup is incomplete."""
+Privacy), and the setup steps while setup is incomplete."""
 
 from __future__ import annotations
 

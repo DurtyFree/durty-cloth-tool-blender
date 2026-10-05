@@ -2,8 +2,9 @@
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
 """The "DCT" tab in the 3D View sidebar and the operators behind its buttons.
 
-Panels, in the order every Creator Link plugin uses: Durty Cloth Tool (the logo and the connection status, with
-the details in a popover), Get Connected (only while setup is incomplete), Linked Cloth, Live Preview (with the
+Panels, in the order every Creator Link plugin uses: Durty Cloth Tool (the logo, the connection status with the
+details in a popover, and the Help menu with Help, Community, Copy Diagnostics and About), Get Connected (only while
+setup is incomplete), Linked Cloth (the cloth's picture and details, and its maps to open), Live Preview (with the
 Texture Checks while it runs), Model and Settings. Every text comes from :mod:`strings` in Blender's interface
 language; texts drawn here are translated already, so layouts get ``translate=False``.
 
@@ -181,9 +182,10 @@ def heading(layout: Any, context: Any, key: str, icon: str = "NONE", info: Optio
         info_button(row, info)
 
 
-def operator(layout: Any, idname: str, key: str, icon: str = "NONE", **properties: Any) -> Any:
-    """An operator button with its translated text."""
-    op = layout.operator(idname, text=t(key), icon=icon, translate=False)
+def operator(layout: Any, idname: str, key: Optional[str], icon: str = "NONE", *, text: Optional[str] = None,
+             **properties: Any) -> Any:
+    """An operator button with the translated text of ``key`` (or ``text``, translated already)."""
+    op = layout.operator(idname, text=text if text is not None else t(key), icon=icon, translate=False)
     for name, value in properties.items():
         setattr(op, name, value)
     return op
@@ -248,9 +250,12 @@ def draw_status(layout: Any, context: Any) -> None:
         messages.operator("screen.userpref_show", icon="PREFERENCES").section = "SYSTEM"
     if ctrl.incompatible is not None:
         messages.separator(factor=GAP_SMALL)
-        wrapped(messages, context, strings.text(settings.describe_error(ctrl.incompatible.get("code"))), "CANCEL",
-                alert=True)
-        primary(messages, "dct_link.open_update_page", "op.update-page", "URL")
+        code = ctrl.incompatible.get("code")
+        wrapped(messages, context, strings.text(settings.describe_error(code)), "CANCEL", alert=True)
+        if code == "dct-too-old":
+            primary(messages, "dct_link.connect", "op.connect", "LINKED")  # Durty Cloth Tool updates itself
+        else:
+            primary(messages, "dct_link.open_update_page", "op.update-page", "URL")
     if ctrl.dct_signed_out:
         messages.separator(factor=GAP_SMALL)
         wrapped(messages, context, t("dct-signed-out"), "ERROR")
@@ -259,7 +264,8 @@ def draw_status(layout: Any, context: Any) -> None:
         messages.separator(factor=GAP_SMALL)
         wrapped(messages, context, t("dct-disconnected"), "UNLINKED")
         primary(messages, "dct_link.connect", "op.connect", "LINKED")
-    if ctrl.notice is not None:
+    said_by_setup = ctrl.setup_needed and ctrl.notice is not None and ctrl.notice.message.key == "notice.signed-out"
+    if ctrl.notice is not None and not said_by_setup:  # the Sign In step says "You signed out" itself
         messages.separator(factor=GAP_SMALL)
         draw_notice(messages, context, ctrl.notice)
 
@@ -279,13 +285,10 @@ def draw_details(layout: Any, context: Any) -> None:
     column.label(text=t("details.addon", version=settings.VERSION, channel=t(f"channel.{settings.CHANNEL}")),
                  icon="BLENDER", translate=False)
     layout.separator(factor=GAP_SMALL)
-    toggle = "op.disconnect" if ctrl.connecting else "op.connect"
-    row = button_group(layout, context, (toggle, "op.diagnostics"), width=DCTLINK_PT_details.bl_ui_units_x * 20 - 16)
     if ctrl.connecting:
-        operator(row, "dct_link.disconnect", "op.disconnect", "UNLINKED")
+        operator(layout, "dct_link.disconnect", "op.disconnect", "UNLINKED")
     else:
-        operator(row, "dct_link.connect", "op.connect", "LINKED")
-    operator(row, "dct_link.diagnostics", "op.diagnostics", "COPYDOWN")
+        operator(layout, "dct_link.connect", "op.connect", "LINKED")
 
 
 # ---- setup --------------------------------------------------------------------------------------------
@@ -360,7 +363,7 @@ def draw_sign_in_step(layout: Any, context: Any) -> None:
             if in_dct:
                 # Durty Cloth Tool is handling it: the browser is the fallback, one click away.
                 header, body = layout.panel("dct_link_sign_in_browser", default_closed=True)
-                header.label(text=t("op.sign-in"), icon="URL", translate=False)
+                header.label(text=t("op.sign-in-browser"), icon="URL", translate=False)
                 if body is not None:
                     _draw_browser_sign_in(body, context, code, lead=False)
             else:
@@ -368,8 +371,9 @@ def draw_sign_in_step(layout: Any, context: Any) -> None:
         layout.separator(factor=GAP_SMALL)
         operator(layout, "dct_link.cancel_sign_in", "op.cancel-sign-in", "X")
         return
-    if ctrl.starting_sign_in:
-        wrapped(layout, context, t("setup.sign-in.starting"), "SORTTIME")
+    if ctrl.starting_sign_in or ctrl.finding_for_sign_in:
+        key = "setup.sign-in.finding" if ctrl.finding_for_sign_in else "setup.sign-in.starting"
+        wrapped(layout, context, t(key), "SORTTIME")
         operator(layout, "dct_link.cancel_sign_in", "op.cancel-sign-in", "X")
         return
     if ctrl.signed_out:
@@ -377,53 +381,140 @@ def draw_sign_in_step(layout: Any, context: Any) -> None:
     else:
         guide(layout, context, "setup.sign-in.subtext", indent=True)
     layout.separator(factor=GAP_SMALL)
-    primary(layout, "dct_link.sign_in_dct", "op.sign-in-dct", "LINKED")
-    operator(layout, "dct_link.sign_in", "op.sign-in", "URL")
+    draw_sign_in_buttons(layout, context)
+
+
+def draw_sign_in_buttons(layout: Any, context: Any) -> None:
+    """Sign In (Durty Cloth Tool approves it; the browser code follows when it is not running) and the browser as
+    the second choice."""
+    primary(layout, "dct_link.sign_in", "op.sign-in", "USER")
+    subtext(layout, context, "setup.sign-in.how")
+    layout.separator(factor=GAP_SMALL)
+    operator(layout, "dct_link.sign_in_browser", "op.sign-in-browser", "URL")
 
 
 # ---- linked cloth -------------------------------------------------------------------------------------
 
 
-def draw_map_choice(layout: Any, context: Any, props: Any, info: Optional[link.FocusInfo], locked: bool) -> None:
-    """The map to replace: one segmented row when the three names fit, otherwise stacked."""
-    labels = [t(f"map.{target}") for target, _, _ in settings.TARGETS]
-    group = layout.row(align=True) if fits_side_by_side(context, labels) else layout.column(align=True)
-    group.enabled = not locked
-    for target, _, _ in settings.TARGETS:
-        cell = group.row(align=True)
-        cell.enabled = info is None or not info.targets or target in info.targets
-        cell.prop_enum(props, "target", target, text=t(f"map.{target}"), translate=False)
+def map_label(target: str) -> str:
+    """A map's short name for a row of three buttons ("Diffuse", "Normal", "Specular")."""
+    return t(f"map.{target}-short") if f"map.{target}-short" in EN else t(f"map.{target}")
+
+
+def draw_map_row(layout: Any, context: Any, props: Any, stream: link.TextureStream) -> None:
+    """Which map the chosen image replaces: the one a linked image belongs to, the running preview's, or a choice
+    (a labelled list, so it does not look like the Linked Cloth panel's buttons that open a map)."""
+    ctrl = state.get()
+    binding = host.stored_binding(props.image)
+    linked_map = host.stored_map(props.image) if binding else None
+    if linked_map is not None:
+        name = ctrl.cloth_label(binding)
+        map_name = t(f"map.{linked_map}")
+        text = t("live.linked", name=name, map=map_name) if name else t("live.map", map=map_name)
+        wrapped(layout, context, text, "LINKED")
+        return
+    if stream.active:
+        wrapped(layout, context, t("live.map", map=t(f"map.{stream.target}")), "TEXTURE", dim=True)
+        return
+    row = layout.row(align=True)
+    split = row.split(factor=MAP_LABEL_FACTOR, align=True)
+    split.label(text=t("linked.map"), translate=False)
+    split.prop(props, "target", text="")
+    info_button(row, "map")
+    info = ctrl.focus_info()
+    if info is not None and info.targets and props.target not in info.targets:
+        wrapped(layout, context, t(f"linked.map-missing.{props.target}"), "ERROR")
+
+
+#: The share of a row the label takes in the Live Preview panel's Image and Map rows.
+MAP_LABEL_FACTOR = 0.3
+
+
+def cloth_details(info: link.FocusInfo) -> str:
+    """The cloth's facts in one line, as Durty Cloth Tool names them: "jbib · Female · mp_f_freemode_01 · #3". The
+    game's tokens and the collection are shown as they are, never translated."""
+    parts = []
+    if info.drawable_type:
+        parts.append(str(info.drawable_type))
+    if info.gender in ("male", "female"):
+        parts.append(t(f"gender.{info.gender}"))
+    if info.collection:
+        parts.append(str(info.collection))
+    if info.number is not None:
+        parts.append(t("linked.number", number=info.number))
+    return " · ".join(parts)
+
+
+#: The size of the cloth's picture in the Linked Cloth panel (``template_icon`` scale; one unit is 20 pixels).
+THUMBNAIL_SCALE = 4.0
+
+
+def _thumbnail_icon() -> int:
+    import importlib
+
+    return importlib.import_module(__package__ + ".addon").thumbnail_icon()
+
+
+def draw_card(layout: Any, context: Any, info: link.FocusInfo) -> None:
+    """The cloth: its picture beside its name, variation and facts."""
+    icon = _thumbnail_icon()
+    row = layout.row()
+    if icon:
+        picture = row.column()
+        picture.template_icon(icon_value=icon, scale=THUMBNAIL_SCALE)
+    text = row.column(align=True)
+    reserve = THUMBNAIL_SCALE * 20 + 8 if icon else 0
+    lead = "NONE" if icon else "MOD_CLOTH"
+    if info.name:
+        wrapped(text, context, info.name, lead, reserve=reserve)
+        if info.letter:
+            wrapped(text, context, t("linked.variation", letter=info.letter), indent=not icon, reserve=reserve)
+    else:
+        wrapped(text, context, t("linked.unknown"), lead, reserve=reserve)
+        wrapped(text, context, t("linked.unknown-subtext"), dim=True, indent=not icon, reserve=reserve)
+    details = cloth_details(info)
+    if details:
+        wrapped(text, context, details, dim=True, indent=not icon, reserve=reserve)
 
 
 def draw_linked(layout: Any, context: Any) -> None:
     ctrl = state.get()
-    props = context.scene.dct_link
     project = ctrl.project
     if not project:
         wrapped(layout, context, t("linked.no-project"), "INFO")
         return
     wrapped(layout, context, t("linked.project", name=project.get("name") or ""), "FILE_FOLDER")
-    info = ctrl.focus_info()
+    info = ctrl.card_info()
     if info is None:
         wrapped(layout, context, t("linked.no-cloth"), "INFO")
+        draw_notice(layout, context, ctrl.open_notice)
         return
-    title = (t("linked.cloth", name=info.name, letter=info.letter) if info.letter
-             else t("linked.cloth-no-variation", name=info.name))
-    wrapped(layout, context, title, "MOD_CLOTH")
-    if info.texture:
-        text = (t("linked.texture", name=info.texture, width=info.width, height=info.height)
-                if info.width and info.height else info.texture)
-        wrapped(layout, context, text, "TEXTURE", dim=True)
-    wrapped(layout, context, t("linked.follows"), "LINKED", dim=True)
+    layout.separator(factor=GAP_SMALL)
+    draw_card(layout, context, info)
+    layout.separator(factor=GAP_SMALL)
+    row = layout.row()
+    if info.linked:
+        # The image chosen below belongs to this cloth: Unlink lets it follow the selection again.
+        wrapped(row.column(), context, t("linked.image"), "LINKED", reserve=2 * 24)
+        row.operator("dct_link.unlink_image", text="", icon="UNLINKED")
+    else:
+        wrapped(row.column(), context, t("linked.follows"), "LINKED", dim=True, reserve=24)
+    info_button(row, "linked")
 
     layout.separator(factor=GAP)
-    stream = ctrl.stream
-    heading(layout, context, "linked.map", info="map")
-    draw_map_choice(layout, context, props, info, locked=stream.active)
-    if info.targets and props.target not in info.targets:
-        wrapped(layout, context, t(f"linked.map-missing.{props.target}"), "ERROR")
-    if stream.active:
-        guide(layout, context, "linked.map-locked")
+    heading(layout, context, "linked.open-map", info="open-map")
+    labels = [map_label(target) for target, _, _ in settings.TARGETS]
+    group = layout.row(align=True) if fits_side_by_side(context, labels) else layout.column(align=True)
+    for target, _, _ in settings.TARGETS:
+        cell = group.row(align=True)
+        cell.enabled = ctrl.open_map_problem(target) is None  # the tooltip says why
+        operator(cell, "dct_link.open_map", None, "IMAGE_DATA", text=map_label(target), target=target)
+    general = ctrl.open_map_problem("diffuse" if not info.targets or "diffuse" in info.targets else info.targets[0])
+    if ctrl.opening_map is not None:
+        wrapped(layout, context, t("open.reading"), "SORTTIME")
+    elif general is not None:
+        reason_text(layout, context, general)
+    draw_notice(layout, context, ctrl.open_notice)
 
 
 # ---- live preview -------------------------------------------------------------------------------------
@@ -460,11 +551,16 @@ def draw_live(layout: Any, context: Any) -> None:
                 "INFO")
         layout.separator(factor=GAP_SMALL)
     row = layout.row(align=True)
-    image = row.row(align=True)
+    split = row.split(factor=MAP_LABEL_FACTOR, align=True)
+    split.label(text=t("prop.image"), translate=False)
+    image = split.row(align=True)
     image.enabled = not stream.active
     image.prop(props, "image", text="")
     image.operator("dct_link.use_paint_image", text="", icon="EYEDROPPER")
     info_button(row, "live")
+
+    draw_map_row(layout, context, props, stream)
+    layout.separator(factor=GAP_SMALL)
 
     key, icon = live_state(stream)
     wrapped(layout, context, t(key), icon)
@@ -573,10 +669,13 @@ def draw_model(layout: Any, context: Any) -> None:
     model = ctrl.model
     available, status = host.sollumz_status()
     if not available:
-        # One calm line: pushing models needs Sollumz; everything else in the tab works without it.
+        # One calm line: models need Sollumz; everything else in the tab works without it.
         row = layout.row()
         wrapped(row.column(), context, strings.text(status), "ERROR", reserve=24)
         info_button(row, "model")
+        if model.open_notice is not None:
+            layout.separator(factor=GAP_SMALL)
+            draw_notice(layout, context, model.open_notice)
         return
     row = layout.row()
     wrapped(row.column(), context, strings.text(status), "CHECKMARK", reserve=24)
@@ -585,6 +684,9 @@ def draw_model(layout: Any, context: Any) -> None:
     problem = ctrl.feature_problem(settings.FEATURE_MODEL) if ctrl.ready else None
     if problem:
         wrapped(layout, context, strings.text(problem), "INFO")
+    if model.open_notice is not None:
+        layout.separator(factor=GAP_SMALL)
+        draw_notice(layout, context, model.open_notice)
 
     layout.separator(factor=GAP)
     if model.lease is not None:
@@ -627,7 +729,7 @@ def _group(layout: Any, context: Any, idname: str, key: str, icon: str, info: Op
 
 
 def draw_settings(layout: Any, context: Any, prefs: Any) -> None:
-    """The settings groups: Connection, Account, Models, Updates, Privacy and About (the add-on preferences
+    """The settings groups: Connection, Account, Models, Updates and Privacy (the add-on preferences
     show the same)."""
     ctrl = state.get()
 
@@ -648,10 +750,8 @@ def draw_settings(layout: Any, context: Any, prefs: Any) -> None:
             operator(body, "dct_link.sign_out", "op.sign-out", "X")
             subtext(body, context, "settings.sign-out-subtext")
         else:
-            wrapped(body, context, t("settings.signed-out" if ctrl.signed_out else "settings.not-signed-in"))
-            row = button_group(body, context, ("op.sign-in-dct", "op.sign-in"))
-            operator(row, "dct_link.sign_in_dct", "op.sign-in-dct", "LINKED")
-            operator(row, "dct_link.sign_in", "op.sign-in", "URL")
+            # Signing in is a setup step: Get Connected shows its buttons, so they are not repeated here.
+            wrapped(body, context, t("settings.signed-out" if ctrl.signed_out else "settings.not-signed-in"), "USER")
 
     if prefs is not None:
         body = _group(layout, context, "models", "settings.models", "EXPORT", closed=True)
@@ -676,13 +776,15 @@ def draw_settings(layout: Any, context: Any, prefs: Any) -> None:
             checkbox(body, context, prefs, "share_device_name", "prop.device-name")
         subtext(body, context, "settings.device-name-subtext")
 
-    body = _group(layout, context, "about", "settings.about", "INFO", closed=True)
-    if body is not None:
-        subtext(body, context, "settings.licence")
-        row = button_group(body, context, ("op.help", "op.community"))
-        operator(row, "dct_link.open_help", "op.help", "HELP")
-        operator(row, "dct_link.open_community", "op.community", "COMMUNITY")
-        operator(body, "dct_link.diagnostics", "op.diagnostics", "COPYDOWN")
+
+def draw_help_menu(layout: Any) -> None:
+    """Help, the community, support details and About, in the one place they live: the menu in the header."""
+    operator(layout, "dct_link.open_help", "op.help", "HELP")
+    operator(layout, "dct_link.open_community", "op.community", "COMMUNITY")
+    layout.separator()
+    operator(layout, "dct_link.diagnostics", "op.diagnostics", "COPYDOWN")
+    layout.separator()
+    operator(layout, "dct_link.about", "op.about", "INFO")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -798,23 +900,25 @@ class DCTLINK_OT_disconnect(_Op):
         return _run(self, lambda: state.get().disconnect())
 
 
-class DCTLINK_OT_sign_in_dct(_Op):
-    bl_idname = "dct_link.sign_in_dct"
-    bl_label = EN["op.sign-in-dct"]
-    bl_description = EN["op.sign-in-dct.desc"]
+class DCTLINK_OT_sign_in(_Op):
+    """Sign In: Durty Cloth Tool's approval window asks; without Durty Cloth Tool the browser code follows."""
+
+    bl_idname = "dct_link.sign_in"
+    bl_label = EN["op.sign-in"]
+    bl_description = EN["op.sign-in.desc"]
 
     @classmethod
     def poll(cls, context):
         return _refuse(cls, _controller_reason() or _online_reason())
 
     def execute(self, context):
-        return _run(self, lambda: state.get().sign_in_with_dct())
+        return _run(self, lambda: state.get().sign_in())
 
 
-class DCTLINK_OT_sign_in(_Op):
-    bl_idname = "dct_link.sign_in"
-    bl_label = EN["op.sign-in"]
-    bl_description = EN["op.sign-in.desc"]
+class DCTLINK_OT_sign_in_browser(_Op):
+    bl_idname = "dct_link.sign_in_browser"
+    bl_label = EN["op.sign-in-browser"]
+    bl_description = EN["op.sign-in-browser.desc"]
 
     @classmethod
     def poll(cls, context):
@@ -1019,6 +1123,91 @@ class DCTLINK_OT_info(_Op):
         return {"FINISHED"}
 
 
+class DCTLINK_OT_about(_Op):
+    bl_idname = "dct_link.about"
+    bl_label = EN["op.about"]
+    bl_description = EN["op.about.desc"]
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_popup(self, width=380)
+
+    def draw(self, context):
+        layout = self.layout
+        icon = _logo_icon()
+        title = t("about.title", version=settings.VERSION, channel=t(f"channel.{settings.CHANNEL}"))
+        if icon:
+            layout.label(text=title, icon_value=icon, translate=False)
+        else:
+            layout.label(text=title, icon="INFO", translate=False)
+        wrapped(layout, context, t("settings.licence"), dim=True, width=360)
+        layout.separator(factor=GAP_SMALL)
+        wrapped(layout, context, t("info.privacy"), width=360)
+
+    def execute(self, context):
+        return {"FINISHED"}
+
+
+class DCTLINK_MT_help(bpy.types.Menu):
+    bl_idname = "DCTLINK_MT_help"
+    bl_label = EN["op.help"]
+    bl_translation_context = CONTEXT
+
+    def draw(self, context):
+        draw_help_menu(self.layout)
+
+
+def _open_map_reason(target: str) -> Optional[Msg]:
+    reason = _controller_reason()
+    if reason is None:
+        reason = state.get().open_map_problem(target)
+    return reason
+
+
+class DCTLINK_OT_open_map(_Op):
+    bl_idname = "dct_link.open_map"
+    bl_label = EN["op.open-map"]
+    bl_description = EN["op.open-map.desc"]
+
+    target: EnumProperty(items=settings.TARGETS, options={"HIDDEN", "SKIP_SAVE"}, translation_context=CONTEXT)
+
+    @classmethod
+    def poll(cls, context):
+        return state.controller is not None and state.controller.ready
+
+    @classmethod
+    def description(cls, context, properties):
+        reason = _open_map_reason(properties.target)
+        text = tt("op.open-map.desc")
+        return f"{text}.\n{strings.tip(reason)}" if reason is not None else text
+
+    def execute(self, context):
+        reason = _open_map_reason(self.target)
+        if reason is not None:
+            self.report({"WARNING"}, strings.text(reason))
+            return {"CANCELLED"}
+        return _run(self, lambda: state.get().open_map(self.target))
+
+
+class DCTLINK_OT_unlink_image(_Op):
+    bl_idname = "dct_link.unlink_image"
+    bl_label = EN["op.unlink"]
+    bl_description = EN["op.unlink.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        reason = _controller_reason()
+        if reason is None and state.get().stream.active:
+            reason = msg("open.stop-live-first")
+        return _refuse(cls, reason)
+
+    def execute(self, context):
+        image = context.scene.dct_link.image
+        if image is not None:
+            host.clear_binding(image)
+            state.get().touch()
+        return {"FINISHED"}
+
+
 class DCTLINK_OT_use_paint_image(_Op):
     bl_idname = "dct_link.use_paint_image"
     bl_label = EN["op.use-paint-image"]
@@ -1038,8 +1227,8 @@ def _live_start_reason(context: Any) -> Optional[Msg]:
     if reason is not None:
         return reason
     ctrl = state.get()
-    if ctrl.focused is None:
-        return msg("notice.select-cloth")
+    if ctrl.focused is None and host.stored_binding(context.scene.dct_link.image) is None:
+        return msg("notice.select-cloth")  # an image linked to its cloth needs no selection
     problem = ctrl.feature_problem(settings.FEATURE_LIVE_TEXTURE)
     if problem is not None:
         return msg("live.upsell") if problem.key == "feature.needsUltimate" else problem
@@ -1063,10 +1252,14 @@ class DCTLINK_OT_live_start(_Op):
             self.report({"ERROR"}, strings.text(problem))
             return {"CANCELLED"}
 
+        # An image opened from Durty Cloth Tool always goes to its own cloth and map, also after reconnecting.
+        binding = host.stored_binding(image)
+        target = (host.stored_map(image) or props.target) if binding else props.target
+
         def start() -> None:
-            source = host.BlenderImageSource(image, props.target)
-            state.get().stream.start(source, props.target, source.width, source.height, source.conversion,
-                                     document=image.name, warning=source.warning)
+            source = host.BlenderImageSource(image, target)
+            state.get().stream.start(source, target, source.width, source.height, source.conversion,
+                                     document=image.name, warning=source.warning, binding=binding)
 
         try:
             return _run(self, start)
@@ -1293,6 +1486,9 @@ class DCTLINK_PT_main(_DCTPanel, Panel):
         else:
             self.layout.label(text="", icon="LINKED")
 
+    def draw_header_preset(self, context):
+        self.layout.menu(DCTLINK_MT_help.bl_idname, text="", icon="HELP")
+
     def draw(self, context):
         if state.controller is None:
             self.layout.label(text=t("notice.not-ready"), translate=False)
@@ -1385,8 +1581,8 @@ CLASSES = (
     DCTLINK_PG_scene,
     DCTLINK_OT_connect,
     DCTLINK_OT_disconnect,
-    DCTLINK_OT_sign_in_dct,
     DCTLINK_OT_sign_in,
+    DCTLINK_OT_sign_in_browser,
     DCTLINK_OT_open_sign_in_page,
     DCTLINK_OT_copy_code,
     DCTLINK_OT_cancel_sign_in,
@@ -1398,6 +1594,10 @@ CLASSES = (
     DCTLINK_OT_join_discord,
     DCTLINK_OT_diagnostics,
     DCTLINK_OT_info,
+    DCTLINK_OT_about,
+    DCTLINK_MT_help,
+    DCTLINK_OT_open_map,
+    DCTLINK_OT_unlink_image,
     DCTLINK_OT_use_paint_image,
     DCTLINK_OT_live_start,
     DCTLINK_OT_live_stop,

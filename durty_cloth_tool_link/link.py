@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""The add-on's link to Durty Cloth Tool: connection, sign-in, live preview, texture checks and model pushes.
+"""The add-on's link to Durty Cloth Tool: connection, sign-in, live preview, texture checks, model pushes, the
+textures and models Durty Cloth Tool sends ("Edit in connected app") and the linked cloth's picture.
 
 ``LinkController.poll`` runs on Blender's main thread from a ``bpy.app.timers`` timer and drives the dct_link
 session; session callbacks run inside that call. Network calls to gta.clothing (sign-in, renewing it, sign-in
@@ -9,7 +10,8 @@ whether they finished.
 
 Texts for the user are :class:`strings.Msg` values (a key and its fields); the panels render them in Blender's
 language. Nothing in this module imports Blender. The Blender side passes in where to keep files, how to read
-an image and how to export a model, so the flows can be tested against a fake Durty Cloth Tool without Blender.
+an image, how to export a model and how to open what Durty Cloth Tool sends (:class:`DocumentHost`), so the flows
+can be tested against a fake Durty Cloth Tool without Blender.
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ import shutil
 import tempfile
 import time
 import traceback
-from typing import Any, Callable, Deque, Dict, List, NamedTuple, Optional, Protocol
+from typing import Any, Callable, Deque, Dict, List, NamedTuple, Optional, Protocol, Set
 
 from . import bundle, settings
 from .dct_link import auth, protocol, tokens
@@ -32,12 +34,15 @@ from .dct_link.session import (
     SIGNING_IN,
     STOPPED,
     WAITING,
+    HostOpenModel,
+    HostOpenTexture,
     LinkError,
     LinkSession,
     LiveSurface,
     PluginInfo,
     Request,
     SignInPrompt,
+    Thumbnail,
 )
 from .pixels import Conversion, StreamBuffers, limit_rects
 from .strings import Msg, UserError, english, msg
@@ -57,6 +62,16 @@ class Notice(NamedTuple):
 
 def _error_notice(code: Optional[str]) -> Notice:
     return Notice("ERROR", settings.describe_error(code))
+
+
+def _detail(exc: BaseException) -> Any:
+    """What went wrong, for a message field: the user's message, or the error itself (logged to the console)."""
+    if isinstance(exc, UserError):
+        return exc.message
+    if isinstance(exc, OSError):
+        return str(exc.strerror or exc)
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    return f"{type(exc).__name__}: {exc}"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -104,6 +119,24 @@ class _RememberFlow:
         self._task.cancel()
 
 
+class _Waiter:
+    """One caller's view of the device sign-in that is being started. The session and the Sign In button can wait
+    for the same start, so there is only ever one code; cancelling one view leaves the start running for the other
+    (Cancel in the panel ends it through :meth:`TokenSource.cancel`)."""
+
+    def __init__(self, task: _RememberFlow) -> None:
+        self._task = task
+
+    def poll(self) -> bool:
+        return self._task.poll()
+
+    def result(self) -> Any:
+        return self._task.result()
+
+    def cancel(self) -> None:
+        pass
+
+
 class TokenSource:
     """The session's token source: :class:`dct_link.auth.LinkAuth` plus one shared device sign-in and Blender's
     "Allow Online Access" switch.
@@ -121,6 +154,7 @@ class TokenSource:
         self.online = online
         self.device_name = device_name
         self.flow: Optional[auth.DeviceFlow] = None
+        self._starting: Optional[_RememberFlow] = None
 
     @property
     def signed_out_by_user(self) -> bool:
@@ -161,10 +195,18 @@ class TokenSource:
         flow = self.active_flow()
         if flow is not None:
             return _Finished(flow)
-        self.flow = None
-        # The computer name is shown on the approval page; the preference may have changed since start-up.
-        self.auth.info = self.auth.info._replace(device_name=self.device_name() or None)
-        return _RememberFlow(self.auth.begin_device_sign_in(), self)
+        starting = self._starting
+        if starting is not None and starting.poll():  # finished: a flow it brought is the shared one now
+            self._starting = starting = None
+            flow = self.active_flow()
+            if flow is not None:
+                return _Finished(flow)
+        if starting is None:  # nothing on its way: start one
+            self.flow = None
+            # The computer name is shown on the approval page; the preference may have changed since start-up.
+            self.auth.info = self.auth.info._replace(device_name=self.device_name() or None)
+            starting = self._starting = _RememberFlow(self.auth.begin_device_sign_in(), self)
+        return _Waiter(starting)
 
     def start_device_sign_in(self) -> auth.DeviceFlow:  # the blocking form; the session prefers begin_*
         if not self.online():
@@ -176,6 +218,9 @@ class TokenSource:
         return flow
 
     def cancel(self) -> None:
+        if self._starting is not None:
+            self._starting.cancel()
+            self._starting = None
         if self.flow is not None:
             self.flow.cancel()
         self.flow = None
@@ -248,6 +293,9 @@ class TextureStream:
         self.opening: Optional[Request] = None
         self.target: Optional[str] = None
         self.document: Optional[str] = None
+        #: The cloth and variation the image is bound to (an image opened from Durty Cloth Tool), sent with every
+        #: live.open so the image stays linked to its cloth; ``None`` follows the selection in Durty Cloth Tool.
+        self.binding: Optional[Dict[str, str]] = None
         self.width = 0
         self.height = 0
         #: Why the image's colours may arrive changed (its colour space), shown while the preview runs.
@@ -293,9 +341,9 @@ class TextureStream:
 
     def start(self, source: ImageSource, target: str, width: int, height: int,
               conversion: Conversion = Conversion(), *, document: Optional[str] = None,
-              warning: Optional[Msg] = None) -> None:
-        """Opens a live texture for ``target`` on the item focused in DCT. Raises :class:`strings.UserError` when
-        that is not possible now."""
+              warning: Optional[Msg] = None, binding: Optional[Dict[str, str]] = None) -> None:
+        """Opens a live texture for ``target`` on the cloth ``binding`` names, or on the item focused in DCT without
+        one. Raises :class:`strings.UserError` when that is not possible now."""
         session = self.controller.ready_session()
         problem = settings.check_stream_size(width, height) or self.controller.feature_problem(settings.FEATURE_LIVE_TEXTURE)
         if problem:
@@ -307,11 +355,13 @@ class TextureStream:
         pixel_source = _PixelSource(buffers)
         try:
             buffers.begin(full=True)  # converted over the next timer steps; the first frame waits for it
-            request = session.open_live(target, width, height, document=document, pixel_source=pixel_source)
+            request = session.open_live(target, width, height, binding=binding, document=document,
+                                        pixel_source=pixel_source)
         except BaseException:
             pixel_source.release()
             raise
         self.source, self.buffers, self.target, self.document = source, buffers, target, document
+        self.binding = dict(binding) if binding else None
         self.width, self.height = width, height
         self._pixel_source = pixel_source
         self.warning = warning
@@ -477,7 +527,7 @@ class TextureStream:
         if self.source is not None and self.source.problem() is None:
             self._capture_now()  # the save covers the newest pixels, also those changed while paused
         self.saving = True
-        name = self.controller.focus_label()
+        name = self.controller.cloth_label(self.surface.binding)
         request = self.surface.save(mode)
         self.status = None
         request.add_done_callback(lambda r: self._on_saved(r, mode, name))
@@ -535,6 +585,7 @@ class TextureStream:
         self.surface = None
         self.buffers = None
         self.source = None
+        self.binding = None
         self.saving = False
         self.paused = False
         self.unsaved = False
@@ -560,7 +611,8 @@ class TextureStream:
             return
         self.checking = True
         self.checks_problem = None
-        request = session.validate_texture(self.target, self.width, self.height)
+        binding = self.surface.binding if self.surface is not None else None
+        request = session.validate_texture(self.target, self.width, self.height, binding=binding)
         self._check_request = request
         request.add_done_callback(self._on_checked)
 
@@ -627,6 +679,10 @@ class ModelPush:
     def __init__(self, controller: "LinkController") -> None:
         self.controller = controller
         self.lease: Optional[str] = None
+        #: The cloth and variation DCT shows the pushed model on (from ``model.applied``).
+        self.lease_binding: Optional[Dict[str, str]] = None
+        #: A pushed model that waits until DCT took the previous one off the ped: (files, binding).
+        self._switch: Optional[tuple] = None
         self.revision: Optional[int] = None
         self.findings: List[Dict[str, Any]] = []
         self.root_name: Optional[str] = None
@@ -635,6 +691,8 @@ class ModelPush:
         self.status: Optional[Notice] = None
         #: What Sollumz reported for the last export (warnings), shown beside the status.
         self.note: Optional[Notice] = None
+        self._open_notice: Optional[Notice] = None
+        self._open_notice_at = 0.0
         self.auto_push = False
         #: Whether Push Automatically is on right now; Blender reads the scene's setting.
         self.auto_enabled: Callable[[], bool] = lambda: self.auto_push
@@ -654,6 +712,16 @@ class ModelPush:
         return self.pending is not None and not self.pending.done
 
     @property
+    def open_notice(self) -> Optional[Notice]:
+        """The outcome of opening a model from Durty Cloth Tool (a result fades after a while, like the stream's)."""
+        return self._open_notice
+
+    @open_notice.setter
+    def open_notice(self, notice: Optional[Notice]) -> None:
+        self._open_notice = notice
+        self._open_notice_at = time.monotonic()
+
+    @property
     def save_blocker(self) -> Optional[Msg]:
         """Why Save cannot run now, or ``None``. Saving while a newer push is on its way would store the model
         DCT showed before it."""
@@ -669,9 +737,14 @@ class ModelPush:
             return msg("model.block.due")
         return None
 
-    def push(self, export: Callable[[str], Any], root_name: Optional[str] = None, *, automatic: bool = False) -> Request:
+    def push(self, export: Callable[[str], Any], root_name: Optional[str] = None, *, automatic: bool = False,
+             binding: Optional[Dict[str, str]] = None) -> Request:
         """Exports with ``export(folder)`` into a temporary folder, collects the files and pushes them. ``export``
         may return an object whose ``warnings`` says the exporter logged warnings.
+
+        ``binding`` is the cloth a model opened from Durty Cloth Tool belongs to. The first push names it; later
+        pushes use the lease DCT returned. When the model shown now belongs to another cloth, DCT is asked to take
+        it off the ped first, and the push follows once it did.
 
         Raises :class:`strings.UserError` (or another ``ValueError``) with a message for the user.
         """
@@ -679,6 +752,8 @@ class ModelPush:
         problem = self.controller.feature_problem(settings.FEATURE_MODEL)
         if problem:
             raise UserError(problem)
+        if self._switch is not None:
+            raise UserError(msg("model.block.waiting"))
         folder = tempfile.mkdtemp(prefix="dct_link_")
         try:
             result = export(folder)
@@ -698,12 +773,43 @@ class ModelPush:
                 self.note = Notice("WARNING", msg("model.warnings"))
         if not automatic:
             self.paused = False
-        request = session.push_model(model_bundle)
-        self.pending = request
         self.status = Notice("INFO", msg("model.sending", name=collected.model.name, count=len(collected.textures)))
-        request.add_done_callback(self._on_pushed)
+        if binding is not None and self.lease is not None and not same_binding(self.lease_binding, binding):
+            # The model on the ped belongs to another cloth: DCT ends it first, then this one is pushed bound.
+            request = session.discard_model()
+            self._switch = (model_bundle, dict(binding))
+            self.pending = request
+            request.add_done_callback(self._on_switched)
+        else:
+            request = session.push_model(model_bundle, binding=binding)
+            self.pending = request
+            request.add_done_callback(self._on_pushed)
         self.controller.touch()
         return request
+
+    def _on_switched(self, request: Request) -> None:
+        """DCT took the previous model off the ped: push the waiting one, bound to its cloth."""
+        switch, self._switch = self._switch, None
+        if request is self.pending:
+            self.pending = None
+        if switch is None:
+            return
+        if request.error is not None and request.error.code != "lease-not-found":
+            self.status = _error_notice(request.error.code)
+            self.controller.touch()
+            return
+        self._forget_lease()
+        self.controller.release_model_files()
+        session = self.controller.session
+        if session is None or not self.controller.ready:
+            self.status = Notice("WARNING", settings.describe_close_reason("disconnected"))
+            self.controller.touch()
+            return
+        bundle, binding = switch
+        pushed = session.push_model(bundle, binding=binding)
+        self.pending = pushed
+        pushed.add_done_callback(self._on_pushed)
+        self.controller.touch()
 
     def _on_pushed(self, request: Request) -> None:
         if request is self.pending:
@@ -717,10 +823,18 @@ class ModelPush:
 
     def _applied(self, message: Dict[str, Any]) -> None:
         self.lease = message.get("lease")
+        binding = message.get("binding")
+        self.lease_binding = dict(binding) if isinstance(binding, dict) else None
         self.revision = message.get("revision")
         self.findings = list(message.get("findings") or [])
         self.status = Notice("INFO", msg("model.previewing"))
         self.controller.touch()
+
+    def _forget_lease(self) -> None:
+        self.lease = None
+        self.lease_binding = None
+        self.revision = None
+        self.findings = []
 
     def on_applied(self, message: Dict[str, Any]) -> None:
         """``model.applied`` as an event (also after the request finished, which changes nothing)."""
@@ -804,15 +918,16 @@ class ModelPush:
             self.controller.touch()
 
     def _closed(self, reason: Optional[str]) -> None:
-        self.lease = None
-        self.revision = None
-        self.findings = []
+        self._forget_lease()
+        self.controller.release_model_files()  # the model's own files are no longer needed in Blender
         self.due_at = None
         self.waiting = None
         self.note = None
         self._save_retry_at = None
         if self.busy == "saving":
             self.busy = None
+        if self.open_notice is not None and self.open_notice.level == "INFO":
+            self.open_notice = None  # "Opened from Durty Cloth Tool" belonged to the model shown until now
         if reason == "closed" and self._saved:
             return  # DCT ended the preview after the save; keep "Saved ..."
         if reason == "closed":
@@ -823,8 +938,9 @@ class ModelPush:
     def on_disconnected(self) -> None:
         if self.lease is not None or self.pending is not None:
             self.status = Notice("WARNING", settings.describe_close_reason("disconnected"))
-        self.lease = None
-        self.revision = None
+            self.controller.release_model_files()
+        self._forget_lease()
+        self._switch = None
         self.pending = None
         self.busy = None
         self.due_at = None
@@ -850,6 +966,10 @@ class ModelPush:
             self.controller.touch()
 
     def tick(self, now: float) -> None:
+        notice = self._open_notice
+        if notice is not None and notice.level == "INFO" and now - self._open_notice_at > TextureStream.INFO_SECONDS:
+            self._open_notice = None
+            self.controller.touch()
         if self._save_retry_at is not None and now >= self._save_retry_at:
             self._retry_save()
         if self.due_at is None or now < self.due_at:
@@ -870,7 +990,7 @@ class ModelPush:
 # --------------------------------------------------------------------------------------------------
 
 class FocusInfo(NamedTuple):
-    """The cloth focused in DCT, as the Linked Cloth panel shows it."""
+    """A cloth as the Linked Cloth panel shows it: the one focused in DCT, or the one the image is linked to."""
 
     name: str
     letter: Optional[str]
@@ -878,12 +998,112 @@ class FocusInfo(NamedTuple):
     width: Optional[int]
     height: Optional[int]
     targets: tuple
+    #: The cloth and variation (``clothId``, ``textureId``); ``textureId`` is missing when DCT selected none.
+    binding: Dict[str, str] = {}
+    #: What DCT says about the cloth (each may be missing): the game's token such as ``jbib``, ``male`` or
+    #: ``female``, the collection and the cloth's number in it.
+    drawable_type: Optional[str] = None
+    gender: Optional[str] = None
+    collection: Optional[str] = None
+    number: Optional[int] = None
+    #: The cloth comes from the image's link, not from the selection in DCT.
+    linked: bool = False
+
+
+def same_binding(a: Optional[Dict[str, str]], b: Optional[Dict[str, str]]) -> bool:
+    """The same cloth and variation (ids compare without regard to case)."""
+    if not a or not b:
+        return False
+    return all(str(a.get(key, "")).lower() == str(b.get(key, "")).lower() for key in ("clothId", "textureId"))
+
+
+def binding_of(cloth_id: Any, texture_id: Any) -> Optional[Dict[str, str]]:
+    """A binding from two ids, or ``None`` when one of them is not an id DCT would accept."""
+    if protocol.is_guid(cloth_id) and protocol.is_guid(texture_id):
+        return {"clothId": cloth_id, "textureId": texture_id}
+    return None
+
+
+class TextureDocument(NamedTuple):
+    """A cloth's texture map to open in Blender: what DCT sent (``host.openTexture``) or what the add-on read
+    (``texture.read``). ``pixels`` are RGBA8 rows from top to bottom."""
+
+    binding: Dict[str, str]
+    target: str
+    name: str
+    width: int
+    height: int
+    pixels: Any
+
+
+class OpenedImage(NamedTuple):
+    """The Blender image a :class:`TextureDocument` became, ready to stream."""
+
+    source: Any  # an ImageSource
+    width: int
+    height: int
+    conversion: Conversion
+    document: str
+    warning: Optional[Msg] = None
+    handle: Any = None  # whatever the Blender side needs to finish the image later
+
+
+class DocumentHost(Protocol):
+    """What opening items from DCT needs from Blender (``state.BlenderDocuments``)."""
+
+    def open_texture(self, document: TextureDocument) -> OpenedImage: ...  # creates or reuses the image
+
+    def keep_texture(self, opened: OpenedImage) -> None: ...  # after DCT heard the answer (keeps the pixels)
+
+    def model_problem(self) -> Optional[Msg]: ...  # why models cannot be opened now (Sollumz), or None
+
+    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> "ImportedModel": ...
+
+
+class ImportedModel(NamedTuple):
+    """A model imported into Blender: the Drawable Dictionary's name and how to push it (bound to its cloth)."""
+
+    name: str
+    push: Callable[[], Any]
+
+
+class _ModelImport(NamedTuple):
+    request: Any  # the HostOpenModel
+    folder: pathlib.Path
+    model_file: str
+    binding: Dict[str, str]
+    name: str
+    poll_number: int
+
+
+#: The add-on's folder (inside its data folder) for the files of models opened from DCT.
+MODELS_FOLDER = "opened-models"
+#: The maps in Blender image names (data names stay English, like file names).
+MAP_NAMES = {"diffuse": "Diffuse", "normal": "Normal", "specular": "Specular"}
+
+
+def _inside(folder: pathlib.Path, name: str) -> pathlib.Path:
+    """``folder / name`` for a bare file name that stays directly inside ``folder`` (``ValueError`` otherwise)."""
+    if not protocol.is_file_name(name):
+        raise ValueError(f"{name!r} is not a bare file name")
+    path = folder / name
+    if path.resolve().parent != folder.resolve():
+        raise ValueError(f"{name!r} leaves its folder")
+    return path
 
 
 class LinkController:
     """Owns the dct_link session and the sign-in for one Blender process."""
 
     RECENT_ERRORS = 10
+    #: After Sign In, how long the add-on looks for Durty Cloth Tool before it shows the browser code by itself.
+    BROWSER_FALLBACK_SECONDS = 6.0
+    #: The longest edge of the cloth's picture in the Linked Cloth panel.
+    THUMBNAIL_SIZE = 128
+    #: Clothes the add-on remembers from the selection, so a linked cloth keeps its name and details.
+    KNOWN_CLOTHES = 64
+    #: Files of opened models older than this are left over from an earlier session and removed at start-up.
+    STALE_MODEL_FILES_SECONDS = 600.0
 
     def __init__(
         self,
@@ -935,11 +1155,43 @@ class LinkController:
         self._sign_in_task: Any = None
         self._open_when_ready = False
         self._logout_task: Any = None
+        #: After Sign In: when to show the browser code if Durty Cloth Tool was not found by then.
+        self._browser_fallback_at: Optional[float] = None
+        self._polls = 0
+
+        #: Blender's side of opening what DCT sends (``None``: DCT hears ``not-supported``).
+        self.documents: Optional[DocumentHost] = None
+        self._open_notice: Optional[Notice] = None
+        self._open_notice_at = 0.0
+        #: The map being read from DCT for the Linked Cloth panel's map buttons.
+        self.opening_map: Optional[str] = None
+        #: The link of the image chosen for the live preview (Blender reads it from the image).
+        self.linked_binding: Callable[[], Optional[Dict[str, str]]] = lambda: None
+        #: The picture of the cloth in the Linked Cloth panel, and who shows it (Blender's preview icon).
+        self.thumbnail: Optional[Thumbnail] = None
+        self.on_thumbnail: Optional[Callable[[Optional[Thumbnail]], None]] = None
+        self._thumbnail_key: Optional[tuple] = None
+        self._thumbnail_request: Optional[Request] = None
+        self._clothes: "collections.OrderedDict[str, Dict[str, Any]]" = collections.OrderedDict()
+        self._model_import: Optional[_ModelImport] = None
+        self._model_folders: Set[pathlib.Path] = set()
+        self._keep_texture: Optional[tuple] = None
 
         self.stream = TextureStream(self)
         self.model = ModelPush(self)
 
     # ---- set-up --------------------------------------------------------------------------------------
+
+    @property
+    def open_notice(self) -> Optional[Notice]:
+        """The outcome of opening a texture from Durty Cloth Tool, for the Linked Cloth panel (a result fades after
+        :attr:`TextureStream.INFO_SECONDS`; warnings and errors stay)."""
+        return self._open_notice
+
+    @open_notice.setter
+    def open_notice(self, notice: Optional[Notice]) -> None:
+        self._open_notice = notice
+        self._open_notice_at = time.monotonic()
 
     def touch(self) -> None:
         """Marks the panels for a redraw."""
@@ -958,6 +1210,7 @@ class LinkController:
         self.token_source = TokenSource(self.link_auth, self.online, self.device_name)
         self.install_id = install_id
         self.data_dir = folder
+        self._remove_stale_model_files()
         self.refresh_account()
 
     def prepare(self) -> None:
@@ -1003,6 +1256,8 @@ class LinkController:
                 ("live-error", self.stream.on_live_error),
                 ("model-applied", self.model.on_applied),
                 ("model-closed", self.model.on_closed),
+                ("open-texture", self._on_open_texture),
+                ("open-model", self._on_open_model),
                 ("incompatible", self._on_incompatible),
                 ("error", self._on_error),
                 ("disconnected", self._on_disconnected),
@@ -1043,6 +1298,10 @@ class LinkController:
             if task is not None:
                 task.cancel()
         self._sign_in_task = self._logout_task = None
+        self._browser_fallback_at = None
+        self._model_import = None
+        self._keep_texture = None
+        self.release_model_files()
         self.session = None
         self.state = IDLE
 
@@ -1112,27 +1371,82 @@ class LinkController:
         key = f"state.{self.state}"
         return msg(key) if key in _STATE_KEYS else msg("state.idle")
 
-    def focus_info(self) -> Optional[FocusInfo]:
-        focused = self.focused
-        if not focused:
-            return None
-        selected = focused.get("selectedTextureId")
+    @staticmethod
+    def _info(cloth: Dict[str, Any], texture_id: Optional[str], linked: bool = False) -> FocusInfo:
+        """A cloth DCT described (``focused`` in the context) with one of its variations."""
         letter = texture = width = height = None
-        for index, item in enumerate(focused.get("textures") or []):
-            if isinstance(item, dict) and item.get("textureId") == selected:
+        for index, item in enumerate(cloth.get("textures") or []):
+            if isinstance(item, dict) and str(item.get("textureId", "")).lower() == str(texture_id or "").lower():
                 letter = settings.variation_letter(index)
                 texture = item.get("name")
                 width, height = item.get("width"), item.get("height")
                 break
-        targets = tuple(t for t in focused.get("targets") or () if t in protocol.LIVE_TARGETS)
-        return FocusInfo(str(focused.get("name") or ""), letter, texture, width, height, targets)
+        targets = tuple(t for t in cloth.get("targets") or () if t in protocol.LIVE_TARGETS)
+        binding = {"clothId": str(cloth.get("clothId") or "")}
+        if texture_id:
+            binding["textureId"] = texture_id
+        number = cloth.get("number")
+        return FocusInfo(str(cloth.get("name") or ""), letter, texture, width, height, targets, binding,
+                         cloth.get("drawableType"), cloth.get("gender"), cloth.get("collection"),
+                         number if isinstance(number, int) else None, linked)
 
-    def focus_label(self) -> Optional[str]:
-        """The focused cloth and its variation, as in "jbib_003_u B"."""
-        info = self.focus_info()
+    def focus_info(self) -> Optional[FocusInfo]:
+        """The cloth focused in DCT with its selected variation, or ``None``."""
+        focused = self.focused
+        if not focused:
+            return None
+        return self._info(focused, focused.get("selectedTextureId"))
+
+    def known_cloth(self, cloth_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        """What DCT last said about a cloth that was selected there while connected, or ``None``."""
+        return self._clothes.get(str(cloth_id or "").lower())
+
+    def _remember_cloth(self, focused: Optional[Dict[str, Any]]) -> None:
+        if isinstance(focused, dict) and focused.get("clothId"):
+            key = str(focused["clothId"]).lower()
+            self._clothes.pop(key, None)
+            self._clothes[key] = focused
+            while len(self._clothes) > self.KNOWN_CLOTHES:
+                self._clothes.popitem(last=False)
+
+    def card_binding(self) -> Optional[Dict[str, str]]:
+        """The cloth the image belongs to: the running live preview's link, else the chosen image's link."""
+        if self.stream.active and self.stream.binding:
+            return self.stream.binding
+        return self.linked_binding()
+
+    def card_info(self) -> Optional[FocusInfo]:
+        """The cloth the Linked Cloth panel shows: the one the image is linked to, otherwise the focused one."""
+        linked = self.card_binding()
+        if linked:
+            cloth = self.known_cloth(linked.get("clothId"))
+            if cloth is not None:
+                return self._info(cloth, linked.get("textureId"), linked=True)
+            return FocusInfo("", None, None, None, None, (), dict(linked), linked=True)
+        return self.focus_info()
+
+    def cloth_label(self, binding: Optional[Dict[str, str]] = None) -> Optional[str]:
+        """A cloth and its variation, as in "jbib_003_u B": the one ``binding`` names, or the focused one."""
+        if binding:
+            cloth = self.known_cloth(binding.get("clothId"))
+            info = self._info(cloth, binding.get("textureId")) if cloth is not None else None
+        else:
+            info = self.focus_info()
         if info is None or not info.name:
             return None
         return f"{info.name} {info.letter}" if info.letter else info.name
+
+    def focus_label(self) -> Optional[str]:
+        """The focused cloth and its variation, as in "jbib_003_u B"."""
+        return self.cloth_label(None)
+
+    def document_name(self, binding: Dict[str, str], target: str, fallback: str) -> str:
+        """The name of the Blender image for a cloth's map, as in "jbib_003_u B Normal" (English, like file names);
+        ``fallback`` (DCT's name of the texture) when the cloth was not seen in the selection."""
+        label = self.cloth_label(binding)
+        if label is None:
+            return fallback or target
+        return f"{label} {MAP_NAMES.get(target, target)}"
 
     def diagnostics(self, extra: Optional[Dict[str, str]] = None) -> str:
         """Support details for Copy Diagnostics: versions, link state and recent error codes. English; no paths,
@@ -1174,8 +1488,15 @@ class LinkController:
     def starting_sign_in(self) -> bool:
         return self._sign_in_task is not None
 
+    @property
+    def finding_for_sign_in(self) -> bool:
+        """After Sign In: Durty Cloth Tool is being looked for, to approve the sign-in there."""
+        return (self._browser_fallback_at is not None and not self.ready and self.state != SIGNING_IN
+                and self.active_sign_in() is None)
+
     def start_sign_in(self) -> None:
-        """Starts (or reuses) the device sign-in; the browser opens once gta.clothing answered (see ``poll``)."""
+        """Sign In in the Browser: starts (or reuses) the device sign-in; the browser opens once gta.clothing
+        answered (see ``poll``)."""
         self._ensure_setup()
         assert self.token_source is not None
         if not self.online():
@@ -1193,16 +1514,40 @@ class LinkController:
         self.notice = None
         self.touch()
 
-    def sign_in_with_dct(self) -> None:
-        """Connects; the session then asks DCT to approve the sign-in."""
+    def sign_in(self) -> None:
+        """Sign In: connects, and Durty Cloth Tool's approval window asks the user to approve the sign-in. When
+        Durty Cloth Tool is not found within :data:`BROWSER_FALLBACK_SECONDS`, the browser code is shown instead
+        (``poll``); the code stays the same, so Durty Cloth Tool can still approve it once it is found."""
+        self._ensure_setup()
+        if not self.online():
+            raise auth.AuthError("offline", "online access is off")
         session = self._session()
         self.want_connected = True
         self.dct_disconnected = False
         self.signed_out = False
+        self.search_failed = False
         self.notice = None
         self.sign_in_status = None
+        self._browser_fallback_at = time.monotonic() + self.BROWSER_FALLBACK_SECONDS
         session.sign_in()
         self.touch()
+
+    def _check_browser_fallback(self, now: float) -> None:
+        """After Sign In: show the browser code once it is clear that Durty Cloth Tool is not there to approve."""
+        if self._browser_fallback_at is None:
+            return
+        if (self.ready or self.state == SIGNING_IN or self.active_sign_in() is not None
+                or self._sign_in_task is not None or self.token_source is None):
+            self._browser_fallback_at = None  # Durty Cloth Tool asks, or a code is already shown
+            return
+        handshaking = self.state in (HELLO, AUTHENTICATING)
+        if handshaking or not (self.search_failed or now >= self._browser_fallback_at):
+            return
+        self._browser_fallback_at = None
+        if self.online():
+            self._sign_in_task = self.token_source.begin_device_sign_in()
+            self._open_when_ready = False  # the code is shown; the user opens the page
+            self.touch()
 
     def cancel_sign_in(self) -> None:
         if self.token_source is not None:
@@ -1211,6 +1556,7 @@ class LinkController:
             self._sign_in_task.cancel()
             self._sign_in_task = None
         self._open_when_ready = False
+        self._browser_fallback_at = None
         self.sign_in_status = None
         self.touch()
 
@@ -1237,9 +1583,17 @@ class LinkController:
     def poll(self) -> float:
         """One timer step. Returns the seconds until the next step."""
         now = time.monotonic()
+        self._polls += 1
         if self.session is not None:
-            self.session.poll()
+            self.session.poll()  # also sends the answers to DCT's requests handled in the step before
         self._poll_tasks()
+        self._check_browser_fallback(now)
+        self._finish_opening()
+        self._refresh_thumbnail()
+        notice = self._open_notice
+        if notice is not None and notice.level == "INFO" and now - self._open_notice_at > TextureStream.INFO_SECONDS:
+            self._open_notice = None
+            self.touch()
         try:
             self.stream.tick(now)
         except Exception as exc:  # noqa: BLE001 - stop the stream, show why, keep the link running
@@ -1252,8 +1606,9 @@ class LinkController:
             traceback.print_exc()
             self.model.status = Notice("ERROR", msg("model.failed", detail=f"{type(exc).__name__}: {exc}"))
             self.touch()
-        working = self.stream.active or self.model.pushing
-        waiting = self._sign_in_task is not None or self._logout_task is not None or self.active_sign_in() is not None
+        working = self.stream.active or self.model.pushing or self._model_import is not None
+        waiting = (self._sign_in_task is not None or self._logout_task is not None or self.active_sign_in() is not None
+                   or self._browser_fallback_at is not None)
         state = self.session.state if self.session is not None else IDLE
         if state == READY and working:
             return 0.02
@@ -1319,6 +1674,269 @@ class LinkController:
                 self.session.sign_in()
             self.touch()
 
+    # ---- opening what DCT sends ("Edit in connected app") and the cloth's maps ------------------------
+
+    def texture_busy(self) -> Optional[Msg]:
+        """Why another texture cannot be opened right now (a live preview runs or saves), or ``None``."""
+        if self.stream.saving:
+            return msg("notice.wait-saving")
+        if self.stream.active:
+            return msg("open.stop-live-first")
+        return None
+
+    def _on_open_texture(self, request: HostOpenTexture) -> None:
+        """``host.openTexture``: opens the map as an image linked to its cloth and starts its live preview. DCT hears
+        ``ok`` as soon as the image exists, ``busy`` while another live preview runs or saves, and ``open-failed``
+        when the image could not be made."""
+        name = self.document_name(request.binding, request.target, request.name)
+        if self.documents is None:
+            request.refuse("not-supported")
+            return
+        if self.texture_busy() is not None:
+            request.refuse("busy")
+            self.open_notice = Notice("WARNING", msg("open.texture-busy", name=name))
+            self.touch()
+            return
+        document = TextureDocument(dict(request.binding), request.target, name, request.width, request.height,
+                                   request.pixels)
+        self._open_texture(document, request)
+
+    def _open_texture(self, document: TextureDocument, request: Optional[HostOpenTexture] = None) -> None:
+        assert self.documents is not None
+        try:
+            opened = self.documents.open_texture(document)
+        except Exception as exc:  # noqa: BLE001 - DCT hears open-failed, the panel says why
+            if request is not None:
+                request.refuse("open-failed")
+            self.open_notice = Notice("ERROR", msg("open.texture-failed", name=document.name, detail=_detail(exc)))
+            self.touch()
+            return
+        if request is not None:
+            request.accept()
+        self.open_notice = Notice("INFO", msg("open.opened", name=document.name))
+        self._keep_texture = (opened, self._polls)  # after DCT heard the answer (it can take a moment)
+        try:
+            self.stream.start(opened.source, document.target, opened.width, opened.height, opened.conversion,
+                              document=opened.document, warning=opened.warning, binding=document.binding)
+        except UserError as exc:
+            self.stream.status = Notice("ERROR", exc.message)
+        except LinkError as exc:
+            self.stream.status = _error_notice(exc.code)
+        self.touch()
+
+    def open_map_problem(self, target: str) -> Optional[Msg]:
+        """Why the Linked Cloth panel cannot open this map of its cloth right now, or ``None``."""
+        if self.documents is None:
+            return msg("notice.not-ready")
+        if not self.ready:
+            return msg("notice.connect-first")
+        info = self.card_info()
+        if info is None:
+            return msg("notice.select-cloth")
+        if info.targets and target not in info.targets:
+            return msg(f"linked.map-missing.{target}")
+        busy = self.texture_busy()
+        if busy is not None:
+            return busy
+        if self.opening_map is not None:
+            return msg("open.reading")
+        problem = self.feature_problem(settings.FEATURE_SERVICES)
+        if problem is not None:
+            return msg("open.map-upsell") if problem.key in ("feature.needsUltimate", "feature.needsLicense") else problem
+        return None
+
+    def open_map(self, target: str) -> Request:
+        """Reads a map of the Linked Cloth panel's cloth from DCT (``texture.read``) and opens it like a map DCT
+        sent: as an image linked to the cloth, with its live preview running."""
+        session = self.ready_session()
+        if target not in protocol.LIVE_TARGETS:
+            raise ValueError(f"unknown map {target!r}")
+        problem = self.open_map_problem(target)
+        if problem is not None:
+            raise UserError(problem)
+        info = self.card_info()
+        assert info is not None
+        binding = info.binding if "textureId" in info.binding else None
+        request = session.read_texture(target, binding=binding)
+        self.opening_map = target
+        self.open_notice = None
+        request.add_done_callback(self._on_map_read)
+        self.touch()
+        return request
+
+    def _on_map_read(self, request: Request) -> None:
+        self.opening_map = None
+        if request.error is not None:
+            code = request.error.code
+            self.open_notice = (Notice("INFO", msg("open.map-upsell")) if code in ("needs-license", "needs-ultimate")
+                                else _error_notice(code))
+            self.touch()
+            return
+        header = request.result().header
+        name = self.document_name(header["binding"], header["target"], header.get("name") or "")
+        if self.documents is None or self.texture_busy() is not None:
+            self.open_notice = Notice("WARNING", msg("open.texture-busy", name=name))  # started meanwhile
+            self.touch()
+            return
+        self._open_texture(TextureDocument(dict(header["binding"]), header["target"], name, header["width"],
+                                           header["height"], request.result().payload))
+
+    def _on_open_model(self, request: HostOpenModel) -> None:
+        """``host.openModel``: writes the files into the add-on's folder and imports them with Sollumz in the next
+        timer step, after DCT heard ``ok``. ``dependency-missing`` without a usable Sollumz, ``busy`` while a model
+        is pushed, saved or imported, ``open-failed`` when the files cannot be written."""
+        model_file = next((name for name, _ in request.files if name.lower().endswith(bundle.MODEL_SUFFIX)), "")
+        name = model_file.split(".", 1)[0] or request.name
+        if self.documents is None:
+            request.refuse("not-supported")
+            return
+        problem = self.documents.model_problem()
+        if problem is not None:
+            request.refuse("dependency-missing")
+            self.model.open_notice = Notice("WARNING", msg("open.model-needs-sollumz", name=name, problem=problem))
+            self.touch()
+            return
+        if self._model_import is not None or self.model.pushing or self.model.busy is not None:
+            request.refuse("busy")
+            self.model.open_notice = Notice("WARNING", msg("open.model-busy", name=name))
+            self.touch()
+            return
+        try:
+            folder = self._write_model_files(name, model_file, request.files)
+        except (OSError, ValueError) as exc:
+            request.refuse("open-failed")
+            self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=name, detail=_detail(exc)))
+            self.touch()
+            return
+        self._model_import = _ModelImport(request, folder, model_file, dict(request.binding), name, self._polls)
+        request.accept()  # the files are in place and the import runs in the next step
+        self.model.open_notice = Notice("INFO", msg("open.model-importing", name=name))
+        self.touch()
+
+    def _write_model_files(self, name: str, model_file: str, files: List[Any]) -> pathlib.Path:
+        """``<data folder>/opened-models/<model>/<model>.ydd.xml`` with its textures in ``<model>/`` beside it, the
+        folder Sollumz reads them from. Every name is a bare file name and is joined inside its folder only."""
+        assert self.data_dir is not None
+        base = self.data_dir / MODELS_FOLDER
+        base.mkdir(parents=True, exist_ok=True)
+        folder = _inside(base, name)
+        if folder.exists():
+            shutil.rmtree(folder)
+        folder.mkdir()
+        self._model_folders.add(folder)
+        try:
+            textures = _inside(folder, name)
+            for file_name, data in files:
+                if file_name == model_file:
+                    target = _inside(folder, file_name)
+                else:
+                    textures.mkdir(exist_ok=True)
+                    target = _inside(textures, file_name)
+                with open(target, "xb") as handle:
+                    handle.write(data)
+        except BaseException:
+            self._remove_model_folder(folder)
+            raise
+        return folder
+
+    def _finish_opening(self) -> None:
+        """Work that waits until DCT heard the answer to its request: importing a model, keeping a texture's
+        pixels with the Blender file."""
+        keep = self._keep_texture
+        if keep is not None and keep[1] < self._polls:
+            self._keep_texture = None
+            try:
+                assert self.documents is not None
+                self.documents.keep_texture(keep[0])
+            except Exception:  # noqa: BLE001 - the image stays usable; only saving it with the file is up to the user
+                traceback.print_exc()
+        job = self._model_import
+        if job is None or job.poll_number >= self._polls:
+            return
+        self._model_import = None
+        try:
+            assert self.documents is not None
+            imported = self.documents.import_model(job.folder, job.model_file, job.binding)
+        except Exception as exc:  # noqa: BLE001 - DCT already heard ok; the panel says what went wrong
+            self._remove_model_folder(job.folder)
+            self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=job.name, detail=_detail(exc)))
+            self.touch()
+            return
+        self.model.open_notice = Notice("INFO", msg("open.opened", name=imported.name))
+        try:
+            imported.push()
+        except UserError as exc:
+            self.model.status = Notice("ERROR", exc.message)
+        except LinkError as exc:
+            self.model.status = _error_notice(exc.code)
+        self.touch()
+
+    def release_model_files(self) -> None:
+        """Removes the files of opened models (Blender keeps what it imported), except an import still to run."""
+        keep = self._model_import.folder if self._model_import is not None else None
+        for folder in list(self._model_folders):
+            if folder != keep:
+                self._remove_model_folder(folder)
+
+    def _remove_model_folder(self, folder: pathlib.Path) -> None:
+        self._model_folders.discard(folder)
+        shutil.rmtree(folder, ignore_errors=True)
+
+    def _remove_stale_model_files(self) -> None:
+        """Files of opened models an earlier session left behind (Blender closed before the model was discarded)."""
+        base = self.data_dir / MODELS_FOLDER if self.data_dir is not None else None
+        if base is None or not base.is_dir():
+            return
+        cutoff = time.time() - self.STALE_MODEL_FILES_SECONDS
+        for entry in base.iterdir():
+            try:
+                if entry.is_dir() and not entry.is_symlink() and entry.stat().st_mtime < cutoff:
+                    shutil.rmtree(entry, ignore_errors=True)
+            except OSError:
+                continue  # another Blender may be using it; it goes with the next start
+
+    # ---- the cloth's picture -------------------------------------------------------------------------
+
+    def _refresh_thumbnail(self) -> None:
+        """Asks DCT for the picture of the Linked Cloth panel's cloth whenever that cloth or variation changes."""
+        info = self.card_info() if self.ready else None
+        key = None
+        if info is not None:
+            key = (info.binding.get("clothId", "").lower(), info.binding.get("textureId", "").lower())
+        if key == self._thumbnail_key:
+            return
+        pending = self._thumbnail_request
+        if pending is not None and not pending.done:
+            return  # asked again once DCT answered
+        self._thumbnail_key = key
+        self._set_thumbnail(None)
+        if info is None or self.session is None or self.feature_problem(settings.FEATURE_SERVICES) is not None:
+            return
+        binding = info.binding if "textureId" in info.binding else None
+        try:
+            request = self.session.request_thumbnail(self.THUMBNAIL_SIZE, binding=binding)
+        except (LinkError, ValueError):
+            return  # no picture; the panel shows the cloth without one
+        self._thumbnail_request = request
+        request.add_done_callback(lambda done, key=key: self._on_thumbnail(done, key))
+
+    def _on_thumbnail(self, request: Request, key: tuple) -> None:
+        if key != self._thumbnail_key or request.error is not None:
+            return
+        result = request.result()
+        self._set_thumbnail(result if getattr(result, "ok", False) else None)
+
+    def _set_thumbnail(self, thumbnail: Optional[Thumbnail]) -> None:
+        if thumbnail is None and self.thumbnail is None:
+            return
+        self.thumbnail = thumbnail
+        if self.on_thumbnail is not None:
+            try:
+                self.on_thumbnail(thumbnail)
+            except Exception:  # noqa: BLE001 - a picture must never stop the link
+                traceback.print_exc()
+        self.touch()
+
     # ---- session events ------------------------------------------------------------------------------
 
     def _on_state(self, state: str) -> None:
@@ -1357,6 +1975,7 @@ class LinkController:
             message = request.result()
             self.project = message.get("project")
             self.focused = message.get("focused")
+            self._remember_cloth(self.focused)
             self.touch()
 
     def _on_sign_in(self, prompt: SignInPrompt) -> None:
@@ -1392,12 +2011,15 @@ class LinkController:
 
     def _on_selection(self, message: Dict[str, Any]) -> None:
         self.focused = message.get("focused")
+        self._remember_cloth(self.focused)
         self.touch()
 
     def _on_project(self, message: Dict[str, Any]) -> None:
         self.project = message.get("project")
         if self.project is None:
             self.focused = None
+        self._clothes.clear()  # another project: its clothes are other ones
+        self._remember_cloth(self.focused)
         self.touch()
 
     def _on_incompatible(self, message: Dict[str, Any]) -> None:
@@ -1416,6 +2038,8 @@ class LinkController:
             self.user_name = None
         if code in ("token-invalid", "signed-out"):
             return  # the session refreshes and retries by itself; signed-out has its own event
+        if self.incompatible is not None and code == self.incompatible.get("code"):
+            return  # the status explains it, with what to update
         retrying = ("disconnected", "busy", "rate-limited", "assertion-invalid", "authentication-failed",
                     "untrusted-endpoint")  # the session tries again by itself
         level = "WARNING" if code in retrying else "ERROR"
@@ -1425,6 +2049,11 @@ class LinkController:
     def _on_disconnected(self, code: Optional[int], reason: str) -> None:
         self.project = None
         self.focused = None
+        self.opening_map = None
+        self._keep_texture = None
+        self._thumbnail_key = None
+        self._thumbnail_request = None
+        self._set_thumbnail(None)
         self.stream.on_disconnected()
         self.model.on_disconnected()
         self.touch()
@@ -1433,10 +2062,16 @@ class LinkController:
 _STATE_KEYS = frozenset(f"state.{s}" for s in ("idle", "connecting", "waiting", "hello", "signing-in", "authenticating"))
 
 __all__ = [
+    "DocumentHost",
     "FocusInfo",
+    "ImportedModel",
     "LinkController",
     "ModelPush",
     "Notice",
+    "OpenedImage",
+    "TextureDocument",
     "TokenSource",
     "TextureStream",
+    "binding_of",
+    "same_binding",
 ]

@@ -4,6 +4,7 @@
 
 TEXT = {
     "path.connected-apps": "Optionen > Verbundene Apps",
+    "path.edit-in-app": "In verbundener App bearbeiten",
     "panel.main": "Durty Cloth Tool",
     "panel.details": "Verbindung",
     "panel.setup": "Verbinden",
@@ -54,6 +55,10 @@ TEXT = {
         "Creator Link nutzt dein gta.clothing-Konto (Discord). Du meldest dich auf diesem Computer einmal an."
     ),
     "setup.sign-in.starting": "Starte die Anmeldung…",
+    "setup.sign-in.finding": "Suche Durty Cloth Tool, um die Anmeldung zu bestätigen…",
+    "setup.sign-in.how": (
+        "Durty Cloth Tool bittet dich, sie zu bestätigen. Läuft es nicht, bekommst du einen Code für deinen Browser."
+    ),
     "setup.sign-in.waiting": "Warte auf die Bestätigung…",
     "setup.sign-in.asked": "Durty Cloth Tool zeigt eine Anmeldeanfrage. Bestätige sie dort.",
     "setup.sign-in.approved": "Durty Cloth Tool hat die Anmeldung bestätigt. Schließe ab…",
@@ -63,21 +68,44 @@ TEXT = {
     "linked.project": "Projekt: {name}",
     "linked.no-project": "Öffne ein Projekt in Durty Cloth Tool.",
     "linked.no-cloth": "Wähle ein Kleidungsstück in Durty Cloth Tool, um hier daran zu arbeiten.",
-    "linked.cloth": "{name} · Variante {letter}",
-    "linked.cloth-no-variation": "{name}",
-    "linked.texture": "{name} ({width} x {height})",
+    "linked.variation": "Variante {letter}",
+    "linked.number": "#{number}",
+    "linked.unknown": "Verknüpfte Kleidung",
+    "linked.unknown-subtext": "Wähle sie einmal in Durty Cloth Tool aus, um hier ihren Namen zu sehen.",
     "linked.map": "Map",
     "linked.follows": "Folgt deiner Auswahl in Durty Cloth Tool",
-    "linked.map-locked": "Beende die Live-Vorschau, um eine andere Map zu wählen.",
+    "linked.image": "Mit dem Bild unten verknüpft",
+    "linked.open-map": "Map in Blender öffnen",
     "linked.map-missing.diffuse": "Dieses Kleidungsstück hat keine Diffuse-Map.",
     "linked.map-missing.normal": "Dieses Kleidungsstück hat keine Normal-Map.",
     "linked.map-missing.specular": "Dieses Kleidungsstück hat keine Specular-Map.",
     "map.diffuse": "Diffuse (Farbe)",
+    "map.diffuse-short": "Diffuse",
     "map.diffuse.desc": "Die Farbtextur des Kleidungsstücks",
     "map.normal": "Normal",
     "map.normal.desc": "Die Normal-Map des Kleidungsstücks",
     "map.specular": "Specular",
     "map.specular.desc": "Die Specular-Map des Kleidungsstücks",
+    "gender.male": "Männlich",
+    "gender.female": "Weiblich",
+    "open.opened": "Aus Durty Cloth Tool geöffnet: {name}",
+    "open.texture-busy": (
+        "Durty Cloth Tool hat {name} gesendet, aber eine Live-Vorschau läuft oder speichert. Beende sie und sende die "
+        "Map dann erneut."
+    ),
+    "open.texture-failed": "{name} konnte nicht geöffnet werden: {detail}",
+    "open.stop-live-first": "Beende zuerst die Live-Vorschau.",
+    "open.reading": "Lese die Map aus Durty Cloth Tool…",
+    "open.map-upsell": "Die Maps eines Kleidungsstücks hier zu öffnen ist in Durty Cloth Tool Ultimate enthalten.",
+    "open.model-importing": "Importiere {name} mit Sollumz…",
+    "open.model-needs-sollumz": "Durty Cloth Tool hat das Modell {name} gesendet. {problem}",
+    "open.model-busy": (
+        "Durty Cloth Tool hat das Modell {name} gesendet, aber ein anderes Modell wird noch gesendet oder gespeichert. "
+        "Sende es gleich noch einmal."
+    ),
+    "open.model-failed": "Das Modell {name} konnte nicht geöffnet werden: {detail}",
+    "open.import-failed": "Sollumz konnte das Modell nicht importieren ({detail}). Sein Info-Log zeigt die Details.",
+    "open.no-dictionary": "Sollumz hat kein Drawable Dictionary importiert. Sein Info-Log zeigt die Details.",
     "live.off": "Starte die Live-Vorschau, um deine Farbe auf dem Ped zu sehen.",
     "live.reading": "Lese das Bild…",
     "live.starting": "Starte die Live-Vorschau…",
@@ -88,6 +116,8 @@ TEXT = {
     "live.paused": "Pausiert. Deine Änderungen werden gesendet, wenn du fortsetzt.",
     "live.saving": "Speichere…",
     "live.unsaved": "Noch nicht im Projekt gespeichert",
+    "live.linked": "Verknüpft mit {name} · {map}",
+    "live.map": "Map: {map}",
     "live.save-subtext": (
         "Speichern schreibt diese Map in dein Projekt. Du kannst es im Verlauf des Kleidungsstücks in Durty Cloth "
         "Tool rückgängig machen."
@@ -206,7 +236,7 @@ TEXT = {
     "model.not-exported": "Sollumz hat das Modell nicht exportiert. Sein Info-Log zeigt die Details.",
     "sollumz.ready": "Sollumz {version}",
     "sollumz.ready-unknown": "Sollumz",
-    "sollumz.missing": "Installiere und aktiviere Sollumz {version} oder neuer, um Modelle zu senden.",
+    "sollumz.missing": "Installiere und aktiviere Sollumz {version} oder neuer, um Modelle zu öffnen und zu senden.",
     "sollumz.too-old": (
         "Dieses Sollumz ist zu alt, um für Durty Cloth Tool zu exportieren. Aktualisiere auf Sollumz {version} oder "
         "neuer."
@@ -233,7 +263,6 @@ TEXT = {
     "settings.account": "Konto",
     "settings.updates": "Updates",
     "settings.privacy": "Datenschutz",
-    "settings.about": "Über",
     "settings.models": "Modelle",
     "settings.connect-subtext": (
         "Braucht Durty Cloth Tool auf diesem Computer. Die Verbindung bleibt auf diesem Computer; gta.clothing "
@@ -289,8 +318,19 @@ TEXT = {
     ),
     "info.model": (
         "Modell senden exportiert das ausgewählte Sollumz Drawable Dictionary als CodeWalker XML (YDD) mit seinen "
-        "Texturen und zeigt es auf dem verknüpften Kleidungsstück. Gespeichert wird erst mit Modell im "
-        "Kleidungsstück speichern."
+        "Texturen und zeigt es auf dem verknüpften Kleidungsstück. Ein aus Durty Cloth Tool gesendetes Modell wird "
+        "importiert, mit seinem Kleidungsstück verknüpft und nach jeder Änderung erneut gesendet. Gespeichert wird "
+        "erst mit Modell im Kleidungsstück speichern."
+    ),
+    "info.open-map": (
+        "Öffnet diese Map des Kleidungsstücks aus deinem Projekt als Bild in Blender, verknüpft mit dem "
+        "Kleidungsstück, und startet ihre Live-Vorschau. Durty Cloth Tool kann eine Map auch senden: {edit} im Menü "
+        "des Kleidungsstücks."
+    ),
+    "info.linked": (
+        "Ein aus Durty Cloth Tool geöffnetes Bild merkt sich sein Kleidungsstück und seine Map, auch in der "
+        "gespeicherten .blend-Datei, damit seine Live-Vorschau immer zu diesem Kleidungsstück geht. Hebe die "
+        "Verknüpfung unter Live-Vorschau auf, um es für das in Durty Cloth Tool ausgewählte Kleidungsstück zu nutzen."
     ),
     "info.checks": (
         "Durty Cloth Tool prüft das Bild darauf, was GTA V und das Kleidungsstück brauchen, wie seine Fehlerliste. "
@@ -305,10 +345,15 @@ TEXT = {
     "op.connect.desc": "Mit Durty Cloth Tool auf diesem Computer verbinden",
     "op.disconnect": "Trennen",
     "op.disconnect.desc": "Von Durty Cloth Tool trennen. Eine laufende Live-Vorschau endet",
-    "op.sign-in-dct": "In Durty Cloth Tool bestätigen",
-    "op.sign-in-dct.desc": "Durty Cloth Tool bitten, die Anmeldung mit seinem Konto zu bestätigen",
-    "op.sign-in": "Im Browser anmelden",
-    "op.sign-in.desc": "Mit deinem gta.clothing-Konto (Discord) im Browser anmelden",
+    "op.sign-in": "Anmelden",
+    "op.sign-in.desc": (
+        "Mit deinem gta.clothing-Konto (Discord) anmelden. Durty Cloth Tool bittet dich, es zu bestätigen; läuft es "
+        "nicht, bekommst du einen Code für deinen Browser"
+    ),
+    "op.sign-in-browser": "Im Browser anmelden",
+    "op.sign-in-browser.desc": (
+        "Mit deinem gta.clothing-Konto (Discord) auf der Seite von gta.clothing in deinem Browser anmelden"
+    ),
     "op.open-sign-in": "Anmeldeseite öffnen",
     "op.open-sign-in.desc": "Die gta.clothing-Seite öffnen, die diese Anmeldung bestätigt",
     "op.copy-code": "Code kopieren",
@@ -319,6 +364,14 @@ TEXT = {
     "op.sign-out.desc": "Dieses Add-on von gta.clothing abmelden und trennen",
     "op.update-page": "Update holen",
     "op.update-page.desc": "Die Seite mit den aktuellen Versionen von Durty Cloth Tool und seinen Plugins öffnen",
+    "op.open-map": "Map öffnen",
+    "op.open-map.desc": (
+        "Diese Map des Kleidungsstücks aus deinem Projekt als verknüpftes Bild öffnen und ihre Live-Vorschau starten"
+    ),
+    "op.unlink": "Verknüpfung aufheben",
+    "op.unlink.desc": (
+        "Dieses Bild nicht mehr mit seinem Kleidungsstück verknüpfen, damit es deiner Auswahl in Durty Cloth Tool folgt"
+    ),
     "op.use-paint-image": "Bemaltes Bild nutzen",
     "op.use-paint-image.desc": "Das Bild nutzen, auf dem du malst, oder das im Image Editor",
     "op.live-start": "Live-Vorschau starten",
@@ -371,6 +424,9 @@ TEXT = {
     "op.community": "Pleb Masters Community Discord",
     "op.community.desc": "Den Pleb Masters Community Discord Server öffnen, wo du um Hilfe bitten kannst",
     "op.info": "Mehr Informationen",
+    "op.about": "Über",
+    "op.about.desc": "Version und Lizenz des Add-ons, und was es wohin sendet",
+    "about.title": "Durty Cloth Tool Link {version} ({channel})",
     "op.join-discord": "Discord-Server beitreten",
     "op.join-discord.desc": "Die Einladung zum Pleb Masters Community Discord Server im Browser öffnen",
     "prop.image": "Bild",
@@ -431,7 +487,9 @@ TEXT = {
     "error.message-too-large": "Das Bild oder Modell war zu groß zum Senden.",
     "error.unsupported-protocol": "Dieses Add-on und Durty Cloth Tool nutzen verschiedene Link-Versionen. Aktualisiere beide.",
     "error.plugin-too-old": "Dieses Add-on ist zu alt für dein Durty Cloth Tool. Aktualisiere das Add-on.",
-    "error.dct-too-old": "Dein Durty Cloth Tool ist zu alt für dieses Add-on. Aktualisiere Durty Cloth Tool.",
+    "error.dct-too-old": (
+        "Dieses Durty Cloth Tool ist älter als dieses Add-on. Aktualisiere Durty Cloth Tool und wähle dann Verbinden."
+    ),
     "error.not-authenticated": "Melde dich zuerst an.",
     "error.authentication-failed": "Durty Cloth Tool hat die Anmeldung nicht akzeptiert. Neuer Versuch…",
     "error.untrusted-endpoint": (

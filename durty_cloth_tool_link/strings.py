@@ -27,6 +27,9 @@ EN: Dict[str, str] = {
     # Durty Cloth Tool's Options page that lists the connected apps (View > Connect an app opens it too), in its own
     # words and language. Texts use it as the field {apps}.
     "path.connected-apps": "Options > Connected apps",
+    # Durty Cloth Tool's menu item that sends a cloth's map or model to a connected app, in its own words. Texts use
+    # it as the field {edit}.
+    "path.edit-in-app": "Edit in connected app",
     # ---- panels -------------------------------------------------------------------------------------------
     "panel.main": "Durty Cloth Tool",
     "panel.details": "Connection",
@@ -78,6 +81,8 @@ EN: Dict[str, str] = {
     "setup.sign-in.done": "Signed In",
     "setup.sign-in.subtext": "Creator Link uses your gta.clothing account (Discord). You sign in once on this computer.",
     "setup.sign-in.starting": "Starting the sign-in…",
+    "setup.sign-in.finding": "Looking for Durty Cloth Tool to approve the sign-in…",
+    "setup.sign-in.how": "Durty Cloth Tool asks you to approve it. When it is not running, you get a code for your browser.",
     "setup.sign-in.waiting": "Waiting for approval…",
     "setup.sign-in.asked": "Durty Cloth Tool shows a sign-in request. Approve it there.",
     "setup.sign-in.approved": "Durty Cloth Tool approved the sign-in. Finishing…",
@@ -88,21 +93,44 @@ EN: Dict[str, str] = {
     "linked.project": "Project: {name}",
     "linked.no-project": "Open a project in Durty Cloth Tool.",
     "linked.no-cloth": "Select a cloth in Durty Cloth Tool to work on it here.",
-    "linked.cloth": "{name} · Variation {letter}",
-    "linked.cloth-no-variation": "{name}",
-    "linked.texture": "{name} ({width} x {height})",
+    "linked.variation": "Variation {letter}",
+    "linked.number": "#{number}",
+    "linked.unknown": "Linked cloth",
+    "linked.unknown-subtext": "Select it in Durty Cloth Tool once to see its name here.",
     "linked.map": "Map",
     "linked.follows": "Follows your selection in Durty Cloth Tool",
-    "linked.map-locked": "Stop the live preview to choose another map.",
+    "linked.image": "Linked to the image below",
+    "linked.open-map": "Open a Map in Blender",
     "linked.map-missing.diffuse": "This cloth has no diffuse map.",
     "linked.map-missing.normal": "This cloth has no normal map.",
     "linked.map-missing.specular": "This cloth has no specular map.",
     "map.diffuse": "Diffuse (Colour)",
+    "map.diffuse-short": "Diffuse",
     "map.diffuse.desc": "The colour texture of the cloth",
     "map.normal": "Normal",
     "map.normal.desc": "The normal map of the cloth",
     "map.specular": "Specular",
     "map.specular.desc": "The specular map of the cloth",
+    "gender.male": "Male",
+    "gender.female": "Female",
+    # ---- opened from Durty Cloth Tool ---------------------------------------------------------------------
+    "open.opened": "Opened from Durty Cloth Tool: {name}",
+    "open.texture-busy": (
+        "Durty Cloth Tool sent {name}, but a live preview is running or saving. Stop it, then send the map again."
+    ),
+    "open.texture-failed": "{name} could not be opened: {detail}",
+    "open.stop-live-first": "Stop the live preview first.",
+    "open.reading": "Reading the map from Durty Cloth Tool…",
+    "open.map-upsell": "Opening a cloth's maps here is included in Durty Cloth Tool Ultimate.",
+    "open.model-importing": "Importing {name} with Sollumz…",
+    "open.model-needs-sollumz": "Durty Cloth Tool sent the model {name}. {problem}",
+    "open.model-busy": (
+        "Durty Cloth Tool sent the model {name}, but another model is still being pushed or saved. Send it again in "
+        "a moment."
+    ),
+    "open.model-failed": "The model {name} could not be opened: {detail}",
+    "open.import-failed": "Sollumz could not import the model ({detail}). Its Info log has the details.",
+    "open.no-dictionary": "Sollumz did not import a Drawable Dictionary. Its Info log has the details.",
     # ---- live preview -------------------------------------------------------------------------------------
     "live.off": "Start the live preview to see your paint on the ped.",
     "live.reading": "Reading the image…",
@@ -114,6 +142,8 @@ EN: Dict[str, str] = {
     "live.paused": "Paused. Your changes are sent when you resume.",
     "live.saving": "Saving…",
     "live.unsaved": "Not saved in the project yet",
+    "live.linked": "Linked to {name} · {map}",
+    "live.map": "Map: {map}",
     "live.save-subtext": (
         "Saving writes this map into your project. You can undo it in the cloth's History in Durty Cloth Tool."
     ),
@@ -218,7 +248,7 @@ EN: Dict[str, str] = {
     "model.not-exported": "Sollumz did not export the model. Its Info log has the details.",
     "sollumz.ready": "Sollumz {version}",
     "sollumz.ready-unknown": "Sollumz",
-    "sollumz.missing": "Install and enable Sollumz {version} or later to push models.",
+    "sollumz.missing": "Install and enable Sollumz {version} or later to open and push models.",
     "sollumz.too-old": "This Sollumz is too old to export for Durty Cloth Tool. Update to Sollumz {version} or later.",
     "sollumz.tested": "Tested with Sollumz {version}.",
     "bundle.unreadable": "The export folder could not be read ({detail}).",
@@ -242,7 +272,6 @@ EN: Dict[str, str] = {
     "settings.account": "Account",
     "settings.updates": "Updates",
     "settings.privacy": "Privacy",
-    "settings.about": "About",
     "settings.models": "Models",
     "settings.connect-subtext": (
         "Needs Durty Cloth Tool on this computer. The connection stays on this computer; gta.clothing confirms your "
@@ -296,7 +325,17 @@ EN: Dict[str, str] = {
     ),
     "info.model": (
         "Push Model exports the selected Sollumz Drawable Dictionary as CodeWalker XML (YDD) with its textures and "
-        "shows it on the linked cloth. Nothing is saved until you choose Save Model to Cloth."
+        "shows it on the linked cloth. A model sent from Durty Cloth Tool is imported, linked to its cloth and sent "
+        "again after each change. Nothing is saved until you choose Save Model to Cloth."
+    ),
+    "info.open-map": (
+        "Opens this map of the cloth from your project as an image in Blender, linked to the cloth, and starts its "
+        "live preview. Durty Cloth Tool can send a map too: {edit} in the cloth's menu."
+    ),
+    "info.linked": (
+        "An image opened from Durty Cloth Tool remembers its cloth and map, also in the saved .blend file, so its "
+        "live preview always goes to that cloth. Unlink it under Live Preview to use it for the cloth selected in "
+        "Durty Cloth Tool."
     ),
     "info.checks": (
         "Durty Cloth Tool checks the image against what GTA V and the cloth need, like its Error List does. Fix "
@@ -312,10 +351,13 @@ EN: Dict[str, str] = {
     "op.connect.desc": "Connect to Durty Cloth Tool on this computer",
     "op.disconnect": "Disconnect",
     "op.disconnect.desc": "Disconnect from Durty Cloth Tool. A running live preview stops",
-    "op.sign-in-dct": "Approve in Durty Cloth Tool",
-    "op.sign-in-dct.desc": "Ask Durty Cloth Tool to approve the sign-in with the account it uses",
-    "op.sign-in": "Sign In in the Browser",
-    "op.sign-in.desc": "Sign in with your gta.clothing account (Discord) in your browser",
+    "op.sign-in": "Sign In",
+    "op.sign-in.desc": (
+        "Sign in with your gta.clothing account (Discord). Durty Cloth Tool asks you to approve it; when it is not "
+        "running, you get a code for your browser"
+    ),
+    "op.sign-in-browser": "Sign In in the Browser",
+    "op.sign-in-browser.desc": "Sign in with your gta.clothing account (Discord) on the gta.clothing page in your browser",
     "op.open-sign-in": "Open Sign-in Page",
     "op.open-sign-in.desc": "Open the gta.clothing page that approves this sign-in",
     "op.copy-code": "Copy Code",
@@ -326,6 +368,12 @@ EN: Dict[str, str] = {
     "op.sign-out.desc": "Sign out of gta.clothing in this add-on and disconnect",
     "op.update-page": "Get the Update",
     "op.update-page.desc": "Open the page with the current versions of Durty Cloth Tool and its plugins",
+    "op.open-map": "Open Map",
+    "op.open-map.desc": (
+        "Open this map of the cloth from your project as an image linked to the cloth, and start its live preview"
+    ),
+    "op.unlink": "Unlink",
+    "op.unlink.desc": "Stop linking this image to its cloth, so it follows your selection in Durty Cloth Tool",
     "op.use-paint-image": "Use Painted Image",
     "op.use-paint-image.desc": "Use the image you are painting on, or the one in the Image Editor",
     "op.live-start": "Start Live Preview",
@@ -359,6 +407,9 @@ EN: Dict[str, str] = {
     "op.community": "Pleb Masters Community Discord",
     "op.community.desc": "Open the Pleb Masters Community Discord server, where you can ask for help",
     "op.info": "More Information",
+    "op.about": "About",
+    "op.about.desc": "The add-on's version, its licence, and what it sends where",
+    "about.title": "Durty Cloth Tool Link {version} ({channel})",
     "op.join-discord": "Join the Discord Server",
     "op.join-discord.desc": "Open the invitation to the Pleb Masters Community Discord server in your browser",
     # ---- properties ---------------------------------------------------------------------------------------
@@ -411,7 +462,7 @@ EN: Dict[str, str] = {
     "error.message-too-large": "The image or model was too large to send.",
     "error.unsupported-protocol": "This add-on and Durty Cloth Tool use different link versions. Update both.",
     "error.plugin-too-old": "This add-on is too old for your Durty Cloth Tool. Update the add-on.",
-    "error.dct-too-old": "Your Durty Cloth Tool is too old for this add-on. Update Durty Cloth Tool.",
+    "error.dct-too-old": "This Durty Cloth Tool is older than this add-on. Update Durty Cloth Tool, then select Connect.",
     "error.not-authenticated": "Sign in first.",
     "error.authentication-failed": "Durty Cloth Tool did not accept the sign-in. Trying again…",
     "error.untrusted-endpoint": (
@@ -518,7 +569,7 @@ def set_translators(iface: Optional[Callable[[str], str]], tip: Optional[Callabl
 def _render(message: Text, translate: Callable[[str], str]) -> str:
     if isinstance(message, str):
         return message  # already a finished text (a name, a number, a detail from another program)
-    fields: Dict[str, Any] = {"apps": translate(EN["path.connected-apps"])}
+    fields: Dict[str, Any] = {"apps": translate(EN["path.connected-apps"]), "edit": translate(EN["path.edit-in-app"])}
     for name, value in message.fields.items():
         fields[name] = _render(value, translate) if isinstance(value, Msg) else value
     english_text = EN[message.key]

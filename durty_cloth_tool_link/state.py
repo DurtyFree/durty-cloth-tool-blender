@@ -4,9 +4,10 @@
 
 from __future__ import annotations
 
+import pathlib
 import time
 import traceback
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 import bpy
 
@@ -63,15 +64,58 @@ def scene_auto_push(scene: Optional[Any] = None) -> bool:
 
 
 def push_model(root: Any, automatic: bool = False) -> None:
-    """Exports ``root`` with Sollumz and pushes it. Raises ``ValueError`` with a message for the user."""
+    """Exports ``root`` with Sollumz and pushes it, bound to the cloth it is linked to (a model opened from Durty
+    Cloth Tool). Raises ``ValueError`` with a message for the user."""
     ctrl = get()
     watcher.exporting = True
     try:
-        ctrl.model.push(lambda folder: host.export_with_sollumz(root, folder), root.name, automatic=automatic)
+        ctrl.model.push(lambda folder: host.export_with_sollumz(root, folder), root.name, automatic=automatic,
+                        binding=host.stored_binding(root))
         watcher.watch(root)
     finally:
         watcher.exporting = False
         watcher.forget()  # the hierarchy may have changed; read it again at the next update
+
+
+def chosen_image(scene: Optional[Any] = None) -> Optional[Any]:
+    """The image chosen for the live preview in the current scene."""
+    scene = scene if scene is not None else current_scene()
+    props = getattr(scene, "dct_link", None) if scene is not None else None
+    return props.image if props is not None else None
+
+
+def linked_binding() -> Optional[Dict[str, str]]:
+    """The cloth the image chosen for the live preview is linked to, for the Linked Cloth panel."""
+    return host.stored_binding(chosen_image())
+
+
+class BlenderDocuments:
+    """Opens what Durty Cloth Tool sends: texture maps as images, models through Sollumz (``link.DocumentHost``)."""
+
+    def open_texture(self, document: link.TextureDocument) -> link.OpenedImage:
+        image = host.open_texture_image(document)
+        scene = current_scene()
+        if scene is not None:
+            scene.dct_link.image = image  # the image the live preview streams
+            scene.dct_link.target = document.target
+        source = host.BlenderImageSource(image, document.target)
+        return link.OpenedImage(source, source.width, source.height, source.conversion, image.name, source.warning,
+                                image)
+
+    def keep_texture(self, opened: link.OpenedImage) -> None:
+        host.keep_image(opened.handle)
+
+    def model_problem(self) -> Optional[Any]:
+        return host.model_open_problem()
+
+    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> link.ImportedModel:
+        root = host.import_with_sollumz(folder, model_file)
+        host.store_binding(root, binding)
+        window = host.window_for(root)
+        scene = window.scene if window is not None else current_scene()
+        if scene is not None:
+            scene.dct_link.auto_push = True  # each change is sent again, as for a model pushed by hand
+        return link.ImportedModel(root.name, lambda: push_model(root))
 
 
 def auto_push() -> None:

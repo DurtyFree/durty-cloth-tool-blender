@@ -4,6 +4,7 @@
 
 TEXT = {
     "path.connected-apps": "विकल्प > कनेक्टेड ऐप्स",
+    "path.edit-in-app": "कनेक्टेड ऐप में एडिट करें",
     "panel.main": "Durty Cloth Tool",
     "panel.details": "कनेक्शन",
     "panel.setup": "कनेक्ट करें",
@@ -56,6 +57,10 @@ TEXT = {
         "Creator Link आपके gta.clothing अकाउंट (Discord) का उपयोग करता है। इस कंप्यूटर पर आप एक बार साइन इन करते हैं।"
     ),
     "setup.sign-in.starting": "साइन इन शुरू हो रहा है…",
+    "setup.sign-in.finding": "साइन इन मंज़ूर करने के लिए Durty Cloth Tool ढूँढ रहे हैं…",
+    "setup.sign-in.how": (
+        "Durty Cloth Tool आपसे इसे मंज़ूर करने को कहता है। अगर वह नहीं चल रहा, तो आपको ब्राउज़र के लिए एक कोड मिलता है।"
+    ),
     "setup.sign-in.waiting": "मंज़ूरी का इंतज़ार…",
     "setup.sign-in.asked": "Durty Cloth Tool साइन इन अनुरोध दिखा रहा है। उसे वहीं मंज़ूर करें।",
     "setup.sign-in.approved": "Durty Cloth Tool ने साइन इन मंज़ूर कर दिया। पूरा हो रहा है…",
@@ -65,21 +70,44 @@ TEXT = {
     "linked.project": "प्रोजेक्ट: {name}",
     "linked.no-project": "Durty Cloth Tool में एक प्रोजेक्ट खोलें।",
     "linked.no-cloth": "यहाँ काम करने के लिए Durty Cloth Tool में एक कपड़ा चुनें।",
-    "linked.cloth": "{name} · वैरिएशन {letter}",
-    "linked.cloth-no-variation": "{name}",
-    "linked.texture": "{name} ({width} x {height})",
+    "linked.variation": "वैरिएशन {letter}",
+    "linked.number": "#{number}",
+    "linked.unknown": "लिंक किया गया कपड़ा",
+    "linked.unknown-subtext": "इसका नाम यहाँ देखने के लिए इसे एक बार Durty Cloth Tool में चुनें।",
     "linked.map": "मैप",
     "linked.follows": "Durty Cloth Tool में आपके चयन के साथ चलता है",
-    "linked.map-locked": "दूसरा मैप चुनने के लिए लाइव प्रीव्यू रोकें।",
+    "linked.image": "नीचे की इमेज से लिंक है",
+    "linked.open-map": "Blender में एक मैप खोलें",
     "linked.map-missing.diffuse": "इस कपड़े में डिफ्यूज़ मैप नहीं है।",
     "linked.map-missing.normal": "इस कपड़े में नॉर्मल मैप नहीं है।",
     "linked.map-missing.specular": "इस कपड़े में स्पेक्युलर मैप नहीं है।",
     "map.diffuse": "डिफ्यूज़ (रंग)",
+    "map.diffuse-short": "डिफ्यूज़",
     "map.diffuse.desc": "कपड़े का रंग वाला टेक्सचर",
     "map.normal": "नॉर्मल",
     "map.normal.desc": "कपड़े का नॉर्मल मैप",
     "map.specular": "स्पेक्युलर",
     "map.specular.desc": "कपड़े का स्पेक्युलर मैप",
+    "gender.male": "पुरुष",
+    "gender.female": "महिला",
+    "open.opened": "Durty Cloth Tool से खोला गया: {name}",
+    "open.texture-busy": (
+        "Durty Cloth Tool ने {name} भेजा, लेकिन एक लाइव प्रीव्यू चल रहा है या सेव हो रहा है। उसे रोकें, फिर मैप दोबारा "
+        "भेजें।"
+    ),
+    "open.texture-failed": "{name} नहीं खुल सका: {detail}",
+    "open.stop-live-first": "पहले लाइव प्रीव्यू रोकें।",
+    "open.reading": "Durty Cloth Tool से मैप पढ़ा जा रहा है…",
+    "open.map-upsell": "यहाँ किसी कपड़े के मैप खोलना Durty Cloth Tool Ultimate में शामिल है।",
+    "open.model-importing": "Sollumz से {name} इम्पोर्ट हो रहा है…",
+    "open.model-needs-sollumz": "Durty Cloth Tool ने मॉडल {name} भेजा। {problem}",
+    "open.model-busy": (
+        "Durty Cloth Tool ने मॉडल {name} भेजा, लेकिन दूसरा मॉडल अभी भेजा या सेव किया जा रहा है। थोड़ी देर में इसे "
+        "दोबारा भेजें।"
+    ),
+    "open.model-failed": "मॉडल {name} नहीं खुल सका: {detail}",
+    "open.import-failed": "Sollumz मॉडल इम्पोर्ट नहीं कर सका ({detail})। उसके Info लॉग में विवरण है।",
+    "open.no-dictionary": "Sollumz ने कोई Drawable Dictionary इम्पोर्ट नहीं किया। उसके Info लॉग में विवरण है।",
     "live.off": "ped पर अपनी पेंटिंग देखने के लिए लाइव प्रीव्यू शुरू करें।",
     "live.reading": "इमेज पढ़ी जा रही है…",
     "live.starting": "लाइव प्रीव्यू शुरू हो रहा है…",
@@ -90,6 +118,8 @@ TEXT = {
     "live.paused": "रुका हुआ। फिर से शुरू करने पर आपके बदलाव भेजे जाएँगे।",
     "live.saving": "सेव हो रहा है…",
     "live.unsaved": "अभी प्रोजेक्ट में सेव नहीं हुआ",
+    "live.linked": "{name} · {map} से लिंक है",
+    "live.map": "मैप: {map}",
     "live.save-subtext": (
         "सेव करने से यह मैप आपके प्रोजेक्ट में लिखा जाता है। आप इसे Durty Cloth Tool में कपड़े के इतिहास में पूर्ववत कर "
         "सकते हैं।"
@@ -196,7 +226,7 @@ TEXT = {
     "model.not-exported": "Sollumz ने मॉडल एक्सपोर्ट नहीं किया। उसके Info लॉग में विवरण है।",
     "sollumz.ready": "Sollumz {version}",
     "sollumz.ready-unknown": "Sollumz",
-    "sollumz.missing": "मॉडल भेजने के लिए Sollumz {version} या नया इंस्टॉल और चालू करें।",
+    "sollumz.missing": "मॉडल खोलने और भेजने के लिए Sollumz {version} या नया इंस्टॉल और चालू करें।",
     "sollumz.too-old": (
         "यह Sollumz Durty Cloth Tool के लिए एक्सपोर्ट करने को बहुत पुराना है। Sollumz {version} या नए पर अपडेट करें।"
     ),
@@ -221,7 +251,6 @@ TEXT = {
     "settings.account": "अकाउंट",
     "settings.updates": "अपडेट",
     "settings.privacy": "गोपनीयता",
-    "settings.about": "जानकारी",
     "settings.models": "मॉडल",
     "settings.connect-subtext": (
         "इस कंप्यूटर पर Durty Cloth Tool ज़रूरी है। कनेक्शन इसी कंप्यूटर पर रहता है; gta.clothing हर कनेक्शन के लिए "
@@ -273,7 +302,18 @@ TEXT = {
     ),
     "info.model": (
         "मॉडल भेजें चुना गया Sollumz Drawable Dictionary उसके टेक्सचर के साथ CodeWalker XML (YDD) के रूप में एक्सपोर्ट "
-        "करता है और लिंक किए गए कपड़े पर दिखाता है। जब तक आप मॉडल को कपड़े में सेव करें न चुनें, कुछ सेव नहीं होता।"
+        "करता है और लिंक किए गए कपड़े पर दिखाता है। Durty Cloth Tool से भेजा गया मॉडल इम्पोर्ट होता है, अपने कपड़े से "
+        "लिंक होता है और हर बदलाव के बाद फिर से भेजा जाता है। जब तक आप मॉडल को कपड़े में सेव करें न चुनें, कुछ सेव "
+        "नहीं होता।"
+    ),
+    "info.open-map": (
+        "कपड़े का यह मैप आपके प्रोजेक्ट से Blender में एक इमेज के रूप में खोलता है, कपड़े से लिंक करता है, और उसका "
+        "लाइव प्रीव्यू शुरू करता है। Durty Cloth Tool भी मैप भेज सकता है: कपड़े के मेनू में {edit}।"
+    ),
+    "info.linked": (
+        "Durty Cloth Tool से खोली गई इमेज अपना कपड़ा और मैप याद रखती है, सेव की गई .blend फ़ाइल में भी, ताकि उसका लाइव "
+        "प्रीव्यू हमेशा उसी कपड़े पर जाए। Durty Cloth Tool में चुने गए कपड़े के लिए इस्तेमाल करने के लिए लाइव प्रीव्यू "
+        "में इसका लिंक हटाएँ।"
     ),
     "info.checks": (
         "Durty Cloth Tool अपनी त्रुटि सूची की तरह इमेज को GTA V और कपड़े की ज़रूरतों के अनुसार जाँचता है। सेव करने से पहले "
@@ -288,10 +328,13 @@ TEXT = {
     "op.connect.desc": "इस कंप्यूटर पर Durty Cloth Tool से कनेक्ट करें",
     "op.disconnect": "डिस्कनेक्ट करें",
     "op.disconnect.desc": "Durty Cloth Tool से डिस्कनेक्ट करें। चल रहा लाइव प्रीव्यू रुक जाएगा",
-    "op.sign-in-dct": "Durty Cloth Tool में मंज़ूर करें",
-    "op.sign-in-dct.desc": "Durty Cloth Tool से उसके अकाउंट के साथ साइन इन मंज़ूर करने को कहें",
-    "op.sign-in": "ब्राउज़र में साइन इन करें",
-    "op.sign-in.desc": "अपने gta.clothing अकाउंट (Discord) से ब्राउज़र में साइन इन करें",
+    "op.sign-in": "साइन इन करें",
+    "op.sign-in.desc": (
+        "अपने gta.clothing अकाउंट (Discord) से साइन इन करें। Durty Cloth Tool आपसे इसे मंज़ूर करने को कहता है; अगर वह "
+        "नहीं चल रहा, तो आपको ब्राउज़र के लिए एक कोड मिलता है"
+    ),
+    "op.sign-in-browser": "ब्राउज़र में साइन इन करें",
+    "op.sign-in-browser.desc": "अपने gta.clothing अकाउंट (Discord) से ब्राउज़र में gta.clothing पेज पर साइन इन करें",
     "op.open-sign-in": "साइन इन पेज खोलें",
     "op.open-sign-in.desc": "वह gta.clothing पेज खोलें जो यह साइन इन मंज़ूर करता है",
     "op.copy-code": "कोड कॉपी करें",
@@ -302,6 +345,12 @@ TEXT = {
     "op.sign-out.desc": "इस ऐड-ऑन में gta.clothing से साइन आउट करें और डिस्कनेक्ट करें",
     "op.update-page": "अपडेट पाएँ",
     "op.update-page.desc": "Durty Cloth Tool और उसके प्लगइन के मौजूदा संस्करणों वाला पेज खोलें",
+    "op.open-map": "मैप खोलें",
+    "op.open-map.desc": (
+        "कपड़े का यह मैप आपके प्रोजेक्ट से कपड़े से लिंक की गई इमेज के रूप में खोलें और उसका लाइव प्रीव्यू शुरू करें"
+    ),
+    "op.unlink": "लिंक हटाएँ",
+    "op.unlink.desc": "इस इमेज को इसके कपड़े से लिंक करना बंद करें, ताकि यह Durty Cloth Tool में आपके चयन के साथ चले",
     "op.use-paint-image": "पेंट की जा रही इमेज इस्तेमाल करें",
     "op.use-paint-image.desc": "वह इमेज इस्तेमाल करें जिस पर आप पेंट कर रहे हैं, या Image Editor वाली",
     "op.live-start": "लाइव प्रीव्यू शुरू करें",
@@ -341,6 +390,9 @@ TEXT = {
     "op.community": "Pleb Masters Community Discord",
     "op.community.desc": "Pleb Masters Community Discord सर्वर खोलें, जहाँ आप मदद माँग सकते हैं",
     "op.info": "अधिक जानकारी",
+    "op.about": "जानकारी",
+    "op.about.desc": "ऐड-ऑन का वर्ज़न, उसका लाइसेंस, और वह क्या कहाँ भेजता है",
+    "about.title": "Durty Cloth Tool Link {version} ({channel})",
     "op.join-discord": "Discord सर्वर से जुड़ें",
     "op.join-discord.desc": "ब्राउज़र में Pleb Masters Community Discord सर्वर का आमंत्रण खोलें",
     "prop.image": "इमेज",
@@ -392,7 +444,9 @@ TEXT = {
     "error.message-too-large": "इमेज या मॉडल भेजने के लिए बहुत बड़ा था।",
     "error.unsupported-protocol": "यह ऐड-ऑन और Durty Cloth Tool अलग लिंक संस्करण इस्तेमाल करते हैं। दोनों अपडेट करें।",
     "error.plugin-too-old": "यह ऐड-ऑन आपके Durty Cloth Tool के लिए बहुत पुराना है। ऐड-ऑन अपडेट करें।",
-    "error.dct-too-old": "आपका Durty Cloth Tool इस ऐड-ऑन के लिए बहुत पुराना है। Durty Cloth Tool अपडेट करें।",
+    "error.dct-too-old": (
+        "यह Durty Cloth Tool इस ऐड-ऑन से पुराना है। Durty Cloth Tool अपडेट करें, फिर कनेक्ट करें चुनें।"
+    ),
     "error.not-authenticated": "पहले साइन इन करें।",
     "error.authentication-failed": "Durty Cloth Tool ने साइन इन स्वीकार नहीं किया। फिर कोशिश हो रही है…",
     "error.untrusted-endpoint": (

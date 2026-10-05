@@ -4,6 +4,7 @@
 
 TEXT = {
     "path.connected-apps": "خيارات > التطبيقات المتصلة",
+    "path.edit-in-app": "تعديل في التطبيق المتصل",
     "panel.main": "Durty Cloth Tool",
     "panel.details": "الاتصال",
     "panel.setup": "بدء الاتصال",
@@ -54,6 +55,8 @@ TEXT = {
         "يستخدم Creator Link حسابك على gta.clothing (Discord). تسجّل الدخول مرة واحدة على هذا الحاسوب."
     ),
     "setup.sign-in.starting": "جارٍ بدء تسجيل الدخول…",
+    "setup.sign-in.finding": "جارٍ البحث عن Durty Cloth Tool للموافقة على تسجيل الدخول…",
+    "setup.sign-in.how": "يطلب منك Durty Cloth Tool الموافقة. إذا لم يكن قيد التشغيل، تحصل على رمز لمتصفحك.",
     "setup.sign-in.waiting": "بانتظار الموافقة…",
     "setup.sign-in.asked": "يعرض Durty Cloth Tool طلب تسجيل دخول. وافق عليه هناك.",
     "setup.sign-in.approved": "وافق Durty Cloth Tool على تسجيل الدخول. جارٍ الإنهاء…",
@@ -63,21 +66,42 @@ TEXT = {
     "linked.project": "المشروع: {name}",
     "linked.no-project": "افتح مشروعًا في Durty Cloth Tool.",
     "linked.no-cloth": "حدد قطعة ملابس في Durty Cloth Tool للعمل عليها هنا.",
-    "linked.cloth": "{name} · التنويعة {letter}",
-    "linked.cloth-no-variation": "{name}",
-    "linked.texture": "{name} ({width} x {height})",
+    "linked.variation": "التنويعة {letter}",
+    "linked.number": "رقم {number}",
+    "linked.unknown": "الملابس المرتبطة",
+    "linked.unknown-subtext": "حددها مرة واحدة في Durty Cloth Tool لترى اسمها هنا.",
     "linked.map": "الخريطة",
     "linked.follows": "يتبع تحديدك في Durty Cloth Tool",
-    "linked.map-locked": "أوقف المعاينة المباشرة لاختيار خريطة أخرى.",
+    "linked.image": "مرتبطة بالصورة أدناه",
+    "linked.open-map": "فتح خريطة في Blender",
     "linked.map-missing.diffuse": "لا تحتوي قطعة الملابس هذه على خريطة منتشرة.",
     "linked.map-missing.normal": "لا تحتوي قطعة الملابس هذه على خريطة الاتجاهات.",
     "linked.map-missing.specular": "لا تحتوي قطعة الملابس هذه على خريطة اللمعان.",
     "map.diffuse": "منتشرة (لون)",
+    "map.diffuse-short": "منتشرة",
     "map.diffuse.desc": "نسيج اللون لقطعة الملابس",
     "map.normal": "الاتجاهات",
     "map.normal.desc": "خريطة الاتجاهات لقطعة الملابس",
     "map.specular": "اللمعان",
     "map.specular.desc": "خريطة اللمعان لقطعة الملابس",
+    "gender.male": "ذكر",
+    "gender.female": "أنثى",
+    "open.opened": "فُتح من Durty Cloth Tool: {name}",
+    "open.texture-busy": (
+        "أرسل Durty Cloth Tool {name}، لكن معاينة مباشرة قيد التشغيل أو الحفظ. أوقفها، ثم أرسل الخريطة مرة أخرى."
+    ),
+    "open.texture-failed": "تعذّر فتح {name}: {detail}",
+    "open.stop-live-first": "أوقف المعاينة المباشرة أولًا.",
+    "open.reading": "جارٍ قراءة الخريطة من Durty Cloth Tool…",
+    "open.map-upsell": "فتح خرائط قطعة الملابس هنا مضمّن في Durty Cloth Tool Ultimate.",
+    "open.model-importing": "جارٍ استيراد {name} باستخدام Sollumz…",
+    "open.model-needs-sollumz": "أرسل Durty Cloth Tool النموذج {name}. {problem}",
+    "open.model-busy": (
+        "أرسل Durty Cloth Tool النموذج {name}، لكن نموذجًا آخر ما زال قيد الإرسال أو الحفظ. أرسله مرة أخرى بعد لحظة."
+    ),
+    "open.model-failed": "تعذّر فتح النموذج {name}: {detail}",
+    "open.import-failed": "تعذّر على Sollumz استيراد النموذج ({detail}). التفاصيل في سجل Info الخاص به.",
+    "open.no-dictionary": "لم يستورد Sollumz أي Drawable Dictionary. التفاصيل في سجل Info الخاص به.",
     "live.off": "ابدأ المعاينة المباشرة لترى رسمك على الـ ped.",
     "live.reading": "جارٍ قراءة الصورة…",
     "live.starting": "جارٍ بدء المعاينة المباشرة…",
@@ -88,6 +112,8 @@ TEXT = {
     "live.paused": "متوقف مؤقتًا. تُرسل تغييراتك عند الاستئناف.",
     "live.saving": "جارٍ الحفظ…",
     "live.unsaved": "لم يُحفظ في المشروع بعد",
+    "live.linked": "مرتبطة بـ {name} · {map}",
+    "live.map": "الخريطة: {map}",
     "live.save-subtext": (
         "يكتب الحفظ هذه الخريطة في مشروعك. يمكنك التراجع عنه في سجل قطعة الملابس في Durty Cloth Tool."
     ),
@@ -187,7 +213,7 @@ TEXT = {
     "model.not-exported": "لم يصدّر Sollumz النموذج. التفاصيل في سجل Info الخاص به.",
     "sollumz.ready": "Sollumz {version}",
     "sollumz.ready-unknown": "Sollumz",
-    "sollumz.missing": "ثبّت Sollumz {version} أو أحدث وفعّله لإرسال النماذج.",
+    "sollumz.missing": "ثبّت Sollumz {version} أو أحدث وفعّله لفتح النماذج وإرسالها.",
     "sollumz.too-old": "إصدار Sollumz هذا قديم جدًا للتصدير إلى Durty Cloth Tool. حدّث إلى Sollumz {version} أو أحدث.",
     "sollumz.tested": "تم اختباره مع Sollumz {version}.",
     "bundle.unreadable": "تعذرت قراءة مجلد التصدير ({detail}).",
@@ -210,7 +236,6 @@ TEXT = {
     "settings.account": "الحساب",
     "settings.updates": "التحديثات",
     "settings.privacy": "الخصوصية",
-    "settings.about": "حول",
     "settings.models": "النماذج",
     "settings.connect-subtext": (
         "يحتاج إلى Durty Cloth Tool على هذا الحاسوب. يبقى الاتصال على هذا الحاسوب؛ يؤكد gta.clothing تسجيل دخولك لكل "
@@ -259,7 +284,17 @@ TEXT = {
     ),
     "info.model": (
         "يصدّر إرسال النموذج الـ Drawable Dictionary المحدد من Sollumz بصيغة CodeWalker XML (YDD) مع أنسجته ويعرضه على "
-        "قطعة الملابس المرتبطة. لا يُحفظ شيء حتى تختار حفظ النموذج في قطعة الملابس."
+        "قطعة الملابس المرتبطة. يُستورد النموذج المرسل من Durty Cloth Tool ويُربط بقطعة ملابسه ويُرسل مجددًا بعد كل "
+        "تغيير. لا يُحفظ شيء حتى تختار حفظ النموذج في قطعة الملابس."
+    ),
+    "info.open-map": (
+        "يفتح خريطة قطعة الملابس هذه من مشروعك كصورة في Blender، مرتبطة بقطعة الملابس، ويبدأ معاينتها المباشرة. يمكن "
+        "لـ Durty Cloth Tool إرسال خريطة أيضًا: {edit} في قائمة قطعة الملابس."
+    ),
+    "info.linked": (
+        "تتذكر الصورة المفتوحة من Durty Cloth Tool قطعة ملابسها وخريطتها، حتى في ملف .blend المحفوظ، لذا تذهب معاينتها "
+        "المباشرة دائمًا إلى تلك القطعة. ألغِ ربطها في المعاينة المباشرة لاستخدامها مع قطعة الملابس المحددة في Durty "
+        "Cloth Tool."
     ),
     "info.checks": (
         "يفحص Durty Cloth Tool الصورة وفق ما تحتاجه GTA V وقطعة الملابس، كما تفعل قائمة الأخطاء فيه. أصلح الأخطاء قبل "
@@ -274,10 +309,13 @@ TEXT = {
     "op.connect.desc": "الاتصال بـ Durty Cloth Tool على هذا الحاسوب",
     "op.disconnect": "قطع الاتصال",
     "op.disconnect.desc": "قطع الاتصال بـ Durty Cloth Tool. تتوقف المعاينة المباشرة الجارية",
-    "op.sign-in-dct": "الموافقة في Durty Cloth Tool",
-    "op.sign-in-dct.desc": "طلب موافقة Durty Cloth Tool على تسجيل الدخول بالحساب الذي يستخدمه",
-    "op.sign-in": "تسجيل الدخول في المتصفح",
-    "op.sign-in.desc": "تسجيل الدخول بحسابك على gta.clothing (Discord) في متصفحك",
+    "op.sign-in": "تسجيل الدخول",
+    "op.sign-in.desc": (
+        "تسجيل الدخول بحسابك على gta.clothing (Discord). يطلب منك Durty Cloth Tool الموافقة؛ إذا لم يكن قيد التشغيل، "
+        "تحصل على رمز لمتصفحك"
+    ),
+    "op.sign-in-browser": "تسجيل الدخول في المتصفح",
+    "op.sign-in-browser.desc": "تسجيل الدخول بحسابك على gta.clothing (Discord) في صفحة gta.clothing في متصفحك",
     "op.open-sign-in": "فتح صفحة تسجيل الدخول",
     "op.open-sign-in.desc": "فتح صفحة gta.clothing التي توافق على تسجيل الدخول هذا",
     "op.copy-code": "نسخ الرمز",
@@ -288,6 +326,10 @@ TEXT = {
     "op.sign-out.desc": "تسجيل الخروج من gta.clothing في هذه الإضافة وقطع الاتصال",
     "op.update-page": "الحصول على التحديث",
     "op.update-page.desc": "فتح صفحة الإصدارات الحالية من Durty Cloth Tool وإضافاته",
+    "op.open-map": "فتح الخريطة",
+    "op.open-map.desc": "فتح خريطة قطعة الملابس هذه من مشروعك كصورة مرتبطة بقطعة الملابس وبدء معاينتها المباشرة",
+    "op.unlink": "إلغاء الربط",
+    "op.unlink.desc": "التوقف عن ربط هذه الصورة بقطعة ملابسها، لتتبع تحديدك في Durty Cloth Tool",
     "op.use-paint-image": "استخدام الصورة المرسومة",
     "op.use-paint-image.desc": "استخدام الصورة التي ترسم عليها، أو الصورة في Image Editor",
     "op.live-start": "بدء المعاينة المباشرة",
@@ -323,6 +365,9 @@ TEXT = {
     "op.community": "Pleb Masters Community Discord",
     "op.community.desc": "فتح خادم Pleb Masters Community Discord، حيث يمكنك طلب المساعدة",
     "op.info": "مزيد من المعلومات",
+    "op.about": "حول",
+    "op.about.desc": "إصدار الإضافة وترخيصها، وما ترسله وإلى أين",
+    "about.title": "Durty Cloth Tool Link {version} ({channel})",
     "op.join-discord": "الانضمام إلى خادم Discord",
     "op.join-discord.desc": "فتح دعوة خادم Pleb Masters Community Discord في متصفحك",
     "prop.image": "الصورة",
@@ -371,7 +416,7 @@ TEXT = {
     "error.message-too-large": "الصورة أو النموذج أكبر من أن يُرسل.",
     "error.unsupported-protocol": "تستخدم هذه الإضافة وDurty Cloth Tool إصدارات ربط مختلفة. حدّث كليهما.",
     "error.plugin-too-old": "هذه الإضافة قديمة جدًا بالنسبة إلى Durty Cloth Tool لديك. حدّث الإضافة.",
-    "error.dct-too-old": "Durty Cloth Tool لديك قديم جدًا بالنسبة إلى هذه الإضافة. حدّث Durty Cloth Tool.",
+    "error.dct-too-old": "Durty Cloth Tool هذا أقدم من هذه الإضافة. حدّث Durty Cloth Tool، ثم اختر اتصال.",
     "error.not-authenticated": "سجّل الدخول أولًا.",
     "error.authentication-failed": "لم يقبل Durty Cloth Tool تسجيل الدخول. جارٍ المحاولة مرة أخرى…",
     "error.untrusted-endpoint": (

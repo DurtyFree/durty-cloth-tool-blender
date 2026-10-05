@@ -14,8 +14,9 @@ It installs the built extension into a temporary local repository, enables it, a
 operators against a fake Durty Cloth Tool and a fake gta.clothing on 127.0.0.1: sign-in approved in DCT, texture
 streaming (checking the vertical flip and dirty rectangles), saving and discarding, a model push
 through Sollumz's export operator (a stand-in by default, the real Sollumz with ``--sollumz``), an automatic
-push after a mesh change, a skinned model whose export switches the armature to its rest pose and back, the
-update repository, sign-out and disabling the add-on. Blender's timers do not run in background mode, so the
+push after a mesh change, a skinned model whose export switches the armature to its rest pose and back, a texture
+and a model Durty Cloth Tool sends (the model imported with Sollumz's import operator, with the real Sollumz a round
+trip of its own export), the update repository, sign-out and disabling the add-on. Blender's timers do not run in background mode, so the
 script calls the add-on's timer function itself, and evaluates the view layer where Blender's main loop would.
 """
 
@@ -32,9 +33,12 @@ import time
 import traceback
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, StringProperty  # module level: annotations are strings
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT))
+from tests.blender import sollumz_stub  # noqa: E402 - needs the repository on the path
+from tests.blender.sollumz_stub import STUB  # noqa: E402
+
 RESULTS = []
 
 
@@ -95,78 +99,6 @@ def pump(addon, until, timeout=20.0, what="condition"):
 
 
 # ---- Sollumz ------------------------------------------------------------------------------------------
-
-STUB = {"mode": "ydd", "calls": []}
-
-
-def register_sollumz_stub():
-    """A stand-in for Sollumz's export operator with the properties of Sollumz 2.8.1 and later."""
-
-    class SOLLUMZ_OT_export_assets(bpy.types.Operator):
-        bl_idname = "sollumz.export_assets"
-        bl_label = "Export (smoke stand-in)"
-        directory: StringProperty(subtype="DIR_PATH")
-        direct_export: BoolProperty()
-        use_custom_settings: BoolProperty()
-        target_formats: EnumProperty(items=(("NATIVE", "Native", ""), ("CWXML", "CW XML", "")), options={"ENUM_FLAG"},
-                                     default={"NATIVE", "CWXML"})
-        target_versions: EnumProperty(items=(("GEN8", "Gen8", ""), ("GEN9", "Gen9", "")), options={"ENUM_FLAG"},
-                                      default={"GEN8", "GEN9"})
-        limit_to_selected: BoolProperty(default=False)
-        exclude_skeleton: BoolProperty()
-
-        def execute(self, context):
-            selected = [o for o in context.view_layer.objects if o.select_get()]
-            call = {
-                "directory": self.directory, "custom": self.use_custom_settings,
-                "formats": sorted(self.target_formats), "versions": sorted(self.target_versions),
-                "limit": self.limit_to_selected, "selected": [o.name for o in selected], "poses": [],
-            }
-            STUB["calls"].append(call)
-            folder = pathlib.Path(self.directory)
-            top = selected[0]
-            while top.parent is not None:
-                top = top.parent
-            # Like Sollumz: every armature of the model is exported in its rest pose, then switched back.
-            for armature in [o for o in [top, *top.children_recursive] if o.type == "ARMATURE"]:
-                previous = armature.data.pose_position
-                armature.data.pose_position = "REST"
-                context.evaluated_depsgraph_get()
-                call["poses"].append(armature.data.pose_position)
-                armature.data.pose_position = previous
-                call["poses"].append(armature.data.pose_position)
-            name = top.name.lower()
-            if STUB["mode"] == "ydr":
-                (folder / f"{name}.ydr.xml").write_text("<Drawable />")
-                return {"FINISHED"}
-            (folder / f"{name}.ydd.xml").write_text(f"<DrawableDictionary revision='{len(STUB['calls'])}' />")
-            (folder / name).mkdir(exist_ok=True)
-            (folder / name / "smoke_diff_000_a_uni.dds").write_bytes(b"DDS " + bytes(124))
-            return {"FINISHED"}
-
-    bpy.utils.register_class(SOLLUMZ_OT_export_assets)
-    bpy.types.Object.sollum_type = EnumProperty(items=(
-        ("sollumz_none", "None", ""), ("sollumz_drawable_dictionary", "Drawable Dictionary", ""),
-        ("sollumz_drawable", "Drawable", ""), ("sollumz_drawable_model", "Drawable Model", ""),
-    ), default="sollumz_none")
-
-
-def stub_scene():
-    scene = bpy.context.scene
-    root = bpy.data.objects.new("smoke_ydd", None)
-    root.sollum_type = "sollumz_drawable_dictionary"
-    drawable = bpy.data.objects.new("smoke_drawable", None)
-    drawable.sollum_type = "sollumz_drawable"
-    drawable.parent = root
-    mesh = bpy.data.meshes.new("smoke_mesh")
-    mesh.from_pydata([(0, 0, 0), (1, 0, 0), (0, 1, 0)], [], [(0, 1, 2)])
-    part = bpy.data.objects.new("smoke_part", mesh)
-    part.sollum_type = "sollumz_drawable_model"
-    part.parent = drawable
-    for obj in (root, drawable, part):
-        scene.collection.objects.link(obj)
-    return root, part
-
 
 def install_real_sollumz(repo, repo_dir, source, site):
     target = pathlib.Path(repo_dir) / "sollumz"
@@ -297,6 +229,19 @@ class FakeLayout:
     def separator(self, **_kw):
         pass
 
+    def template_icon(self, icon_value=0, scale=1.0, **_kw):
+        if not isinstance(icon_value, int) or icon_value <= 0:
+            raise AssertionError(f"template_icon needs an icon id, got {icon_value!r}")
+        self.log.append(("template_icon", scale))
+
+    def menu(self, menu, text="", icon="NONE", **_kw):
+        self._icon(icon)
+        cls = getattr(bpy.types, menu, None)
+        if cls is None:
+            raise AssertionError(f"unknown menu {menu}")
+        cls.draw(type("M", (), {"layout": FakeLayout(self.log)})(), bpy.context)  # its items are checked too
+        self.log.append(("menu", menu))
+
     def panel(self, idname, default_closed=False, **_kw):
         if not isinstance(idname, str) or not idname:
             raise AssertionError("a layout panel needs an id")
@@ -332,6 +277,8 @@ class FakeLayout:
         self.log.append(("progress", text))
 
     def operator(self, idname, text=None, icon="NONE", **_kw):
+        if text is not None and not isinstance(text, str):
+            raise AssertionError(f"{idname}: text must be a string")
         self._icon(icon)
         module, name = idname.split(".")
         rna = getattr(getattr(bpy.ops, module), name).get_rna_type()  # KeyError for an unknown operator
@@ -390,7 +337,6 @@ def run(args):
     check("the link timer is registered", bpy.app.timers.is_registered(addon.tick))
     ctrl = state.get()
 
-    sys.path.insert(0, str(REPO_ROOT))
     from tests.support.fake_dct import FakeDct
     from tests.support.fake_link_api import FakeLinkApi
 
@@ -418,6 +364,134 @@ def stream_image(addon, ctrl, dct, image, target="diffuse"):
     pump(addon, lambda: len(dct.frames) > frames and ctrl.stream.live_state == "attached", what="the first frame")
     frame = dct.frames[frames]
     return frame, dct.connections_ready[-1].leases[frame[0]]
+
+
+def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
+    """Edit in connected app: textures and models Durty Cloth Tool sends, through the add-on's Blender side."""
+    import numpy as np
+    from tests.support.fake_dct import BINDING
+
+    host = sys.modules[package + ".host"]
+    link = sys.modules[package + ".link"]
+    images_before = len(bpy.data.images)
+    rgba = rng.integers(0, 256, size=(32, 64, 4), dtype=np.uint8)
+    request_id = dct.open_texture(rgba.tobytes(), 64, 32, target="normal", name="jbib_normal_003")
+    pump(addon, lambda: dct.host_result(request_id) is not None and ctrl.stream.live_state == "attached",
+         what="the texture opened from DCT")
+    check("DCT hears ok for the texture it sent", dct.host_result(request_id)["ok"] is True, dct.host_result(request_id))
+    opened = scene.dct_link.image
+    check("the texture became an image named after the cloth, variation and map, linked to it",
+          opened is not None and opened.name == "jbib_003_u A Normal" and host.stored_map(opened) == "normal"
+          and link.same_binding(host.stored_binding(opened), BINDING), opened and dict(opened.items()))
+    check("a normal map opens as Non-Color", opened.colorspace_settings.is_data)
+    live_open = [m for m in dct.received if m.get("type") == "live.open"][-1]
+    lease = list(dct.connections_ready[-1].leases.values())[-1]
+    check("the live preview is bound to the cloth DCT sent and shows its pixels unchanged",
+          live_open["binding"] == BINDING and live_open["target"] == "normal"
+          and bytes(lease["canvas"]) == rgba.tobytes())
+    pump(addon, lambda: opened.packed_file is not None, what="the opened image to be kept with the file")
+    log = draw_everything(package, state, "opened texture")
+    check("the linked image offers Unlink", ("operator", "dct_link.unlink_image") in log)
+    check("Stop Live Preview runs (opened texture)", "FINISHED" in bpy.ops.dct_link.live_stop())
+    pump(addon, lambda: not dct.connections_ready[-1].leases, what="the opened live texture to close")
+
+    # Start Live Preview sends the image's stored binding, whatever DCT has selected now.
+    dct.broadcast({"type": "event.selection", "id": "smoke-sel", "focused": None})
+    pump(addon, lambda: ctrl.focused is None, what="the empty selection")
+    frames = len(dct.frames)
+    check("Start Live Preview runs for the linked image without a selection", "FINISHED" in bpy.ops.dct_link.live_start())
+    pump(addon, lambda: len(dct.frames) > frames, what="the linked image's frame")
+    live_open = [m for m in dct.received if m.get("type") == "live.open"][-1]
+    check("a linked image always goes to its own cloth and map",
+          live_open["binding"] == BINDING and live_open["target"] == "normal", live_open)
+    bpy.ops.dct_link.live_stop()
+    pump(addon, lambda: not dct.connections_ready[-1].leases, what="the linked live texture to close")
+    dct.broadcast({"type": "event.selection", "id": "smoke-sel2", "focused": {
+        "clothId": BINDING["clothId"], "name": "jbib_003_u", "selectedTextureId": BINDING["textureId"],
+        "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni"}],
+        "targets": ["diffuse", "normal", "specular"]}})
+    pump(addon, lambda: ctrl.focused is not None, what="the selection")
+
+    # The same map again reuses the image (nothing unsaved in it); a busy live preview refuses the next one.
+    request_id = dct.open_texture(rgba[::-1].copy().tobytes(), 64, 32, target="normal", name="jbib_normal_003")
+    pump(addon, lambda: dct.host_result(request_id) is not None and ctrl.stream.live_state == "attached",
+         what="the texture opened again")
+    check("opening the same map again reuses its image", len(bpy.data.images) == images_before + 1
+          and scene.dct_link.image == opened)
+    busy = dct.open_texture(rgba.tobytes(), 64, 32, target="diffuse")
+    pump(addon, lambda: dct.host_result(busy) is not None, what="the busy answer")
+    check("a texture sent during a live preview is refused as busy", dct.host_result(busy).get("code") == "busy")
+    bpy.ops.dct_link.live_stop()
+    pump(addon, lambda: not dct.connections_ready[-1].leases, what="the live texture to close")
+    check("Unlink runs", "FINISHED" in bpy.ops.dct_link.unlink_image() and host.stored_binding(opened) is None)
+
+    # A model: without a usable Sollumz DCT hears dependency-missing.
+    if not args.sollumz:
+        bpy.utils.unregister_class(sollumz_stub.SOLLUMZ_OT_import_assets)
+        request_id = dct.open_model([("smoke_open.ydd.xml", b"<DrawableDictionary />")])
+        pump(addon, lambda: dct.host_result(request_id) is not None, what="the refusal without Sollumz")
+        check("a model without Sollumz's import is refused as dependency-missing",
+              dct.host_result(request_id).get("code") == "dependency-missing"
+              and ctrl.model.open_notice.message.key == "open.model-needs-sollumz", ctrl.model.open_notice)
+        bpy.utils.register_class(sollumz_stub.SOLLUMZ_OT_import_assets)
+        files = [("smoke_open.ydd.xml", b"<DrawableDictionary />"), ("smoke_diff_000_a_uni.dds", b"DDS " + bytes(124))]
+    else:
+        # What the real Sollumz exported earlier, sent back as the model to open (the full round trip), with its
+        # diffuse sampler naming a texture that comes as a DDS file in the folder named after the model.
+        exported = dict(dct.pushes[0][1])
+        model = next(name for name in exported if name.endswith(".ydd.xml"))
+        xml = exported[model].replace(b'<Item name="DiffuseSampler" type="Texture" />',
+                                      b'<Item name="DiffuseSampler" type="Texture"><Name>smoke_open_diff</Name></Item>')
+        check("the exported model has a diffuse sampler to name a texture in", xml != exported[model])
+        files = [("smoke_open.ydd.xml", xml), ("smoke_open_diff.dds", rgba_dds(4, 4))]
+        files += [(n, d) for n, d in sorted(exported.items()) if n != model]
+    pushes = len(dct.pushes)
+    objects_before = {obj.session_uid for obj in bpy.data.objects}
+    request_id = dct.open_model(files)
+    pump(addon, lambda: dct.host_result(request_id) is not None, what="the answer to the model")
+    check("DCT hears ok for the model it sent", dct.host_result(request_id)["ok"] is True, dct.host_result(request_id))
+    pump(addon, lambda: len(dct.pushes) > pushes and ctrl.model.lease is not None and not ctrl.model.pushing,
+         timeout=60, what="the push of the opened model")
+    roots = [obj for obj in bpy.data.objects if obj.session_uid not in objects_before and obj.parent is None
+             and getattr(obj, "sollum_type", "") == "sollumz_drawable_dictionary"]
+    check("Sollumz imported the model as a Drawable Dictionary linked to its cloth",
+          len(roots) == 1 and link.same_binding(host.stored_binding(roots[0]), BINDING), [o.name for o in roots])
+    root = roots[0]
+    check("the opened model is selected and pushed automatically",
+          root.select_get() and bpy.context.view_layer.objects.active == root and scene.dct_link.auto_push)
+    header = dct.pushes[pushes][0]
+    check("the first push of the opened model names its cloth", header.get("binding") == BINDING
+          and "lease" not in header, header)
+    folder = pathlib.Path(ctrl.data_dir) / link.MODELS_FOLDER / "smoke_open"
+    if not args.sollumz:
+        imported = sollumz_stub.STUB["imports"][-1]
+        check("the files were written where Sollumz reads them, and its textures are packed",
+              imported["found"] == ["smoke_open.ydd.xml", "smoke_open/smoke_diff_000_a_uni.dds"]
+              and imported["textures_mode"] == "PACK" and imported["custom"], imported)
+    check("the opened model's files exist while it is on the ped", folder.is_dir())
+    log = draw_everything(package, state, "opened model")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the opened model says where it came from", "Opened from Durty Cloth Tool: smoke_open" in labels)
+    scene.dct_link.auto_push = False
+    check("Discard (opened model) runs", "FINISHED" in bpy.ops.dct_link.model_discard())
+    pump(addon, lambda: ctrl.model.lease is None, what="the opened model's discard")
+    check("discarding the opened model removes its temporary files", not folder.exists())
+    texture = "smoke_open_diff" if args.sollumz else "smoke_diff_000_a_uni"
+    images = [image for image in bpy.data.images if image.name.lower().startswith(texture)]
+    check("the opened model's texture was read from the model's folder and stays in Blender, packed",
+          images and all(image.packed_file is not None for image in images)
+          and (not args.sollumz or tuple(images[0].size) == (4, 4)),
+          [(image.name, tuple(image.size), image.packed_file is not None) for image in images])
+
+
+def rgba_dds(width, height):
+    """An uncompressed 32-bit DDS file (what CodeWalker writes for small textures), filled with one colour."""
+    import struct
+
+    header = struct.pack("<4s7I44x", b"DDS ", 124, 0x100F, height, width, width * 4, 0, 0)
+    pixel_format = struct.pack("<8I", 32, 0x41, 0, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
+    caps = struct.pack("<5I", 0x1000, 0, 0, 0, 0)
+    return header + pixel_format + caps + bytes((40, 80, 160, 255)) * (width * height)
 
 
 def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, api):
@@ -548,8 +622,8 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
         install_real_sollumz(repo, repo_dir, args.sollumz, args.sollumz_site)
         root, part = real_sollumz_scene()
     else:
-        register_sollumz_stub()
-        root, part = stub_scene()
+        sollumz_stub.register()
+        root, part = sollumz_stub.scene()
     available, text = host.sollumz_status()
     check("Sollumz is detected", available, text)
     use_logger, counter = host._sollumz_log_counter()
@@ -678,6 +752,10 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
               refused(bpy.ops.dct_link.model_push, "needs a Drawable Dictionary") and len(STUB["calls"]) == calls)
         check("nothing was pushed for the refused exports", len(dct.pushes) == pushes)
 
+    # Edit in connected app (protocol 2): a normal map DCT sends opens as an image linked to its cloth and its live
+    # preview starts at once; a model DCT sends is imported with Sollumz, linked and pushed back bound to its cloth.
+    open_from_dct(args, addon, state, package, ctrl, dct, scene, rng)
+
     # Undo: Push Automatically is read from the scene when it is used.
     try:
         bpy.ops.ed.undo_push(message="smoke: before Push Automatically")
@@ -738,7 +816,7 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     pump(addon, lambda: ctrl.state == "stopped" and ctrl.signed_out, what="the remembered sign-out")
     check("after a sign-out no sign-in starts by itself",
           len([r for r in api.requests if r["path"] == "/link/api/auth/device"]) == devices)
-    check("Sign In through Durty Cloth Tool runs", "FINISHED" in bpy.ops.dct_link.sign_in_dct())
+    check("Sign In (approved in Durty Cloth Tool) runs", "FINISHED" in bpy.ops.dct_link.sign_in())
     pump(addon, lambda: ctrl.ready, what="the sign-in after enabling again")
     check("connected again after enabling the add-on again", ctrl.account_name == "Durty")
     result = bpy.ops.preferences.addon_disable(module=package)

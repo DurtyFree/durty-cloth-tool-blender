@@ -12,7 +12,7 @@ from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Set, Tuple
 
 import bpy
 
-from . import pixels, settings
+from . import link, pixels, settings
 from .dct_link import protocol, tokens
 from .strings import Msg, UserError, msg
 
@@ -248,6 +248,96 @@ class BlenderImageSource:
         image.pixels.foreach_get(buffer)
 
 
+# --------------------------------------------------------------------------------------------------
+# Images and models linked to a cloth
+# --------------------------------------------------------------------------------------------------
+
+#: The custom properties that link an image or a Drawable Dictionary to its cloth in Durty Cloth Tool: the cloth's
+#: id, the variation's id and (images only) the map the image is. Blender keeps them in the .blend file.
+CLOTH_ID = "dct_cloth_id"
+TEXTURE_ID = "dct_texture_id"
+MAP = "dct_map"
+
+
+def stored_binding(data: Optional[Any]) -> Optional[Dict[str, str]]:
+    """The cloth an image or object is linked to (``clothId``, ``textureId``), or ``None``."""
+    if data is None:
+        return None
+    try:
+        return link.binding_of(data.get(CLOTH_ID), data.get(TEXTURE_ID))
+    except (AttributeError, ReferenceError, TypeError):
+        return None
+
+
+def stored_map(image: Optional[Any]) -> Optional[str]:
+    """The map a linked image is (``diffuse``, ``normal`` or ``specular``), or ``None``."""
+    try:
+        value = image.get(MAP) if image is not None else None
+    except (AttributeError, ReferenceError):
+        return None
+    return value if value in protocol.LIVE_TARGETS else None
+
+
+def store_binding(data: Any, binding: Dict[str, str], target: Optional[str] = None) -> None:
+    data[CLOTH_ID] = binding["clothId"]
+    data[TEXTURE_ID] = binding["textureId"]
+    if target is not None:
+        data[MAP] = target
+
+
+def clear_binding(data: Any) -> None:
+    for key in (CLOTH_ID, TEXTURE_ID, MAP):
+        if key in data:
+            del data[key]
+
+
+def _linked_image(binding: Dict[str, str], target: str) -> Optional[Any]:
+    for image in bpy.data.images:
+        if stored_map(image) == target and link.same_binding(stored_binding(image), binding):
+            return image
+    return None
+
+
+def open_texture_image(document: "link.TextureDocument") -> Any:
+    """The image for a cloth's map from Durty Cloth Tool, filled with its pixels and linked to the cloth.
+
+    The image linked to the same cloth, variation and map is reused when Blender holds no unsaved changes in it;
+    otherwise (and the first time) a new image is made, named after the cloth, variation and map, so paint that is
+    not saved anywhere is never overwritten. Normal and specular maps are set to Non-Color."""
+    import numpy as np
+
+    width, height = document.width, document.height
+    problem = settings.check_stream_size(width, height)
+    if problem is not None:
+        raise UserError(problem)
+    image = _linked_image(document.binding, document.target)
+    if image is not None and (image.is_dirty or image.channels != 4 or image_problem(image, load=False)):
+        image = None
+    if image is None:
+        image = bpy.data.images.new(document.name, width, height, alpha=True)
+    elif tuple(image.size) != (width, height):
+        image.scale(width, height)
+    image.colorspace_settings.name = "sRGB" if document.target == "diffuse" else "Non-Color"
+    rgba = np.frombuffer(document.pixels, dtype=np.uint8)
+    if rgba.size != width * height * 4:
+        raise ValueError("the texture has the wrong number of pixels")
+    rows = rgba.reshape(height, width, 4)[::-1]  # Blender's rows start at the bottom
+    image.pixels.foreach_set((rows.astype(np.float32) / np.float32(255)).reshape(-1))
+    store_binding(image, document.binding, document.target)
+    return image
+
+
+def keep_image(image: Any) -> None:
+    """Packs an image the add-on made or packed before into the .blend file, so it keeps its pixels (and its link)
+    when the file is saved and opened again; painting on it later marks it changed as usual. An image saved as its
+    own file stays that file: Blender asks to save its changes."""
+    try:
+        if image.source == "GENERATED" or image.packed_file is not None:
+            image.pack()
+    except ReferenceError:
+        pass  # removed meanwhile
+
+
 def painted_image(context: Any) -> Optional[Any]:
     """The image the user is painting or looking at: the Image Editor's image, the active paint slot, or the
     single-image canvas."""
@@ -350,6 +440,107 @@ def sollumz_status() -> Tuple[bool, Msg]:
         return False, msg("sollumz.too-old", version=settings.SOLLUMZ_MINIMUM)
     version = sollumz_version()
     return True, msg("sollumz.ready", version=version) if version else msg("sollumz.ready-unknown")
+
+
+#: Sollumz's import operator properties the add-on needs to import a model DCT sent.
+REQUIRED_IMPORT_PROPERTIES = frozenset({"directory", "files"})
+_NOT_COPIED_IMPORT = {"rna_type", "directory", "files", "filter_glob", "use_custom_settings", "import_as_asset",
+                      "textures_mode", "textures_extract_custom_directory"}
+
+
+def sollumz_import_properties() -> Optional[Set[str]]:
+    """The properties of Sollumz's import operator, or ``None`` when Sollumz does not have it (or is not enabled)."""
+    try:
+        rna = bpy.ops.sollumz.import_assets.get_rna_type()
+    except (AttributeError, KeyError, RuntimeError):
+        return None
+    return {prop.identifier for prop in rna.properties}
+
+
+def model_open_problem() -> Optional[Msg]:
+    """Why a model from Durty Cloth Tool cannot be opened (Sollumz missing or too old), or ``None``. Opening needs
+    Sollumz's import, and pushing the model back needs its export."""
+    ready, status = sollumz_status()
+    if not ready:
+        return status
+    properties = sollumz_import_properties()
+    if properties is None or not REQUIRED_IMPORT_PROPERTIES <= properties:
+        return msg("sollumz.too-old", version=settings.SOLLUMZ_MINIMUM)
+    return None
+
+
+def _import_settings(properties: Set[str]) -> Dict[str, Any]:
+    """The user's Sollumz import settings, with the textures packed into the .blend file (the imported files are
+    temporary)."""
+    if not {"use_custom_settings", "textures_mode"} <= properties:
+        return {}  # an older Sollumz imports with its own settings; the textures are packed afterwards
+    values: Dict[str, Any] = {}
+    addon = _sollumz_addon()
+    prefs = getattr(getattr(addon, "preferences", None), "import_settings", None) if addon is not None else None
+    if prefs is not None:
+        for prop in prefs.bl_rna.properties:
+            name = prop.identifier
+            if name in properties and name not in _NOT_COPIED_IMPORT and not prop.is_readonly:
+                values[name] = getattr(prefs, name)
+    values.update(use_custom_settings=True, textures_mode="PACK")
+    return values
+
+
+def import_with_sollumz(folder: pathlib.Path, model_file: str) -> Any:
+    """Imports ``folder/model_file`` (CodeWalker XML of a Drawable Dictionary, its textures in the folder named after
+    it) with Sollumz into the active collection of the first window, and returns the new Drawable Dictionary. Every
+    image the import read from ``folder`` is packed into the .blend file, so the files can be deleted afterwards."""
+    problem = model_open_problem()
+    if problem is not None:
+        raise ExportError(problem)
+    properties = sollumz_import_properties() or set()
+    arguments = dict(_import_settings(properties), directory=str(folder), files=[{"name": model_file}])
+    window = getattr(bpy.context, "window", None) or first_window()
+    override: Dict[str, Any] = {"window": window} if window is not None else {}
+    before = {obj.session_uid for obj in bpy.data.objects}
+    images_before = {image.session_uid for image in bpy.data.images}
+    with bpy.context.temp_override(**override):
+        layer = bpy.context.view_layer
+        active = layer.objects.active if layer is not None else None
+        if active is not None and active.mode != "OBJECT":
+            bpy.ops.object.mode_set(mode="OBJECT")  # Sollumz imports in Object Mode
+        try:
+            result = bpy.ops.sollumz.import_assets("EXEC_DEFAULT", **arguments)
+        except (RuntimeError, TypeError, ValueError) as exc:
+            raise _export_error("open.import-failed", detail=str(exc)) from exc
+        if "FINISHED" not in result:
+            raise _export_error("open.import-failed", detail=", ".join(sorted(result)))
+        new = [obj for obj in bpy.data.objects if obj.session_uid not in before]
+        roots = [obj for obj in new if obj.parent is None and getattr(obj, "sollum_type", None) == DRAWABLE_DICTIONARY]
+        if not roots:
+            raise _export_error("open.no-dictionary")
+        root = roots[0]
+        _pack_imported_images(folder, images_before)
+        for obj in layer.objects if layer is not None else ():
+            if obj.select_get():
+                obj.select_set(False)
+        try:
+            root.select_set(True)
+            layer.objects.active = root
+        except (RuntimeError, AttributeError):
+            pass  # not in the view layer that is shown; it is still linked to its cloth
+    return root
+
+
+def _pack_imported_images(folder: pathlib.Path, images_before: Set[int]) -> None:
+    base = folder.resolve()
+    for image in bpy.data.images:
+        if image.session_uid in images_before or image.packed_file is not None or image.source != "FILE":
+            continue
+        try:
+            path = pathlib.Path(bpy.path.abspath(image.filepath)).resolve()
+        except (OSError, ValueError):
+            continue
+        if base in path.parents and path.is_file():
+            try:
+                image.pack()
+            except RuntimeError:
+                continue  # not loadable; Sollumz has reported it
 
 
 def top_parent(obj: Any) -> Any:

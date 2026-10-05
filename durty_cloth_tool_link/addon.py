@@ -75,6 +75,33 @@ def logo_icon() -> int:
     return _icons["dct_mark"].icon_id
 
 
+def thumbnail_icon() -> int:
+    """The icon id of the cloth's picture in the Linked Cloth panel (0 while there is none)."""
+    ctrl = state.controller
+    if _icons is None or ctrl is None or ctrl.thumbnail is None or THUMBNAIL not in _icons:
+        return 0
+    return _icons[THUMBNAIL].icon_id
+
+
+#: The preview that shows the cloth's picture (rows from DCT arrive top to bottom; previews start at the bottom).
+THUMBNAIL = "cloth_thumbnail"
+
+
+def _show_thumbnail(thumbnail) -> None:
+    if _icons is None or thumbnail is None:
+        return
+    import numpy as np
+
+    preview = _icons[THUMBNAIL] if THUMBNAIL in _icons else _icons.new(THUMBNAIL)
+    rgba = np.frombuffer(thumbnail.pixels, dtype=np.uint8).reshape(thumbnail.height, thumbnail.width, 4)[::-1]
+    values = (rgba.astype(np.float32) / np.float32(255)).reshape(-1)
+    size = (thumbnail.width, thumbnail.height)
+    preview.image_size = size
+    preview.image_pixels_float.foreach_set(values)
+    preview.icon_size = size
+    preview.icon_pixels_float.foreach_set(values)
+
+
 def _load_icons() -> None:
     global _icons
     try:
@@ -169,6 +196,9 @@ def register() -> None:
     )
     ctrl.model.on_auto_push = state.auto_push
     ctrl.model.auto_enabled = state.scene_auto_push
+    ctrl.documents = state.BlenderDocuments()
+    ctrl.linked_binding = state.linked_binding
+    ctrl.on_thumbnail = _show_thumbnail
     state.controller = ctrl
     state.watcher.clear()
     _started = False
