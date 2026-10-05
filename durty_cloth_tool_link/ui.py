@@ -5,7 +5,8 @@
 Panels, in the order every Creator Link plugin uses: Durty Cloth Tool (the logo, the connection status with the
 details in a popover, and the Help menu with Help, Community, Copy Diagnostics and About), Get Connected (only while
 setup is incomplete), Linked Cloth (the cloth's picture and details, and its maps to open), Live Preview (with the
-Texture Checks while it runs), Model and Settings. Every text comes from :mod:`strings` in Blender's interface
+Texture Checks while it runs), Model and Settings. Garment Fitting (:mod:`ui_garment`) sits between Model and
+Settings. Every text comes from :mod:`strings` in Blender's interface
 language; texts drawn here are translated already, so layouts get ``translate=False``.
 
 Layout rules (the Creator Link spacing intent, in Blender's own means): one enlarged primary action per panel
@@ -1614,6 +1615,7 @@ class DCTLINK_PT_model(_SubPanel, Panel):
 class DCTLINK_PT_settings(_SubPanel, Panel):
     bl_label = EN["panel.settings"]
     bl_options = {"DEFAULT_CLOSED"}
+    bl_order = 1  # last, after Garment Fitting (registered later by ui_garment)
 
     @classmethod
     def poll(cls, context):

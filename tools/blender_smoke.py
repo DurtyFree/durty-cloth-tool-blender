@@ -103,7 +103,8 @@ def smoke_one(blender: str, sollumz: Optional[str], sollumz_site: Optional[str],
                 print(f"    FAIL {failure['check']}: {failure['detail']}")
             for entry in data["results"]:
                 reported = ("pushed files", "uninstalling removes the user folder")
-                if entry["check"] in reported or entry["check"].startswith("undo"):
+                measured = ("undo", "fit check (", "tears (", "combine materials (", "validate (")
+                if entry["check"] in reported or entry["check"].startswith(measured):
                     print(f"  {entry['check']}: {entry['detail']}")
         return summary
     finally:

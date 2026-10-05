@@ -16,8 +16,9 @@ streaming (checking the vertical flip and dirty rectangles), saving and discardi
 through Sollumz's export operator (a stand-in by default, the real Sollumz with ``--sollumz``), an automatic
 push after a mesh change, a skinned model whose export switches the armature to its rest pose and back, a texture
 and a model Durty Cloth Tool sends (the model imported with Sollumz's import operator, with the real Sollumz a round
-trip of its own export), the update repository, sign-out and disabling the add-on. Blender's timers do not run in background mode, so the
-script calls the add-on's timer function itself, and evaluates the view layer where Blender's main loop would.
+trip of its own export), the garment fitting tools on a synthetic body and garments (``garment_smoke.py``), the update
+repository, sign-out and disabling the add-on. Blender's timers do not run in background mode, so the script calls
+the add-on's timer function itself, and evaluates the view layer where Blender's main loop would.
 """
 
 from __future__ import annotations
@@ -36,7 +37,7 @@ import bpy
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
-from tests.blender import sollumz_stub  # noqa: E402 - needs the repository on the path
+from tests.blender import garment_smoke, sollumz_stub  # noqa: E402 - needs the repository on the path
 from tests.blender.sollumz_stub import STUB  # noqa: E402
 
 RESULTS = []
@@ -309,9 +310,12 @@ class PreferencesProxy:
 
 def draw_everything(package, state, label):
     ui = sys.modules[package + ".ui"]
+    garment_ui = sys.modules[package + ".ui_garment"]
     log = []
     panels = (ui.DCTLINK_PT_main, ui.DCTLINK_PT_details, ui.DCTLINK_PT_setup, ui.DCTLINK_PT_linked,
-              ui.DCTLINK_PT_live, ui.DCTLINK_PT_model, ui.DCTLINK_PT_settings)
+              ui.DCTLINK_PT_live, ui.DCTLINK_PT_model, garment_ui.DCTLINK_PT_garment,
+              garment_ui.DCTLINK_PT_garment_setup, garment_ui.DCTLINK_PT_garment_fit, garment_ui.DCTLINK_PT_garment_fix,
+              garment_ui.DCTLINK_PT_garment_ready, ui.DCTLINK_PT_settings)
     for panel in panels:
         if panel.poll(bpy.context) if hasattr(panel, "poll") else True:
             instance = type("P", (), {"layout": FakeLayout(log)})()
@@ -916,6 +920,9 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
           "disconnected in Durty Cloth Tool" in labels and ("operator", "dct_link.connect") in log, labels)
     check("Connect runs after the disconnect", "FINISHED" in bpy.ops.dct_link.connect())
     pump(addon, lambda: ctrl.ready, what="connecting again after the disconnect")
+
+    # The garment fitting tools, while signed in (the hosted body comes from the fake gta.clothing).
+    RESULTS.extend(garment_smoke.run(package, addon, state, ctrl, api, check, refused, pump, draw_everything))
 
     # Signing out (the network part runs on a worker thread), then disabling and enabling again.
     check("Sign Out runs", "FINISHED" in bpy.ops.dct_link.sign_out("EXEC_DEFAULT"))

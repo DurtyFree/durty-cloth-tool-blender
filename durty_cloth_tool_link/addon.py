@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""Registration: translations, the logo icon, classes, the timer that drives the link, and the handlers for file
-loads, undo and model changes."""
+"""Registration: translations, the logo icon, classes (the link's and the garment fitting tools'), the timer that
+drives the link, and the handlers for file loads, undo and model changes."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import traceback
 import bpy
 from bpy.app.handlers import persistent
 
-from . import host, link, preferences, settings, state, strings, translations, ui
+from . import host, link, preferences, settings, state, strings, translations, ui, ui_garment
 from .strings import msg
 
 _started = False
@@ -148,6 +148,7 @@ def _remove_translations() -> None:
 
 @persistent
 def _on_load_pre(*_args) -> None:
+    ui_garment.on_load_pre()
     ctrl = state.controller
     if ctrl is not None:
         ctrl.stream.stop()
@@ -187,6 +188,7 @@ def register() -> None:
     _load_icons()
     preferences.register()
     ui.register()
+    ui_garment.register()
     ctrl = link.LinkController(
         lambda: host.data_dir(state.PACKAGE),
         host.host_version(),
@@ -221,6 +223,7 @@ def unregister() -> None:
         except Exception:  # noqa: BLE001 - disabling must always finish
             traceback.print_exc()
     state.watcher.clear()
+    ui_garment.unregister()
     ui.unregister()
     preferences.unregister()
     _free_icons()

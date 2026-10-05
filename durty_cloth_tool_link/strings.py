@@ -547,6 +547,430 @@ EN: Dict[str, str] = {
     "feature.needsLicense": "This needs a Durty Cloth Tool license.",
     "feature.needsUltimate": "This is included in Durty Cloth Tool Ultimate.",
     "feature.unavailable": "This is not included in your Durty Cloth Tool plan.",
+    # ---- garment fitting: panels and the next step ----------------------------------------------------------
+    "garment.panel": "Garment Fitting (Experimental)",
+    "garment.panel.setup": "Setup",
+    "garment.panel.fit": "Fit",
+    "garment.panel.fix": "Fix",
+    "garment.panel.ready": "Game Ready",
+    "garment.next.import": "Import a garment, or select yours and choose Use Selected Garment.",
+    "garment.next.body": "Next: add the freemode body under Setup.",
+    "garment.next.markers": "Next: place the markers with Auto Markers under Fit, then check where they are.",
+    "garment.next.tpose": "Next: bring the T-pose into an A-pose under Fit.",
+    "garment.next.check": "Next: run the fit check under Fix.",
+    "garment.next.push": "Next: parts of the garment are inside the body. Use Push Out of Body under Fix.",
+    "garment.next.prepare": "Next: Prepare Garment under Game Ready.",
+    "garment.next.combine": "Next: Combine Materials under Game Ready, so the garment uses one texture.",
+    "garment.next.lods": "Next: Generate LODs under Game Ready.",
+    "garment.next.validate": "Next: Validate under Game Ready.",
+    "garment.next.done": (
+        "The local steps are done. Fitting to the GTA pose and adding the garment to a Durty Cloth Tool project come "
+        "in a later version."
+    ),
+    "garment.next.sculpting": "Sculpting: drag with the Grab brush, then choose Accept or Cancel under Fix.",
+    # ---- garment fitting: choices -------------------------------------------------------------------------
+    "garment.gender.male.desc": "The male freemode ped (mp_m_freemode_01)",
+    "garment.gender.female.desc": "The female freemode ped (mp_f_freemode_01)",
+    "garment.slot.jbib": "Top (jbib)",
+    "garment.slot.jbib.desc": "Jackets and tops",
+    "garment.slot.accs": "Undershirt (accs)",
+    "garment.slot.accs.desc": "Undershirts, worn under a top",
+    "garment.slot.lowr": "Legs (lowr)",
+    "garment.slot.lowr.desc": "Trousers, shorts and skirts",
+    "garment.slot.feet": "Shoes (feet)",
+    "garment.slot.feet.desc": "Shoes and boots",
+    "garment.category.vest": "Vest",
+    "garment.category.vest.desc": "A top without sleeves",
+    "garment.category.tshirt": "T-shirt",
+    "garment.category.tshirt.desc": "A top with short sleeves",
+    "garment.category.long_sleeve": "Long Sleeve",
+    "garment.category.long_sleeve.desc": "A top with sleeves to the wrists",
+    "garment.category.long_jacket": "Long Jacket or Tunic",
+    "garment.category.long_jacket.desc": "A top with long sleeves that reaches below the hips",
+    "garment.category.pants": "Pants",
+    "garment.category.pants.desc": "Trousers that reach the ankles",
+    "garment.category.shorts": "Shorts",
+    "garment.category.shorts.desc": "Trousers that end at or above the knees",
+    "garment.category.shoes": "Shoes",
+    "garment.category.shoes.desc": "Shoes, boots and sandals",
+    "garment.pose.a_pose": "A-pose",
+    "garment.pose.a_pose.desc": "The arms point down at an angle, as the ped stands in the game",
+    "garment.pose.t_pose": "T-pose",
+    "garment.pose.t_pose.desc": "The arms point straight out to the sides",
+    "garment.pose.custom": "Custom",
+    "garment.pose.custom.desc": "Another pose: check the markers and move them to the joints by hand",
+    "garment.region.shoulders": "Shoulders",
+    "garment.region.upper_arms": "Upper Arms",
+    "garment.region.chest": "Chest",
+    "garment.region.back": "Back",
+    "garment.region.waist": "Waist",
+    "garment.region.hips": "Hips",
+    "garment.region.neck": "Neck",
+    "garment.region.legs": "Legs",
+    "garment.region.desc": "A part of the garment, found from the markers",
+    "garment.level.high": "High",
+    "garment.level.medium": "Medium",
+    "garment.level.low": "Low",
+    # ---- garment fitting: properties ----------------------------------------------------------------------
+    "garment.prop.garment": "Garment",
+    "garment.prop.garment.desc": "The garment the tools work on. Only this object is changed",
+    "garment.prop.body": "Body",
+    "garment.prop.body.desc": "The freemode body the garment is measured against",
+    "garment.prop.gender": "Gender",
+    "garment.prop.gender.desc": "Which freemode ped the garment is for",
+    "garment.prop.slot": "Slot",
+    "garment.prop.slot.desc": "The clothing slot the garment goes into in Durty Cloth Tool",
+    "garment.prop.category": "Category",
+    "garment.prop.category.desc": "What kind of garment it is: it sets where the markers go and which regions the tools offer",
+    "garment.prop.pose": "Source Pose",
+    "garment.prop.pose.desc": "The pose of the avatar the garment was made on",
+    "garment.prop.marker-size": "Marker Size",
+    "garment.prop.marker-size.desc": "How large the marker spheres are drawn",
+    "garment.prop.arm-angle": "Arm Angle",
+    "garment.prop.arm-angle.desc": "How far below the horizontal T-pose to A-pose lowers the arms",
+    "garment.prop.gap": "Gap (mm)",
+    "garment.prop.push-gap.desc": "How far outside the body Push Out of Body moves the garment, in millimetres",
+    "garment.prop.snug-gap.desc": "How far off the body Snug to Body leaves the region, in millimetres",
+    "garment.prop.region": "Region",
+    "garment.prop.region.desc": "The part of the garment Snug to Body and Relax Stretched work on",
+    "garment.prop.amount": "Amount",
+    "garment.prop.amount.desc": "How much of the way the region moves: 1 moves it all the way",
+    "garment.prop.radius": "Radius (cm)",
+    "garment.prop.radius.desc": "The size of the Grab brush, in centimetres",
+    "garment.prop.strength": "Strength",
+    "garment.prop.strength.desc": "How strongly the Grab brush moves the garment",
+    "garment.prop.mirror": "Mirror X",
+    "garment.prop.mirror.desc": "Sculpt both sides of the garment at once",
+    "garment.prop.keep-out": "Keep Out of Body",
+    "garment.prop.keep-out.desc": (
+        "When you accept, move what you pushed into the body back out, to the gap of Push Out of Body"
+    ),
+    "garment.prop.weld": "Weld Distance (mm)",
+    "garment.prop.weld.desc": "Panel edges closer than this, in millimetres, are joined into one seam",
+    "garment.prop.colour-1": "Color 1",
+    "garment.prop.colour-1.desc": (
+        "The ped shader's first vertex colour (Sollumz's Color 1): the light the garment receives. #FF8000 suits "
+        "most clothing; #FFBAFF lets emissive materials glow"
+    ),
+    "garment.prop.colour-2": "Color 2",
+    "garment.prop.colour-2.desc": (
+        "The ped shader's second vertex colour (Sollumz's Color 2): wind and sweat. Black without alpha turns both off"
+    ),
+    "garment.prop.overwrite": "Replace Existing Vertex Colours",
+    "garment.prop.overwrite.desc": "Also replace Color 1 and Color 2 when the garment has them already",
+    "garment.prop.size": "Texture Size",
+    "garment.size.desc": "The size of the combined texture in pixels. Durty Cloth Tool's texture checks advise 2048 or less",
+    "garment.prop.cut": "Cut Long Strips",
+    "garment.prop.cut.desc": (
+        "Cut long thin UV islands, such as hems and waistbands, into pieces, so the rest of the garment gets more of "
+        "the texture"
+    ),
+    "garment.prop.lod-medium": "Medium Triangles",
+    "garment.prop.lod-low": "Low Triangles",
+    "garment.prop.lod.desc": "The most triangles this level of detail keeps",
+    "garment.prop.ground": "Avatar Stood on the Ground",
+    "garment.prop.ground.desc": (
+        "The garment was made on an avatar standing at height 0, as in Marvelous Designer: move it down to the ped, "
+        "whose soles are 1 m below its origin"
+    ),
+    "garment.prop.preset-name": "Name",
+    # ---- garment fitting: headings ------------------------------------------------------------------------
+    "garment.heading.markers": "Markers",
+    "garment.heading.tpose": "Model in T-pose",
+    "garment.heading.backups": "Backups",
+    "garment.heading.push": "Clearance",
+    "garment.heading.regions": "Region Tools",
+    "garment.heading.problems": "Problems",
+    "garment.heading.check": "Fit Check",
+    "garment.heading.sculpt": "Fix by Hand",
+    "garment.heading.tears": "Tears",
+    "garment.heading.prepare": "Prepare",
+    "garment.heading.combine": "Materials",
+    "garment.heading.lods": "Levels of Detail",
+    "garment.heading.validate": "Checks",
+    # ---- garment fitting: operators -----------------------------------------------------------------------
+    "garment.op.use": "Use Selected Garment",
+    "garment.op.use.desc": "Work on the selected mesh object",
+    "garment.op.import": "Import Garment",
+    "garment.op.import.desc": (
+        "Import a garment from an FBX, OBJ or glTF file (for example from Marvelous Designer), in metres and as one "
+        "object"
+    ),
+    "garment.op.add-body": "Add Freemode Body",
+    "garment.op.add-body.desc": (
+        "Download the freemode body of the chosen gender from gta.clothing for your account (once per body version) "
+        "and add it to the scene"
+    ),
+    "garment.op.cancel-body.desc": "Stop downloading the body",
+    "garment.op.body-file": "Use a Body File",
+    "garment.op.body-file.desc": "Add a body from a GLB, glTF, FBX or OBJ file instead, in metres and in the game's pose",
+    "garment.op.auto-markers": "Auto Markers",
+    "garment.op.auto-markers.desc": (
+        "Place the joint markers (neck, chest, pelvis, shoulders, elbows, wrists, hips) from the garment's shape. Move "
+        "any marker that is off"
+    ),
+    "garment.op.mirror": "Mirror L to R",
+    "garment.op.mirror.desc": "Copy the markers of the ped's left side to its right side",
+    "garment.op.save-preset": "Save Pose Preset",
+    "garment.op.save-preset.desc": "Save the markers as a preset in the add-on's folder, for similar garments",
+    "garment.op.load-preset": "Load Pose Preset",
+    "garment.op.load-preset.desc": "Place the markers from a saved preset",
+    "garment.op.tpose": "T-pose to A-pose",
+    "garment.op.tpose.desc": "Lower the arms of a garment made in T-pose to the arm angle, using the markers",
+    "garment.op.restore": "Restore Pre-fit",
+    "garment.op.restore.desc": "Put back the garment's shape from before the first fitting step",
+    "garment.op.push": "Push Out of Body",
+    "garment.op.push.desc": "Move every part of the garment that is inside the body, or closer than the gap, out to the gap",
+    "garment.op.snug": "Snug to Body",
+    "garment.op.snug.desc": "Bring the chosen region closer to the body, down to the gap",
+    "garment.op.relax": "Relax Stretched",
+    "garment.op.relax.desc": "Ease stretched parts of the chosen region back towards their original size",
+    "garment.op.problems": "Show Problems",
+    "garment.op.problems.desc": (
+        "Colour the garment: red inside the body, yellow too close, purple stretched, blue a floating shoulder. "
+        "Select again to hide the colours"
+    ),
+    "garment.op.refresh": "Refresh",
+    "garment.op.refresh.desc": "Colour the problems again after a change",
+    "garment.op.check": "Run Fit Check",
+    "garment.op.check.desc": "Measure how far each region of the garment stands off the body",
+    "garment.op.sculpt": "Start Sculpting",
+    "garment.op.sculpt.desc": "Fix the shape by hand with the Grab brush. Accept keeps the result, Cancel puts the shape back",
+    "garment.op.accept": "Accept",
+    "garment.op.accept.desc": "Keep the sculpted shape and end the session",
+    "garment.op.cancel-sculpt.desc": "Put back the shape from before the session and end it",
+    "garment.op.tears": "Check Tears",
+    "garment.op.tears.desc": "Pose the garment's armature through a few test poses and show where seams open up",
+    "garment.op.prepare": "Prepare Garment",
+    "garment.op.prepare.desc": (
+        "Join the panel seams, remove loose parts, triangulate, shade smooth and add the ped vertex colours"
+    ),
+    "garment.op.combine": "Combine Materials",
+    "garment.op.combine.desc": "Pack all UV islands into one layout and bake the colour of every material into one texture",
+    "garment.op.lods": "Generate LODs",
+    "garment.op.lods.desc": (
+        "Make the Medium and Low levels of detail in Sollumz's LOD slots, with the weights of the High level"
+    ),
+    "garment.op.validate": "Validate",
+    "garment.op.validate.desc": "Check the garment for problems the game would show",
+    # ---- garment fitting: setup ---------------------------------------------------------------------------
+    "garment.garment.facts": "{count} vertices · materials: {materials}",
+    "garment.body.hosted": "Freemode body: {gender}, version {version}",
+    "garment.body.object": "Body: {name}",
+    "garment.body.downloading": "Downloading the freemode body…",
+    "garment.body.subtext": (
+        "The body comes from gta.clothing for your signed-in account and is kept in the add-on's folder, so each "
+        "version is downloaded once."
+    ),
+    "garment.body.cancelled": "The body download was cancelled.",
+    "garment.body.offline": (
+        "Blender's online access is off and no body was downloaded before. Allow online access, or use a body file."
+    ),
+    "garment.body.network": "gta.clothing could not be reached. Check the internet connection, or use a body file.",
+    "garment.body.no-body": "gta.clothing has no freemode body for this channel yet. Use a body file for now.",
+    "garment.body.signed-out": "The sign-in is no longer valid. Sign in again, then add the body.",
+    "garment.body.not-entitled": "Your account cannot download the freemode body.",
+    "garment.body.refused": "gta.clothing refused the download.",
+    "garment.body.update": "gta.clothing needs a newer version of this add-on for the body. Update it.",
+    "garment.body.busy": "Too many downloads at once. Wait a moment and try again.",
+    "garment.body.unavailable": "The freemode body is unavailable right now. Try again later.",
+    "garment.body.invalid": "gta.clothing sent something that is not a body. Try again later.",
+    "garment.body.disk": "The body could not be saved in the add-on's folder.",
+    # ---- garment fitting: fit -----------------------------------------------------------------------------
+    "garment.markers.count": "Markers placed: {count} of {total}",
+    "garment.presets.none": "No saved presets yet",
+    "garment.backups.count": "Backups kept: {count} of {limit}",
+    # ---- garment fitting: fix -----------------------------------------------------------------------------
+    "garment.problem.inside": "Inside the body",
+    "garment.problem.close": "Too close to the body",
+    "garment.problem.stretched": "Stretched",
+    "garment.problem.floating": "Floating shoulder",
+    "garment.check.none": "Run the fit check to see how far each region stands off the body.",
+    "garment.check.measured": "Measured (mm)",
+    "garment.check.reference": "Usual",
+    "garment.check.value": "{p50} ({p10} to {p90})",
+    "garment.check.later": "–",
+    "garment.check.inside": "Inside the body: {count} vertices ({share} %)",
+    "garment.check.reference-later": (
+        "The usual range of game clothing for each region comes with the fitting service in a later version."
+    ),
+    "garment.advice.shoulders": "The shoulders stand off the body: Snug to Body with Shoulders brings them down.",
+    "garment.sculpt.running": "Drag with the Grab brush to move the garment. The body shows as a wireframe.",
+    "garment.sculpt.subtext": "Accept keeps the shape; Cancel puts back the shape from before the session.",
+    "garment.pose.arms-up": "Arms up",
+    "garment.pose.arms-forward": "Arms forward",
+    "garment.pose.legs-forward": "Legs forward",
+    "garment.pose.twist": "Twist",
+    "garment.tears.pose": "{pose}: {count} seam points open, up to {gap} mm",
+    "garment.tears.pose-clean": "{pose}: no seam opens",
+    # ---- garment fitting: game ready ----------------------------------------------------------------------
+    "garment.validate.clean": "CLEAN: nothing to fix.",
+    "garment.finding.non-finite": "{count} points have broken coordinates.",
+    "garment.finding.no-uv": "The garment has no UV map, so it cannot show a texture.",
+    "garment.finding.uv-outside": "{count} UV points lie outside the 0 to 1 square; the game repeats the texture there.",
+    "garment.finding.uv-area": "The UV layout uses only {area} % of the texture.",
+    "garment.finding.no-weights": "Not rigged yet: the weights come with the fit in a later version.",
+    "garment.finding.unweighted": "{count} vertices have no weights; the game leaves them behind when the ped moves.",
+    "garment.finding.influences": "{count} vertices are moved by more than {limit} bones; the game uses only {limit}.",
+    "garment.finding.colour-missing": "Color 1 is missing. Prepare Garment adds it.",
+    "garment.finding.colour-format": (
+        "Color 1 is not a face corner byte colour, as Sollumz needs it. Prepare Garment replaces it."
+    ),
+    "garment.finding.vertices": "The {level} level has {count} game vertices; game clothing usually stays under {budget}.",
+    "garment.finding.inside": "{share} % of the garment is inside the body.",
+    "garment.finding.materials": "The garment has {count} materials. Combine Materials makes one texture of them.",
+    # ---- garment fitting: why a button is unavailable -----------------------------------------------------
+    "garment.why.no-garment": "Import a garment or choose one under Setup first.",
+    "garment.why.not-shown": "The garment is not in the current view layer.",
+    "garment.why.sculpting": "Accept or cancel the sculpt session first.",
+    "garment.why.object-mode": "Switch to Object Mode first.",
+    "garment.why.shape-keys": "The garment has shape keys. Apply or remove them first.",
+    "garment.why.empty": "The garment has no geometry.",
+    "garment.why.no-body": "Add the freemode body under Setup first.",
+    "garment.why.no-markers": "Shoes need no markers.",
+    "garment.why.downloading": "The body is being downloaded.",
+    "garment.why.sign-in": "Sign in with gta.clothing first (Get Connected), or use a body file.",
+    "garment.why.select-mesh": "Select a mesh object first.",
+    "garment.why.is-body": "This is the freemode body, not a garment.",
+    "garment.why.no-file": "Choose a file.",
+    "garment.why.file-type": "Only FBX, OBJ, GLB and glTF files can be imported.",
+    "garment.why.markers": "Place the markers under Fit first.",
+    "garment.why.preset-name": "Give the preset a name with letters or digits.",
+    "garment.why.preset-unreadable": "The preset could not be read: {detail}",
+    "garment.why.tops-only": "Only tops have arms to lower.",
+    "garment.why.no-backup": "There is no backup yet. One is kept before each step that changes the garment.",
+    "garment.why.region-category": "This region is not part of the chosen category.",
+    "garment.why.region-empty": "The garment has nothing in the region {region}.",
+    "garment.why.no-session": "No sculpt session is running.",
+    "garment.why.no-armature": "Checking tears needs an armature and weights on the garment. They come with the fit.",
+    "garment.why.no-weights": "The garment has no weights to pose it with.",
+    "garment.why.modifiers": "A modifier changes the garment's geometry. Tears can only be checked without it.",
+    "garment.why.no-uv": "The garment has no UV map.",
+    "garment.why.empty-slot": "Every material slot of the garment needs a material.",
+    "garment.why.uv-full": "The garment has as many UV maps as Blender allows. Remove one first.",
+    "garment.why.no-sollumz": "Generating LODs needs Sollumz.",
+    "garment.why.show-high": "Show the High level of detail in Sollumz first.",
+    "garment.why.no-download": "No body is being downloaded.",
+    "garment.error.import": "The file could not be imported: {detail}",
+    "garment.error.no-mesh": "The file holds no mesh.",
+    "garment.error.mode": "Sculpt Mode could not be started: {detail}",
+    "garment.error.bake": "Baking failed: {detail}",
+    "garment.marker-error.no-markers": "This category needs no markers.",
+    "garment.marker-error.too-small": "The garment is too small or too flat for markers. Check that it is in metres.",
+    "garment.marker-error.not-a-top": (
+        "The garment does not look like a top. Check the category, or place the markers by hand."
+    ),
+    "garment.marker-error.no-sleeves": "No sleeves were found. Choose Vest, or place the arm markers by hand.",
+    "garment.marker-error.not-legs": (
+        "No trouser legs were found. Check the category, or place the markers by hand."
+    ),
+    # ---- garment fitting: results -------------------------------------------------------------------------
+    "garment.done.use": "Working on {name}.",
+    "garment.done.import": "Imported {name} ({count} vertices).",
+    "garment.done.body": "Added the freemode body ({gender}, version {version}).",
+    "garment.done.body-file": "Added {name} as the body.",
+    "garment.done.markers": "Placed {count} markers. Move any that are off before fitting.",
+    "garment.done.mirror": "Mirrored the left markers to the right.",
+    "garment.done.preset-saved": "Saved the pose preset {name}.",
+    "garment.done.preset-loaded": "Loaded the pose preset {name}.",
+    "garment.done.tpose": "Lowered the arms by {angle}°. A backup was kept.",
+    "garment.done.tpose-none": "The arms are at the arm angle already.",
+    "garment.done.restore": "Put back the shape from before the first fitting step.",
+    "garment.done.push": "Moved {moved} vertices. Inside the body: {before} before, {after} now.",
+    "garment.done.snug": "Brought {moved} vertices of {region} closer to the body ({mean} mm on average).",
+    "garment.done.relax": "Relaxed {moved} vertices of {region}.",
+    "garment.done.relax-smooth": (
+        "Smoothed {moved} vertices of {region} (the shape from before fitting is not there to compare with)."
+    ),
+    "garment.done.problems": "Inside: {inside}, too close: {close}, stretched: {stretched}, floating: {floating}.",
+    "garment.done.check": "Fit check done. Inside the body: {inside} vertices.",
+    "garment.done.sculpt-start": "Sculpt session started.",
+    "garment.done.accept": "Kept the sculpted shape: moved {moved} vertices. Inside the body: {before} before, {after} now.",
+    "garment.done.cancel-sculpt": "Sculpting cancelled: the garment is back to its shape from before the session.",
+    "garment.done.tears": "{count} seam vertices open up in a test pose. They are in the vertex group DCT Tears.",
+    "garment.done.no-tears": "No seam opens in the test poses.",
+    "garment.done.tears-welded": "The garment has no open seams that could tear.",
+    "garment.done.prepare": (
+        "Prepared: joined {welded} seam vertices, removed {removed} loose vertices, {triangles} triangles."
+    ),
+    "garment.done.prepare-lining": (
+        "Prepared: joined {welded} seam vertices (a lining was found and kept apart), removed {removed} loose "
+        "vertices, {triangles} triangles."
+    ),
+    "garment.done.combine": (
+        "Combined {count} materials into one texture of {size} pixels; the layout uses {used} % of it ({cut} strips "
+        "cut)."
+    ),
+    "garment.done.lods": "Levels of detail: High {high}, Medium {medium}, Low {low} triangles.",
+    "garment.done.clean": "Validate: CLEAN.",
+    "garment.done.findings": "Validate found things to look at: {count}.",
+    # ---- garment fitting: help ----------------------------------------------------------------------------
+    "garment.info.pose": (
+        "Choose the pose of the avatar the garment was made on. A garment made in T-pose can be brought into the "
+        "game's A-pose under Fit."
+    ),
+    "garment.info.garment": (
+        "The tools change only this object. Import Garment converts centimetres and millimetres (as Marvelous "
+        "Designer exports them) to metres. Each step that changes the garment keeps a backup, and Ctrl+Z undoes it."
+    ),
+    "garment.info.body": (
+        "The freemode body is downloaded from gta.clothing once per version and kept in the add-on's folder. It is "
+        "added to the scene as its own object, and the tools never change it."
+    ),
+    "garment.info.markers": (
+        "The markers stand for the ped's joints: neck, chest, pelvis, shoulders, elbows, wrists and hips. Auto "
+        "Markers places them from the garment's shape; move any that are off. Mirror L to R copies the left side to "
+        "the right."
+    ),
+    "garment.info.tpose": (
+        "For garments made in T-pose: a temporary armature built from the markers lowers the arms to the arm angle "
+        "and is removed afterwards. The markers follow."
+    ),
+    "garment.info.backups": (
+        "Before each step that changes the garment, a copy of its mesh is kept in the .blend file (the first one "
+        "and the newest ones). Restore Pre-fit puts the first one back."
+    ),
+    "garment.info.push": (
+        "Moves everything inside the body, or closer than the gap, to the gap outside it. The vertices around "
+        "follow, so no crease forms."
+    ),
+    "garment.info.regions": (
+        "Snug to Body pulls a loose region towards the body, down to the gap. Relax Stretched eases stretched parts "
+        "back towards their original size. The edges of the region blend in."
+    ),
+    "garment.info.problems": (
+        "Colours the garment while you work: red inside the body, yellow too close, purple stretched compared with "
+        "its original shape, blue a shoulder that floats off the body."
+    ),
+    "garment.info.check": (
+        "Measures how far each region of the garment stands off the body: the middle value and the range of most "
+        "of its vertices, in millimetres. Negative values are inside the body."
+    ),
+    "garment.info.sculpt": (
+        "Sculpt Mode with the Grab brush, the body as a wireframe. Accept keeps the shape (and moves what went into "
+        "the body back out when Keep Out of Body is on); Cancel puts back the shape from before."
+    ),
+    "garment.info.tears": (
+        "Needs an armature and weights, which come with the fit. The garment is posed through a few test poses "
+        "(arms up, arms forward, legs forward, a twist), and the seams that open are reported."
+    ),
+    "garment.info.prepare": (
+        "Joins the seams between panels (never a lining onto its shell), removes loose parts, triangulates, shades "
+        "smooth and gives the garment Sollumz's vertex colours Color 1 and Color 2 with the values above."
+    ),
+    "garment.info.combine": (
+        "Packs all UV islands into one square and bakes the colour of every material into one texture, which "
+        "becomes the garment's only material. The original UV map is kept as DCT Source UV. Transparency is not "
+        "baked."
+    ),
+    "garment.info.lods": (
+        "Decimates a copy of the garment to each triangle budget and puts it into Sollumz's Medium and Low LOD "
+        "slots; their weights come from the High level."
+    ),
+    "garment.info.validate": (
+        "Quick local checks: weights, more than four bones per vertex, broken coordinates, the UV layout, vertex "
+        "colours, the vertices of each level of detail and how much is inside the body."
+    ),
 }
 
 

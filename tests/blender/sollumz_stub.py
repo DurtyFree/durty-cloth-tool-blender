@@ -1,10 +1,12 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""Stand-ins for Sollumz's export and import operators, for the Blender smoke and the interface screenshots.
+"""Stand-ins for Sollumz's export and import operators and its LOD slots, for the Blender smoke and the interface
+screenshots.
 
 They have the operator properties of Sollumz 2.8.1 and later (``sollumz.export_assets``) and of Sollumz 2.9
 (``sollumz.import_assets``), write and read what Sollumz writes (a ``*.ydd.xml`` and its ``*.dds`` textures in a
-folder named after the model), and record every call in :data:`STUB`. Only for use inside Blender.
+folder named after the model), and record every call in :data:`STUB`. ``Object.sz_lods`` keeps a mesh per level of
+detail as Sollumz 2.9 does (the active level's mesh is the object's own). Only for use inside Blender.
 """
 
 from __future__ import annotations
@@ -12,7 +14,8 @@ from __future__ import annotations
 import pathlib
 
 import bpy
-from bpy.props import BoolProperty, CollectionProperty, EnumProperty, StringProperty  # module level: annotations
+from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, PointerProperty,  # module level: annotations
+                       StringProperty)
 
 STUB = {"mode": "ydd", "calls": [], "imports": []}
 
@@ -106,9 +109,52 @@ class SOLLUMZ_OT_import_assets(bpy.types.Operator):
         return {"FINISHED"}
 
 
+LOD_LEVELS = (("sollumz_high", "High", ""), ("sollumz_medium", "Medium", ""), ("sollumz_low", "Low", ""),
+              ("sollumz_verylow", "Very Low", ""), ("sollumz_veryhigh", "Very High", ""))
+
+
+class SZ_LODLevel(bpy.types.PropertyGroup):
+    mesh_ref: PointerProperty(type=bpy.types.Mesh)
+    has_mesh: BoolProperty(default=False)
+
+    def _active(self):
+        lods = self.id_data.sz_lods
+        return lods.get_lod(lods.active_lod_level) == self
+
+    @property
+    def mesh(self):
+        if not self.has_mesh:
+            return None
+        return self.id_data.data if self._active() else self.mesh_ref
+
+    @mesh.setter
+    def mesh(self, value):
+        self.has_mesh = value is not None
+        if self._active():
+            self.mesh_ref = None
+            if value is not None:
+                self.id_data.data = value
+        else:
+            self.mesh_ref = value
+
+
+class SZ_LODLevels(bpy.types.PropertyGroup):
+    active_lod_level: EnumProperty(items=LOD_LEVELS, default="sollumz_high")
+    very_high: PointerProperty(type=SZ_LODLevel)
+    high: PointerProperty(type=SZ_LODLevel)
+    medium: PointerProperty(type=SZ_LODLevel)
+    low: PointerProperty(type=SZ_LODLevel)
+    very_low: PointerProperty(type=SZ_LODLevel)
+
+    def get_lod(self, level):
+        return {"sollumz_veryhigh": self.very_high, "sollumz_high": self.high, "sollumz_medium": self.medium,
+                "sollumz_low": self.low, "sollumz_verylow": self.very_low}[level]
+
+
 def register():
-    for cls in (SOLLUMZ_OT_export_assets, SOLLUMZ_OT_import_assets):
+    for cls in (SOLLUMZ_OT_export_assets, SOLLUMZ_OT_import_assets, SZ_LODLevel, SZ_LODLevels):
         bpy.utils.register_class(cls)
+    bpy.types.Object.sz_lods = PointerProperty(type=SZ_LODLevels)
     bpy.types.Object.sollum_type = EnumProperty(items=(
         ("sollumz_none", "None", ""), ("sollumz_drawable_dictionary", "Drawable Dictionary", ""),
         ("sollumz_drawable", "Drawable", ""), ("sollumz_drawable_model", "Drawable Model", ""),

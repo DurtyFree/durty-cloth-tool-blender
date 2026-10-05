@@ -2,8 +2,9 @@
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
 """The add-on's eight translations and their registration with Blender.
 
-Each language module holds ``TEXT``, a dictionary with the keys of :data:`strings.EN`. Blender looks texts up by
-their English text in the add-on's own translation context (:data:`strings.CONTEXT`), so Blender's translations
+Each language has two modules, ``<language>`` (the link) and ``garment_<language>`` (the garment fitting tools),
+each holding ``TEXT``; together they have the keys of :data:`strings.EN`. Blender looks texts up by their English
+text in the add-on's own translation context (:data:`strings.CONTEXT`), so Blender's translations
 of common words never replace the add-on's wording. The module names follow Blender's locale codes; Blender
 falls back from a full locale (``de_DE``) to its language (``de``), so one table serves every country variant.
 Portuguese from Portugal gets the Brazilian table, as Durty Cloth Tool does; Traditional Chinese gets English.
@@ -31,11 +32,13 @@ LOCALES: Dict[str, Tuple[str, ...]] = {
 
 
 def table(language: str) -> Mapping[str, str]:
-    """The ``TEXT`` dictionary of one translation module."""
+    """Every text of one language: its link module's ``TEXT`` and its garment module's."""
     if language not in LOCALES:
         raise KeyError(language)
-    module = importlib.import_module(f"{__name__}.{language}")
-    return module.TEXT
+    texts: Dict[str, str] = {}
+    for name in (language, f"garment_{language}"):
+        texts.update(importlib.import_module(f"{__name__}.{name}").TEXT)
+    return texts
 
 
 def blender_tables() -> Dict[str, Dict[Tuple[str, str], str]]:

@@ -5,13 +5,17 @@
 
     python tools/blender_shots.py --blender <path to blender> --out <folder>
         [--source <add-on source folder>] [--prefix after] [--expanded] [--language de_DE] [--theme light]
+        [--scenario garment]
 
 Builds the extension from ``--source`` (default: this repository's ``durty_cloth_tool_link``), starts a Blender
 window with a throw-away user folder (``BLENDER_USER_RESOURCES``), installs the build, and walks the add-on through
 its states against the fake Durty Cloth Tool and fake gta.clothing of the tests on 127.0.0.1: Durty Cloth Tool not
 running, signing in, connected, live preview, saving, a pushed model, items opened from Durty Cloth Tool, no cloth,
-no project, disconnected in Durty Cloth Tool, a Durty Cloth Tool that is too old, and signed out. Each state is
-saved as ``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
+no project, disconnected in Durty Cloth Tool, a Durty Cloth Tool that is too old, and signed out. ``--scenario
+garment`` walks Garment Fitting (Experimental) instead, on a synthetic garment and body: Setup before and after a
+garment and the hosted body are added, Fit with markers, Fix with the fit check and the problem colours, a sculpt
+session, the tear check, and Game Ready after the local steps. Each state is saved as
+``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run. Blender
 quits by itself at the end (and is ended after ``--timeout`` seconds otherwise). Your Blender settings and
 extensions are never touched, and nothing is sent to gta.clothing.
@@ -55,6 +59,7 @@ def launch(argv=None) -> int:
     parser.add_argument("--language", help="Blender's interface language for the run, for example de_DE")
     parser.add_argument("--theme", choices=("dark", "light"), default="dark")
     parser.add_argument("--size", default="1280x1600", help="the window size, WIDTHxHEIGHT")
+    parser.add_argument("--scenario", choices=("link", "garment"), default="link", help="which states to walk")
     parser.add_argument("--timeout", type=float, default=420.0)
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
@@ -77,7 +82,8 @@ def launch(argv=None) -> int:
         width, height = (int(v) for v in args.size.lower().split("x"))
         command = [args.blender, "--factory-startup", "--online-mode", "--window-geometry", "0", "0", str(width),
                    str(height), "--python", str(pathlib.Path(__file__).resolve()), "--", "--zip", str(archives[-1]),
-                   "--out", str(args.out.resolve()), "--prefix", args.prefix, "--theme", args.theme]
+                   "--out", str(args.out.resolve()), "--prefix", args.prefix, "--theme", args.theme,
+                   "--scenario", args.scenario]
         if args.expanded:
             command.append("--expanded")
         if args.language:
@@ -223,7 +229,10 @@ class Shots:
         ctrl.auth_base_url = api.base_url
         new = hasattr(link.LinkController, "open_map")
         try:
-            yield from self.states(ctrl, dct, api, ui, link, sollumz_stub, new, dead_port)
+            if args.scenario == "garment":
+                yield from self.garment_states(package, ctrl, dct, api, ui, sollumz_stub)
+            else:
+                yield from self.states(ctrl, dct, api, ui, link, sollumz_stub, new, dead_port)
         finally:
             dct.stop()
             api.stop()
@@ -256,6 +265,183 @@ class Shots:
         window, area, region = self.view()
         with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
             return call()
+
+    # ---- the garment fitting states (--scenario garment) ---------------------------------------------------
+
+    GARMENT_CHILDREN = ("DCTLINK_PT_garment_setup", "DCTLINK_PT_garment_fit", "DCTLINK_PT_garment_fix",
+                        "DCTLINK_PT_garment_ready")
+
+    def show_garment(self, garment_ui, open_child, link_ui=None):
+        """Garment Fitting with one child panel open and the others closed (and, with ``link_ui``, the link's working
+        panels closed). Blender keeps a panel's open state by its idname, so the classes are registered again under
+        new idnames (parents first, in their original order) and start in the state their options give."""
+        self.generation = getattr(self, "generation", 0) + 1
+        tree = [garment_ui.DCTLINK_PT_garment, garment_ui.DCTLINK_PT_garment_setup, garment_ui.DCTLINK_PT_garment_fit,
+                garment_ui.DCTLINK_PT_garment_fix, garment_ui.DCTLINK_PT_garment_ready]
+        for cls in reversed(tree):
+            bpy.utils.unregister_class(cls)
+        if link_ui is not None:
+            working = [link_ui.DCTLINK_PT_linked, link_ui.DCTLINK_PT_live, link_ui.DCTLINK_PT_model]
+            for cls in reversed(working):
+                bpy.utils.unregister_class(cls)
+            for cls in working:
+                cls.bl_idname = f"{cls.__name__}_shot{self.generation}"
+                cls.bl_options = set(getattr(cls, "bl_options", set()) or set()) | {"DEFAULT_CLOSED"}
+                bpy.utils.register_class(cls)
+        self.scroll(-20)
+        parent = f"DCTLINK_PT_garment_shot{self.generation}"
+        for cls in tree:
+            options = set(getattr(cls, "bl_options", set()) or set())
+            closed = cls.__name__ in self.GARMENT_CHILDREN and cls.__name__ != open_child
+            cls.bl_options = (options | {"DEFAULT_CLOSED"}) if closed else (options - {"DEFAULT_CLOSED"})
+            if cls is tree[0]:
+                cls.bl_idname = parent
+            else:
+                cls.bl_idname = f"{cls.__name__}_shot{self.generation}"
+                cls.bl_parent_id = parent
+            bpy.utils.register_class(cls)
+        self.show_tab()
+
+    def scroll(self, pages):
+        """Scrolls the sidebar by whole pages (negative: up), for panels taller than the window."""
+        window, area, region = self.view()
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
+            for _ in range(abs(pages)):
+                try:
+                    (bpy.ops.view2d.scroll_down if pages > 0 else bpy.ops.view2d.scroll_up)(page=True)
+                except RuntimeError:
+                    break  # at the end already
+        self.redraw()
+
+    def frame_all(self):
+        window, area, _ = self.view()
+        main = next(r for r in area.regions if r.type == "WINDOW")
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=main):
+            try:
+                bpy.ops.view3d.view_all()
+            except RuntimeError:
+                pass  # nothing to frame
+
+    def garment_states(self, package, ctrl, dct, api, ui, stub):
+        import math
+
+        from tests.blender import garment_smoke
+
+        garment_ui = sys.modules[package + ".ui_garment"]
+        gh = sys.modules[package + ".garment_host"]
+        stub.register()
+        # Signed in and connected: the hosted body needs the sign-in.
+        ctrl.shutdown()
+        ctrl.port_override = dct.port
+        dct.on_assist = api.approve
+        dct.focused = None
+        ctrl.connect()
+        yield from self.wait(lambda: ctrl.ready, 30, "the connection")
+        scene = bpy.context.scene
+        for obj in list(scene.objects):
+            bpy.data.objects.remove(obj)  # the default cube, camera and light
+        props = scene.dct_garment
+
+        # 1. Nothing chosen yet: the next step says how to start.
+        self.show_garment(garment_ui, "DCTLINK_PT_garment_setup", ui)
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-start")
+
+        # 2. A garment and the hosted body (from the fake gta.clothing).
+        folder = pathlib.Path(tempfile.mkdtemp(prefix="dct_shots_garment_", dir=os.environ["BLENDER_USER_RESOURCES"]))
+        tee = garment_smoke.panel_garment("tshirt_md", "short", 45.0)
+        props.garment = tee
+        props.gender = "female"
+        glb = garment_smoke.body_glb(folder)
+        api.body_files = {"freemode_female.glb": glb.read_bytes()}
+        garment_ui.BODY_ORIGIN["url"] = api.base_url
+        self.operator(lambda: bpy.ops.dct_link.fit_add_body())
+        yield from self.wait(lambda: garment_ui.RUNTIME.download is None and props.body is not None, 30,
+                             "the hosted body")
+        self.frame_all()
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-setup")
+
+        # 3. Fit: the markers placed.
+        props.category = "tshirt"
+        self.operator(lambda: bpy.ops.dct_link.fit_auto_markers())
+        self.show_garment(garment_ui, "DCTLINK_PT_garment_fit")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fit-markers")
+
+        # 4. Fix: the fit check and the problem colours.
+        self.operator(lambda: bpy.ops.dct_link.fit_check())
+        self.operator(lambda: bpy.ops.dct_link.fit_show_problems())
+        self.show_garment(garment_ui, "DCTLINK_PT_garment_fix")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fix-check")
+        self.scroll(1)
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fix-check-lower")
+        self.scroll(-20)
+
+        # 5. Fix by hand: a sculpt session, then accepted.
+        self.operator(lambda: bpy.ops.dct_link.fit_sculpt_start())
+        yield from self.wait(lambda: gh.sculpting(tee), 5, "the sculpt session")
+        self.shot("garment-fix-sculpting")
+        self.operator(lambda: bpy.ops.dct_link.fit_sculpt_accept())
+        yield from self.wait(lambda: not gh.sculpting(tee), 5, "the end of the session")
+        self.shot("garment-fix-accepted")
+
+        # 6. A garment made in T-pose: brought into the A-pose, rigged by hand, its tears checked.
+        tpose = garment_smoke.panel_garment("coat_tpose", "long", 0.0)
+        tee.hide_set(True)
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj == tpose)
+        bpy.context.view_layer.objects.active = tpose
+        self.operator(lambda: bpy.ops.dct_link.fit_use_garment())
+        props.category = "long_sleeve"
+        props.source_pose = "t_pose"
+        self.operator(lambda: bpy.ops.dct_link.fit_auto_markers())
+        self.show_garment(garment_ui, "DCTLINK_PT_garment_fit")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fit-tpose")
+        props.arm_angle = math.radians(40.0)
+        self.operator(lambda: bpy.ops.dct_link.fit_tpose_to_apose())
+        markers = gh.read_markers(scene)
+        rig_data = bpy.data.armatures.new("rig")
+        rig = bpy.data.objects.new("rig", rig_data)
+        scene.collection.objects.link(rig)
+        bpy.context.view_layer.objects.active = rig
+        self.operator(lambda: bpy.ops.object.mode_set(mode="EDIT"))
+        bones = []
+        for name, head, tail, parent in (("SKEL_Spine3", "pelvis", "chest", None),
+                                         ("SKEL_L_UpperArm", "shoulder_l", "elbow_l", 0),
+                                         ("SKEL_L_Forearm", "elbow_l", "wrist_l", 1),
+                                         ("SKEL_R_UpperArm", "shoulder_r", "elbow_r", 0),
+                                         ("SKEL_R_Forearm", "elbow_r", "wrist_r", 3)):
+            bone = rig_data.edit_bones.new(name)
+            bone.head, bone.tail = markers[head], markers[tail]
+            if parent is not None:
+                bone.parent = bones[parent]
+            bones.append(bone)
+        self.operator(lambda: bpy.ops.object.mode_set(mode="OBJECT"))
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj in (tpose, rig))
+        bpy.context.view_layer.objects.active = rig
+        self.operator(lambda: bpy.ops.object.parent_set(type="ARMATURE_AUTO"))
+        garment_smoke.split_weights(tpose)
+        self.operator(lambda: bpy.ops.dct_link.fit_check_tears())
+        self.show_garment(garment_ui, "DCTLINK_PT_garment_fix")
+        yield from self.wait(lambda: True, 5)
+        self.scroll(2)  # once the panel has drawn: the sidebar knows its height
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fix-tears")
+
+        # 7. Game ready: prepare, combine materials, levels of detail, validate.
+        self.operator(lambda: bpy.ops.dct_link.fit_prepare())
+        self.operator(lambda: bpy.ops.dct_link.fit_combine_materials())
+        props.lod_medium, props.lod_low = 600, 150
+        self.operator(lambda: bpy.ops.dct_link.fit_lods())
+        self.operator(lambda: bpy.ops.dct_link.fit_validate())
+        self.show_garment(garment_ui, "DCTLINK_PT_garment_ready")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-ready")
 
     def states(self, ctrl, dct, api, ui, link, stub, new, dead_port):
         # 1. Durty Cloth Tool is not running: the add-on keeps looking.
@@ -407,6 +593,7 @@ def run_inside_blender() -> None:
     parser.add_argument("--expanded", action="store_true")
     parser.add_argument("--language")
     parser.add_argument("--theme", default="dark")
+    parser.add_argument("--scenario", default="link")
     args = parser.parse_args(argv)
     view = bpy.context.preferences.view
     view.show_splash = False
