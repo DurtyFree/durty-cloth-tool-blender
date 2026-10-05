@@ -368,6 +368,7 @@ def test_presets_round_trip_and_reject_anything_else():
     for text in ("[]", json.dumps({"version": 2, "markers": {"neck": [0, 0, 0]}}),
                  json.dumps({"version": 1, "markers": {"nose": [0, 0, 0]}}),
                  json.dumps({"version": 1, "markers": {"neck": [0, 0, "x"]}}),
+                 json.dumps({"version": 1, "markers": {"neck": [0, None, 0]}}),
                  json.dumps({"version": 1, "markers": {"neck": [0, 0, 1e9]}})):
         with pytest.raises(ValueError):
             garment.parse_preset(text)
@@ -376,10 +377,18 @@ def test_presets_round_trip_and_reject_anything_else():
         garment.preset_file_name("../..")
 
 
-@pytest.mark.parametrize("size, factor", [(0.7, 1.0), (0.25, 1.0), (70.0, 0.01), (25.0, 0.01), (150.0, 0.01),
-                                          (700.0, 0.001), (300.0, 0.001), (1e6, 1.0)])
-def test_import_scale_brings_centimetres_and_millimetres_to_metres(size, factor):
-    assert garment.import_scale(size) == factor
+@pytest.mark.parametrize("size, category, factor", [
+    (0.7, "tshirt", 1.0), (70.0, "tshirt", 0.01), (700.0, "tshirt", 0.001), (160.0, "long_sleeve", 0.01),
+    (0.27, "shoes", 1.0), (27.0, "shoes", 0.01), (270.0, "shoes", 0.001), (80.0, "shoes", 0.001),
+    (105.0, "pants", 0.01), (1050.0, "pants", 0.001), (190.0, "long_jacket", 0.01), (1e6, "tshirt", 1.0),
+])
+def test_import_scale_brings_centimetres_and_millimetres_to_metres(size, category, factor):
+    assert garment.import_scale(size, category) == factor
+
+
+def test_the_size_ranges_never_fit_two_units():
+    for low, high in [*garment.SIZE_RANGES.values(), garment.TOP_SIZE_RANGE]:
+        assert high / low < 10
 
 
 # ---- the next step ------------------------------------------------------------------------------------------

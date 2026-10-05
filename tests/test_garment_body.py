@@ -109,6 +109,33 @@ def test_without_a_sign_in_no_ticket_is_asked_for(api, tmp_path):
     assert download(api, tmp_path, token="expired").error == "signed-out"  # the fake answers 401
 
 
+def test_a_refused_sign_in_is_renewed_once_and_a_failed_renewal_is_no_crash(api, tmp_path):
+    good = make_jwt()
+    api.access_tokens.append(good)
+    tokens = iter(["stale", good])
+    renewed = []
+    job = garment_body.BodyDownload(gender="male", channel="experimental", cache_root=tmp_path, client_header=HEADER,
+                                    access_token=lambda: next(tokens), blender_version=(5, 2, 1),
+                                    origin=api.base_url, invalidate_token=lambda: renewed.append(True)).run()
+    assert job.result is not None and renewed == [True]
+
+    def broken():
+        raise auth.AuthError("network", "gta.clothing could not be reached", retryable=True)
+
+    failed = garment_body.BodyDownload(gender="female", channel="experimental", cache_root=tmp_path / "x",
+                                       client_header=HEADER, access_token=broken, blender_version=(5, 2, 1),
+                                       origin=api.base_url).run()
+    assert failed.error == "network"
+
+
+def test_kept_versions_sort_by_their_numbers(tmp_path):
+    for version in ("2026.9.1", "2026.10.03-rc1", "2026.10.03.1"):
+        folder = tmp_path / "body" / version
+        folder.mkdir(parents=True)
+        (folder / "freemode_male.glb").write_bytes(GLB)
+    assert garment_body.cached_body(tmp_path, "male").version.startswith("2026.10.03")  # 10 sorts after 9
+
+
 def test_signed_out_a_body_kept_before_is_used(api, tmp_path):
     download(api, tmp_path)
     api.manifest["body"]["version"] = "2026.11.01.1"  # a newer body needs a ticket, so the kept one is used
@@ -123,7 +150,9 @@ def test_only_the_link_origin_or_a_loopback_test_server():
                 "http://user@127.0.0.1:80", "https://127.0.0.1/path"):
         with pytest.raises(ValueError):
             garment_body.check_origin(url)
-    assert not garment_body.valid_version("../etc") and garment_body.valid_version("2026.10.03.1")
+    assert garment_body.valid_version("2026.10.03.1") and garment_body.valid_version("2026.10.03-rc1")
+    for bad in ("../etc", ".", "..", "-1", "1.", "CON", "nul.1", "a/b", "x" * 33, "", None):
+        assert not garment_body.valid_version(bad), bad
 
 
 def test_the_download_runs_on_a_thread_and_can_be_cancelled(api, tmp_path):

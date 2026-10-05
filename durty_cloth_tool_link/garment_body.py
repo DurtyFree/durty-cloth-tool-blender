@@ -38,7 +38,9 @@ PLAIN_FILES = {"male": "freemode_male_plain.glb", "female": "freemode_female_pla
 COMPRESSED_FROM = (5, 2)
 MAX_BODY_BYTES = 32 * 1024 * 1024
 _MAX_JSON_BYTES = 256 * 1024
-_VERSION = re.compile(r"[A-Za-z0-9._-]{1,32}")
+_VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}")
+#: Names Windows keeps for devices, which can never be a folder.
+_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{n}" for n in range(1, 10)), *(f"LPT{n}" for n in range(1, 10))}
 _TICKET = re.compile(r"v1\.[A-Za-z0-9_-]{40,3000}")
 
 
@@ -75,7 +77,10 @@ def check_origin(url: str) -> str:
 
 
 def valid_version(value: Any) -> bool:
-    return isinstance(value, str) and _VERSION.fullmatch(value) is not None and ".." not in value
+    """A body version that is safe as a folder name: letters, digits, '.', '_' and '-', starting with a letter or
+    digit, no '..', no trailing '.', and no Windows device name."""
+    return (isinstance(value, str) and _VERSION.fullmatch(value) is not None and ".." not in value
+            and not value.endswith(".") and value.split(".")[0].upper() not in _RESERVED)
 
 
 def body_files(gender: str, blender_version: Tuple[int, ...]) -> List[str]:
@@ -92,7 +97,8 @@ def is_glb(data: bytes) -> bool:
 
 
 def _version_key(name: str) -> tuple:
-    return tuple(int(part) if part.isdigit() else part for part in re.split(r"[._-]", name))
+    """Sorts versions by their parts, numbers by value (a number part sorts before a word part)."""
+    return tuple((0, int(part), "") if part.isdigit() else (1, 0, part) for part in re.split(r"[._-]", name))
 
 
 def cached_body(cache_root: pathlib.Path, gender: str, version: Optional[str] = None,
@@ -108,8 +114,10 @@ def cached_body(cache_root: pathlib.Path, gender: str, version: Optional[str] = 
         for name in names:
             path = folder / candidate / name
             try:
-                if path.is_file() and is_glb(path.read_bytes()[:20]):
-                    return BodyResult(path, candidate, gender, True)
+                if path.is_file():
+                    with path.open("rb") as stream:
+                        if is_glb(stream.read(20)):
+                            return BodyResult(path, candidate, gender, True)
             except OSError:
                 continue
     return None
@@ -125,7 +133,8 @@ class BodyDownload:
 
     def __init__(self, *, gender: str, channel: str, cache_root: pathlib.Path, client_header: str,
                  access_token: Callable[[], Optional[str]], blender_version: Tuple[int, ...],
-                 origin: str = LINK_ORIGIN, timeout: float = 20.0, online: bool = True) -> None:
+                 origin: str = LINK_ORIGIN, timeout: float = 20.0, online: bool = True,
+                 invalidate_token: Callable[[], None] = lambda: None) -> None:
         if gender not in BODY_FILES:
             raise ValueError(gender)
         self.gender = gender
@@ -133,6 +142,7 @@ class BodyDownload:
         self.cache_root = pathlib.Path(cache_root)
         self.client_header = client_header
         self.access_token = access_token
+        self.invalidate_token = invalidate_token
         self.blender_version = tuple(blender_version)
         self.origin = check_origin(origin)
         self.timeout = timeout
@@ -269,15 +279,17 @@ class BodyDownload:
         if not isinstance(panel_version, str) or not re.fullmatch(r"[0-9A-Za-z.+-]{1,64}", panel_version):
             raise BodyError("unavailable")
 
-        token = self.access_token()
-        if not token:
-            older = cached_body(self.cache_root, self.gender, files=files)  # signed out: a body kept before
-            if older is None:
-                raise BodyError("signed-out")
-            return older
-        status, payload = self._request("POST", "/link/panel/ticket", body={"channel": self.channel,
-                                                                            "version": panel_version},
-                                        authorization="Bearer " + token)
+        status, payload = 401, b""
+        for attempt in range(2):  # a sign-in gta.clothing no longer accepts is renewed once
+            token = self._token(files)
+            if isinstance(token, BodyResult):
+                return token
+            status, payload = self._request("POST", "/link/panel/ticket", body={"channel": self.channel,
+                                                                                "version": panel_version},
+                                            authorization="Bearer " + token)
+            if status != 401 or attempt:
+                break
+            self.invalidate_token()
         if status != 200:
             raise self._failure(status, payload)
         ticket = self._json(payload).get("ticket")
@@ -296,6 +308,21 @@ class BodyDownload:
                 raise BodyError("invalid")
             return BodyResult(self._keep(version, name, payload), version, self.gender, False)
         raise BodyError("no-body")
+
+    def _token(self, files: List[str]) -> Any:
+        """The access token, or a body kept before when there is none (signed out, or the renewal failed)."""
+        try:
+            token = self.access_token()
+            code = "signed-out"
+        except Exception as exc:  # noqa: BLE001 - a failed renewal (network, signed out elsewhere) is no crash here
+            token = None
+            code = "network" if getattr(exc, "code", None) == "network" else "signed-out"
+        if token:
+            return token
+        older = cached_body(self.cache_root, self.gender, files=files)
+        if older is None:
+            raise BodyError(code)
+        return older
 
     def _keep(self, version: str, name: str, data: bytes) -> pathlib.Path:
         folder = self.cache_root / CACHE_FOLDER / version

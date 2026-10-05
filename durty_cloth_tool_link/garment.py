@@ -1095,7 +1095,10 @@ def parse_preset(text: str) -> Tuple[Dict[str, Vector], Optional[str], Optional[
             raise ValueError(f"unknown marker {name!r}")
         if not isinstance(value, list) or len(value) != 3:
             raise ValueError(f"marker {name!r} needs three numbers")
-        numbers = [float(v) for v in value]
+        try:
+            numbers = [float(v) for v in value]
+        except (TypeError, ValueError):
+            raise ValueError(f"marker {name!r} needs three numbers") from None
         if not all(math.isfinite(v) and abs(v) <= 10.0 for v in numbers):
             raise ValueError(f"marker {name!r} is out of range")
         markers[name] = (numbers[0], numbers[1], numbers[2])
@@ -1109,15 +1112,17 @@ def parse_preset(text: str) -> Tuple[Dict[str, Vector], Optional[str], Optional[
 # --------------------------------------------------------------------------------------------------
 
 
-#: The largest dimension, in metres, of anything worn on the body, from a small shoe to a long coat.
-GARMENT_SIZE_RANGE = (0.08, 2.5)
+#: The largest dimension, in metres, a garment of each kind has (with the arms of an A-pose or a T-pose). Each range
+#: spans less than a factor of 10, the step from centimetres to millimetres, so at most one unit fits.
+SIZE_RANGES = {"shoes": (0.08, 0.5), "pants": (0.25, 1.6), "shorts": (0.25, 1.6), "long_jacket": (0.4, 2.2)}
+TOP_SIZE_RANGE = (0.3, 1.8)
 
 
-def import_scale(size: float) -> float:
+def import_scale(size: float, category: str = "tshirt") -> float:
     """The factor that brings an imported garment whose largest dimension is ``size`` (Blender units) to metres:
-    Marvelous Designer files are often in centimetres or millimetres. Metres, centimetres and millimetres are 100
-    times apart and the size range is narrower than that, so the first factor that fits is the right one."""
-    low, high = GARMENT_SIZE_RANGE
+    Marvelous Designer files are often in centimetres or millimetres. The unit whose size fits the category wins;
+    a size that fits none is kept as it is."""
+    low, high = SIZE_RANGES.get(category, TOP_SIZE_RANGE)
     for factor in (1.0, 0.01, 0.001):
         if low <= size * factor <= high:
             return factor
