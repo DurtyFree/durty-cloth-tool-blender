@@ -1,0 +1,89 @@
+name: Bug report
+description: Something in the Blender add-on does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please do not report security problems here: see SECURITY.md.
+        For questions and quick help, the Pleb Masters Community Discord (https://discord.plebmasters.de) is faster.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The steps that make the problem happen, one per line.
+      placeholder: |
+        1. Select a cloth in Durty Cloth Tool
+        2. Select Start Live Preview in the DCT tab
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: addon-version
+    attributes:
+      label: Add-on version
+      description: Settings > Updates in the DCT tab, or About in its ? menu.
+      placeholder: 0.1.0-experimental.1
+    validations:
+      required: true
+  - type: input
+    id: blender-version
+    attributes:
+      label: Blender version
+      placeholder: "5.2.1"
+    validations:
+      required: true
+  - type: input
+    id: dct-version
+    attributes:
+      label: Durty Cloth Tool version
+      description: If the problem involves Durty Cloth Tool.
+  - type: input
+    id: sollumz-version
+    attributes:
+      label: Sollumz version
+      description: If the problem involves models or Generate LODs.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Connecting or signing in
+        - Live Preview or Texture Checks
+        - Model push or Edit in connected app
+        - Garment Fitting
+        - Add to Durty Cloth Tool Project
+        - Installing or updating
+        - Translations
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: >-
+        Use Copy Diagnostics in the ? menu of the DCT tab and paste the result here. It holds versions and status
+        codes only. Add any error from Blender's system console (Window > Toggle System Console).
+      render: text
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Screenshots of the DCT tab or the problem help a lot. Remove anything personal first.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I searched the existing issues and this is not a duplicate.
+          required: true
+        - label: This report contains no passwords, sign-in codes or other personal data.
+          required: true

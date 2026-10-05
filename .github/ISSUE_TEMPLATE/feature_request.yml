@@ -1,0 +1,50 @@
+name: Feature request
+description: An idea that would make the Blender add-on better.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your idea. Please describe the problem you want to solve first; there may be more than one
+        way to solve it.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What do you want to do?
+      description: The task you are working on and what makes it hard today.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Your idea
+      description: How the add-on could help. Mockups or screenshots are welcome.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Connecting or signing in
+        - Live Preview or Texture Checks
+        - Model push or Edit in connected app
+        - Garment Fitting
+        - Add to Durty Cloth Tool Project
+        - Installing or updating
+        - Translations
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Anything else?
+      description: Workarounds you use today, or other ideas you considered.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send
+      options:
+        - label: I searched the existing issues and this idea is not there yet.
+          required: true

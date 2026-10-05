@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://discord.plebmasters.de
+    about: Ask in the Pleb Masters Community Discord server.
+  - name: Documentation
+    url: https://docs.gta.clothing/
+    about: How Durty Cloth Tool and its plugins work.
+  - name: Security problem
+    url: https://github.com/DurtyFree/durty-cloth-tool-blender/security/policy
+    about: Do not open a public issue. Report it privately as described in the security policy.
