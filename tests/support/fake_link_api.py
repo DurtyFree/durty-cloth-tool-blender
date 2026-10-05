@@ -1,12 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
-"""A fake of gta.clothing's public Creator Link sign-in routes on 127.0.0.1 for tests: device sign-in, token
-rotation, sign-in assertions and logout, and the link origin's channel manifest, panel tickets and hosted body. It is
-strict where the real service is strict (a spent refresh token revokes the session, a ticket opens only the body of
-the version the manifest names).
+"""A fake of the gta.clothing routes the add-on calls, on 127.0.0.1 for tests: device sign-in, token renewal, sign-in
+assertions and logout, and the link origin's channel manifest, tickets and hosted body. It only checks what the tests
+need to see the add-on handle: the add-on's own requests and each refusal it must explain to the user.
 
-Adapted from the dct_link test suite (MIT, like dct_link itself), reduced to the routes the add-on calls.
-Standard library only, so the Blender smoke can use it too.
+MIT licensed, like dct_link. Standard library only, so the Blender smoke can use it too.
 """
 
 from __future__ import annotations
@@ -36,13 +34,14 @@ def _part(obj: Dict[str, Any]) -> str:
 
 
 def make_jwt() -> str:
-    return _part({"alg": "ES256", "kid": "link-1"}) + "." + _part({"UserId": "u1", "jti": os.urandom(4).hex()}) + "." + _token("")
+    """An opaque access token in three dot-separated parts; the add-on never reads it."""
+    return _part({"alg": "none", "typ": "test"}) + "." + _part({"sub": "u1", "jti": os.urandom(4).hex()}) + "." + _token("")
 
 
 def make_assertion(nonce: str, user: str = "u1") -> str:
-    """Shape and claims of a sign-in assertion (the fake does not sign; the fake DCT checks the claims)."""
-    claims = {"aud": "dct-creator-link-assertion", "UserId": user, "nonce": nonce, "jti": secrets.token_hex(8)}
-    return _part({"alg": "ES256", "kid": "link-1"}) + "." + _part(claims) + ".c2ln"
+    """A stand-in for a sign-in assertion with the claims the add-on checks (audience and nonce); not signed."""
+    claims = {"aud": "dct-creator-link-assertion", "sub": user, "nonce": nonce, "jti": secrets.token_hex(8)}
+    return _part({"alg": "none", "typ": "test"}) + "." + _part(claims) + ".c2ln"
 
 
 class FakeLinkApi:
@@ -116,8 +115,8 @@ class FakeLinkApi:
         self.access_tokens.append(access)
         return {"successful": True, "accessToken": access, "tokenType": "Bearer", "expiresIn": 900,
                 "refreshToken": refresh, "refreshSessionExpiresAtUtc": "2026-11-01T12:00:00Z", "sessionId": session,
-                "user": {"id": "u1", "name": "Durty", "avatarUrl": "https://cdn.discordapp.com/x.png"},
-                "entitlement": {"tier": "ultimate", "featureTableVersion": "0.1", "features": []}}
+                "user": {"id": "u1", "name": "Durty", "avatarUrl": "https://avatar.example/x.png"},
+                "entitlement": {"features": []}}
 
     def _send_bytes(self, handler: BaseHTTPRequestHandler, data: bytes, content_type: str) -> None:
         handler.send_response(200)
@@ -200,8 +199,7 @@ class FakeLinkApi:
         ticket = "v1." + base64.urlsafe_b64encode(os.urandom(40)).rstrip(b"=").decode()
         with self.lock:
             self.tickets.append(ticket)
-        self._send(handler, 200, {"ticket": ticket, "expiresAtUtc": "2026-10-05T12:30:00Z",
-                                  "base": f"/link/panel/{body['channel']}/{body['version']}/app/{ticket}/"})
+        self._send(handler, 200, {"ticket": ticket})
 
     def _body(self, handler: BaseHTTPRequestHandler, headers: Dict[str, str], rest: str) -> None:
         authorization = headers.get("authorization", "")

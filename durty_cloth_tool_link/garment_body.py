@@ -2,10 +2,9 @@
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
 """The hosted freemode body: downloading it for the signed-in account and keeping it in the add-on's user folder.
 
-The body is served by gta.clothing's link origin for a short-lived ticket, as the Creator Link panel loads it:
-the channel manifest names the body version and the panel version, ``POST /link/panel/ticket`` (with the sign-in)
-returns a ticket, and ``GET /link/assets/body/<version>/<file>`` (``Authorization: Ticket``) the file. Each version
-is kept in ``body/<version>/`` and never downloaded again. Without online access, or when gta.clothing cannot be
+The channel manifest on gta.clothing's link origin names the current body version; the signed-in account gets a
+short-lived ticket and downloads the body with it. Each version is kept in ``body/<version>/`` and never downloaded
+again. Without online access, or when gta.clothing cannot be
 reached, the newest kept version is used. The requests run on a worker thread; :meth:`BodyDownload.poll` never
 blocks. Nothing here imports Blender.
 """
