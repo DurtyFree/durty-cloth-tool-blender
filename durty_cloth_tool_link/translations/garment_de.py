@@ -281,14 +281,8 @@ TEXT = {
     "garment.problem.floating": "Abstehende Schulter",
     "garment.check.none": "Wähle Passform prüfen, um zu sehen, wie weit jeder Bereich vom Körper absteht.",
     "garment.check.measured": "Gemessen (mm)",
-    "garment.check.reference": "Üblich",
     "garment.check.value": "{p50} ({p10} bis {p90})",
-    "garment.check.later": "–",
     "garment.check.inside": "Im Körper: {count} Vertices ({share} %)",
-    "garment.check.reference-later": (
-        "Die übliche Spanne von Spielkleidung für jeden Bereich kommt in einer späteren Version mit dem "
-        "Anpassungsdienst."
-    ),
     "garment.advice.shoulders": (
         "Die Schultern stehen vom Körper ab: An den Körper anlegen mit Schultern bringt sie herunter."
     ),
@@ -312,7 +306,7 @@ TEXT = {
     ),
     "garment.finding.uv-area": "Das UV-Layout nutzt nur {area} % der Textur.",
     "garment.finding.no-weights": (
-        "Noch nicht geriggt: Die Gewichte kommen in einer späteren Version mit der Anpassung."
+        "Noch nicht geriggt: Weise dem Kleidungsstück Gewichte für die Knochen des Freemode-Skeletts zu."
     ),
     "garment.finding.unweighted": (
         "{count} Vertices haben keine Gewichte; das Spiel lässt sie zurück, wenn sich das Ped bewegt."
@@ -326,7 +320,7 @@ TEXT = {
         "vorbereiten ersetzt sie."
     ),
     "garment.finding.vertices": (
-        "Die Stufe {level} hat {count} Spiel-Vertices; Spielkleidung bleibt meist unter {budget}."
+        "Die Stufe {level} hat {count} Spiel-Vertices, mehr als die {budget}, die das Add-on empfiehlt."
     ),
     "garment.finding.inside": "{share} % des Kleidungsstücks liegen im Körper.",
     "garment.finding.materials": (
@@ -356,9 +350,7 @@ TEXT = {
     "garment.why.region-category": "Dieser Bereich gehört nicht zur gewählten Kategorie.",
     "garment.why.region-empty": "Das Kleidungsstück hat nichts im Bereich {region}.",
     "garment.why.no-session": "Es läuft keine Sculpting-Sitzung.",
-    "garment.why.no-armature": (
-        "Die Rissprüfung braucht eine Armature und Gewichte am Kleidungsstück. Sie kommen mit der Anpassung."
-    ),
+    "garment.why.no-armature": "Die Rissprüfung braucht eine Armature und Gewichte am Kleidungsstück.",
     "garment.why.no-weights": "Das Kleidungsstück hat keine Gewichte, mit denen es sich posieren lässt.",
     "garment.why.modifiers": (
         "Ein Modifikator ändert die Geometrie des Kleidungsstücks. Risse lassen sich nur ohne ihn prüfen."
@@ -482,9 +474,8 @@ TEXT = {
         "vorherige Form wieder her."
     ),
     "garment.info.tears": (
-        "Braucht eine Armature und Gewichte, die mit der Anpassung kommen. Das Kleidungsstück wird durch einige "
-        "Testposen bewegt (Arme hoch, Arme nach vorn, Beine nach vorn, eine Drehung), und die Nähte, die aufgehen, "
-        "werden gemeldet."
+        "Braucht eine Armature und Gewichte am Kleidungsstück. Das Kleidungsstück wird durch einige Testposen bewegt "
+        "(Arme hoch, Arme nach vorn, Beine nach vorn, eine Drehung), und die Nähte, die aufgehen, werden gemeldet."
     ),
     "garment.info.prepare": (
         "Verbindet die Nähte zwischen Schnittteilen (nie ein Futter mit seinem Oberstoff), entfernt lose Teile, "

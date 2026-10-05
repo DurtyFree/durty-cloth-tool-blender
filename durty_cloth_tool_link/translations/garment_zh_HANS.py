@@ -222,11 +222,8 @@ TEXT = {
     "garment.problem.floating": "肩部悬空",
     "garment.check.none": "运行适配检查，查看每个区域离身体多远。",
     "garment.check.measured": "测量值（mm）",
-    "garment.check.reference": "常见值",
     "garment.check.value": "{p50}（{p10} 至 {p90}）",
-    "garment.check.later": "–",
     "garment.check.inside": "在身体内：{count} 个顶点（{share}%）",
-    "garment.check.reference-later": "各区域游戏服装的常见范围将在以后的版本中随适配服务提供。",
     "garment.advice.shoulders": "肩部与身体之间有空隙：把区域设为肩部后点击贴合身体，即可把它们拉向身体。",
     "garment.sculpt.running": "用抓起笔刷拖动以移动服装。身体以线框显示。",
     "garment.sculpt.subtext": "接受会保留形状；取消会恢复会话之前的形状。",
@@ -241,14 +238,14 @@ TEXT = {
     "garment.finding.no-uv": "服装没有 UV 贴图，因此无法显示任何贴图。",
     "garment.finding.uv-outside": "{count} 个 UV 点位于 0 到 1 的方形范围之外；游戏会在那里重复贴图。",
     "garment.finding.uv-area": "UV 布局只使用了贴图的 {area}%。",
-    "garment.finding.no-weights": "尚未绑定：权重将在以后的版本中随适配提供。",
+    "garment.finding.no-weights": "尚未绑定：请为服装分配 freemode 骨架骨骼的权重。",
     "garment.finding.unweighted": "{count} 个顶点没有权重；ped 移动时，游戏会把它们留在原地。",
     "garment.finding.influences": "{count} 个顶点受超过 {limit} 根骨骼影响；游戏只使用 {limit} 根。",
     "garment.finding.colour-missing": "缺少 Color 1。准备服装会添加它。",
     "garment.finding.colour-format": (
         "Color 1 不是 Sollumz 所需的面拐（Face Corner）字节颜色（Byte Color）。准备服装会替换它。"
     ),
-    "garment.finding.vertices": "{level}细节级别有 {count} 个游戏顶点；游戏服装通常不超过 {budget} 个。",
+    "garment.finding.vertices": "{level}细节级别有 {count} 个游戏顶点，超过了插件建议的 {budget} 个。",
     "garment.finding.inside": "服装有 {share}% 在身体内。",
     "garment.finding.materials": "服装有 {count} 个材质。合并材质会把它们合成一张贴图。",
     "garment.why.no-garment": "请先导入服装，或在初始设置面板中选择一件服装。",
@@ -273,7 +270,7 @@ TEXT = {
     "garment.why.region-category": "此区域不属于所选类别。",
     "garment.why.region-empty": "服装在区域 {region} 中没有任何部分。",
     "garment.why.no-session": "没有正在进行的雕刻会话。",
-    "garment.why.no-armature": "检查撕裂需要服装带有骨架和权重。它们会随适配提供。",
+    "garment.why.no-armature": "检查撕裂需要服装带有骨架和权重。",
     "garment.why.no-weights": "服装没有可以用来摆姿势的权重。",
     "garment.why.modifiers": "有修改器会改变服装的几何体。只有在没有它的情况下才能检查撕裂。",
     "garment.why.no-uv": "服装没有 UV 贴图。",
@@ -371,10 +368,7 @@ TEXT = {
         "使用抓起笔刷的雕刻模式，身体以线框显示。接受会保留形状（开启保持在身体外时，"
         "还会把进入身体的部分移回外面）；取消会恢复之前的形状。"
     ),
-    "garment.info.tears": (
-        "需要骨架和权重，它们会随适配提供。服装会依次摆出几个测试姿势（手臂上举、手臂前伸、腿部前伸、扭转），"
-        "并报告裂开的接缝。"
-    ),
+    "garment.info.tears": "需要服装带有骨架和权重。服装会依次摆出几个测试姿势（手臂上举、手臂前伸、腿部前伸、扭转），并报告裂开的接缝。",
     "garment.info.prepare": (
         "合并版片之间的接缝（绝不会把里衬合并到外层上），移除松散部分，三角化，平滑着色，"
         "并用上面的值为服装添加 Sollumz 的顶点色 Color 1 和 Color 2。"

@@ -992,8 +992,8 @@ def game_vertex_count(loop_vertex: Any, loop_uv: Optional[Any] = None, loop_mate
 # Local checks
 # --------------------------------------------------------------------------------------------------
 
-#: Game vertices per level of detail above which a model is much heavier than game clothing usually is. This is
-#: guidance for performance, not a format limit: Sollumz splits larger geometries.
+#: Game vertices per level of detail above which the add-on advises reducing the model. This is rounded guidance
+#: for performance, not a format limit: Sollumz splits larger geometries.
 GAME_VERTEX_BUDGET = {"high": 30000, "medium": 10000, "low": 4000}
 #: The game skins each vertex with at most this many bones.
 MAX_INFLUENCES = 4

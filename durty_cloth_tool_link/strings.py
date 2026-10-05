@@ -788,13 +788,8 @@ EN: Dict[str, str] = {
     "garment.problem.floating": "Floating shoulder",
     "garment.check.none": "Run the fit check to see how far each region stands off the body.",
     "garment.check.measured": "Measured (mm)",
-    "garment.check.reference": "Usual",
     "garment.check.value": "{p50} ({p10} to {p90})",
-    "garment.check.later": "–",
     "garment.check.inside": "Inside the body: {count} vertices ({share} %)",
-    "garment.check.reference-later": (
-        "The usual range of game clothing for each region comes with the fitting service in a later version."
-    ),
     "garment.advice.shoulders": "The shoulders stand off the body: Snug to Body with Shoulders brings them down.",
     "garment.sculpt.running": "Drag with the Grab brush to move the garment. The body shows as a wireframe.",
     "garment.sculpt.subtext": "Accept keeps the shape; Cancel puts back the shape from before the session.",
@@ -810,14 +805,16 @@ EN: Dict[str, str] = {
     "garment.finding.no-uv": "The garment has no UV map, so it cannot show a texture.",
     "garment.finding.uv-outside": "{count} UV points lie outside the 0 to 1 square; the game repeats the texture there.",
     "garment.finding.uv-area": "The UV layout uses only {area} % of the texture.",
-    "garment.finding.no-weights": "Not rigged yet: the weights come with the fit in a later version.",
+    "garment.finding.no-weights": "Not rigged yet: weight the garment to the freemode skeleton's bones.",
     "garment.finding.unweighted": "{count} vertices have no weights; the game leaves them behind when the ped moves.",
     "garment.finding.influences": "{count} vertices are moved by more than {limit} bones; the game uses only {limit}.",
     "garment.finding.colour-missing": "Color 1 is missing. Prepare Garment adds it.",
     "garment.finding.colour-format": (
         "Color 1 is not a face corner byte colour, as Sollumz needs it. Prepare Garment replaces it."
     ),
-    "garment.finding.vertices": "The {level} level has {count} game vertices; game clothing usually stays under {budget}.",
+    "garment.finding.vertices": (
+        "The {level} level has {count} game vertices, more than the {budget} the add-on advises."
+    ),
     "garment.finding.inside": "{share} % of the garment is inside the body.",
     "garment.finding.materials": "The garment has {count} materials. Combine Materials makes one texture of them.",
     # ---- garment fitting: why a button is unavailable -----------------------------------------------------
@@ -843,7 +840,7 @@ EN: Dict[str, str] = {
     "garment.why.region-category": "This region is not part of the chosen category.",
     "garment.why.region-empty": "The garment has nothing in the region {region}.",
     "garment.why.no-session": "No sculpt session is running.",
-    "garment.why.no-armature": "Checking tears needs an armature and weights on the garment. They come with the fit.",
+    "garment.why.no-armature": "Checking tears needs an armature and weights on the garment.",
     "garment.why.no-weights": "The garment has no weights to pose it with.",
     "garment.why.modifiers": "A modifier changes the garment's geometry. Tears can only be checked without it.",
     "garment.why.no-uv": "The garment has no UV map.",
@@ -952,8 +949,8 @@ EN: Dict[str, str] = {
         "the body back out when Keep Out of Body is on); Cancel puts back the shape from before."
     ),
     "garment.info.tears": (
-        "Needs an armature and weights, which come with the fit. The garment is posed through a few test poses "
-        "(arms up, arms forward, legs forward, a twist), and the seams that open are reported."
+        "Needs an armature and weights on the garment. The garment is posed through a few test poses (arms up, arms "
+        "forward, legs forward, a twist), and the seams that open are reported."
     ),
     "garment.info.prepare": (
         "Joins the seams between panels (never a lining onto its shell), removes loose parts, triangulates, shades "

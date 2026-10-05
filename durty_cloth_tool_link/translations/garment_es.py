@@ -273,14 +273,8 @@ TEXT = {
     "garment.problem.floating": "Hombro flotante",
     "garment.check.none": "Usa Comprobar ajuste para ver a qué distancia del cuerpo queda cada región.",
     "garment.check.measured": "Medido (mm)",
-    "garment.check.reference": "Habitual",
     "garment.check.value": "{p50} ({p10} a {p90})",
-    "garment.check.later": "–",
     "garment.check.inside": "Dentro del cuerpo: {count} vértices ({share} %)",
-    "garment.check.reference-later": (
-        "El rango habitual de la ropa del juego para cada región llegará con el servicio de ajuste en una versión "
-        "posterior."
-    ),
     "garment.advice.shoulders": "Los hombros se separan del cuerpo: Ceñir al cuerpo con Hombros los baja.",
     "garment.sculpt.running": (
         "Arrastra con el pincel Arrastrar para mover la prenda. El cuerpo se muestra como estructura de alambre."
@@ -299,7 +293,7 @@ TEXT = {
         "{count} puntos UV quedan fuera del cuadrado de 0 a 1; el juego repite la textura allí."
     ),
     "garment.finding.uv-area": "La distribución UV usa solo el {area} % de la textura.",
-    "garment.finding.no-weights": "Aún sin rigging: los pesos llegarán con el ajuste en una versión posterior.",
+    "garment.finding.no-weights": "Aún sin rigging: asígnale a la prenda pesos de los huesos del esqueleto freemode.",
     "garment.finding.unweighted": (
         "{count} vértices no tienen pesos; el juego los deja atrás cuando el ped se mueve."
     ),
@@ -309,7 +303,7 @@ TEXT = {
         "Color 1 no es un color byte de esquina de cara, como lo necesita Sollumz. Preparar prenda lo reemplaza."
     ),
     "garment.finding.vertices": (
-        "El nivel {level} tiene {count} vértices de juego; la ropa del juego suele quedarse por debajo de {budget}."
+        "El nivel {level} tiene {count} vértices de juego, más de los {budget} que recomienda el complemento."
     ),
     "garment.finding.inside": "El {share} % de la prenda está dentro del cuerpo.",
     "garment.finding.materials": (
@@ -339,9 +333,7 @@ TEXT = {
     "garment.why.region-category": "Esta región no forma parte de la categoría elegida.",
     "garment.why.region-empty": "La prenda no tiene nada en la región {region}.",
     "garment.why.no-session": "No hay ninguna sesión de esculpido en curso.",
-    "garment.why.no-armature": (
-        "Comprobar desgarros necesita un esqueleto y pesos en la prenda. Llegan con el ajuste."
-    ),
+    "garment.why.no-armature": "Comprobar desgarros necesita un esqueleto y pesos en la prenda.",
     "garment.why.no-weights": "La prenda no tiene pesos con los que posarla.",
     "garment.why.modifiers": (
         "Un modificador cambia la geometría de la prenda. Los desgarros solo se pueden comprobar sin él."
@@ -464,9 +456,8 @@ TEXT = {
         "recupera la forma anterior."
     ),
     "garment.info.tears": (
-        "Necesita un esqueleto y pesos, que llegan con el ajuste. La prenda se pone en unas cuantas poses de prueba "
-        "(brazos arriba, brazos hacia delante, piernas hacia delante, una torsión) y se informa de las costuras "
-        "que se abren."
+        "Necesita un esqueleto y pesos en la prenda. La prenda se pone en unas cuantas poses de prueba (brazos arriba, "
+        "brazos hacia delante, piernas hacia delante, una torsión) y se informa de las costuras que se abren."
     ),
     "garment.info.prepare": (
         "Une las costuras entre paneles (nunca un forro con su capa exterior), quita las partes sueltas, triangula, "

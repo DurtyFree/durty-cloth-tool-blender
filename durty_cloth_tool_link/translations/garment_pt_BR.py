@@ -271,13 +271,8 @@ TEXT = {
     "garment.problem.floating": "Ombro flutuante",
     "garment.check.none": "Execute a verificação de ajuste para ver a que distância do corpo fica cada região.",
     "garment.check.measured": "Medido (mm)",
-    "garment.check.reference": "Típico",
     "garment.check.value": "{p50} ({p10} a {p90})",
-    "garment.check.later": "–",
     "garment.check.inside": "Dentro do corpo: {count} vértices ({share} %)",
-    "garment.check.reference-later": (
-        "A faixa típica das roupas do jogo para cada região vem com o serviço de ajuste numa versão futura."
-    ),
     "garment.advice.shoulders": (
         "Os ombros estão afastados do corpo: Aproximar do corpo com a região Ombros os traz para baixo."
     ),
@@ -296,7 +291,7 @@ TEXT = {
         "{count} pontos UV ficam fora do quadrado de 0 a 1; o jogo repete a textura ali."
     ),
     "garment.finding.uv-area": "O layout UV usa só {area} % da textura.",
-    "garment.finding.no-weights": "Ainda sem rig: os pesos vêm com o ajuste numa versão futura.",
+    "garment.finding.no-weights": "Ainda sem rig: atribua à roupa pesos dos ossos do esqueleto freemode.",
     "garment.finding.unweighted": (
         "{count} vértices não têm pesos; o jogo os deixa para trás quando o ped se move."
     ),
@@ -308,7 +303,7 @@ TEXT = {
         "Color 1 não está no formato que o Sollumz precisa (Byte Color em Face Corner). Preparar roupa o substitui."
     ),
     "garment.finding.vertices": (
-        "O nível {level} tem {count} vértices de jogo; roupas do jogo costumam ficar abaixo de {budget}."
+        "O nível {level} tem {count} vértices de jogo, mais do que os {budget} que o add-on recomenda."
     ),
     "garment.finding.inside": "{share} % da roupa está dentro do corpo.",
     "garment.finding.materials": (
@@ -338,9 +333,7 @@ TEXT = {
     "garment.why.region-category": "Esta região não faz parte da categoria escolhida.",
     "garment.why.region-empty": "A roupa não tem nada na região {region}.",
     "garment.why.no-session": "Nenhuma sessão de escultura está em andamento.",
-    "garment.why.no-armature": (
-        "Verificar rasgos precisa de uma armature e de pesos na roupa. Eles vêm com o ajuste."
-    ),
+    "garment.why.no-armature": "Verificar rasgos precisa de uma armature e de pesos na roupa.",
     "garment.why.no-weights": "A roupa não tem pesos para ser posada.",
     "garment.why.modifiers": (
         "Um modificador altera a geometria da roupa. Os rasgos só podem ser verificados sem ele."
@@ -466,9 +459,8 @@ TEXT = {
         "que entrou no corpo quando Manter fora do corpo está ligado); Cancelar devolve a forma de antes."
     ),
     "garment.info.tears": (
-        "Precisa de uma armature e de pesos, que vêm com o ajuste. A roupa é posada em algumas poses de teste "
-        "(braços para cima, braços para a frente, pernas para a frente, uma torção), e as costuras que se abrem são "
-        "informadas."
+        "Precisa de uma armature e de pesos na roupa. A roupa é posada em algumas poses de teste (braços para cima, "
+        "braços para a frente, pernas para a frente, uma torção), e as costuras que se abrem são informadas."
     ),
     "garment.info.prepare": (
         "Une as costuras entre os moldes (nunca um forro à camada externa), remove partes soltas, triangula, suaviza "

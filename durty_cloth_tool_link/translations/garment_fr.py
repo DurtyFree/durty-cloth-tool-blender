@@ -280,14 +280,8 @@ TEXT = {
         "Lancez le contrôle de l'ajustement pour voir à quelle distance du corps se tient chaque zone."
     ),
     "garment.check.measured": "Mesuré (mm)",
-    "garment.check.reference": "Habituel",
     "garment.check.value": "{p50} ({p10} à {p90})",
-    "garment.check.later": "–",
     "garment.check.inside": "Dans le corps : {count} sommets ({share} %)",
-    "garment.check.reference-later": (
-        "La plage habituelle des vêtements du jeu pour chaque zone arrivera avec le service d'ajustement dans une "
-        "version ultérieure."
-    ),
     "garment.advice.shoulders": (
         "Les épaules sont décollées du corps : Plaquer au corps avec Épaules les rabaisse."
     ),
@@ -309,7 +303,7 @@ TEXT = {
     ),
     "garment.finding.uv-area": "La disposition UV n'utilise que {area} % de la texture.",
     "garment.finding.no-weights": (
-        "Pas encore riggé : les poids arriveront avec l'ajustement dans une version ultérieure."
+        "Pas encore riggé : attribuez au vêtement des poids sur les os du squelette freemode."
     ),
     "garment.finding.unweighted": (
         "{count} sommets n'ont pas de poids ; le jeu les laisse sur place quand le ped bouge."
@@ -323,7 +317,7 @@ TEXT = {
         "le remplace."
     ),
     "garment.finding.vertices": (
-        "Le niveau {level} a {count} sommets en jeu ; les vêtements du jeu restent généralement sous {budget}."
+        "Le niveau {level} a {count} sommets en jeu, plus que les {budget} que le module conseille."
     ),
     "garment.finding.inside": "{share} % du vêtement est dans le corps.",
     "garment.finding.materials": (
@@ -356,10 +350,7 @@ TEXT = {
     "garment.why.region-category": "Cette zone ne fait pas partie de la catégorie choisie.",
     "garment.why.region-empty": "Le vêtement n'a rien dans la zone {region}.",
     "garment.why.no-session": "Aucune session de sculpture n'est en cours.",
-    "garment.why.no-armature": (
-        "Vérifier les déchirures nécessite une armature et des poids sur le vêtement. Ils arrivent avec "
-        "l'ajustement."
-    ),
+    "garment.why.no-armature": "Vérifier les déchirures nécessite une armature et des poids sur le vêtement.",
     "garment.why.no-weights": "Le vêtement n'a pas de poids avec lesquels le poser.",
     "garment.why.modifiers": (
         "Un modificateur change la géométrie du vêtement. Les déchirures ne peuvent être vérifiées que sans lui."
@@ -482,9 +473,8 @@ TEXT = {
         "est entré dans le corps quand Garder hors du corps est activé) ; Annuler rétablit la forme d'avant."
     ),
     "garment.info.tears": (
-        "Nécessite une armature et des poids, qui arrivent avec l'ajustement. Le vêtement passe par quelques poses "
-        "de test (bras levés, bras en avant, jambes en avant, une torsion), et les coutures qui s'ouvrent sont "
-        "signalées."
+        "Nécessite une armature et des poids sur le vêtement. Le vêtement passe par quelques poses de test (bras "
+        "levés, bras en avant, jambes en avant, une torsion), et les coutures qui s'ouvrent sont signalées."
     ),
     "garment.info.prepare": (
         "Joint les coutures entre les panneaux (jamais une doublure sur son tissu extérieur), supprime les parties "

@@ -1678,16 +1678,14 @@ def _mm(value: float) -> str:
     return f"{value:.0f}" if round(value) != 0 else "0"
 
 
-#: The fit check table's columns: region, measured, the usual range (filled in a later version).
-REPORT_COLUMNS = (0.34, 0.5)
+#: The share of the fit check table's width that the region column takes; the measurement takes the rest.
+REPORT_REGION_SHARE = 0.4
 
 
-def _report_row(column: Any, first: str, second: str, third: str, icon: str = "NONE") -> None:
-    line = column.split(factor=REPORT_COLUMNS[0], align=True)
+def _report_row(column: Any, first: str, second: str, icon: str = "NONE") -> None:
+    line = column.split(factor=REPORT_REGION_SHARE, align=True)
     line.label(text=first, translate=False)
-    rest = line.split(factor=REPORT_COLUMNS[1] / (1.0 - REPORT_COLUMNS[0]), align=True)
-    rest.label(text=second, icon=icon, translate=False)
-    rest.label(text=third, translate=False)
+    line.label(text=second, icon=icon, translate=False)
 
 
 def draw_report(layout: Any, context: Any) -> None:
@@ -1696,17 +1694,16 @@ def draw_report(layout: Any, context: Any) -> None:
         subtext(layout, context, "garment.check.none")
         return
     column = layout.column(align=True)
-    _report_row(column, t("garment.prop.region"), t("garment.check.measured"), t("garment.check.reference"))
+    _report_row(column, t("garment.prop.region"), t("garment.check.measured"))
     for row in report.rows:
         _report_row(column, t(f"garment.region.{row.region}"),
                     t("garment.check.value", p50=_mm(row.p50), p10=_mm(row.p10), p90=_mm(row.p90)),
-                    t("garment.check.later"), "ERROR" if row.inside else "BLANK1")
+                    "ERROR" if row.inside else "BLANK1")
     share = round(100.0 * report.inside_share, 1)
     wrapped(layout, context, t("garment.check.inside", count=report.inside, share=share),
             "ERROR" if report.inside else "CHECKMARK")
     for key, fields in garment.fit_advice(report):
         wrapped(layout, context, t(key, **fields), "INFO")
-    subtext(layout, context, "garment.check.reference-later")
 
 
 def draw_sculpt(layout: Any, context: Any) -> None:
