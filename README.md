@@ -9,7 +9,11 @@ computer, so you see your work on the freemode ped in Durty Cloth Tool's 3D prev
 - **Model.** Push a Sollumz Drawable Dictionary straight into Durty Cloth Tool's preview, replacing the linked
   cloth's model until you save or discard it. Turn on Push Automatically to send the model again a moment after
   each change.
-- **Linked Cloth.** The panel shows the open project, the cloth selected in Durty Cloth Tool and its variation.
+- **Edit from Durty Cloth Tool.** Choose Edit in connected app in Durty Cloth Tool: a texture map opens in Blender
+  as an image linked to its cloth with the live preview running, and a model opens through Sollumz, linked to its
+  cloth and pushed again after each change.
+- **Linked Cloth.** The panel shows the open project and the cloth with its picture, variation, drawable type,
+  gender, collection and number, and opens the cloth's diffuse, normal or specular map in Blender.
 - **Texture Checks.** Durty Cloth Tool checks the image against what GTA V and the cloth need, before you save.
 
 Nothing is saved in your project until you choose to save, and every save can be undone in the cloth's History in
@@ -21,11 +25,13 @@ Brazilian Portuguese, Simplified Chinese, Hindi and Arabic. It is open source un
 
 - Blender 4.2 or later on Windows (x64). Tested with Blender 4.5 LTS and 5.2 LTS; 4.2 to 4.4 are expected to
   work but are not tested.
-- Durty Cloth Tool running on the same computer, with connected apps allowed (Options > Connected apps).
+- Durty Cloth Tool running on the same computer, with connected apps allowed (Options > Connected apps), in a
+  version that speaks Creator Link protocol 2. With an older Durty Cloth Tool the DCT tab says to update it.
 - A Durty Cloth Tool account (you sign in with Discord on gta.clothing). Blender and Durty Cloth Tool must use
   the same account. Some features are included in a Durty Cloth Tool plan; the panels say when yours does not
   include one.
-- [Sollumz](https://docs.sollumz.org) 2.8.0 or later for pushing models (tested with Sollumz 2.9.0).
+- [Sollumz](https://docs.sollumz.org) 2.8.0 or later for opening and pushing models (tested with Sollumz 2.9.0).
+  Textures work without it.
 - Blender's **Allow Online Access** (Edit > Preferences > System > Network). The connection to Durty Cloth Tool
   stays on your computer, but each connection is confirmed with your gta.clothing sign-in, so without online
   access the add-on can neither sign in nor connect. The DCT tab says so while it is off.
@@ -56,12 +62,12 @@ Open the 3D View sidebar (N) and the **DCT** tab. It has these panels, in this o
 
 | Panel | What it is for |
 |---|---|
-| Durty Cloth Tool | The connection status in one word (Connected, Live, Connecting, Action Needed, Offline, Problem). Click it for the connection details, Connect or Disconnect, and Copy Diagnostics. |
+| Durty Cloth Tool | The connection status in one word (Connected, Live, Connecting, Action Needed, Offline, Problem). Click it for the connection details, Connect or Disconnect. The **?** menu in the panel header holds Help, the Pleb Masters Community Discord, Copy Diagnostics and About. |
 | Get Connected | Only while setup is incomplete: the setup steps, one at a time. The panels below appear once Durty Cloth Tool is found and you are signed in. |
-| Linked Cloth | The project, the cloth and variation selected in Durty Cloth Tool, and the map to replace. |
-| Live Preview | Start, pause and stop the live preview; Save to Cloth, Save as New Variation, Discard Changes; while it runs, the Texture Checks with Durty Cloth Tool's findings for the image. |
+| Linked Cloth | The project and the cloth: the one selected in Durty Cloth Tool, or the one the chosen image is linked to, with its picture, variation and details, and buttons that open its maps in Blender. |
+| Live Preview | The image and the map it replaces; start, pause and stop the live preview; Save to Cloth, Save as New Variation, Discard Changes; while it runs, the Texture Checks with Durty Cloth Tool's findings for the image. |
 | Model | Push Model, Push Automatically, Save Model to Cloth, Discard, and the Sollumz status. |
-| Settings | Connection, Account, Models (Automatic Push Delay), Updates, Privacy and About (closed by default). The add-on preferences show the same groups. |
+| Settings | Connection, Account, Models (Automatic Push Delay), Updates and Privacy (closed by default). The add-on preferences show the same groups. |
 
 The small **?** buttons explain a step or option: hover for the tooltip, or click for a popup. A greyed-out button
 says why it is unavailable, in the line below it and in its tooltip.
@@ -70,10 +76,10 @@ says why it is unavailable, in the line below it and in its tooltip.
 
 1. Start Durty Cloth Tool. The add-on finds it by itself (you can turn this off with Connect Automatically in
    Settings); otherwise click **Connect**.
-2. **Sign In with gta.clothing.** When Blender is not signed in yet, the add-on asks Durty Cloth Tool to approve
-   the sign-in: approve the request in Durty Cloth Tool (**Approve in Durty Cloth Tool** asks again). Or click
-   **Sign In in the Browser** and approve it on gta.clothing after checking that the page shows the same code
-   (**Copy Code** copies it).
+2. **Sign In with gta.clothing.** Click **Sign In**: Durty Cloth Tool shows the sign-in request with a code, and
+   you approve it there. When Durty Cloth Tool is not running, the add-on shows the code for your browser instead
+   after a few seconds (**Open Sign-in Page**, **Copy Code**); approve it on gta.clothing after checking that the
+   page shows the same code. **Sign In in the Browser** goes to that page straight away.
 
 There is nothing else to set up: Durty Cloth Tool accepts Blender once both are signed in with the same account,
 and lists it on its Connected apps page (Options > Connected apps), where you can disconnect it. After a
@@ -87,9 +93,9 @@ itself until you choose one of the sign-in buttons.
 ## Live Preview
 
 1. Select the cloth and texture variation in Durty Cloth Tool. The Linked Cloth panel shows them.
-2. Choose the map under Linked Cloth: Diffuse (Colour), Normal or Specular.
-3. In Live Preview, pick the image (the eyedropper picks the image you are painting on) and click **Start Live
-   Preview**. A progress bar shows while a large image is read for the first time.
+2. In Live Preview, pick the image (the eyedropper picks the image you are painting on) and the map it replaces:
+   Diffuse (Colour), Normal or Specular.
+3. Click **Start Live Preview**. A progress bar shows while a large image is read for the first time.
 4. Paint. The add-on reads the image when a paint stroke ends, so painting stays smooth, and Durty Cloth Tool
    shows the change a moment later. Changes made without painting (scripts, baking, reloading) are found when the
    add-on next checks the image, which it does less often the longer nothing changes; **Send Now** sends them at
@@ -102,6 +108,9 @@ itself until you choose one of the sign-in buttons.
    **Stop Live Preview** ends the preview without saving; your changes stay in the Blender image, so you can
    start again and save them.
 
+To start from the cloth's own texture instead, use the map buttons under Linked Cloth (**Open a Map in Blender**),
+or Edit in connected app in Durty Cloth Tool (see below).
+
 Images can be up to 4096 by 4096 pixels. Colours:
 
 - For the diffuse texture use an sRGB image, the default for painting. Linear images (32-bit float images, or
@@ -112,6 +121,29 @@ Images can be up to 4096 by 4096 pixels. Colours:
 - Normal and specular maps should be set to **Non-Color**; their values are sent as they are. The panel warns
   when an image's colour space means its values would arrive changed.
 - Everything arrives as 8 bits per channel. For exact colours, paint on 8-bit images.
+
+## Edit from Durty Cloth Tool
+
+In Durty Cloth Tool, choose **Edit in connected app** for a cloth or a texture variation and pick Blender. Blender
+must be running with the add-on connected; Durty Cloth Tool puts the cloth on the ped and sends it.
+
+- **A texture map** (diffuse, normal or specular) opens as an image named after the cloth, variation and map, for
+  example `jbib_003_u A Normal`, and its live preview starts at once. Normal and specular maps are set to
+  Non-Color. The image remembers its cloth and map (also in the saved .blend file), so its live preview always goes
+  to that cloth, whatever is selected in Durty Cloth Tool; **Unlink** under Linked Cloth lets it follow the
+  selection again. Opening the same map again reuses the image when it holds no unsaved changes; otherwise a new
+  image is made, so unsaved paint is never overwritten. The image is packed into the .blend file. While a live
+  preview runs or saves, Durty Cloth Tool is told that Blender is busy: stop it first.
+- **A model** opens with Sollumz: the add-on writes the `.ydd.xml` and its `.dds` textures into its own user
+  folder (the textures in a folder named after the model, where Sollumz looks for them), imports them with
+  Sollumz's import (your Sollumz import settings, with textures packed into the .blend file), selects the new
+  Drawable Dictionary, links it to its cloth and turns on Push Automatically. Its first push names the cloth;
+  later pushes update that preview. A model of another cloth that was on the ped before is taken off first. Save
+  Model to Cloth and Discard work as for any pushed model. Without Sollumz (or with one that is too old), Durty
+  Cloth Tool is told what is missing and the Model panel says what to install.
+
+The panels say what happened ("Opened from Durty Cloth Tool: ..."); a problem after Blender took the item is shown
+there too.
 
 ## Model
 
@@ -150,20 +182,24 @@ This connection never leaves your computer. Messages the add-on sends:
 | Message | When | Contents |
 |---|---|---|
 | `hello` | every connection | link protocol version, add-on version and channel, "Blender" and the Blender version, the random installation id (the one gta.clothing sees with your sign-in), and a random number for this connection |
-| `account.assist` | signing in through Durty Cloth Tool | the sign-in code, so Durty Cloth Tool can approve it |
+| `account.assist` | Sign In | the sign-in code, so Durty Cloth Tool can approve it |
 | `auth` | every connection | a short-lived sign-in assertion for this connection (never your gta.clothing tokens) |
 | `context.get` | after connecting | asks for the open project and the selected cloth |
-| `live.open` | Start Live Preview | the map (diffuse, normal or specular), the image size and the image name |
+| `live.open` | Start Live Preview, an opened map | the map (diffuse, normal or specular), the image size and the image name, and for an image linked to its cloth the ids of that cloth and variation |
 | `live.frame` | during the live preview | the changed parts of the image as pixels |
 | `live.save` | Save to Cloth, Save as New Variation | which save to make |
 | `live.discard`, `live.close` | Discard Changes, Stop Live Preview | which live preview to drop or close |
 | `texture.validate` | when the live preview starts, Check Again | the map and the image size |
-| `model.push` | Push Model | the `.ydd.xml` and `.dds` files with their names |
+| `texture.read` | the map buttons under Linked Cloth | which map of which cloth to send |
+| `item.thumbnail` | when the Linked Cloth panel shows another cloth | the cloth and the picture size |
+| `host.result` | when Durty Cloth Tool sent a texture or model | whether Blender opened it, or why not |
+| `model.push` | Push Model, an opened model | the `.ydd.xml` and `.dds` files with their names; the first push of an opened model also the ids of its cloth |
 | `model.save`, `model.discard` | Save Model to Cloth, Discard | which pushed model to save or drop |
 | `bye` | disconnecting | nothing |
 
 Durty Cloth Tool answers with the matching results and tells the add-on when the project, the selected cloth or
-your plan changes, and when a live preview or pushed model is closed on its side.
+your plan changes, and when a live preview or pushed model is closed on its side. It sends the textures and models
+you choose Edit in connected app for.
 
 ### To gta.clothing
 
@@ -177,7 +213,7 @@ Blender does not wait for them.
 | `POST /link/api/assertions` | every connection to Durty Cloth Tool | your sign-in (as `Authorization: Bearer`) and the random number Durty Cloth Tool chose for this connection |
 | `POST /link/api/auth/logout` | Sign Out, when online access is allowed | the renewal token, to end the session |
 
-Every request carries the header `X-DCT-Link-Client: blender/<add-on version> (protocol 1.0; channel <channel>)`
+Every request carries the header `X-DCT-Link-Client: blender/<add-on version> (protocol 2.0; channel <channel>)`
 (also used as the User-Agent). The add-on opens these pages in your browser when you ask it to: the sign-in
 approval page `https://gta.clothing/account/link/`, the plugins page `https://gta.clothing/account/plugins/`, the
 documentation `https://docs.gta.clothing/`, the Pleb Masters Community Discord server, and its invitation
@@ -204,6 +240,12 @@ sign-in data.
   - `install-id`: a random id for this installation (not a secret).
   - `auth.lock`: an empty file that keeps two Blender windows from renewing the sign-in at the same time.
 - **Exported models:** in a temporary folder named `dct_link_...`, deleted right after each push.
+- **Models opened from Durty Cloth Tool:** in `opened-models` in the add-on's user folder while the model is on the
+  ped. They are deleted when the model is discarded or closed, when the add-on is disabled, and (left over from a
+  Blender that closed) when the add-on starts. Blender keeps what it imported, with the textures packed.
+- **Textures opened from Durty Cloth Tool:** packed into the .blend file, with the ids of the cloth and variation
+  and the map as custom properties of the image (`dct_cloth_id`, `dct_texture_id`, `dct_map`). A model opened from
+  Durty Cloth Tool keeps the ids on its Drawable Dictionary.
 
 ## Signing out and disconnecting
 
@@ -224,6 +266,10 @@ this computer. It does not end the session on gta.clothing, so sign out first.
 
 - **Durty Cloth Tool not found:** make sure it is running and connected apps are allowed (Options > Connected
   apps).
+- **Durty Cloth Tool is older than the add-on:** update Durty Cloth Tool, then click **Connect**. When the add-on is
+  older than Durty Cloth Tool, **Get the Update** opens the plugins page.
+- **Busy when sending from Durty Cloth Tool:** a live preview is running or saving in Blender (or a model is being
+  pushed). Stop it, then choose Edit in connected app again.
 - **Disconnected in Durty Cloth Tool:** click **Connect** in the DCT tab.
 - **Durty Cloth Tool is signed out:** sign in there, then click **Connect**. The add-on also tries again by
   itself, waiting longer each time (up to about five minutes).
@@ -234,7 +280,8 @@ this computer. It does not end the session on gta.clothing, so sign out first.
 - **Online access is off:** signing in and connecting both need it; allow it in Edit > Preferences > System >
   Network.
 - **A button is greyed out:** the line below it says why and what makes it available (so does its tooltip).
-- **Support:** Settings > About > **Copy Diagnostics**, then paste it in the Pleb Masters Community Discord server.
+- **Support:** the **?** menu in the header of the DCT tab > **Copy Diagnostics**, then paste it in the Pleb
+  Masters Community Discord server.
 
 ## Development
 
@@ -247,14 +294,19 @@ tools/                   dct_link sync, manifest check, release checks and the B
 - **Tests** (Python 3.11 or later): `python -m pip install -r requirements-dev.txt numpy`, then `python -m pytest`.
   They cover pixel conversion and the vertical flip, colour handling, dirty rectangles, capture scheduling,
   collecting Sollumz exports, settings, the nine languages, the manifest, the vendored copy, and the whole link
-  flow against a fake Durty Cloth Tool and a fake gta.clothing on `127.0.0.1`.
+  flow against a fake Durty Cloth Tool and a fake gta.clothing on `127.0.0.1`, including the textures and models
+  Durty Cloth Tool sends.
 - **Texts:** every text the add-on shows is in `durty_cloth_tool_link/strings.py` (English) and
   `durty_cloth_tool_link/translations/` (one module per language, Blender locale names). Add a key in all nine
   languages at once; the tests fail when one is missing or its `{fields}` differ.
 - **Blender smoke:** `python tools/blender_smoke.py --blender <path to blender>` validates and builds the
   extension into `dist/` and runs `tests/blender/smoke_in_blender.py` in a background Blender with a throw-away
   user folder. Add `--sollumz <Sollumz extension folder> --sollumz-site <folder with its szio package>` to also
-  push through a real Sollumz.
+  push through a real Sollumz (and open a model with its import).
+- **Interface screenshots:** `python tools/blender_shots.py --blender <path to blender> --out <folder>` builds the
+  extension, opens a Blender window with a throw-away user folder, walks the DCT tab through its states against
+  the fake Durty Cloth Tool and saves a cropped screenshot of the sidebar for each (`--expanded`, `--language
+  de_DE` and `--theme light` for variants). Blender quits by itself.
 - **Build by hand:** `blender --command extension build --source-dir durty_cloth_tool_link --output-dir dist`.
 - **Release:** set the new version in `blender_manifest.toml` and `VERSION` in `settings.py` (`X.Y.Z`, or
   `X.Y.Z-experimental.N` with N from 1 for an Experimental release), then push the tag `v<version>` from the
@@ -266,9 +318,9 @@ tools/                   dct_link sync, manifest check, release checks and the B
   Blender offers any listed version that differs from the installed one as an update, without comparing
   versions, so switching from Experimental to Release can move to a lower version number.
 - **Manifest check without Blender:** `python tools/check_manifest.py`.
-- **dct_link** is vendored from the Durty Cloth Tool repository: only the modules the add-on uses, each copied
-  unchanged. Never edit `durty_cloth_tool_link/dct_link` by hand; update it with
-  `python tools/sync_dct_link.py <Durty Cloth Tool checkout>` and check it with
+- **dct_link** (the Creator Link client, protocol 2) is developed in the Durty Cloth Tool repository and vendored
+  here: only the modules the add-on uses, each copied unchanged. Never edit `durty_cloth_tool_link/dct_link` by
+  hand; update it with `python tools/sync_dct_link.py <Durty Cloth Tool checkout>` and check it with
   `python tools/sync_dct_link.py --check`.
 
 ## Licence
