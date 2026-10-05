@@ -16,9 +16,9 @@ computer, so you see your work on the freemode ped in Durty Cloth Tool's 3D prev
   gender, collection and number, and opens the cloth's diffuse, normal or specular map in Blender.
 - **Texture Checks.** Durty Cloth Tool checks the image against what GTA V and the cloth need, before you save.
 - **Garment Fitting (Experimental).** Bring a garment from Marvelous Designer (or any FBX, OBJ or glTF) towards a
-  game-ready freemode cloth: markers, fit checks against the freemode body, fixes by region or by hand, and the
-  game-ready steps (seams, one texture, levels of detail, checks). See
-  [Garment fitting (experimental)](#garment-fitting-experimental).
+  game-ready freemode cloth: markers, fit checks against the freemode body, fixes by region or by hand, the
+  game-ready steps (seams, one texture, levels of detail, checks), and adding it as a new cloth to the project open
+  in Durty Cloth Tool. See [Garment fitting (experimental)](#garment-fitting-experimental).
 
 Nothing is saved in your project until you choose to save, and every save can be undone in the cloth's History in
 Durty Cloth Tool. The add-on speaks Blender's interface language: English, German, French, Russian, Spanish,
@@ -34,8 +34,9 @@ Brazilian Portuguese, Simplified Chinese, Hindi and Arabic. It is open source un
 - A Durty Cloth Tool account (you sign in with Discord on gta.clothing). Blender and Durty Cloth Tool must use
   the same account. Some features are included in a Durty Cloth Tool plan; the panels say when yours does not
   include one.
-- [Sollumz](https://docs.sollumz.org) 2.8.0 or later for opening and pushing models and for Generate LODs (tested with
-  Sollumz 2.9.0). Textures and the other garment fitting tools work without it.
+- [Sollumz](https://docs.sollumz.org) 2.8.0 or later for opening and pushing models, for Generate LODs and for adding a
+  garment to Durty Cloth Tool (tested with Sollumz 2.9.0). Textures and the other garment fitting tools work without
+  it.
 - Blender's **Allow Online Access** (Edit > Preferences > System > Network). The connection to Durty Cloth Tool
   stays on your computer, but each connection is confirmed with your gta.clothing sign-in, so without online
   access the add-on can neither sign in nor connect. The DCT tab says so while it is off.
@@ -184,9 +185,10 @@ with Add clothing instead.
 
 Garment Fitting (Experimental) in the DCT tab takes a garment made elsewhere, for example in Marvelous Designer,
 and works it towards a cloth the game can wear. Its first line always says what to do next. In this version every
-tool runs in Blender on your computer; only the freemode body is downloaded (see below). Fitting the garment to the
-GTA pose, giving it weights and adding it to a Durty Cloth Tool project come in a later version and will use
-gta.clothing, with a daily limit for each account.
+tool runs in Blender on your computer; only the freemode body is downloaded (see below), and **Add to Durty Cloth
+Tool** sends the finished garment to Durty Cloth Tool on this computer. Fitting the garment to the GTA pose and giving
+it weights come in a later version and will use gta.clothing, with a daily limit for each account; until then, weight
+the garment yourself (see below).
 
 The tools change only the garment chosen under Setup, the markers and the body they added. Every step that changes
 the garment can be undone with Ctrl+Z, and the garment keeps up to three backups of its mesh in the .blend file (the
@@ -252,11 +254,60 @@ shape before the first fitting step and the newest ones) for **Restore Pre-fit**
   layout, the vertex colours, the vertices of each level of detail against what game clothing usually has, and how
   much of the garment is inside the body. It says CLEAN, or lists what to look at.
 
+**Add to Durty Cloth Tool**
+
+The last part of Game Ready adds the garment as a new cloth to the project open in Durty Cloth Tool. It needs:
+
+- Durty Cloth Tool running on this computer and connected (see [First connection](#first-connection)), with a
+  project open. A custom ped project takes no freemode clothing this way.
+- The game set up in Durty Cloth Tool: the freemode skeleton comes from your own game files.
+- Sollumz (see [Requirements](#requirements)).
+- One material with a colour texture (**Combine Materials** makes one) and weights for the freemode skeleton: vertex
+  groups named after its bones, such as `SKEL_Spine3`. The weights come with the fit in a later version; until then
+  weight the garment yourself.
+
+The fields:
+
+- **Cloth Name**: the name the cloth gets in Durty Cloth Tool (the garment's name when the field is empty). The slot
+  and the gender are the ones chosen under Setup.
+- **Shows Skin**: the cloth shows some of the ped's skin, so the game colours it with the ped's skin tone (the `_r`
+  variant).
+- **Colour Variations**: the garment's own texture is the first one; **Add Colour Variation** adds more from other
+  images in the same layout, up to 26 in all, each with a name of its own. Each side of a picture must divide by four
+  and be at most 4096 pixels; Durty Cloth Tool advises powers of two and 2048 pixels or less.
+- **Use Durty Cloth Tool Skeleton** asks Durty Cloth Tool for the freemode skeleton of the gender under Setup, imports
+  it with Sollumz as a Drawable Dictionary and puts the garment on it: the garment is parented to the skeleton with an
+  Armature modifier and keeps its vertex groups, and becomes a Sollumz Drawable Model. Each skeleton is asked for once
+  while Blender runs. **Add to Durty Cloth Tool Project** does this by itself when the garment is not on the skeleton
+  yet.
+
+**Add to Durty Cloth Tool Project** then:
+
+1. Runs Validate and checks the name, the material, the pictures and the vertex groups. What blocks the add is listed
+   under the button, and nothing is sent. Vertex groups that are not bones of the skeleton block the add (the game
+   would move them with the root).
+2. Checks that the skeleton still has the freemode skeleton's bones in the game's order, gives the garment Sollumz's
+   ped shader with its colour texture (and its normal and specular maps; these go into the model when they are DDS
+   files), shades it smooth and exports it with Sollumz with Exclude Skeleton, so the cloth uses the ped's own
+   skeleton. An export Sollumz reports errors for, or one without the garment's geometry, is refused.
+3. Sends the model and the colour variations (as PNG pictures) to Durty Cloth Tool, which shows the cloth with its
+   checks in a window of its own. Nothing is added unless you choose **Add to project** there; **Cancel** in Blender
+   withdraws the add while Durty Cloth Tool still asks.
+
+The panel then says what happened: the cloth was added (with Durty Cloth Tool's checks of the model and the pictures),
+you chose Cancel in Durty Cloth Tool, or Durty Cloth Tool refused it. Durty Cloth Tool applies its own limits to every
+add: when the project already has as many clothes as the free version of Durty Cloth Tool allows, Durty Cloth Tool
+says no, and the panel says so. Once the cloth is added, the Drawable Dictionary is linked to it like a model opened
+from Durty Cloth Tool, so **Push Model** and **Save Model to Cloth** under Model update that cloth (with Durty Cloth
+Tool Ultimate). Undo in Blender does not remove the cloth from the project; remove it in Durty Cloth Tool.
+
 What the garment tools keep: the backups as meshes with a fake user, the latest fit check and validation, and a few
 markers of progress as custom properties of the garment (`dct_garment`, `dct_fit_backups`, `dct_fit_report`,
-`dct_findings`, `dct_prepared` and similar); the markers as empties in the collection `DCT Garment Markers`; the
-body in `DCT Freemode Body`; the problem colours as the colour attribute `DCT Problems`; and, during a sculpt
-session, the shape it started from as the attribute `dct_presculpt`.
+`dct_findings`, `dct_prepared` and similar, and `dct_added` once the garment was added to Durty Cloth Tool); the
+markers as empties in the collection `DCT Garment Markers`; the body in `DCT Freemode Body`; the problem colours as
+the colour attribute `DCT Problems`; during a sculpt session, the shape it started from as the attribute
+`dct_presculpt`; and the freemode skeleton from Durty Cloth Tool as a Drawable Dictionary and its armature, named
+after the garment and marked with the custom property `dct_skeleton` (the gender).
 
 ## What the add-on sends, and where
 
@@ -284,11 +335,14 @@ This connection never leaves your computer. Messages the add-on sends:
 | `host.result` | when Durty Cloth Tool sent a texture or model | whether Blender opened it, or why not |
 | `model.push` | Push Model, an opened model | the `.ydd.xml` and `.dds` files with their names; the first push of an opened model also the ids of its cloth |
 | `model.save`, `model.discard` | Save Model to Cloth, Discard | which pushed model to save or drop |
+| `skeleton.template` | Use Durty Cloth Tool Skeleton, Add to Durty Cloth Tool Project | the gender of the skeleton |
+| `item.add` | Add to Durty Cloth Tool Project | the `.ydd.xml` and its `.dds` files, the colour variations as `.png` files with their names, the cloth's name, slot, gender and whether it shows skin |
+| `item.addCancel` | Cancel while Durty Cloth Tool asks | which add to withdraw |
 | `bye` | disconnecting | nothing |
 
 Durty Cloth Tool answers with the matching results and tells the add-on when the project, the selected cloth or
 your plan changes, and when a live preview or pushed model is closed on its side. It sends the textures and models
-you choose Edit in connected app for.
+you choose Edit in connected app for, and the freemode skeleton (built from your own game files) for an add.
 
 ### To gta.clothing
 
@@ -323,7 +377,7 @@ and the add-on archive it names.
 ### What leaves your computer
 
 Your pixels and models go only to Durty Cloth Tool on this computer; the garment fitting tools of this version send
-nothing of your garment anywhere. gta.clothing sees your sign-in and its renewals, a sign-in assertion request each
+your garment nowhere else (Add to Durty Cloth Tool sends it to Durty Cloth Tool on this computer). gta.clothing sees your sign-in and its renewals, a sign-in assertion request each
 time Blender connects to Durty Cloth Tool, your sign-out, the download of the freemode body (once per body version)
 and Blender's update checks. Nothing else is sent anywhere, and the add-on does not collect usage data. **Copy
 Diagnostics** copies versions and status codes to the clipboard for support; it contains no file paths, names or
@@ -342,6 +396,10 @@ sign-in data.
     version.
   - `garment-presets\<name>.json`: the pose presets you saved (marker positions, category and source pose).
 - **Exported models:** in a temporary folder named `dct_link_...`, deleted right after each push.
+- **Adding a garment:** the skeleton template and the export of an add go into a folder of their own in
+  `garment-add` in the add-on's user folder, deleted right after they were read (and, left over from a Blender that
+  closed meanwhile, when the add-on starts). The Drawable Dictionary of an added garment keeps the ids of its new cloth
+  (`dct_cloth_id`, `dct_texture_id`), like a model opened from Durty Cloth Tool.
 - **Models opened from Durty Cloth Tool:** in `opened-models` in the add-on's user folder, one folder per open,
   while the model is on the ped. They are deleted when the model is discarded or closed, when the add-on is
   disabled, and (left over from a Blender that closed) when the add-on starts; at start-up only folders the add-on
@@ -402,7 +460,9 @@ tools/                   dct_link sync, manifest check, release checks and the B
   flow against a fake Durty Cloth Tool and a fake gta.clothing on `127.0.0.1`, including the textures and models
   Durty Cloth Tool sends. The garment fitting tools' arithmetic (markers on synthetic garments, regions, the fit
   check, problem colours, seams, UV strips, validation, presets) and the hosted body download are tested the same
-  way (`tests/test_garment.py`, `tests/test_garment_body.py`).
+  way (`tests/test_garment.py`, `tests/test_garment_body.py`), and so is adding a garment to Durty Cloth Tool: the
+  skeleton template, the checks, the PNG pictures, the export check and the whole exchange with the fake Durty Cloth
+  Tool (`tests/test_garment_add.py`).
 - **Texts:** every text the add-on shows is in `durty_cloth_tool_link/strings.py` (English) and
   `durty_cloth_tool_link/translations/` (one module per language, Blender locale names). Add a key in all nine
   languages at once; the tests fail when one is missing or its `{fields}` differ.
@@ -410,7 +470,8 @@ tools/                   dct_link sync, manifest check, release checks and the B
   extension into `dist/` and runs `tests/blender/smoke_in_blender.py` in a background Blender with a throw-away
   user folder. Add `--sollumz <Sollumz extension folder> --sollumz-site <folder with its szio package>` to also
   push through a real Sollumz (and open a model with its import). The smoke also runs every garment fitting tool on
-  a synthetic garment and body (`tests/blender/garment_smoke.py`; no game files are used or needed).
+  a synthetic garment and body, and adds the garment to the fake Durty Cloth Tool on a synthetic skeleton
+  (`tests/blender/garment_smoke.py`; no game files are used or needed).
 - **Interface screenshots:** `python tools/blender_shots.py --blender <path to blender> --out <folder>` builds the
   extension, opens a Blender window with a throw-away user folder (both tools drop Blender's `BLENDER_USER_*`
   folder variables, so your own profile is never used), walks the DCT tab through its states against
