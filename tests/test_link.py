@@ -81,7 +81,7 @@ def ready_controller(tmp_path, dct, api, stores) -> link.LinkController:
 def test_sign_in_through_dct(tmp_path, dct, api, stores):
     ctrl = ready_controller(tmp_path, dct, api, stores)
     assert ctrl.account_name == "Durty" and ctrl.user_name == "Durty"
-    assert ctrl.project == {"name": "FS Studio Clothing"}
+    assert ctrl.project == {"name": "Sample Clothing"}
     info = ctrl.focus_info()
     assert info[:6] == ("jbib_003_u", "A", "jbib_diff_003_a_uni", 2048, 2048, ("diffuse", "normal", "specular"))
     assert info.binding == BINDING and not info.linked and info.drawable_type is None  # DCT sent no details

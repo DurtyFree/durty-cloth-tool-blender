@@ -4,13 +4,12 @@
 per connection, plus enough DCT behaviour (hello, challenge, auth, account assist, disconnecting an app, live
 surfaces, models, services, thumbnails and opening items in the plugin) to drive the add-on end to end.
 
-Adapted from the dct_link test suite (MIT, like dct_link itself). Changes: the protocol module is passed in, so the
-same file serves pytest and the Blender smoke (which uses the add-on's vendored copy); a ``glb`` model push is
-answered with ``unsupported-format`` as Durty Cloth Tool does today; ``save_busy`` makes ``model.save`` answer
-``busy`` that many times; ``texture.read`` answers for the cloth and map asked for; ``open_texture`` and
-``open_model`` send ``host.openTexture`` and ``host.openModel`` as Durty Cloth Tool's "Edit in connected app" does;
-``skeleton.template`` answers with a synthetic skeleton template (or ``skeleton_files``), and ``item.add`` with
-``add_result`` (``hold_adds`` keeps it waiting like Durty Cloth Tool's dialog, ``item.addCancel`` answers it as refused).
+MIT licensed, like dct_link. The protocol module is passed in, so the same file serves pytest and the Blender
+smoke (which uses the add-on's vendored copy). A ``glb`` model push is answered with ``unsupported-format``;
+``save_busy`` makes ``model.save`` answer ``busy`` that many times; ``texture.read`` answers for the cloth and map
+asked for; ``open_texture`` and ``open_model`` send ``host.openTexture`` and ``host.openModel`` ("Edit in connected
+app"); ``skeleton.template`` answers with a synthetic skeleton template (or ``skeleton_files``), and ``item.add``
+with ``add_result`` (``hold_adds`` keeps it waiting, ``item.addCancel`` answers it as refused).
 Standard library only.
 """
 
@@ -35,10 +34,10 @@ except ImportError:  # pragma: no cover - inside Blender the package has another
 
 GUID = b"258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 def make_assertion(nonce: str, user: str = "u1", jti: Optional[str] = None) -> str:
-    """A stand-in for gta.clothing's sign-in assertion (shape and claims only; the fake does not sign)."""
+    """A stand-in for a sign-in assertion with the claims the fake checks (audience, nonce, id); not signed."""
     part = lambda obj: base64.urlsafe_b64encode(json.dumps(obj).encode()).rstrip(b"=").decode()  # noqa: E731
-    claims = {"aud": "dct-creator-link-assertion", "UserId": user, "nonce": nonce, "jti": jti or secrets.token_hex(8)}
-    return part({"alg": "ES256", "kid": "link-1"}) + "." + part(claims) + ".c2ln"
+    claims = {"aud": "dct-creator-link-assertion", "sub": user, "nonce": nonce, "jti": jti or secrets.token_hex(8)}
+    return part({"alg": "none", "typ": "test"}) + "." + part(claims) + ".c2ln"
 
 
 def assertion_claims(assertion: str) -> Dict[str, Any]:
@@ -49,19 +48,15 @@ def assertion_claims(assertion: str) -> Dict[str, Any]:
 BINDING = {"clothId": "3f2b8c1e-7a4d-4e8b-9c1f-2d6e5a7b8c90", "textureId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"}
 #: The cloth an item.add creates (and its first variation).
 ADDED_BINDING = {"clothId": "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b", "textureId": "6f7a8b9c-0d1e-4f2a-9b3c-4d5e6f7a8b9c"}
-#: What skeleton.template.data carries unless ``skeleton_files`` says otherwise (a stand-in for DCT's skeleton-only
-#: YDD XML; the tests and the smoke give it a synthetic skeleton).
+#: What skeleton.template.data carries unless ``skeleton_files`` says otherwise (a drawable dictionary without
+#: bones; the tests and the smoke give it a synthetic skeleton).
 SKELETON_XML = b'<?xml version="1.0" encoding="UTF-8"?>\n<DrawableDictionary><Item><Skeleton /></Item></DrawableDictionary>\n'
-#: The features Durty Cloth Tool checks itself and reports in welcome and event.entitlement, in its order.
+#: The feature states the fake reports in welcome and event.entitlement (the features the add-on reads).
 DCT_FEATURES = ("dct.link.connect", "dct.link.context", "dct.link.liveTexture", "dct.link.save", "dct.link.model",
-                "dct.link.services", "dct.link.addItem", "dct.studio.edit", "dct.studio.materials")
-#: The request types DCT checks against a feature before it does anything (answered with needs-license or
-#: needs-ultimate otherwise).
-GATED_REQUESTS = {"live.open": "dct.link.liveTexture", "live.save": "dct.link.save",
-                  "texture.read": "dct.link.services", "texture.validate": "dct.link.services",
-                  "uv.layout": "dct.link.services", "model.glb": "dct.link.services", "body.glb": "dct.link.services",
-                  "item.thumbnail": "dct.link.services", "model.save": "dct.link.model",
-                  "skeleton.template": "dct.link.addItem", "item.add": "dct.link.addItem"}
+                "dct.link.services", "dct.link.addItem")
+#: The requests the fake refuses while their feature is not entitled (the ones the tests exercise).
+GATED_REQUESTS = {"texture.read": "dct.link.services", "texture.validate": "dct.link.services",
+                  "item.thumbnail": "dct.link.services"}
 REFUSALS = {"needsLicense": "needs-license", "needsUltimate": "needs-ultimate"}
 
 
@@ -101,9 +96,6 @@ class Connection:
         self.model_revision = 0
         self.converting: set = set()  # model leases whose push is still converting
         self.waiting_adds: Dict[str, Dict[str, Any]] = {}  # item.add headers by id while "the user" decides
-        # DCT's message budget: about 1000 messages a second, bursts up to 2000, then close 4008.
-        self.message_tokens = float(server.message_burst)
-        self.message_clock = time.monotonic()
 
     # ---- raw I/O --------------------------------------------------------------------------------------
 
@@ -238,10 +230,6 @@ class Connection:
             while not self.closed:
                 opcode, data = self.read_message()
                 self.server.raw_frames.append(data)
-                if not self.take_message_token():
-                    self.server.rate_limited += 1
-                    self.close(4008, "rate limited")
-                    return
                 if opcode == 0x1:
                     message = p.decode_text(data, p.TO_DCT)
                     self.server.received.append(message)
@@ -260,16 +248,6 @@ class Connection:
             except OSError:
                 pass
 
-    def take_message_token(self) -> bool:
-        now = time.monotonic()
-        burst = float(self.server.message_burst)
-        self.message_tokens = min(burst, self.message_tokens + (now - self.message_clock) * self.server.message_rate)
-        self.message_clock = now
-        if self.message_tokens < 1.0:
-            return False
-        self.message_tokens -= 1.0
-        return True
-
     def reply(self, request: Dict[str, Any], message: Dict[str, Any]) -> None:
         message.setdefault("id", "s" + secrets.token_hex(3))
         message["re"] = request["id"]
@@ -286,8 +264,8 @@ class Connection:
                 return
             if server.incompatible:
                 self.reply(m, {"type": "incompatible", "code": "plugin-too-old",
-                               "dct": {"version": "4.1.0", "protocol": {"min": 3, "max": 3}},
-                               "minimumPluginVersion": "9.0.0", "updateUrl": "https://gta.clothing/account/plugins/"})
+                               "dct": {"version": "99.0.0", "protocol": {"min": 99, "max": 99}},
+                               "minimumPluginVersion": "99.0.0", "updateUrl": "https://gta.clothing/account/plugins/"})
                 self.close(4001, "incompatible")
                 return
             self.client_nonce = unb64u(m["clientNonce"])
@@ -319,7 +297,7 @@ class Connection:
                 # app in DCT) and closes the connection.
                 code = server.auth_error_codes.pop(0)
                 self.reply(m, {"type": "error", "code": code})
-                if code != "busy":  # busy: DCT could not reach the account service and keeps the connection
+                if code != "busy":  # busy keeps the connection
                     self.close(4003, code)
                 return
             if server.signed_out_auths > 0:
@@ -337,7 +315,7 @@ class Connection:
                 return
             self.authenticated = True
             server.connections_ready.append(self)  # before the welcome, so a test can broadcast right after it
-            self.reply(m, {"type": "welcome", "dct": {"version": "4.0.60"},
+            self.reply(m, {"type": "welcome", "dct": {"version": "9.9.9"},
                            "protocol": {"major": p.PROTOCOL_MAJOR, "minor": p.PROTOCOL_MINOR},
                            "account": {"userName": server.account}, "features": server.feature_rows()})
         elif not self.authenticated:
@@ -349,7 +327,7 @@ class Connection:
         elif kind in server.fail:
             self.reply(m, {"type": "error", "code": server.fail[kind], "message": "refused by the fake"})
         elif server.refusal(kind) is not None:
-            # DCT enforces every gated action itself, whatever the plugin believes.
+            # The fake refuses a gated request whatever the add-on believes about its features.
             self.reply(m, {"type": "error", "code": server.refusal(kind)})
         elif kind == "context.get":
             focused = server.focused or {"clothId": BINDING["clothId"], "name": "jbib_003_u",
@@ -357,11 +335,11 @@ class Connection:
                                          "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni",
                                                        "width": 2048, "height": 2048}],
                                          "targets": ["diffuse", "normal", "specular"]}
-            self.reply(m, {"type": "context.snapshot", "project": {"name": "FS Studio Clothing"}, "focused": focused})
+            self.reply(m, {"type": "context.snapshot", "project": {"name": "Sample Clothing"}, "focused": focused})
         elif kind == "host.result":
             server.host_results.append(m)  # the answer to host.openTexture or host.openModel; nothing goes back
         elif kind == "skeleton.template":
-            # DCT's skeleton-only YDD XML of the gender asked for (skeleton_files: other files, any gender).
+            # The skeleton template of the gender asked for (skeleton_files: other files, any gender).
             server.templates_sent.append(m["gender"])
             gender = m["gender"]
             files = server.skeleton_files.get(gender) if server.skeleton_files else None
@@ -503,7 +481,7 @@ class Connection:
             if not server.push_delay:
                 self.send(applied)
                 return
-            self.converting.add(lease)  # DCT converts on a worker; model.save meanwhile is answered busy
+            self.converting.add(lease)  # the push is answered later; model.save meanwhile is answered busy
 
             def finish() -> None:
                 self.converting.discard(lease)
@@ -576,11 +554,8 @@ class FakeDct:
         self.hold_types: set = set()
         self.held: List[Any] = []
         self.refuse_assertions = 0
-        self.message_rate = 1000.0
-        self.message_burst = 2000.0
         self.push_delay = 0.0
         self.lease_numbers = itertools.count(1)
-        self.rate_limited = 0
         self.unknown_lease_frames = 0
         self.signed_out_auths = 0
         self.auth_error_codes: List[str] = []
@@ -605,11 +580,9 @@ class FakeDct:
         self.assist_declined_code = "request-denied"
         #: An on_assist answer that is a code is sent as account.assistResult (like DCT); True sends an error.
         self.assist_refusal_as_error = False
-        #: What DCT's licence allows: feature id to state. welcome and event.entitlement report these rows, and
-        #: gated requests are refused accordingly.
+        #: Feature id to state. welcome and event.entitlement report these rows, and gated requests are refused
+        #: accordingly.
         self.feature_states: Dict[str, str] = {feature: "entitled" for feature in DCT_FEATURES}
-        #: Features welcome and event.entitlement leave out (DCT still enforces them).
-        self.unreported_features: set = set()
         self.assisted_codes: List[str] = []
         self.assertions_seen: List[str] = []
         self.raw_frames: List[bytes] = []
@@ -642,7 +615,7 @@ class FakeDct:
             threading.Thread(target=connection.run, daemon=True).start()
 
     def _check_assertion(self, assertion: str, server_nonce: str) -> bool:
-        """Like DCT: the audience is the assertion audience, the nonce is this connection's, and once only."""
+        """The fake accepts an assertion for its audience and this connection's nonce, each one once."""
         claims = assertion_claims(assertion)
         if claims.get("aud") != "dct-creator-link-assertion" or claims.get("nonce") != server_nonce:
             return False
@@ -651,23 +624,17 @@ class FakeDct:
         self.used_jti.add(claims.get("jti"))
         return True
 
-    def report_no_features(self) -> None:
-        """Behaves like a Durty Cloth Tool that reports no feature states: welcome and event.entitlement carry
-        ``"features": []``, while every gated request is still enforced."""
-        self.unreported_features = set(DCT_FEATURES)
-
     def feature_rows(self) -> List[Dict[str, str]]:
-        """The feature states as DCT sends them in welcome and event.entitlement."""
-        return [{"id": feature, "state": state} for feature, state in self.feature_states.items()
-                if feature not in self.unreported_features]
+        """The feature states for welcome and event.entitlement."""
+        return [{"id": feature, "state": state} for feature, state in self.feature_states.items()]
 
     def refusal(self, kind: str) -> Optional[str]:
-        """The error code DCT answers a gated request with, or None when the licence allows it."""
+        """The error code the fake answers a gated request with, or None when its feature is entitled."""
         return REFUSALS.get(self.feature_states.get(GATED_REQUESTS.get(kind, ""), "entitled"))
 
     def set_features(self, **states: str) -> None:
-        """The licence changed in DCT: ``set_features(liveTexture="needsUltimate")`` changes ``dct.link.liveTexture``
-        and tells every connected plugin (event.entitlement), as DCT does."""
+        """``set_features(services="needsUltimate")`` changes ``dct.link.services`` and tells every connected plugin
+        (event.entitlement)."""
         for name, state in states.items():
             matches = [feature for feature in DCT_FEATURES if feature.rsplit(".", 1)[-1] == name]
             self.feature_states[matches[0]] = state
