@@ -39,9 +39,9 @@ _KNOWN_DOMAIN = re.compile(
 GENERATED_FOLDERS = frozenset({"dist", "release", "release-notes", "__pycache__"})
 #: Documents the release workflow writes.
 GENERATED_DOCUMENTS = frozenset({"notes.md"})
-#: Words joined by slashes that are not paths.
+#: Words joined by slashes that are not paths (and element paths in the XML Sollumz reads and writes).
 NOT_PATHS = frozenset({"HTTP/1", "HTTP/1.1", "I/O", "application/json", "hello/challenge/auth", "GLB/glTF",
-                       "folder/model_file"})
+                       "folder/model_file", "Skeleton/Bones", "Skeleton/Bones/Item"})
 #: Paths that exist somewhere else on purpose: the sculpt brush in Blender's bundled assets, and the files the tests
 #: write into temporary folders or refuse because they would leave their folder.
 OUTSIDE_PATHS = frozenset({
@@ -203,9 +203,7 @@ def test_the_repository_points_at_nothing_outside_itself():
     documents = {p.name for p in repository_files()} | GENERATED_DOCUMENTS
     offenders = []
     for path in text_files(include_vendored=True):
-        # An ignore file lists what the repository does not hold. The vendored record is exempt until the next
-        # sync rewrites it in the current wording, which names no paths of the upstream repository.
-        if path.name == ".gitignore" or path == VENDORED / "VENDORED.md":
+        if path.name == ".gitignore":  # an ignore file lists what the repository does not hold
             continue
         text = path.read_text("utf-8")
         missing = {name for name in named_paths(text) if not in_repository(name)}

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import pathlib
+import re
 import shutil
 import subprocess
 import tomllib
@@ -77,10 +78,26 @@ def test_the_package_is_found_in_a_checkout(tmp_path):
         sync_dct_link.find_package(tmp_path)
 
 
-def test_the_record_names_no_upstream_paths():
-    """The record ships inside the add-on: it says where the copy comes from without the layout of that repository."""
-    record = sync_dct_link.render_record("1.0.0", "0" * 40, [("protocol.py", "0" * 64)])
+def test_the_record_names_no_upstream_paths_or_commits():
+    """The record ships inside the add-on: it says where the copy comes from and which versions it holds, without the
+    layout or the commits of that repository."""
+    record = sync_dct_link.render_record("1.0.0", "2.0", "2026-10-06", [("protocol.py", "0" * 64)])
     assert "/" not in record.replace("tools/sync_dct_link.py", "").replace("|---|---|", "")
+    assert "- Creator Link protocol: 2.0\n- Synced: 2026-10-06\n" in record
+    assert not re.search(r"\b[0-9a-f]{40}\b", record)
+
+
+def test_the_check_notices_a_record_with_other_versions(tmp_path):
+    vendored = tmp_path / sync_dct_link.PACKAGE_NAME
+    shutil.copytree(sync_dct_link.VENDOR_DIR, vendored, ignore=shutil.ignore_patterns("__pycache__"))
+    assert sync_dct_link.verify(vendored) == []
+    record = vendored / sync_dct_link.RECORD_NAME
+    text = record.read_text("utf-8")
+    protocol = sync_dct_link.protocol_version(vendored / "protocol.py")
+    record.write_text(text.replace(f"- Creator Link protocol: {protocol}\n", "- Creator Link protocol: 1.0\n")
+                      .replace("- Synced: ", "- Synced: soon "), "utf-8", newline="\n")
+    problems = sync_dct_link.verify(vendored)
+    assert any("protocol" in problem for problem in problems) and any("sync date" in problem for problem in problems)
 
 
 def test_the_vendored_copy_keeps_its_licence_and_headers():

@@ -10,12 +10,13 @@ The first form replaces ``durty_cloth_tool_link/dct_link`` with the modules the 
 package in the checkout: the allowlist in ``ROOT_MODULES`` plus every module they import, nothing else. The
 package is the one folder named dct_link that the checkout tracks in Git; the path of that folder works in place of
 the checkout. The MIT ``LICENSE`` beside the package is copied next to the modules and ``VENDORED.md`` records the
-SHA-256 of every copied file. Each file is copied byte for byte: never edit the vendored files by hand, change
-dct_link upstream and sync again.
+dct_link version, the Creator Link protocol version, the date of the sync and the SHA-256 of every copied file.
+Each file is copied byte for byte: never edit the vendored files by hand, change dct_link upstream and sync again.
 
-``--check`` verifies the vendored copy against ``VENDORED.md`` (the test suite runs the same check), and also
-against the upstream files when a Durty Cloth Tool checkout is given or sits beside this repository, so a change
-upstream that was not synced yet is caught.
+``--check`` verifies the vendored copy against ``VENDORED.md`` (the hashes, and that the recorded versions are
+the ones of the copied modules; the test suite runs the same check), and also against the upstream files when a
+Durty Cloth Tool checkout is given or sits beside this repository, so a change upstream that was not synced yet is
+caught.
 
 Standard library only.
 """
@@ -23,6 +24,7 @@ Standard library only.
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import pathlib
 import re
@@ -40,9 +42,12 @@ ROOT_MODULES = ("__init__", "protocol", "ws", "session", "auth", "tokens")
 SPDX_MIT = "# SPDX-License-Identifier: MIT"
 #: Where a Durty Cloth Tool checkout usually sits: next to this repository.
 SIBLING_CHECKOUT = REPO_ROOT.parent / "durty-cloth-tool"
-NOT_RECORDED = ("not recorded yet: the sync records the Durty Cloth Tool commit once dct_link is committed there "
-                "unchanged")
 _ROW = re.compile(r"^\| `([^`]+)` \| `([0-9a-f]{64})` \|$")
+_VERSION_LINE = re.compile(r"^- dct_link version: (\S+)$", re.MULTILINE)
+_PROTOCOL_LINE = re.compile(r"^- Creator Link protocol: (\d+\.\d+)$", re.MULTILINE)
+_SYNCED_LINE = re.compile(r"^- Synced: (\d{4}-\d{2}-\d{2})$", re.MULTILINE)
+#: The protocol version in the constants of ``protocol.py`` (``"major": 2, "minor": 0`` in its protocol block).
+_PROTOCOL_VERSION = re.compile(r'"protocol":\s*\{[^}]*?"major":\s*(\d+),\s*"minor":\s*(\d+)')
 _RELATIVE_IMPORT = re.compile(r"^[ \t]*from[ \t]+\.(\w*)[ \t]+import[ \t]+(\([^)]*\)|[\w \t,]+)", re.MULTILINE)
 
 
@@ -132,24 +137,15 @@ def package_version(init_file: pathlib.Path) -> str:
     return match.group(1)
 
 
-def source_revision(package: pathlib.Path) -> str:
-    """The commit of the checkout that holds ``package`` when the package is committed there unchanged, otherwise
-    a plain note."""
-    try:
-        head = subprocess.run(["git", "-C", str(package), "rev-parse", "HEAD"], capture_output=True, text=True,
-                              check=True, timeout=30).stdout.strip()
-        tracked = subprocess.run(["git", "-C", str(package), "ls-files", "--", "."],
-                                 capture_output=True, text=True, check=True, timeout=30).stdout.strip()
-        changes = subprocess.run(["git", "-C", str(package), "status", "--porcelain", "--", "."],
-                                 capture_output=True, text=True, check=True, timeout=30).stdout.strip()
-    except (OSError, subprocess.SubprocessError):
-        return NOT_RECORDED
-    if not re.fullmatch(r"[0-9a-f]{40}", head) or not tracked or changes:
-        return NOT_RECORDED
-    return head
+def protocol_version(protocol_file: pathlib.Path) -> str:
+    """The Creator Link protocol version (``major.minor``) of a dct_link ``protocol.py``."""
+    match = _PROTOCOL_VERSION.search(protocol_file.read_text("utf-8"))
+    if match is None:
+        raise SyncError("dct_link/protocol.py names no protocol version")
+    return f"{match.group(1)}.{match.group(2)}"
 
 
-def render_record(version: str, revision: str, hashes: List[Tuple[str, str]]) -> str:
+def render_record(version: str, protocol: str, synced: str, hashes: List[Tuple[str, str]]) -> str:
     lines = [
         "# Vendored dct_link",
         "",
@@ -164,7 +160,8 @@ def render_record(version: str, revision: str, hashes: List[Tuple[str, str]]) ->
         "",
         "- Source: the `dct_link` package and its `LICENSE` in the Durty Cloth Tool repository",
         f"- dct_link version: {version}",
-        f"- Source revision: {revision}",
+        f"- Creator Link protocol: {protocol}",
+        f"- Synced: {synced}",
         "",
         "| File | SHA-256 |",
         "|---|---|",
@@ -209,6 +206,33 @@ def verify(vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
     for path in vendor_dir.iterdir():
         if path.is_dir() and path.name != "__pycache__":
             problems.append(f"unexpected folder {path.name}")
+    problems += record_problems(vendor_dir)
+    return problems
+
+
+def record_problems(vendor_dir: pathlib.Path = VENDOR_DIR) -> List[str]:
+    """Problems with the record's details (empty when it names the dct_link version and the protocol version of the
+    copied modules, and a sync date)."""
+    text = (vendor_dir / RECORD_NAME).read_text("utf-8")
+    problems = []
+    recorded = _VERSION_LINE.search(text)
+    try:
+        actual = package_version(vendor_dir / "__init__.py")
+        protocol = protocol_version(vendor_dir / "protocol.py")
+    except (OSError, SyncError) as exc:
+        return [str(exc)]
+    if recorded is None or recorded.group(1) != actual:
+        problems.append(f"{RECORD_NAME} does not record dct_link version {actual}; sync again")
+    recorded = _PROTOCOL_LINE.search(text)
+    if recorded is None or recorded.group(1) != protocol:
+        problems.append(f"{RECORD_NAME} does not record protocol {protocol}; sync again")
+    synced = _SYNCED_LINE.search(text)
+    try:
+        if synced is None:
+            raise ValueError("no sync date")
+        datetime.date.fromisoformat(synced.group(1))
+    except ValueError:
+        problems.append(f"{RECORD_NAME} records no sync date; sync again")
     return problems
 
 
@@ -234,13 +258,15 @@ def verify_upstream(source: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR)
     return problems
 
 
-def sync(source: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[Tuple[str, str]]:
+def sync(source: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR,
+         today: Optional[datetime.date] = None) -> List[Tuple[str, str]]:
     package = find_package(source)
     license_file = package.parent / "LICENSE"
     files = source_files(package)
     check_source(files, license_file)
     version = package_version(package / "__init__.py")
-    revision = source_revision(package)
+    protocol = protocol_version(package / "protocol.py")
+    synced = (today or datetime.datetime.now(datetime.timezone.utc).date()).isoformat()
 
     if vendor_dir.exists():
         shutil.rmtree(vendor_dir)
@@ -254,7 +280,7 @@ def sync(source: pathlib.Path, vendor_dir: pathlib.Path = VENDOR_DIR) -> List[Tu
             raise SyncError(f"copying {path.name} changed its bytes")
         hashes.append((path.name, digest))
     hashes.sort()
-    record = render_record(version, revision, hashes)
+    record = render_record(version, protocol, synced, hashes)
     (vendor_dir / RECORD_NAME).write_bytes(record.encode("utf-8"))
     return hashes
 

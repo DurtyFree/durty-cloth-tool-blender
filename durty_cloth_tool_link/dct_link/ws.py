@@ -12,7 +12,7 @@ One non-blocking core serves two ways of driving it:
   example from ``bpy.app.timers``. Each call does a bounded amount of work and returns the events it produced:
   connect progress, at most ``budget`` bytes handed to the operating system, at most ``budget`` bytes read,
   and at most one outgoing fragment (``fragment_bytes``, 1 MiB by default) masked ahead of what was written.
-* **Blocking** (GIMP, Krita, Substance on a background thread): call :meth:`WebSocketClient.connect` and then
+* **Blocking** (a host that runs the link on a background thread): call :meth:`WebSocketClient.connect` and then
   :meth:`WebSocketClient.receive` in a loop. Other threads may call the ``send_*`` methods at any time; a
   wakeup socket interrupts the waiting thread so queued data goes out at once.
 """

@@ -9,7 +9,7 @@ A :class:`LinkSession` is driven in one of two ways (the same object supports bo
   does bounded work and returns quickly; callbacks run inside it, on the calling thread. Sign-in work
   (assertions, refresh, device sign-in) runs on a short-lived worker thread that only talks to gta.clothing and
   the secret store and never touches host APIs; ``poll`` picks up its result.
-* **Background thread** (GIMP, Krita, Substance): call :meth:`LinkSession.start_thread`. Callbacks then run on
+* **Background thread** (hosts that allow threads): call :meth:`LinkSession.start_thread`. Callbacks then run on
   that thread unless a ``dispatch`` function moves them (for example onto the Qt or GLib main loop). Every
   public method is safe to call from any thread.
 
@@ -17,11 +17,11 @@ Threading contract for hosts: callbacks and ``pixel_source`` functions run on th
 session (:meth:`LiveSurface.save` reads pending pixels on the calling thread). Token source calls (and with them
 every secret-store access) run on a short-lived worker thread, never on the thread that drives the session
 (``token_threads=False`` runs them inline instead, for hosts without threads). A host whose own API may only be
-used on its UI thread (GIMP, Krita, Substance 3D Painter) reads its pixels on that thread and hands them over with
-:meth:`LiveSurface.update` or from a snapshot, or passes a ``dispatch`` function for callbacks; it never calls its
-host API from the session thread. A ``pixel_source`` must never wait for a thread that may call
-:meth:`LiveSurface.save`, because a save waits for a pixel read that is in progress. An exception raised by a
-callback or a ``pixel_source`` is logged and reported through the ``error`` event; it never stops the session.
+used on its UI thread reads its pixels on that thread and hands them over with :meth:`LiveSurface.update` or from
+a snapshot, or passes a ``dispatch`` function for callbacks; it never calls its host API from the session thread.
+A ``pixel_source`` must never wait for a thread that may call :meth:`LiveSurface.save`, because a save waits for a
+pixel read that is in progress. An exception raised by a callback or a ``pixel_source`` is logged and reported
+through the ``error`` event; it never stops the session.
 
 Host calls are never made while the session holds its internal lock, so a callback may call back into the
 session.
@@ -471,8 +471,8 @@ class Request:
         return callbacks
 
 
-#: Requests DCT runs as services: at most ``MAX_SERVICE_IN_FLIGHT`` of them (model pushes included) are in
-#: flight per connection; DCT answers more with ``busy``, so the session queues the rest.
+#: At most ``MAX_SERVICE_IN_FLIGHT`` of these requests (model pushes included) are in flight per connection;
+#: the session queues the rest.
 SERVICE_TYPES = frozenset(
     {"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push", "item.thumbnail",
      "skeleton.template"}
@@ -983,8 +983,8 @@ class ItemAddResult(NamedTuple):
 
     ``ok`` true: the cloth was added. ``binding`` names it and its first variation (``clothId``, ``textureId``), and
     this connection may now read it and push and save its model. ``ok`` false: ``code`` says why, for example
-    ``request-denied`` (the user chose Cancel, or the add was withdrawn), ``item-limit`` (the free plan's project
-    limits), ``model-rejected`` (the model or a picture did not convert), ``busy``, ``rate-limited``, ``no-project``,
+    ``request-denied`` (the user chose Cancel, or the add was withdrawn), ``item-limit`` (the project cannot take more
+    clothes), ``model-rejected`` (the model or a picture did not convert), ``busy``, ``rate-limited``, ``no-project``,
     ``item-refused`` or ``save-failed``. ``findings`` are DCT's checks of the model and the variations (each a
     ``code`` and a ``severity``), also when the add failed; empty when DCT answered with an error."""
 
@@ -1111,12 +1111,11 @@ _MAX_RETRY_AFTER = 300.0
 _SLOT_HOLD_SECONDS = 120.0
 #: How many answered DCT requests a connection remembers, so a second answer to one of them is not sent.
 _MAX_ANSWERED_HOST_REQUESTS = 256
-#: When DCT answers ``auth`` with ``busy`` (it cannot reach the account service) the connection stays; the session
-#: sends a fresh assertion after these waits, one after another.
+#: When DCT answers ``auth`` with ``busy`` the connection stays; the session sends a fresh assertion after these
+#: waits, one after another.
 _AUTH_BUSY_WAITS = (2.0, 4.0, 8.0, 15.0)
-#: When DCT answers ``account.assist`` with ``busy`` or ``rate-limited`` (another question is open, or the last one
-#: just ended) the session asks again for the same device sign-in after these waits, one after another, before it
-#: settles on the browser code.
+#: When DCT answers ``account.assist`` with ``busy`` or ``rate-limited`` the session asks again for the same device
+#: sign-in after these waits, one after another, before it settles on the browser code.
 _ASSIST_RETRY_WAITS = (3.0, 10.0)
 _ASSIST_RETRY_CODES = frozenset({"busy", "rate-limited"})
 #: While DCT answers ``dct-signed-out``, each try mints an assertion with gta.clothing: wait longer each time, up to
@@ -1151,13 +1150,10 @@ class LinkSession:
     ``discovery_path`` is one discovery file or several to try in order (for example
     ``discovery_file_path(<portable folder>/UserData)`` before the installed one); by default the installed DCT's
     file is read. ``port`` skips discovery and connects to that port only. ``link_ports`` replaces the probed
-    port range (tests use it to stay off the real ports).
+    port range.
 
-    Endpoint safety: an assertion or a sign-in request (``account.assist``) goes only to a DCT the session can
-    accept. When a discovery file exists that is the DCT it names, and on Windows the session also checks that the
-    process behind the connection is that DCT and runs in the same Windows session (it does not sign in when this
-    cannot be confirmed). Without a discovery file (a portable DCT) a probed endpoint is accepted unless it is
-    known to run in another Windows session.
+    Endpoint safety: an assertion or a sign-in request (``account.assist``) goes only to a Durty Cloth Tool the
+    session has verified on this machine; an endpoint it cannot verify is skipped.
 
     Events (``session.on(name, handler)``): ``state(state)``, ``ready(welcome)``, ``sign-in(SignInPrompt)``,
     ``selection(message)``, ``project(message)``, ``entitlement(message)``, ``open-texture(HostOpenTexture)``,
@@ -1952,9 +1948,9 @@ class LinkSession:
         )
 
     def _assist_answered(self, ok: bool, code: Optional[str]) -> None:
-        """DCT answered ``account.assist``. ``busy`` and ``rate-limited`` mean DCT could not ask just now (another
-        question is open, or the last one just ended): ask again for the same device sign-in after 3 and then 10
-        seconds. Any other refusal, and a third one of these, leaves the sign-in to the browser code."""
+        """DCT answered ``account.assist``. ``busy`` and ``rate-limited`` mean DCT could not ask just now: ask again
+        for the same device sign-in after 3 and then 10 seconds. Any other refusal, and a third one of these, leaves
+        the sign-in to the browser code."""
         flow = self._sign_in
         if flow is None or self.state != SIGNING_IN:
             return
@@ -2030,12 +2026,12 @@ class LinkSession:
             self._untrusted_endpoint(LinkError("untrusted-endpoint", "an endpoint sent disconnected before welcome"))
             return
         if answered == "account.assist":
-            # DCT could not prompt now (busy, rate-limited, another prompt open). The device sign-in goes on: DCT is
+            # DCT could not prompt now (busy, rate-limited). The device sign-in goes on: DCT is
             # asked again a little later, and the user can approve it in the browser meanwhile.
             self._assist_answered(False, code)
             return
         if answered == "auth" and code == "busy":
-            # DCT cannot reach the account service right now and keeps the connection: sign in again a little later.
+            # DCT keeps the connection: sign in again a little later.
             self._reauth_at = self._clock() + _AUTH_BUSY_WAITS[min(self._busy_auths, len(_AUTH_BUSY_WAITS) - 1)]
             self._busy_auths += 1
             self._deadline = None

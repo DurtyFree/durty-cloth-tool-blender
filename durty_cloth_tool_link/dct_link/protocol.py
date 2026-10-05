@@ -2,7 +2,7 @@
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
 """Creator Link protocol 2 wire format: constants, validation and the frame codecs.
 
-Everything a peer sends is untrusted. Decoding follows the same order as DCT's reference codec:
+Everything a peer sends is untrusted. Decoding runs in this order:
 
 1. the frame size is checked before anything is parsed;
 2. nesting is bounded (16 levels, the root object is level 1) before the JSON parser runs, the whole frame
@@ -15,8 +15,7 @@ Everything a peer sends is untrusted. Decoding follows the same order as DCT's r
 Decoding raises :class:`ProtocolError` whose ``code`` is one of :data:`ERROR_CODES`. Encoding runs the
 same validation on the outgoing message and raises :class:`ProtocolError` for an invalid one.
 
-The constants are embedded so the package works on its own; the test suite keeps :data:`CONSTANTS` equal to
-the shared protocol package.
+The constants are embedded so the package works on its own.
 """
 
 from __future__ import annotations
@@ -57,7 +56,7 @@ __all__ = [
 ]
 
 # --------------------------------------------------------------------------------------------------
-# Constants (equal to the shared protocol package)
+# Constants
 # --------------------------------------------------------------------------------------------------
 
 CONSTANTS: Dict[str, Any] = {
@@ -71,7 +70,6 @@ CONSTANTS: Dict[str, Any] = {
         "path": "/dct/link/v1",
         "defaultPort": 47820,
         "portRangeEnd": 47829,
-        "allowedOrigins": ["https://link.gta.clothing", "file://"],
         "keepAliveSeconds": 15,
         "keepAliveTimeoutSeconds": 30,
     },
@@ -89,9 +87,6 @@ CONSTANTS: Dict[str, Any] = {
         "maxAccessTokenLength": 8192,
         "maxFocusedTextures": 26,
         "maxFeatureStates": 64,
-        "maxConnections": 8,
-        "maxLeasesPerConnection": 4,
-        "maxLiveStatusPerSecond": 10,
         "nonceBytes": 32,
         "maxModelFiles": 256,
         "maxFindings": 64,
@@ -228,7 +223,6 @@ MAX_SUPPORTED_MAJOR: int = _P["supportedMajors"]["max"]
 PATH: str = _T["path"]
 DEFAULT_PORT: int = _T["defaultPort"]
 PORT_RANGE_END: int = _T["portRangeEnd"]
-ALLOWED_ORIGINS: Tuple[str, ...] = tuple(_T["allowedOrigins"])
 KEEP_ALIVE_SECONDS: int = _T["keepAliveSeconds"]
 KEEP_ALIVE_TIMEOUT_SECONDS: int = _T["keepAliveTimeoutSeconds"]
 
@@ -245,7 +239,6 @@ MAX_DIAGNOSTIC_LENGTH: int = _L["maxDiagnosticLength"]
 MAX_ACCESS_TOKEN_LENGTH: int = _L["maxAccessTokenLength"]
 MAX_FOCUSED_TEXTURES: int = _L["maxFocusedTextures"]
 MAX_FEATURE_STATES: int = _L["maxFeatureStates"]
-MAX_LEASES_PER_CONNECTION: int = _L["maxLeasesPerConnection"]
 NONCE_BYTES: int = _L["nonceBytes"]
 MAX_MODEL_FILES: int = _L["maxModelFiles"]
 MAX_FINDINGS: int = _L["maxFindings"]
@@ -262,7 +255,7 @@ OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
 #: The colour variations one ``item.add`` may carry (the game's variation limit per drawable).
 MAX_ITEM_VARIATIONS: int = _L["maxItemVariations"]
 
-# Values the C# codec defines beside constants.json.
+# Further wire limits.
 MAX_REVISION: int = 9007199254740991  # JavaScript's largest safe integer
 BINARY_LENGTH_PREFIX_BYTES: int = 4
 MAX_UPDATE_URL_LENGTH: int = 512
@@ -284,9 +277,9 @@ GENDERS: Tuple[str, ...] = tuple(_V["genders"])
 FINDING_SEVERITIES: Tuple[str, ...] = tuple(_V["findingSeverities"])
 FINDING_CODES: Tuple[str, ...] = tuple(_V["findingCodes"])
 MODEL_CLOSE_REASONS: Tuple[str, ...] = tuple(_V["modelCloseReasons"])
-#: Why a plugin could not open what DCT sent (``host.result.code``, protocol 1.1).
+#: Why a plugin could not open what DCT sent (``host.result.code``).
 HOST_RESULT_CODES: Tuple[str, ...] = tuple(_V["hostResultCodes"])
-#: The game's tokens for components and props (``focused.drawableType``, protocol 1.1).
+#: The game's tokens for components and props (``focused.drawableType``).
 DRAWABLE_TYPES: Tuple[str, ...] = tuple(_V["drawableTypes"])
 ERROR_CODES: Tuple[str, ...] = tuple(CONSTANTS["errorCodes"])
 CLOSE_CODES: Dict[str, int] = dict(CONSTANTS["closeCodes"])
@@ -444,8 +437,8 @@ def _in_range(value: Any, minimum: int, maximum: int) -> bool:
 class _JsonObject(dict):
     """A parsed JSON object. ``earlier`` keeps values of a repeated property that a later one replaced.
 
-    The last occurrence wins, as in System.Text.Json, but a deserializer still reads every occurrence,
-    so the kind check below looks at the earlier values too.
+    The last occurrence wins, but every occurrence must have the right kind, so the kind check below
+    looks at the earlier values too.
     """
 
     __slots__ = ("earlier",)
@@ -564,7 +557,7 @@ def _parse_json(data: bytes) -> Any:
 
 
 # --------------------------------------------------------------------------------------------------
-# Known-property kinds (what DCT's deserializer accepts for each property)
+# Known-property kinds (the JSON kind each property must have)
 # --------------------------------------------------------------------------------------------------
 
 _STR = "str"
@@ -595,7 +588,7 @@ def _kind_ok(value: Any, kind: Kind) -> bool:
     if value is None:
         return kind != _INT32_REQUIRED
     if kind == _STR:
-        # A deserializer transcodes every known string; an unpaired surrogate escape fails there.
+        # A known string must be text: an unpaired surrogate escape is refused.
         return isinstance(value, str) and _SURROGATE_RE.search(value) is None
     if kind == _INT32 or kind == _INT32_REQUIRED:
         return _is_integer(value) and _INT32_MIN <= value <= _INT32_MAX
@@ -646,7 +639,7 @@ _MODEL_FILES = _list(_obj({"name": _STR, "length": _INT64}))
 
 
 # --------------------------------------------------------------------------------------------------
-# Message rules (the C# Validate methods plus the README rules the schema cannot express)
+# Message rules (what the schema cannot express)
 # --------------------------------------------------------------------------------------------------
 
 Validator = Callable[[Mapping[str, Any]], Optional[str]]
@@ -700,7 +693,7 @@ def _focused_ok(item: Any) -> bool:
     selected = item.get("selectedTextureId")
     if selected is not None and not is_guid(selected):
         return False
-    # Protocol 1.1 metadata: each optional, each valid when present.
+    # Item metadata: each optional, each valid when present.
     drawable_type, gender = item.get("drawableType"), item.get("gender")
     collection, number = item.get("collection"), item.get("number")
     if (

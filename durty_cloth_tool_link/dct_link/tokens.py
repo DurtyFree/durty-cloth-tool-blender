@@ -4,7 +4,7 @@
 
 Backends, chosen by :func:`default_secret_store`:
 
-* Windows: DPAPI (``CryptProtectData`` in the user scope, the install id as extra entropy) via ctypes.
+* Windows: DPAPI (``CryptProtectData`` in the user scope) via ctypes.
 * macOS: the login Keychain through the Security framework via ctypes (``SecItemAdd``,
   ``SecItemCopyMatching``, ``SecItemUpdate``). The secret never appears on a command line.
 * Linux: ``secret-tool`` (libsecret) with the secret written to its standard input.

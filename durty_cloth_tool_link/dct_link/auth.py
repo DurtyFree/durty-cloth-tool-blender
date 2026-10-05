@@ -11,8 +11,8 @@
 * Sign-in assertions: :meth:`LinkAuth.mint_assertion` trades the access token for a short-lived assertion
   bound to one DCT connection (its ``serverNonce``). Only the assertion goes to DCT; access and refresh tokens
   never leave the plugin except to gta.clothing.
-* Every request carries ``X-DCT-Link-Client: <kind>/<version> (protocol 1.0; channel <channel>)`` and goes to
-  ``https://gta.clothing`` only (a loopback server is accepted for testing).
+* Every request carries ``X-DCT-Link-Client: <kind>/<version> (protocol <major>.<minor>; channel <channel>)``
+  and goes to ``https://gta.clothing`` only (see :func:`check_base_url`).
 
 Every operation exists twice. The plain methods (``mint_assertion``, ``access_token``, ``start_device_sign_in``,
 ``logout``) block the calling thread for each HTTP request, bounded by ``timeout``. The ``begin_*`` methods return
@@ -1197,7 +1197,7 @@ class LinkAuth:
 
     def mint_assertion(self, nonce: str) -> Optional[str]:
         """A sign-in assertion for one DCT connection: ``POST /link/api/assertions`` with the access token and
-        ``{"nonce": serverNonce}``. It is valid for about two minutes, for this nonce, and once.
+        ``{"nonce": serverNonce}``. Mint a new one for every connection; never reuse one.
 
         Returns ``None`` when nobody is signed in (start a device sign-in). Any ``401`` answer refreshes the access
         token and tries once more. Raises :class:`AccountBlocked`, :class:`PluginUpdateRequired` or
