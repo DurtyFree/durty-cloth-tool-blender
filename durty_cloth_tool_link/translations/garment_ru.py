@@ -699,4 +699,8 @@ TEXT = {
         "4096)."
     ),
     "add.finding.picture.too-small": "Цветовая вариация меньше 16 пикселей по стороне.",
+    "garment.body.compressed": (
+        "Этот Blender не может прочитать сжатое тело freemode. Используйте Blender 5.2 или новее либо файл тела, пока "
+        "gta.clothing не предложит несжатое тело."
+    ),
 }

@@ -557,4 +557,5 @@ TEXT = {
         "某个颜色变体大于 Durty Cloth Tool 的建议尺寸（边长 2048 像素；最多接受 4096）。"
     ),
     "add.finding.picture.too-small": "某个颜色变体的边长小于 16 像素。",
+    "garment.body.compressed": "此 Blender 无法读取压缩的 freemode 身体。请使用 Blender 5.2 或更新版本，或使用身体文件，直到 gta.clothing 提供未压缩的身体。",
 }

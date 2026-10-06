@@ -11,6 +11,16 @@ from durty_cloth_tool_link.dct_link import auth
 from tests.support.fake_link_api import FakeLinkApi, make_jwt
 
 GLB = b"glTF" + (2).to_bytes(4, "little") + (64).to_bytes(4, "little") + bytes(52)
+
+
+def glb_with(header: bytes) -> bytes:
+    """A GLB whose JSON chunk is ``header`` (padded with spaces)."""
+    header += b" " * (-len(header) % 4)
+    return (b"glTF" + (2).to_bytes(4, "little") + (20 + len(header)).to_bytes(4, "little")
+            + len(header).to_bytes(4, "little") + b"JSON" + header)
+
+
+COMPRESSED = glb_with(b'{"asset":{"version":"2.0"},"extensionsRequired":["EXT_meshopt_compression"]}')
 HEADER = auth.client_header(auth.ClientInfo("blender", "0.1.0-experimental.1", "5.2.1", "experimental",
                                             "00000000-0000-4000-8000-000000000000"))
 
@@ -38,11 +48,13 @@ def test_the_body_is_downloaded_with_a_ticket_and_kept(api, tmp_path):
     assert first.result.path.read_bytes() == GLB and not first.result.cached
     paths = api.paths()
     assert paths == ["GET /link/manifest/experimental.json", "POST /link/panel/ticket",
-                     "GET /link/assets/body/2026.10.03.1/freemode_male.glb"]
+                     "GET /link/assets/body/2026.10.03.1/freemode_male.glb",
+                     "GET /link/assets/body/2026.10.03.1/freemode_joints.json"]  # optional; this version has none
+    assert first.result.joints is None
     ticket_request = next(r for r in api.requests if r["path"] == "/link/panel/ticket")
     assert ticket_request["body"] == {"channel": "experimental", "version": "1.2.0"}
     assert ticket_request["headers"]["authorization"].startswith("Bearer ")
-    body_request = api.requests[-1]
+    body_request = api.requests[-2]
     assert body_request["headers"]["authorization"] == "Ticket " + api.tickets[0]
 
     again = download(api, tmp_path)
@@ -58,15 +70,31 @@ def test_a_new_body_version_is_downloaded_again(api, tmp_path):
     assert (tmp_path / "body" / "2026.10.03.1" / "freemode_male.glb").is_file()
 
 
-def test_older_blender_versions_ask_for_the_plain_body_first(api, tmp_path):
+def test_older_blender_versions_get_the_plain_body_or_a_message(api, tmp_path):
     api.body_files["freemode_female_plain.glb"] = GLB + b"plain"
     result = download(api, tmp_path, gender="female", blender=(4, 5, 3)).result
     assert result.path.name == "freemode_female_plain.glb"
     assert garment_body.body_files("male", (5, 2, 0)) == ["freemode_male.glb"]
-    assert garment_body.body_files("male", (4, 2, 0)) == ["freemode_male_plain.glb", "freemode_male.glb"]
-    # Without a plain copy, an older Blender gets the compressed body.
-    older = download(api, tmp_path / "other", gender="male", blender=(4, 2, 0)).result
-    assert older.path.name == "freemode_male.glb"
+    assert garment_body.body_files("male", (4, 2, 0)) == ["freemode_male_plain.glb"]
+    # Without a plain copy an older Blender is told so, instead of being handed a body its importer fails on.
+    older = download(api, tmp_path / "other", gender="male", blender=(4, 2, 0))
+    assert older.error == "compressed" and older.result is None
+    api.body_files["freemode_male_plain.glb"] = COMPRESSED  # a mislabelled file is refused too
+    assert download(api, tmp_path / "third", gender="male", blender=(4, 2, 0)).error == "compressed"
+    path = tmp_path / "compressed.glb"
+    path.write_bytes(COMPRESSED)
+    assert garment_body.needs_meshopt(path) and garment_body.required_extensions(GLB) == []
+
+
+def test_the_joints_of_a_body_version_are_kept_beside_it(api, tmp_path):
+    api.body_files["freemode_joints.json"] = b'{"schema": 1, "space": "ped", "units": "m", "male": {}}'
+    first = download(api, tmp_path)
+    assert first.result.joints == tmp_path / "body" / "2026.10.03.1" / "freemode_joints.json"
+    assert first.result.joints.is_file()
+    again = download(api, tmp_path)
+    assert again.result.cached and again.result.joints == first.result.joints
+    api.body_files["freemode_joints.json"] = b"[not joints"
+    assert download(api, tmp_path / "other").result.joints is None  # unreadable joints never stop the body
 
 
 def test_without_online_access_only_a_kept_body_is_used(api, tmp_path):

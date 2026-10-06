@@ -770,4 +770,8 @@ TEXT = {
         "accepte au plus 4096)."
     ),
     "add.finding.picture.too-small": "Une variante de couleur fait moins de 16 pixels sur un côté.",
+    "garment.body.compressed": (
+        "Ce Blender ne peut pas lire le corps freemode compressé. Utilisez Blender 5.2 ou plus récent, ou un fichier "
+        "de corps, jusqu'à ce que gta.clothing propose le corps non compressé."
+    ),
 }

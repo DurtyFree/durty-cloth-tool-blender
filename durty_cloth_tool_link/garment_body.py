@@ -3,10 +3,11 @@
 """The hosted freemode body: downloading it for the signed-in account and keeping it in the add-on's user folder.
 
 The channel manifest on gta.clothing's link origin names the current body version; the signed-in account gets a
-short-lived ticket and downloads the body with it. Each version is kept in ``body/<version>/`` and never downloaded
-again. Without online access, or when gta.clothing cannot be
-reached, the newest kept version is used. The requests run on a worker thread; :meth:`BodyDownload.poll` never
-blocks. Nothing here imports Blender.
+short-lived ticket and downloads the body with it, and the body's joints when that version has them. Each version
+is kept in ``body/<version>/`` and never downloaded again. Without online access, or when gta.clothing cannot be
+reached, the newest kept version is used. Blender before 5.2 cannot read the compressed body: it gets the plain one,
+or a message, never a file its importer would fail on. The requests run on a worker thread; :meth:`BodyDownload.poll`
+never blocks. Nothing here imports Blender.
 """
 
 from __future__ import annotations
@@ -35,6 +36,11 @@ BODY_FILES = {"male": "freemode_male.glb", "female": "freemode_female.glb"}
 PLAIN_FILES = {"male": "freemode_male_plain.glb", "female": "freemode_female_plain.glb"}
 #: The first Blender version known to import the compressed body.
 COMPRESSED_FROM = (5, 2)
+#: The joints of both bodies (optional: body versions before 2026-10-06 have none).
+JOINTS_FILE = "freemode_joints.json"
+MAX_JOINTS_BYTES = 64 * 1024
+#: The glTF extension of the compressed body.
+MESHOPT = "EXT_meshopt_compression"
 MAX_BODY_BYTES = 32 * 1024 * 1024
 _MAX_JSON_BYTES = 256 * 1024
 _VERSION = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,31}")
@@ -57,6 +63,8 @@ class BodyResult(NamedTuple):
     gender: str
     #: The file was kept from an earlier download.
     cached: bool
+    #: The joints file of that version, when it has one.
+    joints: Optional[pathlib.Path] = None
 
 
 def check_origin(url: str) -> str:
@@ -83,16 +91,48 @@ def valid_version(value: Any) -> bool:
 
 
 def body_files(gender: str, blender_version: Tuple[int, ...]) -> List[str]:
-    """The files to ask for, in order: older Blender versions take the uncompressed copy first."""
+    """The files to ask for, in order: Blender before 5.2 takes the uncompressed copy only (its glTF importer cannot
+    read the compressed one)."""
     if gender not in BODY_FILES:
         raise ValueError(gender)
     if tuple(blender_version[:2]) >= COMPRESSED_FROM:
         return [BODY_FILES[gender]]
-    return [PLAIN_FILES[gender], BODY_FILES[gender]]
+    return [PLAIN_FILES[gender]]
 
 
 def is_glb(data: bytes) -> bool:
     return len(data) >= 20 and data[:4] == b"glTF"
+
+
+def required_extensions(data: bytes) -> List[str]:
+    """The glTF extensions a GLB says its reader must know (from its JSON chunk); empty for anything unreadable."""
+    import struct
+
+    if not is_glb(data):
+        return []
+    try:
+        length, kind = struct.unpack_from("<II", data, 12)
+        if kind != 0x4E4F534A or 20 + length > len(data):
+            return []
+        header = json.loads(bytes(data[20:20 + length]).decode("utf-8"))
+    except (struct.error, UnicodeDecodeError, ValueError):
+        return []
+    required = header.get("extensionsRequired") if isinstance(header, dict) else None
+    return [str(name) for name in required] if isinstance(required, list) else []
+
+
+def needs_meshopt(path: pathlib.Path) -> bool:
+    """Whether a GLB file is compressed with meshopt (Blender before 5.2 cannot import it)."""
+    try:
+        with path.open("rb") as stream:
+            head = stream.read(20)
+            if not is_glb(head):
+                return False
+            length = int.from_bytes(head[12:16], "little")
+            data = head + stream.read(min(length, 4 * 1024 * 1024))
+    except OSError:
+        return False
+    return MESHOPT in required_extensions(data)
 
 
 def _version_key(name: str) -> tuple:
@@ -116,7 +156,8 @@ def cached_body(cache_root: pathlib.Path, gender: str, version: Optional[str] = 
                 if path.is_file():
                     with path.open("rb") as stream:
                         if is_glb(stream.read(20)):
-                            return BodyResult(path, candidate, gender, True)
+                            joints = folder / candidate / JOINTS_FILE
+                            return BodyResult(path, candidate, gender, True, joints if joints.is_file() else None)
             except OSError:
                 continue
     return None
@@ -305,8 +346,33 @@ class BodyDownload:
                 raise self._failure(status, payload)
             if not is_glb(payload):
                 raise BodyError("invalid")
-            return BodyResult(self._keep(version, name, payload), version, self.gender, False)
+            if MESHOPT in required_extensions(payload) and tuple(self.blender_version[:2]) < COMPRESSED_FROM:
+                raise BodyError("compressed")
+            path = self._keep(version, name, payload)
+            return BodyResult(path, version, self.gender, False, self._joints(version, ticket))
+        if tuple(self.blender_version[:2]) < COMPRESSED_FROM:
+            raise BodyError("compressed")  # this body version has no copy older Blender versions can read
         raise BodyError("no-body")
+
+    def _joints(self, version: str, ticket: str) -> Optional[pathlib.Path]:
+        """The body version's joints file, kept beside the body; ``None`` when it has none or it cannot be had (the
+        joints are optional: Align to Body then uses Durty Cloth Tool's skeleton or the body's shape)."""
+        try:
+            status, payload = self._request("GET", f"/link/assets/body/{version}/{JOINTS_FILE}",
+                                            authorization="Ticket " + ticket, limit=MAX_JOINTS_BYTES)
+        except BodyError:
+            return None
+        if status != 200:
+            return None
+        try:
+            if not isinstance(json.loads(payload.decode("utf-8")), dict):
+                return None
+        except (UnicodeDecodeError, ValueError):
+            return None
+        try:
+            return self._keep(version, JOINTS_FILE, payload)
+        except BodyError:
+            return None
 
     def _token(self, files: List[str]) -> Any:
         """The access token, or a body kept before when there is none (signed out, or the renewal failed)."""

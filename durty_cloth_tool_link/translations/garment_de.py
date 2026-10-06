@@ -767,4 +767,8 @@ TEXT = {
         "Eine Farbvariante ist größer, als Durty Cloth Tool rät (2048 Pixel pro Seite; es nimmt höchstens 4096 an)."
     ),
     "add.finding.picture.too-small": "Eine Farbvariante ist auf einer Seite kleiner als 16 Pixel.",
+    "garment.body.compressed": (
+        "Dieses Blender kann den komprimierten Freemode-Körper nicht lesen. Nutze Blender 5.2 oder neuer oder eine "
+        "Körperdatei, bis gta.clothing den unkomprimierten Körper anbietet."
+    ),
 }

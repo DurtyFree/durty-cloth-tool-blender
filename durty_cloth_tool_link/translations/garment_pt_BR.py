@@ -724,4 +724,8 @@ TEXT = {
         "4096)."
     ),
     "add.finding.picture.too-small": "Uma variação de cor tem menos de 16 pixels de lado.",
+    "garment.body.compressed": (
+        "Este Blender não consegue ler o corpo freemode comprimido. Use o Blender 5.2 ou mais novo, ou um arquivo de "
+        "corpo, até que o gta.clothing ofereça o corpo sem compressão."
+    ),
 }

@@ -1175,6 +1175,10 @@ EN: Dict[str, str] = {
         "A colour variation is larger than Durty Cloth Tool advises (2048 pixels on a side; it takes at most 4096)."
     ),
     "add.finding.picture.too-small": "A colour variation is smaller than 16 pixels on a side.",
+    "garment.body.compressed": (
+        "This Blender cannot read the compressed freemode body. Use Blender 5.2 or later, or a body file, until "
+        "gta.clothing offers the uncompressed body."
+    ),
 }
 
 
