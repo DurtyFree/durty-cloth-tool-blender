@@ -1096,8 +1096,10 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     check("another add runs", "FINISHED" in add("another add"))
     pump(addon, lambda: len(dct.item_adds) > adds, what="the waiting add")
     log = draw_everything(package, state, "add waiting in DCT")
-    check("the waiting add shows its progress and Cancel", ("operator", "dct_link.fit_cancel_add") in log
-          and any(entry[0] == "progress" for entry in log))
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the waiting add says what Durty Cloth Tool asks and offers Cancel, without a full bar",
+          ("operator", "dct_link.fit_cancel_add") in log and "Choose Add to project or Cancel there." in labels
+          and not any(entry[0] == "progress" for entry in log), labels[-400:])
     check("Cancel runs", "FINISHED" in bpy.ops.dct_link.fit_cancel_add())
     pump(addon, lambda: not ctrl.item_add.adding, what="the withdrawn add")
     check("a withdrawn add changes nothing", ctrl.item_add.status.message.key == "add.result.withdrawn"
