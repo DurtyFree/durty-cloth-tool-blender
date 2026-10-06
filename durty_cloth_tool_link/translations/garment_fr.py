@@ -971,7 +971,7 @@ TEXT = {
     "add.cancelled-local": "L'ajout a été annulé avant tout envoi. Ctrl+Z annule ce qu'il a modifié sur le vêtement.",
     "add.failed-undo": "{problem} Ctrl+Z rétablit le vêtement tel qu'il était avant l'ajout.",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.op.service-fit": "Ajuster au corps",
+    "garment.op.service-fit": "Ajuster sur gta.clothing",
     "garment.op.service-fit.desc": (
         "Envoie le vêtement à gta.clothing, qui le met dans la pose du jeu, lui donne les poids du corps freemode et "
         "le sort du corps. Utilise un de vos ajustements du jour"
@@ -986,10 +986,10 @@ TEXT = {
         "un ajustement commencé compte quand même"
     ),
     "garment.info.service": (
-        "Ajuster au corps envoie le vêtement, tel qu'il est après Aligner sur le corps, à gta.clothing. Il revient "
-        "dans la pose du jeu, avec les poids du corps freemode, et sorti du corps là où il était dedans. Le vêtement "
-        "garde une sauvegarde, donc Revenir d'une étape le remet comme avant. Chaque ajustement utilise un de vos "
-        "ajustements du jour."
+        "Ajuster sur gta.clothing ajuste le vêtement tel qu'il est après Aligner sur le corps. Il revient dans la pose "
+        "du jeu, avec les poids du corps freemode, et sorti du corps là où il était dedans. Le vêtement garde une "
+        "sauvegarde, donc Revenir d'une étape le remet comme avant. Chaque ajustement utilise un de vos ajustements du "
+        "jour."
     ),
     "garment.info.weights": (
         "Transférer les poids donne au vêtement les poids du corps freemode, sous forme de groupes de sommets au nom "
@@ -1020,26 +1020,14 @@ TEXT = {
     "fit.stage.busy": "gta.clothing est occupé. Nouvel essai dans un instant",
     "fit.stage.queued": "En attente de gta.clothing",
     "fit.stage.validating": "Vérification du vêtement",
-    "fit.stage.welding": "Réunion des coutures",
-    "fit.stage.posing": "Ajustement de la pose",
-    "fit.stage.transferring": "Reprise des poids du corps",
-    "fit.stage.unposing": "Mise dans la pose du jeu",
-    "fit.stage.pushingout": "Sortie du corps",
-    "fit.stage.weighting": "Finition des poids",
     "fit.stage.running": "Ajustement",
     "fit.stage.cancelling": "Annulation",
     "fit.stage.cancelling-counted": "Annulation. L'ajustement a commencé, il compte donc quand même",
     "fit.consent.title": "Envoyer pour l'ajustement",
-    "fit.consent.what": (
-        "Ajuster au corps et Transférer les poids envoient le vêtement à gta.clothing : sa forme (positions des "
-        "sommets et triangles), les sommets qui sont dans DCT Pinned, masqués ou dans DCT Lining, ses marqueurs, les "
-        "options d'ajustement, ainsi que le genre, l'emplacement et la catégorie. Aucune texture, aucun matériau, "
-        "aucun nom ni fichier."
-    ),
+    "fit.consent.what": "Ajuster sur gta.clothing et Transférer les poids envoient le vêtement.",
     "fit.consent.kept": (
-        "gta.clothing l'ajuste et le renvoie. Le vêtement n'est pas conservé : le résultat est supprimé au plus tard "
-        "après dix minutes. gta.clothing enregistre un résumé de chaque ajustement sans la forme du vêtement : des "
-        "nombres comme les sommets et les triangles, le résultat et la durée."
+        "Seuls la forme et les marqueurs du vêtement sont envoyés, avec les options d'ajustement, et rien n'en est "
+        "conservé plus de dix minutes après l'ajustement."
     ),
     "fit.consent.revoke": (
         "Vous acceptez une seule fois. Pour revenir dessus, désactivez Envoyer les vêtements pour l'ajustement sous "
@@ -1048,13 +1036,12 @@ TEXT = {
     "fit.consent.confirm": "Envoyer et ajuster",
     "prop.fit-consent": "Envoyer les vêtements pour l'ajustement",
     "prop.fit-consent.desc": (
-        "Ajuster au corps et Transférer les poids peuvent envoyer la forme du vêtement à gta.clothing. Désactivez-le "
-        "pour revenir dessus ; l'add-on redemande alors avant tout envoi"
+        "Autorise Ajuster sur gta.clothing et Transférer les poids à envoyer le vêtement. Désactivez-le pour revenir "
+        "dessus ; l'add-on redemande alors avant tout envoi"
     ),
     "settings.fit-consent-subtext": (
-        "La forme, les marqueurs et les options d'ajustement du vêtement ne vont à gta.clothing que quand vous "
-        "choisissez Ajuster au corps ou Transférer les poids. Le vêtement n'y est pas conservé ; seul un résumé sans "
-        "sa forme est enregistré."
+        "Seuls la forme et les marqueurs du vêtement sont envoyés, avec les options d'ajustement, et rien n'en est "
+        "conservé plus de dix minutes après l'ajustement."
     ),
     "fit.why.running": "Un ajustement est en cours. Attendez-le ou annulez-le.",
     "fit.why.hosted-body": (
@@ -1080,9 +1067,7 @@ TEXT = {
     "fit.error.unavailable": (
         "L'ajustement sur gta.clothing n'est pas disponible pour l'instant. Réessayez dans une minute."
     ),
-    "fit.error.not-found": (
-        "gta.clothing n'a plus cet ajustement (un ajustement attend l'add-on dix minutes). Ajustez à nouveau."
-    ),
+    "fit.error.not-found": "gta.clothing n'a plus cet ajustement. Ajustez à nouveau.",
     "fit.error.body-version": (
         "gta.clothing ajuste sur un corps freemode plus récent. Refaites Ajouter le corps freemode sous Configuration, "
         "alignez le vêtement dessus et ajustez à nouveau."
@@ -1121,7 +1106,9 @@ TEXT = {
     "fit.cancelled-counted": "L'ajustement avait déjà commencé sur gta.clothing, il compte donc pour aujourd'hui.",
     "fit.input.add-on": "L'add-on a envoyé quelque chose que gta.clothing n'accepte pas. Mettez l'add-on à jour.",
     "fit.input.slot": "Seuls les vêtements portés sur le corps peuvent être ajustés.",
-    "fit.input.options": "Une option d'ajustement est hors de sa plage. Vérifiez les options de Ajuster au corps.",
+    "fit.input.options": (
+        "Une option d'ajustement est hors de sa plage. Vérifiez les options de Ajuster sur gta.clothing."
+    ),
     "fit.input.too-large": (
         "Le vêtement a {vertices} sommets et {triangles} triangles ; l'ajustement en accepte au plus 120 000 et 240 "
         "000. Réduisez-le, par exemple avec un modificateur Décimer."
@@ -1142,13 +1129,13 @@ TEXT = {
     ),
     "fit.input.seam-dense": (
         "De nombreuses arêtes libres se pressent en un point du vêtement. Supprimez-y les parties isolées (en Mode "
-        "Édition), ou réglez Écart de couture sur 0 dans les options de Ajuster au corps."
+        "Édition), ou réglez Écart de couture sur 0 dans les options de Ajuster sur gta.clothing."
     ),
     "fit.input.seam-crowded": (
         "{count} arêtes ouvertes se pressent en un point du vêtement, et gta.clothing en accepte au plus {limit} à cet "
         "endroit : en général de petites parties isolées comme des boutons, ou des surpiqûres posées sur le tissu. "
         "Elles sont sélectionnées : appuyez sur Tab pour les voir, puis supprimez-les ou fusionnez-les (Fusionner par "
-        "distance). Ou réglez Écart de couture sur 0 dans les options de Ajuster au corps."
+        "distance). Ou réglez Écart de couture sur 0 dans les options de Ajuster sur gta.clothing."
     ),
     "fit.input.seam-crowded-prepare": (
         "{count} arêtes ouvertes se pressent en un point du vêtement, et gta.clothing en accepte au plus {limit} à cet "
@@ -1208,8 +1195,8 @@ TEXT = {
         "Le vêtement a changé pendant l'ajustement, donc le résultat n'a pas été appliqué. Ajustez à nouveau."
     ),
     "garment.next.fit": (
-        "Ensuite : Ajuster au corps sous Ajustement, ou lancez le contrôle de l'ajustement sous Correction et ajustez "
-        "le vêtement à la main."
+        "Ensuite : Ajuster sur gta.clothing sous Ajustement, ou lancez le contrôle de l'ajustement sous Correction et "
+        "ajustez le vêtement à la main."
     ),
     "garment.check.reference": "Habituel",
     "garment.check.reference-none": "–",
@@ -1232,16 +1219,16 @@ TEXT = {
     "garment.done.prepare-open": (
         "Préparé, mais {count} sommets de couture n'ont trouvé aucun partenaire sur la pièce voisine ({welded} réunis) "
         ": les pièces ne se rejoignent pas tout à fait à cet endroit. Ils sont sélectionnés : appuyez sur Tab pour les "
-        "voir. Ajuster au corps donne quand même les mêmes poids aux deux côtés d'une couture ; si un trou apparaît "
-        "dans le jeu, cousez ces coutures dans votre application de vêtements et exportez à nouveau, ou réunissez-les "
-        "à la main."
+        "voir. Ajuster sur gta.clothing donne quand même les mêmes poids aux deux côtés d'une couture ; si un trou "
+        "apparaît dans le jeu, cousez ces coutures dans votre application de vêtements et exportez à nouveau, ou "
+        "réunissez-les à la main."
     ),
     "garment.done.prepare-open.one": (
         "Préparé, mais {count} sommet de couture n'a trouvé aucun partenaire sur la pièce voisine ({welded} réunis) : "
         "les pièces ne se rejoignent pas tout à fait à cet endroit. Il est sélectionné : appuyez sur Tab pour le voir. "
-        "Ajuster au corps donne quand même les mêmes poids aux deux côtés d'une couture ; si un trou apparaît dans le "
-        "jeu, cousez cette couture dans votre application de vêtements et exportez à nouveau, ou réunissez-la à la "
-        "main."
+        "Ajuster sur gta.clothing donne quand même les mêmes poids aux deux côtés d'une couture ; si un trou apparaît "
+        "dans le jeu, cousez cette couture dans votre application de vêtements et exportez à nouveau, ou réunissez-la "
+        "à la main."
     ),
     "garment.done.combine-missing": (
         "Combiné, mais {count} textures sont introuvables et ont été cuites sans leurs pixels : {names}. Placez les "
@@ -1442,9 +1429,9 @@ TEXT = {
     "garment.info.split": (
         "Une robe va dans le jeu comme un seul vêtement dans l'emplacement Haut, ou comme un haut et une jupe. Couper "
         "à la taille la coupe là où elle est la plus étroite au-dessus du bassin : la robe garde le haut, et un "
-        "nouveau vêtement à son nom reçoit la jupe, préparé pour l'emplacement Jambes. Coupez après Ajuster au corps, "
-        "pour que les deux pièces gardent l'ajustement et ses poids, puis choisissez chaque pièce dans Configuration "
-        "pour la terminer et l'ajouter."
+        "nouveau vêtement à son nom reçoit la jupe, préparé pour l'emplacement Jambes. Coupez après Ajuster sur "
+        "gta.clothing, pour que les deux pièces gardent l'ajustement et ses poids, puis choisissez chaque pièce dans "
+        "Configuration pour la terminer et l'ajouter."
     ),
     "garment.done.split": (
         "{name} coupée à la taille : {skirt} est la jupe, pour l'emplacement Jambes. Choisissez-la dans Configuration."
@@ -1460,7 +1447,8 @@ TEXT = {
     "garment.done.bridge.one": "Poids des cuisses de {count} sommet reliés d'une jambe à l'autre.",
     "garment.why.no-bridge": "Seuls les jupes, robes et manteaux longs sont reliés d'une jambe à l'autre.",
     "garment.why.no-leg-weights": (
-        "Le vêtement n'a pas encore de poids des cuisses à relier. Ajustez-le au corps ou transférez d'abord les poids."
+        "Le vêtement n'a pas encore de poids des cuisses à relier. Ajustez-le sur gta.clothing ou transférez d'abord "
+        "les poids."
     ),
     "garment.done.combine-walls": (
         "{count} matériaux combinés en une texture de {size} pixels, {density} pixels par centimètre sur le vêtement "

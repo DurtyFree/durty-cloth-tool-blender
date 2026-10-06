@@ -2434,8 +2434,8 @@ def _influences(obj: Any, mesh: Any) -> Tuple[int, int]:
 
 
 def fit_arrays(obj: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """What Fit to Body and Transfer Weights send: the garment's world positions, its triangles, the vertices the tools
-    leave where they are (Pinned, the sculpt mask) and those of a lining."""
+    """What Fit on gta.clothing and Transfer Weights send: the garment's world positions, its triangles, the vertices
+    the tools leave where they are (Pinned, the sculpt mask) and those of a lining."""
     return (world_positions(obj), mesh_triangles(obj.data), locked_vertices(obj),
             group_weights(obj, LINING_GROUP) > 0.5)
 
@@ -2452,7 +2452,7 @@ def select_vertices(obj: Any, indices: Any) -> None:
 
 
 def fit_digest(obj: Any) -> str:
-    """The digest of the garment's shape as Fit to Body sent it (a result is applied only to the same shape)."""
+    """The digest of the garment's shape as Fit on gta.clothing sent it (a result is applied only to the same shape)."""
     return garment_fit.mesh_digest(world_positions(obj), mesh_triangles(obj.data))
 
 

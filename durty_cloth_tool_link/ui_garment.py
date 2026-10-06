@@ -4,13 +4,13 @@
 
 The panel is the DCT tab's Garment Fitting view (Work On), with the next step in its first line and five numbered
 stages, like Custom Ped's: Setup (gender, garment type, avatar, source pose, the garment and the freemode body), Fit
-(markers, Align to Body, Fit to Body), Fix (Run Fit Check and Push Out of Body, with the problem colours, the region
-tools, sculpting by hand and the tear check in closed sections), Game Ready (prepare, combine materials, the freemode
-skeleton and the weights, levels of detail, the local checks) and Add to Project (the add of the garment as a new cloth
-of the open project). The stage that holds the next step opens and the finished ones fold; each header says how far
-its stage is. The button of the next step is the large one, a finished step's button has a tick, and settings that
-rarely change sit in closed Options sections. Every operator that changes a mesh can be undone; the garment keeps up to
-three backups for Back One Step and Restore Pre-fit, in a closed section after the stages.
+(markers, Align to Body, Fit on gta.clothing), Fix (Run Fit Check and Push Out of Body, with the problem colours, the
+region tools, sculpting by hand and the tear check in closed sections), Game Ready (prepare, combine materials, the
+freemode skeleton and the weights, levels of detail, the local checks) and Add to Project (the add of the garment as a
+new cloth of the open project). The stage that holds the next step opens and the finished ones fold; each header says
+how far its stage is. The button of the next step is the large one, a finished step's button has a tick, and settings
+that rarely change sit in closed Options sections. Every operator that changes a mesh can be undone; the garment keeps
+up to three backups for Back One Step and Restore Pre-fit, in a closed section after the stages.
 """
 
 from __future__ import annotations
@@ -65,8 +65,8 @@ class _Runtime:
         self.add_of: Optional[int] = None
         #: What Auto Markers guessed rather than found, per garment (its session uid).
         self.marker_notes: Dict[int, Tuple[str, ...]] = {}
-        #: How the last Fit to Body or Transfer Weights ended (level and text per line), which of the two it was, and
-        #: the garment it belongs to (its session uid).
+        #: How the last Fit on gta.clothing or Transfer Weights ended (level and text per line), which of the two it
+        #: was, and the garment it belongs to (its session uid).
         self.fit_lines: List[Tuple[str, Msg]] = []
         self.fit_operation: Optional[str] = None
         self.fit_of: Optional[int] = None
@@ -1773,7 +1773,7 @@ class DCTLINK_OT_fit_validate(_MeshOp):
 
 
 # --------------------------------------------------------------------------------------------------
-# Fit to Body and Transfer Weights on gta.clothing
+# Fit on gta.clothing and Transfer Weights
 # --------------------------------------------------------------------------------------------------
 
 
@@ -1784,7 +1784,7 @@ def _hosted_version(body: Optional[Any]) -> Optional[str]:
 
 
 def _service_reason(context: Any, operation: str) -> Optional[Msg]:
-    """Why Fit to Body (``fit``) or Transfer Weights (``weights``) cannot run now."""
+    """Why Fit on gta.clothing (``fit``) or Transfer Weights (``weights``) cannot run now."""
     if _is_prop(context):
         return msg("fit.why.prop")
     reason = _fit_reason(context)
@@ -1815,8 +1815,8 @@ def _until_midnight_utc() -> float:
 
 
 def start_service(context: Any, operation: str) -> Any:
-    """Sends the chosen garment to gta.clothing: Fit to Body (``fit``) or Transfer Weights (``weights``). The run goes
-    on in the add-on's timer; :func:`fit_ended` applies its result."""
+    """Sends the chosen garment to gta.clothing: Fit on gta.clothing (``fit``) or Transfer Weights (``weights``). The
+    run goes on in the add-on's timer; :func:`fit_ended` applies its result."""
     settings_ = props(context)
     obj = current_garment(context)
     body = valid_body(context)
@@ -1911,7 +1911,7 @@ def fit_ended(run: Any) -> bool:
 
 
 class _ServiceOp(_Op):
-    """Fit to Body or Transfer Weights: asks once whether the garment may be uploaded, then starts the run."""
+    """Fit on gta.clothing or Transfer Weights: asks once whether the garment may be uploaded, then starts the run."""
 
     operation = "fit"
     agreed: BoolProperty(options={"HIDDEN", "SKIP_SAVE"})
@@ -3121,8 +3121,8 @@ def draw_ready(layout: Any, context: Any) -> None:
 
 
 def draw_service(layout: Any, context: Any, operation: str) -> None:
-    """Fit to Body (under Fit) or Transfer Weights (under Game Ready): the button, the run's progress with Cancel, the
-    fits left today, how the last run ended, and (Fit to Body) its options."""
+    """Fit on gta.clothing (under Fit) or Transfer Weights (under Game Ready): the button, the run's progress with
+    Cancel, the fits left today, how the last run ended, and (Fit on gta.clothing) its options."""
     ctrl = state.get()
     obj = current_garment(context)
     flow = flow_state(context)

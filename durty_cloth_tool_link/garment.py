@@ -216,7 +216,7 @@ class FlowState(NamedTuple):
     source_pose: str = "a_pose"
     markers: int = 0
     aligned: bool = False
-    #: Fit to Body on gta.clothing put the garment on the body (with weights).
+    #: Fit on gta.clothing put the garment on the body (with weights).
     fitted: bool = False
     sculpting: bool = False
     checked: bool = False

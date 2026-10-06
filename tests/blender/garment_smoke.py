@@ -275,17 +275,17 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           and abs(aligned["neck"][2] - synthetic.joints_of()["SKEL_Neck_1"][2]) < 0.03,
           (ui_garment.RUNTIME.notice, np.abs(positions(tee) - before_align).max()))
 
-    # Fit to Body on the fake gta.clothing: nothing goes out before the user agreed once; the garment comes back moved
-    # by the fake's offset and weighted by bone name, as one step Back One Step takes back.
+    # Fit on gta.clothing against the fake gta.clothing: nothing goes out before the user agreed once; the garment comes
+    # back moved by the fake's offset and weighted by bone name, as one step Back One Step takes back.
     prefs = state.preferences()
     prefs.fit_upload_consent = False
-    check("without consent Fit to Body uploads nothing",
-          refused(bpy.ops.dct_link.fit_service_fit, "send the garment to gta.clothing") and not api.fit.uploads)
+    check("without consent Fit on gta.clothing uploads nothing",
+          refused(bpy.ops.dct_link.fit_service_fit, "upload the garment") and not api.fit.uploads)
     prefs.fit_upload_consent = True
     api.fit.position_offset = (0.0, 0.0, 0.004)
     api.fit.body_version = body.get(gh.BODY_VERSION)  # the fake fits to the hosted body the smoke added
     before_fit = positions(tee)
-    check("Fit to Body runs", "FINISHED" in bpy.ops.dct_link.fit_service_fit())
+    check("Fit on gta.clothing runs", "FINISHED" in bpy.ops.dct_link.fit_service_fit())
     log = draw_everything(package, state, "garment being fitted")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the Fit panel shows the run with Cancel", ("operator", "dct_link.fit_service_cancel") in log, labels[-300:])
@@ -295,7 +295,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("the fit uploaded the aligned garment with its markers in the rest pose",
           sent_request["sourcePose"] == "rest" and "lShoulder" in sent_request.get("markers", {})
           and "lKnee" not in sent_request.get("markers", {}), sent_request)
-    check("Fit to Body moves the garment as gta.clothing answered and weights it by bone name, never to the root",
+    check("Fit on gta.clothing moves the garment as answered and weights it by bone name, never to the root",
           np.allclose(positions(tee), before_fit + [0.0, 0.0, 0.004], atol=1e-4) and "SKEL_Spine3" in groups
           and "SKEL_ROOT" not in groups and tee.get("dct_fitted"),
           (ui_garment.RUNTIME.fit_lines, sorted(groups)))

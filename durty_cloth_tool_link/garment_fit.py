@@ -1,11 +1,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""Fit to Body and Transfer Weights on gta.clothing, without Blender.
+"""Fit on gta.clothing and Transfer Weights, without Blender.
 
-Fit to Body sends the garment as it sits after Align to Body (its triangles in ped space, the markers, the gender, slot
-and category) to gta.clothing, which puts it in the game's pose, gives it the freemode body's weights and pushes it out
-of the body. Transfer Weights sends a garment that already sits on the body and gets the weights only. Both use one of
-the account's fits for the day.
+Fit on gta.clothing sends the garment as it sits after Align to Body (its triangles in ped space, the markers, the
+gender, slot and category) to gta.clothing, which puts it in the game's pose, gives it the freemode body's weights and
+pushes it out of the body. Transfer Weights sends a garment that already sits on the body and gets the weights only.
+Both use one of the account's fits for the day.
 
 * :func:`prepare_upload` turns the garment's arrays into what the service takes (float32 positions, triangles without
   the ones it refuses, the Pinned and Lining flags) and a digest, so a result is applied only to the shape it was made
@@ -58,7 +58,7 @@ REFERENCE_REGIONS = {
 }
 #: Shoes measure their single region against the feet.
 SHOE_REGIONS = ("footL", "footR")
-#: The options of Fit to Body, as the panel offers them, with the service's defaults.
+#: The options of Fit on gta.clothing, as the panel offers them, with the service's defaults.
 DEFAULT_OPTIONS = {"clearanceMm": 3.0, "pushOut": True, "maxPushMm": 30.0, "seamWeldMm": 1.5,
                    "matchProportions": False}
 #: Bones the add-on never weights to: the skeleton's root (index 0) moves the whole ped.
@@ -181,7 +181,7 @@ def densest_seam_cell(positions: Any, triangles: Any, seam_weld_mm: float) -> Tu
 
 def fit_options(clearance: float, push_out: bool, max_push: float, seam_weld: float,
                 match_proportions: bool) -> Dict[str, Any]:
-    """The options of Fit to Body, each kept within the service's range."""
+    """The options of Fit on gta.clothing, each kept within the service's range."""
     weld = min(3.0, max(0.0, float(seam_weld)))
     if 0.0 < weld < fit.MIN_SEAM_WELD_MM:
         weld = fit.MIN_SEAM_WELD_MM
@@ -303,8 +303,9 @@ INPUT_TEXTS = {
     "upload_timeout": "fit.error.upload-timeout",
 }
 WARNING_TEXTS = {code: f"fit.warning.{code.replace('_', '-')}" for code in fit.WARNING_CODES}
-#: What the panel says a run is doing, by stage.
-STAGE_TEXTS = {stage: f"fit.stage.{stage.lower()}" for stage in fit.STAGES}
+#: What the panel says a run is doing, by stage: the check of the garment, then "Fitting" for the rest (the panel names
+#: no step of the work on gta.clothing).
+STAGE_TEXTS = {stage: "fit.stage.validating" if stage == "validating" else "fit.stage.running" for stage in fit.STAGES}
 
 
 def wait_text(seconds: Optional[float]) -> Msg:
@@ -383,8 +384,8 @@ def usual_ranges(reference: fit.FitReference, category: str) -> Dict[str, Tuple[
 
 
 class FitRun:
-    """One Fit to Body or Transfer Weights: the upload, a wait while gta.clothing is busy, polling once a second,
-    Cancel. :meth:`tick` advances it without blocking; once :attr:`ended`, :attr:`result` holds the garment or
+    """One Fit on gta.clothing or Transfer Weights: the upload, a wait while gta.clothing is busy, polling once a
+    second, Cancel. :meth:`tick` advances it without blocking; once :attr:`ended`, :attr:`result` holds the garment or
     :attr:`lines` say why not."""
 
     POLL_SECONDS = 1.0

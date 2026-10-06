@@ -399,7 +399,8 @@ class Shots:
         yield from self.wait(lambda: True, 5)
         self.shot("garment-fit-markers")
 
-        # 4. Aligned to the body: Fit to Body is next. Align to Body asks Durty Cloth Tool for its skeleton first.
+        # 4. Aligned to the body: Fit on gta.clothing is next. Align to Body asks Durty Cloth Tool for its skeleton
+        # first.
         self.operator(lambda: bpy.ops.dct_link.fit_align())
         yield from self.wait(lambda: garment_ui.RUNTIME.job is None and gh.flag(tee, "dct_aligned"), 30,
                              "the alignment")

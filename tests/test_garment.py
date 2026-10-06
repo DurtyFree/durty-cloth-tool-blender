@@ -464,7 +464,7 @@ def test_the_next_step_walks_through_the_local_flow():
         state = state._replace(**change)
         steps.append(garment.next_step(state))
     # The levels of detail come after the weights, which they take over.
-    # Fit to Body on gta.clothing is the next step after Align to Body (the fit check by hand skips it).
+    # Fit on gta.clothing is the next step after Align to Body (the fit check by hand skips it).
     assert steps == ["garment.next.import", "garment.next.body", "garment.next.markers", "garment.next.align",
                      "garment.next.fit", "garment.next.check", "garment.next.push", "garment.next.combine",
                      "garment.next.weights",

@@ -630,13 +630,13 @@ TEXT = {
     "add.cancelled-local": "添加在发送任何内容之前已取消。Ctrl+Z 可以撤销它对服装做的更改。",
     "add.failed-undo": "{problem} Ctrl+Z 可以把服装恢复到添加之前的状态。",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.op.service-fit": "适配到身体",
+    "garment.op.service-fit": "在 gta.clothing 上适配",
     "garment.op.service-fit.desc": "把服装发送到 gta.clothing，由它把服装摆成游戏姿势、赋予 freemode 身体的权重并移出身体。会用掉今天的一次适配",
     "garment.op.service-weights": "传递权重",
     "garment.op.service-weights.desc": "把服装发送到 gta.clothing，由它赋予 freemode 身体的权重，而不移动服装。会用掉今天的一次适配",
     "garment.op.service-cancel.desc": "停止适配。gta.clothing 还没开始的适配不计入今天的次数；已经开始的仍然计入",
     "garment.info.service": (
-        "适配到身体会把服装按对齐到身体之后的样子发送到 gta.clothing。它会以游戏姿势返回，带有 freemode "
+        "在 gta.clothing 上适配会按服装对齐到身体之后的样子进行适配。它会以游戏姿势返回，带有 freemode "
         "身体的权重，原本在身体内部的部分会被移到外面。服装会保留一个备份，后退一步可以恢复。每次适配会用掉今天的一次适配。"
     ),
     "garment.info.weights": (
@@ -657,26 +657,17 @@ TEXT = {
     "fit.stage.busy": "gta.clothing 正忙，稍后会自动重试",
     "fit.stage.queued": "正在等待 gta.clothing",
     "fit.stage.validating": "正在检查服装",
-    "fit.stage.welding": "正在连接接缝",
-    "fit.stage.posing": "正在匹配姿势",
-    "fit.stage.transferring": "正在接收身体的权重",
-    "fit.stage.unposing": "正在摆成游戏姿势",
-    "fit.stage.pushingout": "正在移出身体",
-    "fit.stage.weighting": "正在完成权重",
     "fit.stage.running": "正在适配",
     "fit.stage.cancelling": "正在取消",
     "fit.stage.cancelling-counted": "正在取消。适配已经开始，因此仍会计入",
     "fit.consent.title": "上传以进行适配",
-    "fit.consent.what": (
-        "适配到身体和传递权重会把服装发送到 gta.clothing：它的形状（顶点位置和三角面）、哪些顶点在 DCT Pinned 中、被遮罩或在 DCT Lining "
-        "中、它的标记、适配选项，以及性别、栏位和类别。不包含纹理、材质、名称或文件。"
-    ),
-    "fit.consent.kept": "gta.clothing 适配后会把它发回。服装不会被保存：结果最迟在十分钟后删除。gta.clothing 会为每次适配记录一份不含服装形状的摘要：顶点和三角面等数量、结果以及耗时。",
+    "fit.consent.what": "在 gta.clothing 上适配和传递权重会上传服装。",
+    "fit.consent.kept": "只会发送服装的形状和标记以及适配选项，这些内容在适配结束后最多保留十分钟。",
     "fit.consent.revoke": "你只需同意一次。如要撤回，请在 设置 > 隐私 中关闭上传服装以进行适配。",
     "fit.consent.confirm": "上传并适配",
     "prop.fit-consent": "上传服装以进行适配",
-    "prop.fit-consent.desc": "适配到身体和传递权重可以把服装的形状发送到 gta.clothing。关闭即可撤回；之后插件在发送任何内容前都会再次询问",
-    "settings.fit-consent-subtext": "只有在你选择适配到身体或传递权重时，服装的形状、标记和适配选项才会发送到 gta.clothing。服装不会保存在那里；只会记录一份不含其形状的摘要。",
+    "prop.fit-consent.desc": "允许在 gta.clothing 上适配和传递权重上传服装。关闭即可撤回；之后插件在上传任何内容前都会再次询问",
+    "settings.fit-consent-subtext": "只会发送服装的形状和标记以及适配选项，这些内容在适配结束后最多保留十分钟。",
     "fit.why.running": "正在进行适配。请等待它完成或取消它。",
     "fit.why.hosted-body": "适配需要来自 gta.clothing 的 freemode 身体：请在初始设置中使用添加 freemode 身体。",
     "fit.why.sign-in": "请先用 gta.clothing 登录（开始连接）。",
@@ -688,7 +679,7 @@ TEXT = {
     "fit.error.not-entitled": "你的 gta.clothing 账户无法适配服装。请在 gta.clothing 上检查你的账户。",
     "fit.error.switched-off": "gta.clothing 上的服装适配目前已关闭。Blender 中的工具仍可使用。",
     "fit.error.unavailable": "gta.clothing 上的服装适配暂时不可用。请一分钟后重试。",
-    "fit.error.not-found": "gta.clothing 上已没有这次适配（适配结果会为插件保留十分钟）。请重新适配。",
+    "fit.error.not-found": "gta.clothing 上已没有这次适配。请重新适配。",
     "fit.error.body-version": "gta.clothing 使用的是更新的 freemode 身体。请在初始设置中再次添加 freemode 身体，把服装对齐到它，然后重新适配。",
     "fit.error.too-large": "服装细节太多，无法适配：最多 120,000 个顶点和 240,000 个三角面。请减少它，例如使用精简修改器。",
     "fit.error.mesh-invalid": "gta.clothing 无法适配这件服装：",
@@ -712,16 +703,16 @@ TEXT = {
     "fit.cancelled-counted": "这次适配已在 gta.clothing 上开始，因此计入今天的次数。",
     "fit.input.add-on": "插件发送了 gta.clothing 不接受的内容。请更新插件。",
     "fit.input.slot": "只有穿在身体上的服装才能适配。",
-    "fit.input.options": "某个适配选项超出了范围。请检查适配到身体的选项。",
+    "fit.input.options": "某个适配选项超出了范围。请检查“在 gta.clothing 上适配”的选项。",
     "fit.input.too-large": "这件服装有 {vertices} 个顶点和 {triangles} 个三角面；适配最多接受 120,000 和 240,000。请减少它，例如使用精简修改器。",
     "fit.input.broken": "服装的一些顶点位置已损坏。请删除它们或重新导入服装。",
     "fit.input.far": "服装的一部分离身体超过 3 m。请删除零散的部分，然后重新对齐。",
     "fit.input.degenerate": "服装有没有面积的面。在编辑模式中使用按间距合并可以删除它们。",
     "fit.input.duplicate": "服装有重叠堆在一起的面。在编辑模式中使用按间距合并可以删除这些副本。",
-    "fit.input.seam-dense": "服装的某一处挤着很多松散的边。请删除那里的松散部分（在编辑模式中），或在适配到身体的选项中把接缝间隙设为 0。",
+    "fit.input.seam-dense": "服装的某一处挤着很多松散的边。请删除那里的松散部分（在编辑模式中），或在“在 gta.clothing 上适配”的选项中把接缝间隙设为 0。",
     "fit.input.seam-crowded": (
-        "服装的某一处挤着 {count} 条开放边，而 gta.clothing 在一处最多只接受 {limit} 条：通常是纽扣等小的松散部件，或贴在布料上的明线。它们已被选中：按 Tab "
-        "查看，然后删除或合并它们（按间距合并）。或者在适配到身体的选项中把接缝间隙设为 0。"
+        "服装的某一处挤着 {count} 条开放边，而 gta.clothing 在一处最多只接受 {limit} "
+        "条：通常是纽扣等小的松散部件，或贴在布料上的明线。它们已被选中：按 Tab 查看，然后删除或合并它们（按间距合并）。或者在“在 gta.clothing 上适配”的选项中把接缝间隙设为 0。"
     ),
     "fit.input.seam-crowded-prepare": (
         "服装的某一处挤着 {count} 条开放边，而 gta.clothing 在一处最多只接受 {limit} "
@@ -747,7 +738,7 @@ TEXT = {
     "fit.done.unweighted": "{count} 个顶点没有得到权重。",
     "fit.done.unweighted.one": "{count} 个顶点没有得到权重。",
     "fit.changed": "适配过程中服装发生了变化，因此没有应用结果。请重新适配。",
-    "garment.next.fit": "下一步：在适配面板中使用适配到身体，或在修正中运行适配检查并手动适配服装。",
+    "garment.next.fit": "下一步：在适配面板中使用“在 gta.clothing 上适配”，或在修正中运行适配检查并手动适配服装。",
     "garment.check.reference": "常见",
     "garment.check.reference-none": "–",
     "garment.check.reference-subtext": "常见：这类游戏服装通常离身体多远，数据来自 gta.clothing。",
@@ -757,12 +748,12 @@ TEXT = {
     "garment.done.import-unit": "已导入 {name}（{count} 个顶点），按{unit}读取尺寸，这是唯一能让它具有服装尺寸的单位。如果看起来不对，请重新导入并选择单位。",
     "garment.done.import-size": "已导入 {name}（{count} 个顶点），但 {size} m 不是这类服装的尺寸。请重新导入并选择单位，或检查服装类型。",
     "garment.done.prepare-open": (
-        "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} 个）：那里的裁片没有完全对齐。它们已被选中：按 Tab "
-        "即可看到。适配到身体仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这些接缝并重新导出，或手动连接它们。"
+        "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} "
+        "个）：那里的裁片没有完全对齐。它们已被选中：按 Tab 即可看到。“在 gta.clothing 上适配”仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这些接缝并重新导出，或手动连接它们。"
     ),
     "garment.done.prepare-open.one": (
-        "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} 个）：那里的裁片没有完全对齐。它已被选中：按 Tab "
-        "即可看到。适配到身体仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这条接缝并重新导出，或手动连接它。"
+        "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} "
+        "个）：那里的裁片没有完全对齐。它已被选中：按 Tab 即可看到。“在 gta.clothing 上适配”仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这条接缝并重新导出，或手动连接它。"
     ),
     "garment.done.combine-missing": "已合并，但有 {count} 张纹理找不到，烘焙时没有它们的像素：{names}。请把图像文件放到材质期望的位置（或打包它们），然后重新合并。",
     "garment.done.combine-missing.one": "已合并，但有 {count} 张纹理找不到，烘焙时没有它的像素：{names}。请把图像文件放到材质期望的位置（或打包它），然后重新合并。",
@@ -883,8 +874,8 @@ TEXT = {
     "garment.op.split": "在腰部拆分",
     "garment.op.split.desc": "在腰部把连衣裙切成上衣和裙子：裙子成为用于下装槽位的独立服装",
     "garment.info.split": (
-        "连衣裙可以作为上衣槽位中的一件服装进入游戏，也可以作为上衣和裙子。在腰部拆分会在骨盆上方最窄处切开：连衣裙保留上衣，以它命名的新服装得到裙子，并设置为下装槽位。请在适配到身体之后拆分，这样两件都保留适配结果及其权重，然后"
-        "在初始设置中选择每一件来完成并添加。"
+        "连衣裙可以作为上衣槽位中的一件服装进入游戏，也可以作为上衣和裙子。在腰部拆分会在骨盆上方最窄处切开：连衣裙保留"
+        "上衣，以它命名的新服装得到裙子，并设置为下装槽位。请在“在 gta.clothing 上适配”之后拆分，这样两件都保留适配结果及其权重，然后在初始设置中选择每一件来完成并添加。"
     ),
     "garment.done.split": "已在腰部拆分 {name}：{skirt} 是用于下装槽位的裙子。请在初始设置中选择它。",
     "garment.why.not-dress": "只有连衣裙会在腰部拆分。",
@@ -894,7 +885,7 @@ TEXT = {
     "garment.done.bridge": "已在两腿之间连接 {count} 个顶点的大腿权重。",
     "garment.done.bridge.one": "已在两腿之间连接 {count} 个顶点的大腿权重。",
     "garment.why.no-bridge": "只有裙子、连衣裙和长大衣会在两腿之间连接。",
-    "garment.why.no-leg-weights": "这件服装还没有可连接的大腿权重。请先适配到身体或传递权重。",
+    "garment.why.no-leg-weights": "这件服装还没有可连接的大腿权重。请先在 gta.clothing 上适配或传递权重。",
     "garment.done.combine-walls": (
         "已把 {count} 个材质合并为一张 {size} 像素的贴图，服装上每厘米 {density} 像素（布局使用了 {used}%）。{walls} 个面在 UV "
         "贴图中没有空间（例如厚导出的侧壁）：它们使用旁边布片边缘的颜色。"

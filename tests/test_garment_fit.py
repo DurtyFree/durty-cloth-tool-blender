@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Fit to Body and Transfer Weights on gta.clothing, without Blender: what is uploaded, how a run goes (busy, Cancel,
+"""Fit on gta.clothing and Transfer Weights, without Blender: what is uploaded, how a run goes (busy, Cancel,
 failures, a file closed meanwhile), what comes back as weights, the fits left today, the fit check's usual ranges and
 the texts for every answer. The service is the fake of tests/support/fake_link_api.py; nothing reaches the network."""
 
@@ -134,7 +134,7 @@ def test_a_garment_the_service_would_refuse_is_never_sent(change, key):
 # ---- runs against the fake service ----------------------------------------------------------------------------------
 
 
-def test_fit_to_body_uploads_polls_and_hands_back_the_garment_with_weights(tmp_path, api):
+def test_fit_on_gta_clothing_uploads_polls_and_hands_back_the_garment_with_weights(tmp_path, api):
     api.fit.position_offset = (0.0, 0.0, 0.002)
     ctrl = signed_in(tmp_path, api)
     ended = Ended()
@@ -144,7 +144,7 @@ def test_fit_to_body_uploads_polls_and_hands_back_the_garment_with_weights(tmp_p
     assert ctrl.fitting.busy and run.status_text().key == "fit.stage.uploading"
     seen = set()
     until(ctrl, lambda: seen.add(run.status_text().key) or bool(ended.runs))
-    assert {"fit.stage.validating", "fit.stage.transferring", "fit.stage.weighting"} <= seen
+    assert {"fit.stage.validating", "fit.stage.running"} <= seen
     assert run.state == "done" and run.fraction() == 1.0 and not ctrl.fitting.busy
     moved = garment_fit.result_positions(run.result)
     assert np.allclose(moved, upload.positions + np.array([0, 0, 0.002]), atol=1e-6)

@@ -979,7 +979,7 @@ TEXT = {
     ),
     "add.failed-undo": "{problem} Strg+Z setzt das Kleidungsstück auf den Stand vor dem Hinzufügen zurück.",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.op.service-fit": "An Körper anpassen",
+    "garment.op.service-fit": "Auf gta.clothing anpassen",
     "garment.op.service-fit.desc": (
         "Schickt das Kleidungsstück an gta.clothing, das es in die Spielpose bringt, ihm die Gewichte des "
         "Freemode-Körpers gibt und es aus dem Körper bewegt. Verbraucht eine deiner Anpassungen für heute"
@@ -994,10 +994,10 @@ TEXT = {
         "eine begonnene zählt trotzdem"
     ),
     "garment.info.service": (
-        "An Körper anpassen schickt das Kleidungsstück so, wie es nach An Körper ausrichten sitzt, an gta.clothing. Es "
-        "kommt in der Spielpose zurück, mit den Gewichten des Freemode-Körpers und dort aus dem Körper bewegt, wo es "
-        "darin lag. Das Kleidungsstück behält eine Sicherung, also stellt Einen Schritt zurück es wieder her. Jede "
-        "Anpassung verbraucht eine deiner Anpassungen für heute."
+        "Auf gta.clothing anpassen passt das Kleidungsstück so an, wie es nach An Körper ausrichten sitzt. Es kommt in "
+        "der Spielpose zurück, mit den Gewichten des Freemode-Körpers und dort aus dem Körper bewegt, wo es darin lag. "
+        "Das Kleidungsstück behält eine Sicherung, also stellt Einen Schritt zurück es wieder her. Jede Anpassung "
+        "verbraucht eine deiner Anpassungen für heute."
     ),
     "garment.info.weights": (
         "Gewichte übertragen gibt dem Kleidungsstück die Gewichte des Freemode-Körpers als Vertexgruppen mit den Namen "
@@ -1028,27 +1028,14 @@ TEXT = {
     "fit.stage.busy": "gta.clothing ist beschäftigt. Gleich wird es erneut versucht",
     "fit.stage.queued": "Warten auf gta.clothing",
     "fit.stage.validating": "Kleidungsstück wird geprüft",
-    "fit.stage.welding": "Nähte werden verbunden",
-    "fit.stage.posing": "Pose wird angeglichen",
-    "fit.stage.transferring": "Gewichte des Körpers werden übernommen",
-    "fit.stage.unposing": "Es wird in die Spielpose gebracht",
-    "fit.stage.pushingout": "Es wird aus dem Körper bewegt",
-    "fit.stage.weighting": "Gewichte werden fertiggestellt",
     "fit.stage.running": "Anpassen",
     "fit.stage.cancelling": "Wird abgebrochen",
     "fit.stage.cancelling-counted": "Wird abgebrochen. Die Anpassung hat begonnen und zählt daher trotzdem",
     "fit.consent.title": "Zum Anpassen hochladen",
-    "fit.consent.what": (
-        "An Körper anpassen und Gewichte übertragen schicken das Kleidungsstück an gta.clothing: seine Form "
-        "(Vertex-Positionen und Dreiecke), welche Vertices in DCT Pinned, maskiert oder in DCT Lining sind, seine "
-        "Marker, die Anpassungsoptionen sowie Geschlecht, Slot und Kategorie. Keine Texturen, Materialien, Namen oder "
-        "Dateien."
-    ),
+    "fit.consent.what": "Auf gta.clothing anpassen und Gewichte übertragen laden das Kleidungsstück hoch.",
     "fit.consent.kept": (
-        "gta.clothing passt es an und schickt es zurück. Das Kleidungsstück wird nicht aufbewahrt: Das Ergebnis wird "
-        "spätestens nach zehn Minuten gelöscht. gta.clothing protokolliert zu jeder Anpassung eine Zusammenfassung "
-        "ohne die Form des Kleidungsstücks: Zahlen wie Vertices und Dreiecke, das Ergebnis und wie lange es gedauert "
-        "hat."
+        "Nur Form und Marker des Kleidungsstücks werden gesendet, dazu die Anpassungsoptionen, und nichts davon wird "
+        "länger als zehn Minuten nach der Anpassung aufbewahrt."
     ),
     "fit.consent.revoke": (
         "Du stimmst einmal zu. Zum Widerrufen schalte Kleidung zum Anpassen hochladen unter Einstellungen > "
@@ -1057,13 +1044,12 @@ TEXT = {
     "fit.consent.confirm": "Hochladen und anpassen",
     "prop.fit-consent": "Kleidung zum Anpassen hochladen",
     "prop.fit-consent.desc": (
-        "An Körper anpassen und Gewichte übertragen dürfen die Form des Kleidungsstücks an gta.clothing schicken. "
-        "Schalte es aus, um zu widerrufen; das Add-on fragt dann vor dem nächsten Senden erneut"
+        "Erlaubt Auf gta.clothing anpassen und Gewichte übertragen, das Kleidungsstück hochzuladen. Schalte es aus, um "
+        "zu widerrufen; das Add-on fragt dann vor dem nächsten Hochladen erneut"
     ),
     "settings.fit-consent-subtext": (
-        "Form, Marker und Anpassungsoptionen des Kleidungsstücks gehen nur an gta.clothing, wenn du An Körper anpassen "
-        "oder Gewichte übertragen wählst. Das Kleidungsstück wird dort nicht aufbewahrt; nur eine Zusammenfassung ohne "
-        "seine Form wird protokolliert."
+        "Nur Form und Marker des Kleidungsstücks werden gesendet, dazu die Anpassungsoptionen, und nichts davon wird "
+        "länger als zehn Minuten nach der Anpassung aufbewahrt."
     ),
     "fit.why.running": "Eine Anpassung läuft. Warte auf sie oder brich sie ab.",
     "fit.why.hosted-body": (
@@ -1092,10 +1078,7 @@ TEXT = {
     "fit.error.unavailable": (
         "Das Anpassen auf gta.clothing ist gerade nicht verfügbar. Versuche es in einer Minute erneut."
     ),
-    "fit.error.not-found": (
-        "gta.clothing hat diese Anpassung nicht mehr (eine Anpassung wartet zehn Minuten auf das Add-on). Passe erneut "
-        "an."
-    ),
+    "fit.error.not-found": "gta.clothing hat diese Anpassung nicht mehr. Passe erneut an.",
     "fit.error.body-version": (
         "gta.clothing passt an einen neueren Freemode-Körper an. Wähle Freemode-Körper hinzufügen unter Einrichtung "
         "erneut, richte das Kleidungsstück daran aus und passe erneut an."
@@ -1138,7 +1121,7 @@ TEXT = {
     "fit.input.add-on": "Das Add-on hat etwas gesendet, das gta.clothing nicht annimmt. Aktualisiere das Add-on.",
     "fit.input.slot": "Nur Kleidung, die am Körper getragen wird, kann angepasst werden.",
     "fit.input.options": (
-        "Eine Anpassungsoption liegt außerhalb ihres Bereichs. Prüfe die Optionen von An Körper anpassen."
+        "Eine Anpassungsoption liegt außerhalb ihres Bereichs. Prüfe die Optionen von Auf gta.clothing anpassen."
     ),
     "fit.input.too-large": (
         "Das Kleidungsstück hat {vertices} Vertices und {triangles} Dreiecke; Anpassen nimmt höchstens 120.000 und "
@@ -1161,13 +1144,13 @@ TEXT = {
     ),
     "fit.input.seam-dense": (
         "Viele lose Kanten drängen sich an einer Stelle des Kleidungsstücks. Entferne dort lose Teile (im "
-        "Bearbeitungsmodus) oder setze Nahtabstand in den Optionen von An Körper anpassen auf 0."
+        "Bearbeitungsmodus) oder setze Nahtabstand in den Optionen von Auf gta.clothing anpassen auf 0."
     ),
     "fit.input.seam-crowded": (
         "{count} offene Kanten drängen sich an einer Stelle des Kleidungsstücks, und gta.clothing nimmt dort höchstens "
         "{limit}: meist kleine lose Teile wie Knöpfe oder Ziernähte, die auf dem Stoff liegen. Sie sind ausgewählt: "
         "Drücke Tab, um sie zu sehen, und entferne sie oder führe sie zusammen (Nach Abstand zusammenführen). Oder "
-        "setze Nahtabstand in den Optionen von An Körper anpassen auf 0."
+        "setze Nahtabstand in den Optionen von Auf gta.clothing anpassen auf 0."
     ),
     "fit.input.seam-crowded-prepare": (
         "{count} offene Kanten drängen sich an einer Stelle des Kleidungsstücks, und gta.clothing nimmt dort höchstens "
@@ -1229,7 +1212,8 @@ TEXT = {
         "erneut an."
     ),
     "garment.next.fit": (
-        "Weiter: An Körper anpassen unter Anpassen, oder Passform prüfen unter Korrigieren und von Hand anpassen."
+        "Weiter: Auf gta.clothing anpassen unter Anpassen, oder Passform prüfen unter Korrigieren und von Hand "
+        "anpassen."
     ),
     "garment.check.reference": "Üblich",
     "garment.check.reference-none": "–",
@@ -1251,15 +1235,15 @@ TEXT = {
     ),
     "garment.done.prepare-open": (
         "Vorbereitet, aber {count} Naht-Vertices fanden keinen Partner am Nachbarteil ({welded} verbunden): Die "
-        "Schnittteile treffen sich dort nicht ganz. Sie sind ausgewählt: Drücke Tab, um sie zu sehen. An Körper "
+        "Schnittteile treffen sich dort nicht ganz. Sie sind ausgewählt: Drücke Tab, um sie zu sehen. Auf gta.clothing "
         "anpassen gibt beiden Seiten einer Naht trotzdem dieselben Gewichte; zeigt sich im Spiel eine Lücke, vernähe "
         "diese Nähte in deiner Kleidungs-App und exportiere erneut, oder verbinde sie von Hand."
     ),
     "garment.done.prepare-open.one": (
         "Vorbereitet, aber {count} Naht-Vertex fand keinen Partner am Nachbarteil ({welded} verbunden): Die "
-        "Schnittteile treffen sich dort nicht ganz. Er ist ausgewählt: Drücke Tab, um ihn zu sehen. An Körper anpassen "
-        "gibt beiden Seiten einer Naht trotzdem dieselben Gewichte; zeigt sich im Spiel eine Lücke, vernähe diese Naht "
-        "in deiner Kleidungs-App und exportiere erneut, oder verbinde sie von Hand."
+        "Schnittteile treffen sich dort nicht ganz. Er ist ausgewählt: Drücke Tab, um ihn zu sehen. Auf gta.clothing "
+        "anpassen gibt beiden Seiten einer Naht trotzdem dieselben Gewichte; zeigt sich im Spiel eine Lücke, vernähe "
+        "diese Naht in deiner Kleidungs-App und exportiere erneut, oder verbinde sie von Hand."
     ),
     "garment.done.combine-missing": (
         "Zusammengefasst, aber {count} Texturen wurden nicht gefunden und ohne ihre Pixel gebacken: {names}. Lege die "
@@ -1464,9 +1448,9 @@ TEXT = {
     "garment.info.split": (
         "Ein Kleid kommt als ein Kleidungsstück in den Oberteil-Slot ins Spiel oder als Oberteil und Rock. An der "
         "Taille teilen schneidet es dort, wo es über dem Becken am schmalsten ist: Das Kleid behält das Oberteil, und "
-        "ein neues Kleidungsstück, nach ihm benannt, bekommt den Rock, eingerichtet für den Beine-Slot. Teile nach An "
-        "Körper anpassen, damit beide Teile die Anpassung und ihre Gewichte behalten, und wähle dann jedes Teil unter "
-        "Einrichtung, um es fertigzustellen und hinzuzufügen."
+        "ein neues Kleidungsstück, nach ihm benannt, bekommt den Rock, eingerichtet für den Beine-Slot. Teile nach Auf "
+        "gta.clothing anpassen, damit beide Teile die Anpassung und ihre Gewichte behalten, und wähle dann jedes Teil "
+        "unter Einrichtung, um es fertigzustellen und hinzuzufügen."
     ),
     "garment.done.split": (
         "{name} an der Taille geteilt: {skirt} ist der Rock für den Beine-Slot. Wähle ihn unter Einrichtung."
@@ -1482,7 +1466,7 @@ TEXT = {
     "garment.done.bridge.one": "Die Oberschenkel-Gewichte von {count} Vertex über die Beine hinweg verbunden.",
     "garment.why.no-bridge": "Nur Röcke, Kleider und lange Mäntel werden über die Beine hinweg verbunden.",
     "garment.why.no-leg-weights": (
-        "Das Kleidungsstück hat noch keine Oberschenkel-Gewichte zum Verbinden. Passe es an den Körper an oder "
+        "Das Kleidungsstück hat noch keine Oberschenkel-Gewichte zum Verbinden. Passe es auf gta.clothing an oder "
         "übertrage zuerst die Gewichte."
     ),
     "garment.done.combine-walls": (

@@ -1516,7 +1516,7 @@ class LinkController:
         self.model = ModelPush(self)
         self.skeletons = SkeletonTemplates(self)
         self.item_add = ItemAdd(self)
-        #: Fit to Body and Transfer Weights on gta.clothing, the fits left today and the fit check's usual ranges.
+        #: Fit on gta.clothing and Transfer Weights, the fits left today and the fit check's usual ranges.
         self.fitting = garment_fit.FitService(self._fit_client, ready=self._fit_ready)
         self._fit_api: Optional[dct_fit.FitClient] = None
 

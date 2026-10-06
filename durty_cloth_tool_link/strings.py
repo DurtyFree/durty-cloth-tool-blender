@@ -1184,8 +1184,8 @@ EN: Dict[str, str] = {
     "garment.info.split": (
         "A dress goes into the game as one cloth in the Top slot, or as a top and a skirt. Split at Waist cuts it "
         "where it is narrowest above the pelvis: the dress keeps the top, and a new garment named after it gets the "
-        "skirt, set up for the Legs slot. Split after Fit to Body, so both pieces keep the fit and its weights, then "
-        "choose each piece under Setup to finish and add it."
+        "skirt, set up for the Legs slot. Split after Fit on gta.clothing, so both pieces keep the fit and its "
+        "weights, then choose each piece under Setup to finish and add it."
     ),
     "garment.done.split": "Split {name} at the waist: {skirt} is the skirt, for the Legs slot. Choose it under Setup.",
     "garment.why.not-dress": "Only a dress is split at the waist.",
@@ -1199,7 +1199,7 @@ EN: Dict[str, str] = {
     "garment.done.bridge.one": "Bridged the thigh weights of {count} vertex across the legs.",
     "garment.why.no-bridge": "Only skirts, dresses and long coats are bridged across the legs.",
     "garment.why.no-leg-weights": (
-        "The garment has no thigh weights to bridge yet. Fit it to the body or transfer the weights first."
+        "The garment has no thigh weights to bridge yet. Fit it on gta.clothing or transfer the weights first."
     ),
     "garment.done.combine-walls": (
         "Combined {count} materials into one texture of {size} pixels, {density} pixels per centimetre on the garment "
@@ -1552,7 +1552,7 @@ EN: Dict[str, str] = {
         "The add was cancelled before anything was sent. Ctrl+Z undoes what it changed on the garment."
     ),
     "add.failed-undo": "{problem} Ctrl+Z puts the garment back as it was before the add.",
-    "garment.op.service-fit": "Fit to Body",
+    "garment.op.service-fit": "Fit on gta.clothing",
     "garment.op.service-fit.desc": (
         "Send the garment to gta.clothing, which puts it in the game's pose, gives it the freemode body's weights and "
         "moves it out of the body. Uses one of today's fits"
@@ -1567,9 +1567,9 @@ EN: Dict[str, str] = {
         "started still counts"
     ),
     "garment.info.service": (
-        "Fit to Body sends the garment as it sits after Align to Body to gta.clothing. It comes back in the game's "
-        "pose, with the freemode body's weights, and moved out of the body where it was inside. The garment keeps a "
-        "backup, so Back One Step puts it back. Each fit uses one of today's fits."
+        "Fit on gta.clothing fits the garment as it sits after Align to Body. It comes back in the game's pose, with "
+        "the freemode body's weights, and moved out of the body where it was inside. The garment keeps a backup, so "
+        "Back One Step puts it back. Each fit uses one of today's fits."
     ),
     "garment.info.weights": (
         "Transfer Weights gives the garment the freemode body's weights as vertex groups named after the bones, "
@@ -1597,36 +1597,25 @@ EN: Dict[str, str] = {
     "fit.stage.busy": "gta.clothing is busy. Trying again shortly",
     "fit.stage.queued": "Waiting for gta.clothing",
     "fit.stage.validating": "Checking the garment",
-    "fit.stage.welding": "Joining the seams",
-    "fit.stage.posing": "Matching the pose",
-    "fit.stage.transferring": "Taking the body's weights over",
-    "fit.stage.unposing": "Putting it in the game's pose",
-    "fit.stage.pushingout": "Moving it out of the body",
-    "fit.stage.weighting": "Finishing the weights",
     "fit.stage.running": "Fitting",
     "fit.stage.cancelling": "Cancelling",
     "fit.stage.cancelling-counted": "Cancelling. The fit has started, so it still counts",
     "fit.consent.title": "Upload for Fitting",
-    "fit.consent.what": (
-        "Fit to Body and Transfer Weights send the garment to gta.clothing: its shape (vertex positions and "
-        "triangles), which vertices are in DCT Pinned, masked or in DCT Lining, its markers, the fitting options, and "
-        "the gender, slot and category. No textures, materials, names or files."
-    ),
+    "fit.consent.what": "Fit on gta.clothing and Transfer Weights upload the garment.",
     "fit.consent.kept": (
-        "gta.clothing fits it and sends it back. The garment is not kept: the result is deleted after ten minutes at "
-        "the latest. gta.clothing logs a summary of each fit without the garment's shape: counts such as vertices and "
-        "triangles, the outcome and how long it took."
+        "Only the garment's shape and markers are sent, with the fitting options, and none of it is kept longer than "
+        "ten minutes after the fit."
     ),
     "fit.consent.revoke": "You agree once. To withdraw, turn off Upload Garments for Fitting under Settings > Privacy.",
     "fit.consent.confirm": "Upload and Fit",
     "prop.fit-consent": "Upload Garments for Fitting",
     "prop.fit-consent.desc": (
-        "Fit to Body and Transfer Weights may send the garment's shape to gta.clothing. Turn it off to withdraw; the "
-        "add-on then asks again before it sends anything"
+        "Let Fit on gta.clothing and Transfer Weights upload the garment. Turn it off to withdraw; the add-on then "
+        "asks again before it uploads anything"
     ),
     "settings.fit-consent-subtext": (
-        "The garment's shape, markers and fitting options go to gta.clothing only when you choose Fit to Body or "
-        "Transfer Weights. The garment is not kept there; only a summary without its shape is logged."
+        "Only the garment's shape and markers are sent, with the fitting options, and none of it is kept longer than "
+        "ten minutes after the fit."
     ),
     "fit.why.running": "A fit is running. Wait for it or cancel it.",
     "fit.why.hosted-body": "Fitting needs the freemode body from gta.clothing: Add Freemode Body under Setup.",
@@ -1643,7 +1632,7 @@ EN: Dict[str, str] = {
         "Garment fitting is switched off on gta.clothing at the moment. The tools in Blender still work."
     ),
     "fit.error.unavailable": "Garment fitting on gta.clothing is not available just now. Try again in a minute.",
-    "fit.error.not-found": "gta.clothing no longer has this fit (a fit waits ten minutes for the add-on). Fit again.",
+    "fit.error.not-found": "gta.clothing no longer has this fit. Fit again.",
     "fit.error.body-version": (
         "gta.clothing fits to a newer freemode body. Add Freemode Body under Setup again, align the garment to it and "
         "fit again."
@@ -1678,7 +1667,7 @@ EN: Dict[str, str] = {
     "fit.cancelled-counted": "The fit had already started on gta.clothing, so it counts against today's fits.",
     "fit.input.add-on": "The add-on sent something gta.clothing does not accept. Update the add-on.",
     "fit.input.slot": "Only clothing worn on the body can be fitted.",
-    "fit.input.options": "A fitting option is out of its range. Check the options of Fit to Body.",
+    "fit.input.options": "A fitting option is out of its range. Check the options of Fit on gta.clothing.",
     "fit.input.too-large": (
         "The garment has {vertices} vertices and {triangles} triangles; fitting takes at most 120,000 and 240,000. "
         "Reduce it, for example with a Decimate modifier."
@@ -1691,12 +1680,12 @@ EN: Dict[str, str] = {
     ),
     "fit.input.seam-dense": (
         "Many loose edges crowd one spot of the garment. Remove loose parts there (Select Loose in Edit Mode), or set "
-        "Seam Gap to 0 in the options of Fit to Body."
+        "Seam Gap to 0 in the options of Fit on gta.clothing."
     ),
     "fit.input.seam-crowded": (
         "{count} open edges crowd one spot of the garment, and gta.clothing takes at most {limit} there: usually small "
         "loose parts such as buttons, or stitching lying on the cloth. They are selected: press Tab to see them, then "
-        "remove them or merge them (Merge by Distance). Or set Seam Gap to 0 in the options of Fit to Body."
+        "remove them or merge them (Merge by Distance). Or set Seam Gap to 0 in the options of Fit on gta.clothing."
     ),
     "fit.input.seam-crowded-prepare": (
         "{count} open edges crowd one spot of the garment, and gta.clothing takes at most {limit} there: usually where "
@@ -1738,7 +1727,9 @@ EN: Dict[str, str] = {
     "fit.done.unweighted": "{count} vertices got no weights.",
     "fit.done.unweighted.one": "{count} vertex got no weights.",
     "fit.changed": "The garment changed while it was being fitted, so the result was not applied. Fit again.",
-    "garment.next.fit": "Next: Fit to Body under Fit, or run the fit check under Fix and fit the garment by hand.",
+    "garment.next.fit": (
+        "Next: Fit on gta.clothing under Fit, or run the fit check under Fix and fit the garment by hand."
+    ),
     "garment.check.reference": "Usual",
     "garment.check.reference-none": "–",
     "garment.check.reference-subtext": (
@@ -1757,15 +1748,15 @@ EN: Dict[str, str] = {
     ),
     "garment.done.prepare-open": (
         "Prepared, but {count} seam vertices found no partner on the panel next to them ({welded} joined): the panels "
-        "do not quite meet there. They are selected: press Tab to see them. Fit to Body still gives both sides of a "
-        "seam the same weights; if a gap shows in the game, sew those seams in your clothing app and export again, or "
-        "join them by hand."
+        "do not quite meet there. They are selected: press Tab to see them. Fit on gta.clothing still gives both sides "
+        "of a seam the same weights; if a gap shows in the game, sew those seams in your clothing app and export "
+        "again, or join them by hand."
     ),
     "garment.done.prepare-open.one": (
         "Prepared, but {count} seam vertex found no partner on the panel next to it ({welded} joined): the panels do "
-        "not quite meet there. It is selected: press Tab to see it. Fit to Body still gives both sides of a seam the "
-        "same weights; if a gap shows in the game, sew that seam in your clothing app and export again, or join it by "
-        "hand."
+        "not quite meet there. It is selected: press Tab to see it. Fit on gta.clothing still gives both sides of a "
+        "seam the same weights; if a gap shows in the game, sew that seam in your clothing app and export again, or "
+        "join it by hand."
     ),
     "garment.done.combine-missing": (
         "Combined, but {count} textures could not be found and were baked without their pixels: {names}. Put the image "
