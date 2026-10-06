@@ -67,6 +67,10 @@ TEXT = {
     "setup.sign-in.signed-out": "Du hast dich abgemeldet. Melde dich wieder an, um Creator Link zu nutzen.",
     "linked.project": "Projekt: {name}",
     "linked.no-project": "Öffne ein Projekt in Durty Cloth Tool.",
+    "linked.offline": (
+        "Verbinde Durty Cloth Tool, um die dort ausgewählte Kleidung live auf dem Ped zu bemalen und ihr Modell zu "
+        "senden."
+    ),
     "linked.no-cloth": "Wähle ein Kleidungsstück in Durty Cloth Tool, um hier daran zu arbeiten.",
     "linked.variation": "Variante {letter}",
     "linked.number": "#{number}",

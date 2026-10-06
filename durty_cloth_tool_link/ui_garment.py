@@ -1,14 +1,16 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""Garment Fitting (Experimental) in the DCT tab: the settings, operators and panels of the local garment tools.
+"""Garment Fitting (Experimental) in the DCT tab: the settings, operators and panel of the local garment tools.
 
-The panel sits after Model, with the next step in its first line and four child panels, one per stage of the work:
-Setup (gender, slot, category, source pose, the garment and the freemode body), Fit (markers, Align to Body,
-backups), Fix (push out, region tools, problem colours, the fit check, the sculpt session, the tear check) and Game
-Ready (prepare, combine materials, levels of detail, the local checks, and Add to Durty Cloth Tool: the freemode
-skeleton from Durty Cloth Tool and the add of the garment as a new cloth of the open project). The button of the next
-step is the large one; settings that rarely change sit in closed Options sections. Every operator that changes a mesh
-can be undone; the garment keeps up to three backups for Back One Step and Restore Pre-fit.
+The panel is the DCT tab's Garment Fitting view (Work On), with the next step in its first line and five numbered
+stages, like Custom Ped's: Setup (gender, garment type, avatar, source pose, the garment and the freemode body), Fit
+(markers, Align to Body, Fit to Body), Fix (Run Fit Check and Push Out of Body, with the problem colours, the region
+tools, sculpting by hand and the tear check in closed sections), Game Ready (prepare, combine materials, the freemode
+skeleton and the weights, levels of detail, the local checks) and Add to Project (the add of the garment as a new cloth
+of the open project). The stage that holds the next step opens and the finished ones fold; each header says how far
+its stage is. The button of the next step is the large one, a finished step's button has a tick, and settings that
+rarely change sit in closed Options sections. Every operator that changes a mesh can be undone; the garment keeps up to
+three backups for Back One Step and Restore Pre-fit, in a closed section after the stages.
 """
 
 from __future__ import annotations
@@ -71,6 +73,13 @@ class _Runtime:
         #: The step running from the panel stage by stage (Prepare Garment, Combine Materials), by its title: the other
         #: garment tools wait for it.
         self.stepping: Optional[str] = None
+        #: The garment's flow while the panel draws (computed once per draw).
+        self.flow: Optional[garment.FlowState] = None
+        #: The stage that was open at the last draw, and the ids of the stage sections (see :func:`_draw_main`). This
+        #: is the add-on's own memory, not Blender data, so the panel may change it while it draws.
+        self.opened: Optional[str] = None
+        self.layout_generation = 0
+        self.layout_session = int(time.time()) % 1000000
         self.redraw: Callable[[], None] = lambda: None
 
 
@@ -1980,7 +1989,7 @@ class DCTLINK_OT_fit_service_cancel(_Op):
 
 class Job(NamedTuple):
     """A step that waits for Durty Cloth Tool's skeleton template: ``skeleton`` (Use Durty Cloth Tool Skeleton),
-    ``add`` (Add to Durty Cloth Tool Project, which then goes on by itself) or ``align`` (Align to Body with the
+    ``add`` (Add to Project, which then goes on by itself) or ``align`` (Align to Body with the
     joints of the user's game files)."""
 
     kind: str
@@ -2016,7 +2025,7 @@ def _skeleton_reason(context: Any) -> Optional[Msg]:
 
 
 def _add_reason(context: Any) -> Optional[Msg]:
-    """Why Add to Durty Cloth Tool Project is unavailable (what its checks find is shown after a click)."""
+    """Why Add to Project is unavailable (what its checks find is shown after a click)."""
     reason = _garment_reason(context)
     if reason is not None:
         return reason
@@ -2558,6 +2567,8 @@ def findings_state(obj: Optional[Any]) -> str:
 
 
 def flow_state(context: Any) -> garment.FlowState:
+    if RUNTIME.flow is not None:
+        return RUNTIME.flow  # the panel being drawn computed it already
     settings_ = props(context)
     obj = current_garment(context)
     report = garment.FitReport.from_json(gh.stored_text(obj, gh.FIT_REPORT))
@@ -2590,6 +2601,7 @@ def flow_state(context: Any) -> garment.FlowState:
         adding=RUNTIME.job is not None or RUNTIME.add_job is not None or (ctrl is not None and ctrl.item_add.adding),
         added=bool(obj is not None and gh.stored_text(obj, gdct.ADDED)),
         prop=prop,
+        gender=settings_.gender,
     )
 
 
@@ -2622,12 +2634,88 @@ def labelled(layout: Any, context: Any, data: Any, name: str, key: str, info: Op
         info_button(row, info)
 
 
+def tool(layout: Any, context: Any, idname: str, key: str, icon: str = "NONE", info: Optional[str] = None,
+         done: bool = False, **properties: Any) -> Any:
+    """A one-step tool on one row: its button (the large one when it is the next step, with a tick once its step is
+    done) and its help button. The button's label is the tool's only name: no heading repeats it. A label too long to
+    share the row with the help button (a narrow sidebar, a longer language) keeps the whole row, and the button's
+    tooltip explains it."""
+    row = layout.row(align=True)
+    if next_operator(context) == idname:
+        row.scale_y = ui.PRIMARY_SCALE
+    op = operator(row, idname, key, "CHECKMARK" if done else icon, **properties)
+    room = ui.content_width(context) - (ui._BUTTON + HELP_WIDTH) * ui._scale(context)  # _BUTTON holds the icon
+    if info and ui._measure(context)(t(key)) <= room:
+        info_button(row, info)
+    return op
+
+
+#: The width of a help button beside a tool's button (interface units).
+HELP_WIDTH = 24
+
+
+def section(layout: Any, name: str, key: str, icon: str, info: Optional[str] = None) -> Optional[Any]:
+    """A closed section for tools most garments do not need: its title (and help) in the header; its body, or
+    ``None`` while it is closed."""
+    header, body = layout.panel(f"dct_link_garment_section_{name}", default_closed=True)
+    header.label(text=t(key), icon=icon, translate=False)
+    if info:
+        info_button(header, info)
+    return body
+
+
+def open_stage(context: Any) -> str:
+    """The stage whose section is open: the one that holds the next step."""
+    return garment.stage_of(flow_state(context))
+
+
+def stage_status(flow: garment.FlowState, stage: str) -> Tuple[str, bool]:
+    """A stage's header: its short status (translated) and whether the work has moved past it."""
+    found = garment.stage_status(flow, stage)
+    if found.key is None:
+        return "", found.done
+    fields = dict(found.fields, **{name: msg(key) for name, key in found.keys.items()})
+    return t(found.key, **fields), found.done
+
+
 def draw_main(layout: Any, context: Any) -> None:
-    key = garment.next_step(flow_state(context))
-    wrapped(layout, context, t(key), "FORWARD")
+    RUNTIME.flow = None
+    RUNTIME.flow = flow_state(context)  # computed once for the whole panel
+    try:
+        _draw_main(layout, context)
+    finally:
+        RUNTIME.flow = None
+
+
+def _draw_main(layout: Any, context: Any) -> None:
+    flow = flow_state(context)
+    wrapped(layout, context, t(garment.next_step(flow)), "FORWARD")
+    if not flow.garment:
+        subtext(layout, context, "experimental.note", indent=True)
     if RUNTIME.notice is not None:
         layout.separator(factor=GAP_SMALL)
         ui.draw_notice(layout, context, RUNTIME.notice)
+    # The stage of the next step (open_stage is the panel's choice; the screenshot tool asks it for another stage).
+    opened = open_stage(context)
+    if opened != RUNTIME.opened:
+        # The work moved to another stage: the sections get new ids, so each starts from its default again (the new
+        # stage open, the others folded), also when the work goes back to a stage that was open before. Opened by
+        # hand, a section stays open until the next move. The ids start with this session's time, so a saved file
+        # never brings back the states of an earlier session.
+        RUNTIME.opened = opened
+        RUNTIME.layout_generation += 1
+    generation = f"{RUNTIME.layout_session}_{RUNTIME.layout_generation}"
+    for number, stage in enumerate(garment.STAGES, start=1):
+        layout.separator(factor=GAP_SMALL)
+        header, body = layout.panel(f"dct_link_garment_stage_{stage}_{generation}", default_closed=stage != opened)
+        status, done = stage_status(flow, stage)
+        ui.stage_header(header, context, t("ped.stage-title", number=number, title=msg(f"garment.panel.{stage}")),
+                        status, done)
+        if body is not None:
+            STAGE_DRAW[stage](body, context)
+    if current_garment(context) is not None:
+        layout.separator(factor=GAP_SMALL)
+        draw_backups(layout, context)
 
 
 def draw_setup(layout: Any, context: Any) -> None:
@@ -2679,14 +2767,13 @@ def draw_setup(layout: Any, context: Any) -> None:
     step(layout, context, DCTLINK_OT_fit_add_body.bl_idname, "garment.op.add-body", "IMPORT")
     reason_text(layout, context, _download_reason(context))
     operator(layout, DCTLINK_OT_fit_body_file.bl_idname, "garment.op.body-file", "FILEBROWSER")
-    subtext(layout, context, "garment.body.subtext")
 
 
 def draw_anchor(layout: Any, context: Any) -> None:
     """A prop's placement: Snap to Anchor, then moved by hand."""
     obj = current_garment(context)
-    heading(layout, context, "garment.heading.snap", "PIVOT_CURSOR", info="garment.info.snap")
-    step(layout, context, DCTLINK_OT_fit_snap_anchor.bl_idname, "garment.op.snap", "PIVOT_CURSOR")
+    tool(layout, context, DCTLINK_OT_fit_snap_anchor.bl_idname, "garment.op.snap", "PIVOT_CURSOR",
+         info="garment.info.snap", done=flow_state(context).aligned)
     if obj is not None:
         reason_text(layout, context, _snap_reason(context))
     subtext(layout, context, "garment.snap.subtext", anchor=t(f"garment.slot.{props(context).slot}"))
@@ -2697,13 +2784,12 @@ def draw_fit(layout: Any, context: Any) -> None:
     obj = current_garment(context)
     if _is_prop(context):
         draw_anchor(layout, context)
-        draw_backups(layout, context)
         return
-    heading(layout, context, "garment.heading.markers", "EMPTY_DATA", info="garment.info.markers")
     expected = garment.markers_for(settings_.category)
     if not expected:
         wrapped(layout, context, t("garment.why.no-markers"), "INFO")
     else:
+        heading(layout, context, "garment.heading.markers", "EMPTY_DATA", info="garment.info.markers")
         step(layout, context, DCTLINK_OT_fit_auto_markers.bl_idname, "garment.op.auto-markers", "EMPTY_DATA")
         reason_text(layout, context, _markers_reason(context))
         markers = gh.read_markers(context.scene) if obj is not None else {}
@@ -2725,10 +2811,11 @@ def draw_fit(layout: Any, context: Any) -> None:
                      translate=False)
 
         layout.separator(factor=GAP)
-        heading(layout, context, "garment.heading.align", "ORIENTATION_GIMBAL", info="garment.info.align")
-        step(layout, context, DCTLINK_OT_fit_align.bl_idname, "garment.op.align", "ORIENTATION_GIMBAL")
-        if obj is not None:
-            reason_text(layout, context, _align_reason(context))
+        tool(layout, context, DCTLINK_OT_fit_align.bl_idname, "garment.op.align", "ORIENTATION_GIMBAL",
+             info="garment.info.align", done=flow_state(context).aligned)
+        reason = _align_reason(context) if obj is not None else None
+        if reason is not None and reason.key != "garment.why.markers":  # the markers are right above
+            reason_text(layout, context, reason)
         _found, source = joints(context)
         if source is not None:
             wrapped(layout, context, t(f"garment.align.source.{source}"), "INFO" if source == "estimate" else "CHECKMARK",
@@ -2746,32 +2833,33 @@ def draw_fit(layout: Any, context: Any) -> None:
     draw_service(layout, context, "fit")
     if settings_.category == "dress":
         layout.separator(factor=GAP)
-        heading(layout, context, "garment.heading.split", "MOD_EDGESPLIT", info="garment.info.split")
-        operator(layout, DCTLINK_OT_fit_split_waist.bl_idname, "garment.op.split", "MOD_EDGESPLIT")
+        tool(layout, context, DCTLINK_OT_fit_split_waist.bl_idname, "garment.op.split", "MOD_EDGESPLIT",
+             info="garment.info.split")
         if obj is not None:
             reason_text(layout, context, _split_reason(context))
-    draw_backups(layout, context)
 
 
 def draw_backups(layout: Any, context: Any) -> None:
+    """The garment's backups, in a closed section after the stages: every stage that changes the garment keeps one."""
     obj = current_garment(context)
-    layout.separator(factor=GAP)
-    heading(layout, context, "garment.heading.backups", "FILE_BACKUP", info="garment.info.backups")
+    body = section(layout, "backups", "garment.heading.backups", "FILE_BACKUP", info="garment.info.backups")
+    if body is None:
+        return
     count = len(gh.backups(obj)) if obj is not None else 0
-    subtext(layout, context, "garment.backups.count", count=count, limit=gh.MAX_BACKUPS)
-    row = ui.button_group(layout, context, ("garment.op.back", "garment.op.restore"))
+    subtext(body, context, "garment.backups.count", count=count, limit=gh.MAX_BACKUPS)
+    row = ui.button_group(body, context, ("garment.op.back", "garment.op.restore"))
     operator(row, DCTLINK_OT_fit_back_step.bl_idname, "garment.op.back", "LOOP_BACK")
     operator(row, DCTLINK_OT_fit_restore.bl_idname, "garment.op.restore", "FILE_REFRESH")
-    body = options(layout, context, "backups")
-    if body is not None:
-        operator(body, DCTLINK_OT_fit_remove_backups.bl_idname, "garment.op.remove-backups", "TRASH")
+    operator(body, DCTLINK_OT_fit_remove_backups.bl_idname, "garment.op.remove-backups", "TRASH")
 
 
 def draw_fix(layout: Any, context: Any) -> None:
+    """Run Fit Check and Push Out of Body in view; the problem colours, the region tools, sculpting by hand and the
+    tear check in closed sections below them."""
     settings_ = props(context)
     obj = current_garment(context)
     if gh.sculpting(obj) or gh.session_broken(obj):
-        draw_sculpt(layout, context)
+        draw_sculpt_session(layout, context)
         return
     if _is_prop(context):
         wrapped(layout, context, t("garment.why.prop-fix"), "INFO")
@@ -2781,35 +2869,42 @@ def draw_fix(layout: Any, context: Any) -> None:
         wrapped(layout, context, strings.text(reason), "INFO")
         layout.separator(factor=GAP_SMALL)
 
-    heading(layout, context, "garment.heading.check", "VIEWZOOM", info="garment.info.check")
-    step(layout, context, DCTLINK_OT_fit_check.bl_idname, "garment.op.check", "VIEWZOOM")
+    tool(layout, context, DCTLINK_OT_fit_check.bl_idname, "garment.op.check", "VIEWZOOM", info="garment.info.check")
     draw_report(layout, context)
 
     layout.separator(factor=GAP)
-    heading(layout, context, "garment.heading.push", "MOD_SHRINKWRAP", info="garment.info.push")
     layout.prop(settings_, "push_gap", text=t("garment.prop.gap"), translate=False)
-    step(layout, context, DCTLINK_OT_fit_push_out.bl_idname, "garment.op.push", "MOD_SHRINKWRAP")
+    tool(layout, context, DCTLINK_OT_fit_push_out.bl_idname, "garment.op.push", "MOD_SHRINKWRAP",
+         info="garment.info.push")
 
     layout.separator(factor=GAP)
-    draw_problems(layout, context)
+    body = section(layout, "problems", "garment.heading.problems", "COLOR", info="garment.info.problems")
+    if body is not None:
+        draw_problems(body, context)
+    body = section(layout, "regions", "garment.heading.regions", "MOD_SMOOTH", info="garment.info.regions")
+    if body is not None:
+        draw_region_tools(body, context)
+    body = section(layout, "sculpt", "garment.heading.sculpt", "SCULPTMODE_HLT", info="garment.info.sculpt")
+    if body is not None:
+        operator(body, DCTLINK_OT_fit_sculpt_start.bl_idname, "garment.op.sculpt", "SCULPTMODE_HLT")
+        options_body = options(body, context, "sculpt")
+        if options_body is not None:
+            options_body.prop(settings_, "sculpt_radius", text=t("garment.prop.radius"), translate=False)
+            options_body.prop(settings_, "sculpt_strength", text=t("garment.prop.strength"), translate=False)
+            ui.checkbox(options_body, context, settings_, "sculpt_mirror", "garment.prop.mirror")
+            ui.checkbox(options_body, context, settings_, "sculpt_keep_out", "garment.prop.keep-out")
+    body = section(layout, "tears", "garment.heading.tears", "MOD_PHYSICS", info="garment.info.tears")
+    if body is not None:
+        operator(body, DCTLINK_OT_fit_check_tears.bl_idname, "garment.op.tears", "MOD_PHYSICS")
+        if obj is not None:
+            reason_text(body, context, gh.tears_problem(obj))
+        draw_tears(body, context)
 
-    layout.separator(factor=GAP)
-    draw_region_tools(layout, context)
 
-    layout.separator(factor=GAP)
-    draw_sculpt(layout, context)
-
-    layout.separator(factor=GAP)
-    heading(layout, context, "garment.heading.tears", "MOD_PHYSICS", info="garment.info.tears")
-    operator(layout, DCTLINK_OT_fit_check_tears.bl_idname, "garment.op.tears", "MOD_PHYSICS")
-    if obj is not None:
-        reason_text(layout, context, gh.tears_problem(obj))
-    draw_tears(layout, context)
-
-
-def draw_region_tools(layout: Any, context: Any) -> None:
+def draw_region_tools(layout: Any, context: Any, title: bool = False) -> None:
     settings_ = props(context)
-    heading(layout, context, "garment.heading.regions", "MOD_SMOOTH", info="garment.info.regions")
+    if title:
+        heading(layout, context, "garment.heading.regions", "MOD_SMOOTH", info="garment.info.regions")
     labelled(layout, context, settings_, "region", "garment.prop.region")
     layout.prop(settings_, "snug_gap", text=t("garment.prop.gap"), translate=False)
     layout.prop(settings_, "amount", text=t("garment.prop.amount"), translate=False)
@@ -2819,10 +2914,11 @@ def draw_region_tools(layout: Any, context: Any) -> None:
     reason_text(layout, context, _region_reason(context, True))
 
 
-def draw_problems(layout: Any, context: Any) -> None:
+def draw_problems(layout: Any, context: Any, title: bool = False) -> None:
     obj = current_garment(context)
     shown = gh.problems_shown(obj)
-    heading(layout, context, "garment.heading.problems", "COLOR", info="garment.info.problems")
+    if title:
+        heading(layout, context, "garment.heading.problems", "COLOR", info="garment.info.problems")
     row = layout.row(align=True)
     row.operator(DCTLINK_OT_fit_show_problems.bl_idname, text=t("garment.op.problems"),
                  icon="HIDE_OFF" if shown else "HIDE_ON", depress=shown, translate=False)
@@ -2838,16 +2934,38 @@ def _mm(value: float) -> str:
     return f"{value:.0f}" if round(value) != 0 else "0"
 
 
-#: The fit check table's columns: the region, the measurement, the usual range of game clothing.
-REPORT_COLUMNS = (0.34, 0.5)
+#: Room around a fit check cell's text (interface units): the measurement's column also holds the warning icon.
+REPORT_PADDING = (8, 30, 8)
+#: The share of the region's column when the usual range goes under each row instead of into its own column.
+REPORT_NARROW = 0.42
 
 
-def _report_row(column: Any, first: str, second: str, third: str, icon: str = "NONE") -> None:
-    line = column.split(factor=REPORT_COLUMNS[0], align=True)
-    line.label(text=first, translate=False)
-    rest = line.split(factor=REPORT_COLUMNS[1] / (1.0 - REPORT_COLUMNS[0]), align=True)
-    rest.label(text=second, icon=icon, translate=False)
-    rest.label(text=third, translate=False)
+def _report_row(column: Any, cells: Tuple[str, ...], shares: Optional[Tuple[float, ...]], icon: str = "NONE") -> None:
+    """A row of the fit check: region, measurement and, with ``shares`` (the columns' parts of the width), the usual
+    range."""
+    if shares is None:
+        line = column.split(factor=REPORT_NARROW, align=True)
+        line.label(text=cells[0], translate=False)
+        line.label(text=cells[1], icon=icon, translate=False)
+        return
+    line = column.split(factor=shares[0], align=True)
+    line.label(text=cells[0], translate=False)
+    rest = line.split(factor=shares[1] / (1.0 - shares[0]), align=True)
+    rest.label(text=cells[1], icon=icon, translate=False)
+    rest.label(text=cells[2], translate=False)
+
+
+def report_columns(context: Any, rows: List[Tuple[str, str, str]]) -> Optional[Tuple[float, float, float]]:
+    """The parts of the width the fit check's three columns take, each as wide as its longest text needs with the
+    room left over shared out, or ``None`` when the three do not fit side by side without cutting a cell."""
+    measure = ui._measure(context)
+    scale = ui._scale(context)
+    width = ui.content_width(context)
+    needed = [max(measure(row[index]) for row in rows) + REPORT_PADDING[index] * scale for index in range(3)]
+    if sum(needed) > width:
+        return None
+    spare = (width - sum(needed)) / 3.0
+    return tuple((need + spare) / width for need in needed)
 
 
 def usual_ranges(context: Any) -> Tuple[Optional[Dict[str, Tuple[float, float, float]]], Optional[str]]:
@@ -2869,20 +2987,34 @@ def usual_ranges(context: Any) -> Tuple[Optional[Dict[str, Tuple[float, float, f
 
 
 def draw_report(layout: Any, context: Any) -> None:
+    """The fit check's table: each region's distance from the body beside the usual range of game clothing. When the
+    three columns would cut a value (a narrow sidebar, a longer language), the usual range goes on a dimmed line
+    under its region."""
     report = garment.FitReport.from_json(gh.stored_text(current_garment(context), gh.FIT_REPORT))
     if report is None:
         subtext(layout, context, "garment.check.none")
         return
     usual, why = usual_ranges(context)
-    column = layout.column(align=True)
-    _report_row(column, t("garment.prop.region"), t("garment.check.measured"), t("garment.check.reference"))
     none = t("garment.check.reference-none")
+    rows = []
     for row in report.rows:
         found = (usual or {}).get(row.region)
         third = t("garment.check.value", p10=_mm(found[0]), p50=_mm(found[1]), p90=_mm(found[2])) if found else none
-        _report_row(column, t(f"garment.region.{row.region}"),
-                    t("garment.check.value", p50=_mm(row.p50), p10=_mm(row.p10), p90=_mm(row.p90)), third,
-                    "ERROR" if row.inside else "BLANK1")
+        rows.append((t(f"garment.region.{row.region}"),
+                     t("garment.check.value", p50=_mm(row.p50), p10=_mm(row.p10), p90=_mm(row.p90)), third,
+                     "ERROR" if row.inside else "BLANK1"))
+    titles = (t("garment.prop.region"), t("garment.check.measured"), t("garment.check.reference"))
+    shares = report_columns(context, [titles] + [row[:3] for row in rows])
+    column = layout.column(align=True)
+    _report_row(column, titles, shares)
+    for first, second, third, icon in rows:
+        _report_row(column, (first, second, third), shares, icon)
+        if shares is None and usual:
+            line = column.split(factor=REPORT_NARROW, align=True)
+            line.label(text="", translate=False)
+            cell = line.row(align=True)
+            cell.active = False
+            cell.label(text=t("garment.check.usual-line", range=third), icon="BLANK1", translate=False)
     share = round(100.0 * report.inside_share, 1)
     wrapped(layout, context, t("garment.check.inside", count=report.inside, share=share),
             "ERROR" if report.inside else "CHECKMARK")
@@ -2894,34 +3026,27 @@ def draw_report(layout: Any, context: Any) -> None:
         subtext(layout, context, why)
 
 
-def draw_sculpt(layout: Any, context: Any) -> None:
+def draw_sculpt_session(layout: Any, context: Any) -> None:
+    """A sculpt session: Accept or Cancel, Keep Out of Body, and the problem colours and region tools to work with."""
     settings_ = props(context)
     obj = current_garment(context)
     heading(layout, context, "garment.heading.sculpt", "SCULPTMODE_HLT", info="garment.info.sculpt")
-    if gh.sculpting(obj) or gh.session_broken(obj):
-        if gh.session_broken(obj):
-            wrapped(layout, context, t("garment.sculpt.broken"), "ERROR")
-        else:
-            guide(layout, context, "garment.sculpt.running")
-        row = ui.button_group(layout, context, ("garment.op.accept", "op.cancel-sign-in"))
-        row.scale_y = ui.PRIMARY_SCALE
-        operator(row, DCTLINK_OT_fit_sculpt_accept.bl_idname, "garment.op.accept", "CHECKMARK")
-        operator(row, DCTLINK_OT_fit_sculpt_cancel.bl_idname, "op.cancel-sign-in", "X")
-        subtext(layout, context, "garment.sculpt.subtext")
-        layout.separator(factor=GAP_SMALL)
-        ui.checkbox(layout, context, settings_, "sculpt_keep_out", "garment.prop.keep-out")
-        draw_problems(layout, context)
-        if not gh.session_broken(obj):
-            layout.separator(factor=GAP_SMALL)
-            draw_region_tools(layout, context)
-        return
-    operator(layout, DCTLINK_OT_fit_sculpt_start.bl_idname, "garment.op.sculpt", "SCULPTMODE_HLT")
-    body = options(layout, context, "sculpt")
-    if body is not None:
-        body.prop(settings_, "sculpt_radius", text=t("garment.prop.radius"), translate=False)
-        body.prop(settings_, "sculpt_strength", text=t("garment.prop.strength"), translate=False)
-        ui.checkbox(body, context, settings_, "sculpt_mirror", "garment.prop.mirror")
-        ui.checkbox(body, context, settings_, "sculpt_keep_out", "garment.prop.keep-out")
+    if gh.session_broken(obj):
+        wrapped(layout, context, t("garment.sculpt.broken"), "ERROR")
+    else:
+        guide(layout, context, "garment.sculpt.running")
+    row = ui.button_group(layout, context, ("garment.op.accept", "op.cancel-sign-in"))
+    row.scale_y = ui.PRIMARY_SCALE
+    operator(row, DCTLINK_OT_fit_sculpt_accept.bl_idname, "garment.op.accept", "CHECKMARK")
+    operator(row, DCTLINK_OT_fit_sculpt_cancel.bl_idname, "op.cancel-sign-in", "X")
+    subtext(layout, context, "garment.sculpt.subtext")
+    layout.separator(factor=GAP_SMALL)
+    ui.checkbox(layout, context, settings_, "sculpt_keep_out", "garment.prop.keep-out")
+    layout.separator(factor=GAP)
+    draw_problems(layout, context, title=True)
+    if not gh.session_broken(obj):
+        layout.separator(factor=GAP)
+        draw_region_tools(layout, context, title=True)
 
 
 def draw_tears(layout: Any, context: Any) -> None:
@@ -2940,9 +3065,12 @@ def draw_tears(layout: Any, context: Any) -> None:
 
 
 def draw_ready(layout: Any, context: Any) -> None:
+    """Game Ready's steps in their order, one row each, with a tick once done: Prepare Garment, Combine Materials, the
+    skeleton and the weights (a prop: its anchor), Generate LODs and Validate."""
     settings_ = props(context)
-    heading(layout, context, "garment.heading.prepare", "MODIFIER", info="garment.info.prepare")
-    step(layout, context, DCTLINK_OT_fit_prepare.bl_idname, "garment.op.prepare", "MODIFIER")
+    flow = flow_state(context)
+    tool(layout, context, DCTLINK_OT_fit_prepare.bl_idname, "garment.op.prepare", "MODIFIER",
+         info="garment.info.prepare", done=flow.prepared)
     body = options(layout, context, "prepare")
     if body is not None:
         body.prop(settings_, "weld", text=t("garment.prop.weld"), translate=False)
@@ -2951,8 +3079,8 @@ def draw_ready(layout: Any, context: Any) -> None:
         ui.checkbox(body, context, settings_, "overwrite_colours", "garment.prop.overwrite")
 
     layout.separator(factor=GAP)
-    heading(layout, context, "garment.heading.combine", "NODE_TEXTURE", info="garment.info.combine")
-    step(layout, context, DCTLINK_OT_fit_combine.bl_idname, "garment.op.combine", "NODE_TEXTURE")
+    tool(layout, context, DCTLINK_OT_fit_combine.bl_idname, "garment.op.combine", "NODE_TEXTURE",
+         info="garment.info.combine", done=flow.prepared and flow.materials <= 1)
     body = options(layout, context, "combine")
     if body is not None:
         row = body.row(align=True)
@@ -2970,8 +3098,8 @@ def draw_ready(layout: Any, context: Any) -> None:
             operator(layout, DCTLINK_OT_fit_bridge.bl_idname, "garment.op.bridge", "MOD_VERTEX_WEIGHT")
 
     layout.separator(factor=GAP)
-    heading(layout, context, "garment.heading.lods", "MOD_DECIM", info="garment.info.lods")
-    step(layout, context, DCTLINK_OT_fit_lods.bl_idname, "garment.op.lods", "MOD_DECIM")
+    tool(layout, context, DCTLINK_OT_fit_lods.bl_idname, "garment.op.lods", "MOD_DECIM", info="garment.info.lods",
+         done=flow.lods)
     if not gh.sollumz_lods_available():
         reason_text(layout, context, msg("garment.why.no-sollumz"))
     body = options(layout, context, "lods")
@@ -2980,11 +3108,9 @@ def draw_ready(layout: Any, context: Any) -> None:
         body.prop(settings_, "lod_low", text=t("garment.prop.lod-low"), translate=False)
 
     layout.separator(factor=GAP)
-    heading(layout, context, "garment.heading.validate", "CHECKMARK", info="garment.info.validate")
-    step(layout, context, DCTLINK_OT_fit_validate.bl_idname, "garment.op.validate", "CHECKMARK")
+    tool(layout, context, DCTLINK_OT_fit_validate.bl_idname, "garment.op.validate", "CHECKMARK",
+         info="garment.info.validate", done=flow.validated)
     draw_findings(layout, context)
-    layout.separator(factor=GAP)
-    draw_add(layout, context)
 
 
 def draw_service(layout: Any, context: Any, operation: str) -> None:
@@ -2992,12 +3118,13 @@ def draw_service(layout: Any, context: Any, operation: str) -> None:
     fits left today, how the last run ended, and (Fit to Body) its options."""
     ctrl = state.get()
     obj = current_garment(context)
+    flow = flow_state(context)
     if operation == "fit":
-        heading(layout, context, "garment.heading.service", "WORLD", info="garment.info.service")
         idname, key, icon = DCTLINK_OT_fit_service_fit.bl_idname, "garment.op.service-fit", "WORLD"
+        info, done = "garment.info.service", flow.fitted
     else:
-        heading(layout, context, "garment.heading.weights", "MOD_VERTEX_WEIGHT", info="garment.info.weights")
         idname, key, icon = DCTLINK_OT_fit_service_weights.bl_idname, "garment.op.service-weights", "MOD_VERTEX_WEIGHT"
+        info, done = "garment.info.weights", flow.weighted
     run = ctrl.fitting.run
     if run is not None and not run.handled and run.operation == operation:
         if hasattr(layout, "progress"):
@@ -3006,7 +3133,7 @@ def draw_service(layout: Any, context: Any, operation: str) -> None:
             wrapped(layout, context, strings.text(run.status_text()), "SORTTIME")
         operator(layout, DCTLINK_OT_fit_service_cancel.bl_idname, "op.cancel-sign-in", "X")
     else:
-        step(layout, context, idname, key, icon)
+        tool(layout, context, idname, key, icon, info=info, done=done)
         if obj is not None:
             reason = _service_reason(context, operation)
             if reason is not None and reason.key != "garment.why.align-first":
@@ -3064,33 +3191,35 @@ def draw_anchor_status(layout: Any, context: Any) -> None:
     """Where a prop goes into the game from: its anchor (the add hangs it there)."""
     obj = current_garment(context)
     slot = props(context).slot
-    heading(layout, context, "garment.heading.snap", "PIVOT_CURSOR", info="add.info.anchor")
     rig = gdct.prop_rig_of(obj)
+    row = layout.row()
     if rig is not None and rig.gender == slot:
-        wrapped(layout, context, t("add.anchor.ready", name=rig.root.name, anchor=t(f"garment.slot.{slot}")),
-                "CHECKMARK")
+        wrapped(row.column(), context, t("add.anchor.ready", name=rig.root.name, anchor=t(f"garment.slot.{slot}")),
+                "CHECKMARK", reserve=24)
     else:
-        wrapped(layout, context, t("add.anchor.missing", anchor=t(f"garment.slot.{slot}")), "INFO")
+        wrapped(row.column(), context, t("add.anchor.missing", anchor=t(f"garment.slot.{slot}")), "INFO", reserve=24)
+    info_button(row, "add.info.anchor")
 
 
 def draw_skeleton(layout: Any, context: Any) -> None:
     """The freemode skeleton the garment is weighted to: before the levels of detail, which take the weights over."""
     obj = current_garment(context)
-    heading(layout, context, "add.heading.skeleton", "ARMATURE_DATA", info="add.info.skeleton")
     if obj is not None:
         _skeleton_line(layout, context, obj)
-    step(layout, context, DCTLINK_OT_fit_use_skeleton.bl_idname, "add.op.skeleton", "ARMATURE_DATA")
+    tool(layout, context, DCTLINK_OT_fit_use_skeleton.bl_idname, "add.op.skeleton", "ARMATURE_DATA",
+         info="add.info.skeleton", done=flow_state(context).skeleton)
 
 
 def draw_add(layout: Any, context: Any) -> None:
-    """Add to Durty Cloth Tool: the cloth's name, slot and gender (from Setup), Shows Skin, the colour variations, the
-    button, its progress and Durty Cloth Tool's answer."""
+    """Add to Project: the cloth's name, slot and gender (from Setup), Shows Skin, the colour variations (a closed
+    section), the button, its progress and Durty Cloth Tool's answer."""
     settings_ = props(context)
     ctrl = state.get()
     obj = current_garment(context)
-    heading(layout, context, "add.heading", "EXPORT", info="add.info")
     if not ctrl.ready:
         wrapped(layout, context, t("add.why.connect"), "UNLINKED")
+        if not ctrl.connecting and not ctrl.setup_needed:  # while setup is needed, Get Connected has the buttons
+            operator(layout, "dct_link.connect", "op.connect", "LINKED")
     elif ctrl.project is None:
         wrapped(layout, context, t("add.why.no-project"), "INFO")
     else:
@@ -3107,23 +3236,24 @@ def draw_add(layout: Any, context: Any) -> None:
         ui.checkbox(layout, context, settings_, "skin", "add.prop.skin")
 
     layout.separator(factor=GAP_SMALL)
-    heading(layout, context, "add.heading.variations", "IMAGE_DATA", info="add.info.variations")
-    diffuse = gdct.garment_images(obj)["diffuse"] if obj is not None else None
-    column = layout.column(align=True)
-    row = column.row(align=True)
-    split = row.split(factor=0.45, align=True)
-    split.label(text=diffuse.name if diffuse is not None else t("add.variation.none"),
-                icon="IMAGE_DATA" if diffuse is not None else "ERROR", translate=False)
-    split.prop(settings_, "first_title", text="")
-    for index, variation in enumerate(settings_.variations):
+    body = section(layout, "variations", "add.heading.variations", "IMAGE_DATA", info="add.info.variations")
+    if body is not None:
+        diffuse = gdct.garment_images(obj)["diffuse"] if obj is not None else None
+        column = body.column(align=True)
         row = column.row(align=True)
         split = row.split(factor=0.45, align=True)
-        split.prop(variation, "image", text="")
-        split.prop(variation, "title", text="")
-        operator(row, DCTLINK_OT_fit_remove_variation.bl_idname, None, "X", text="", index=index)
-    operator(layout, DCTLINK_OT_fit_add_variation.bl_idname, "add.op.add-variation", "ADD")
-    subtext(layout, context, "add.variations.subtext", count=1 + len(settings_.variations),
-            limit=garment_add.MAX_VARIATIONS)
+        split.label(text=diffuse.name if diffuse is not None else t("add.variation.none"),
+                    icon="IMAGE_DATA" if diffuse is not None else "ERROR", translate=False)
+        split.prop(settings_, "first_title", text="")
+        for index, variation in enumerate(settings_.variations):
+            row = column.row(align=True)
+            split = row.split(factor=0.45, align=True)
+            split.prop(variation, "image", text="")
+            split.prop(variation, "title", text="")
+            operator(row, DCTLINK_OT_fit_remove_variation.bl_idname, None, "X", text="", index=index)
+        operator(body, DCTLINK_OT_fit_add_variation.bl_idname, "add.op.add-variation", "ADD")
+        subtext(body, context, "add.variations.subtext", count=1 + len(settings_.variations),
+                limit=garment_add.MAX_VARIATIONS)
 
     layout.separator(factor=GAP)
     adding = ctrl.item_add.adding
@@ -3144,7 +3274,8 @@ def draw_add(layout: Any, context: Any) -> None:
             subtext(layout, context, "add.waiting.subtext")
         operator(layout, DCTLINK_OT_fit_cancel_add.bl_idname, "op.cancel-sign-in", "X")
     else:
-        step(layout, context, DCTLINK_OT_fit_add_to_dct.bl_idname, "add.op.add", "EXPORT")
+        tool(layout, context, DCTLINK_OT_fit_add_to_dct.bl_idname, "add.op.add", "EXPORT", info="add.info",
+             done=flow_state(context).added)
         reason = _add_reason(context) if obj is not None else None
         if reason is not None and reason.key not in ("add.why.connect", "add.why.no-project"):
             reason_text(layout, context, reason)  # the connection and the project are said above already
@@ -3178,6 +3309,9 @@ def draw_add_outcome(layout: Any, context: Any, obj: Optional[Any]) -> None:
         subtext(layout, context, "add.added.subtext")
 
 
+STAGE_DRAW = {"setup": draw_setup, "fit": draw_fit, "fix": draw_fix, "ready": draw_ready, "add": draw_add}
+
+
 # --------------------------------------------------------------------------------------------------
 # The markers' stick figure in the 3D view
 # --------------------------------------------------------------------------------------------------
@@ -3191,8 +3325,8 @@ def _draw_stick_figure() -> None:
     context = bpy.context
     scene = getattr(context, "scene", None)
     settings_ = getattr(scene, "dct_garment", None) if scene is not None else None
-    if settings_ is None or current_garment(context) is None:
-        return
+    if settings_ is None or current_garment(context) is None or ui.workspace(context) != "GARMENT":
+        return  # the lines belong to Garment Fitting, as Custom Ped's markers belong to Custom Ped
     try:
         markers = gh.read_markers(scene)
         lines = garment.stick_figure(markers)
@@ -3254,52 +3388,13 @@ class DCTLINK_PT_garment(ui._SubPanel, Panel):
     @classmethod
     def poll(cls, context):
         return (state.controller is not None and getattr(context.scene, "dct_garment", None) is not None
-                and ui.workspace(context) == "CLOTHING")
+                and ui.workspace(context) == "GARMENT")
 
     def draw_header(self, context):
         self.layout.label(text="", icon="MOD_CLOTH")
 
     def draw(self, context):
         draw_main(self.layout, context)
-
-
-class _GarmentChild(ui._DCTPanel):
-    bl_parent_id = "DCTLINK_PT_garment"
-
-    @classmethod
-    def poll(cls, context):
-        return DCTLINK_PT_garment.poll(context)
-
-
-class DCTLINK_PT_garment_setup(_GarmentChild, Panel):
-    bl_label = EN["garment.panel.setup"]
-
-    def draw(self, context):
-        draw_setup(self.layout, context)
-
-
-class DCTLINK_PT_garment_fit(_GarmentChild, Panel):
-    bl_label = EN["garment.panel.fit"]
-    bl_options = {"DEFAULT_CLOSED"}
-
-    def draw(self, context):
-        draw_fit(self.layout, context)
-
-
-class DCTLINK_PT_garment_fix(_GarmentChild, Panel):
-    bl_label = EN["garment.panel.fix"]
-    bl_options = {"DEFAULT_CLOSED"}
-
-    def draw(self, context):
-        draw_fix(self.layout, context)
-
-
-class DCTLINK_PT_garment_ready(_GarmentChild, Panel):
-    bl_label = EN["garment.panel.ready"]
-    bl_options = {"DEFAULT_CLOSED"}
-
-    def draw(self, context):
-        draw_ready(self.layout, context)
 
 
 CLASSES = (
@@ -3346,10 +3441,6 @@ CLASSES = (
     DCTLINK_OT_fit_add_variation,
     DCTLINK_OT_fit_remove_variation,
     DCTLINK_PT_garment,
-    DCTLINK_PT_garment_setup,
-    DCTLINK_PT_garment_fit,
-    DCTLINK_PT_garment_fix,
-    DCTLINK_PT_garment_ready,
 )
 
 

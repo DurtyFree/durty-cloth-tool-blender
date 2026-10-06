@@ -4,20 +4,25 @@
 
 TEXT = {
     "workspace.prop": "किस पर काम करें",
-    "workspace.prop.desc": "DCT टैब क्या दिखाता है: कपड़ों के टूल या कस्टम ped के टूल",
-    "workspace.clothing": "कपड़े",
-    "workspace.clothing.desc": (
-        "Durty Cloth Tool में लिंक किया गया कपड़ा, उसका लाइव प्रीव्यू और मॉडल, और कपड़े की फ़िटिंग"
+    "workspace.prop.desc": (
+        "DCT टैब क्या दिखाता है: Durty Cloth Tool में लिंक किया गया कपड़ा, कपड़े की फ़िटिंग या कस्टम ped"
+    ),
+    "workspace.clothing": "लिंक किया गया कपड़ा",
+    "workspace.clothing.desc": "Durty Cloth Tool में चुना गया कपड़ा: ped पर उसका लाइव प्रीव्यू और उसका मॉडल",
+    "workspace.garment": "कपड़े की फ़िटिंग",
+    "workspace.garment.desc": (
+        "अपने कपड़ों वाले ऐप का कपड़ा गेम के लिए तैयार करें और उसे नए कपड़े के रूप में अपने प्रोजेक्ट में जोड़ें "
+        "(प्रायोगिक)"
     ),
     "workspace.ped": "कस्टम ped",
     "workspace.ped.desc": "अपने कैरेक्टर को Durty Cloth Tool के लिए कस्टम ped में बदलें",
-    "ped.panel": "कस्टम ped (प्रायोगिक)",
+    "ped.panel": "कस्टम ped",
     "ped.stage-title": "{number}. {title}",
     "ped.section.character": "कैरेक्टर",
     "ped.section.markers": "मार्कर",
     "ped.section.rig": "रिग",
     "ped.section.check": "जाँच",
-    "ped.section.send": "भेजें",
+    "ped.section.send": "बनाएँ",
     "ped.status.none": "अभी कोई नहीं",
     "ped.status.vertices": "{count} वर्टेक्स",
     "ped.status.rigging": "रिगिंग हो रही है",
@@ -29,13 +34,13 @@ TEXT = {
     "ped.status.no-problems": "कोई समस्या नहीं",
     "ped.status.problems": "नतीजे: {count}",
     "ped.status.sent": "बनाया गया",
-    "ped.status.sending": "भेजा जा रहा है",
-    "ped.status.not-sent": "नहीं भेजा गया",
+    "ped.status.sending": "बनाया जा रहा है",
+    "ped.status.not-sent": "नहीं बनाया गया",
+    "ped.status.markers": "{total} में से {placed}",
     "ped.privacy": (
         "कैरेक्टर की रिगिंग और ped बनाना इसी कंप्यूटर पर Durty Cloth Tool में, आपकी अपनी GTA V फ़ाइलों से होता है। "
         "आपके कैरेक्टर का कुछ भी gta.clothing पर नहीं जाता।"
     ),
-    "ped.heading.more": "और विकल्प",
     "ped.next.character": "3D व्यू में अपने कैरेक्टर के मेश चुनें और चयन इस्तेमाल करें चुनें।",
     "ped.next.fix": "अगला चरण: कैरेक्टर सेक्शन की जाँच जो बताती है, उसे ठीक करें।",
     "ped.next.markers": "अगला चरण: मार्कर सेक्शन में मार्कर लगाएँ। क्लिक गाइड हर बिंदु दिखाता है।",
@@ -46,7 +51,7 @@ TEXT = {
     "ped.next.rigging": "Durty Cloth Tool आपके कैरेक्टर को रिग कर रहा है। इस बीच Blender इस्तेमाल किया जा सकता है।",
     "ped.next.approve": "अगला चरण: देखें कि Durty Cloth Tool ने मार्कर कहाँ खिसकाए (पीले), फिर रिग लागू करें चुनें।",
     "ped.next.check": "अगला चरण: जाँच सेक्शन में टेस्ट पोज़ आज़माएँ और जाँच चलाएँ चुनें।",
-    "ped.next.send": "अगला चरण: भेजें सेक्शन में कस्टम ped बनाएँ चुनें।",
+    "ped.next.send": "अगला चरण: ped को नाम दें और कस्टम ped बनाएँ चुनें।",
     "ped.next.sending": "Durty Cloth Tool में आपका इंतज़ार है: वहाँ चुनें कि प्रोजेक्ट कहाँ बनाना है।",
     "ped.next.done": "पूरा हुआ: Durty Cloth Tool ने प्रोजेक्ट {name} बनाया। उसे वहीं बिल्ड करें।",
     "ped.next.done-before": "पूरा हुआ: Durty Cloth Tool ने इस कैरेक्टर से एक प्रोजेक्ट बनाया। उसे वहीं बिल्ड करें।",
@@ -566,11 +571,13 @@ TEXT = {
     "ped.error.add-busy": (
         "Durty Cloth Tool किसी दूसरे कस्टम ped या बिल्ड में व्यस्त है। उसके पूरा होने पर फिर कोशिश करें।"
     ),
-    "ped.error.add-denied": "Durty Cloth Tool में रद्द किया गया। तैयार होने पर कैरेक्टर फिर से भेजें।",
+    "ped.error.add-denied": "Durty Cloth Tool में रद्द किया गया। तैयार होने पर फिर से कस्टम ped बनाएँ चुनें।",
     "ped.error.model-rejected": "Durty Cloth Tool कैरेक्टर से ped नहीं बना सका। नीचे उसकी जाँच कारण बताती है।",
     "ped.error.save-failed": "Durty Cloth Tool प्रोजेक्ट नहीं बना सका। कोई दूसरा फ़ोल्डर चुनें और फिर से भेजें।",
-    "ped.error.add-disconnected": "Durty Cloth Tool के जवाब देने से पहले उससे कनेक्शन टूट गया। कैरेक्टर फिर से भेजें।",
-    "ped.error.add-timeout": "Durty Cloth Tool ने समय पर जवाब नहीं दिया। कैरेक्टर फिर से भेजें।",
+    "ped.error.add-disconnected": (
+        "Durty Cloth Tool के जवाब देने से पहले उससे कनेक्शन टूट गया। फिर से कस्टम ped बनाएँ चुनें।"
+    ),
+    "ped.error.add-timeout": "Durty Cloth Tool ने समय पर जवाब नहीं दिया। फिर से कस्टम ped बनाएँ चुनें।",
     "ped.error.add-unanswered": "Durty Cloth Tool ने वापस लेने की पुष्टि नहीं की। उसकी प्रोजेक्ट सूची जाँचें।",
     "error.template-not-found": "यह टेम्पलेट इंस्टॉल नहीं है। सूची रीफ़्रेश करें और कोई दूसरा चुनें।",
     "error.mesh-too-large": (

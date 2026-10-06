@@ -5,21 +5,29 @@
 TEXT = {
     # ---- the switch in the DCT tab --------------------------------------------------------------------
     "workspace.prop": "Travailler sur",
-    "workspace.prop.desc": "Ce qu'affiche l'onglet DCT : les outils de vêtements ou les outils de ped personnalisé",
-    "workspace.clothing": "Vêtements",
+    "workspace.prop.desc": (
+        "Ce qu'affiche l'onglet DCT : le vêtement lié dans Durty Cloth Tool, l'Ajustement de vêtements ou le Ped "
+        "personnalisé"
+    ),
+    "workspace.clothing": "Vêtement lié",
     "workspace.clothing.desc": (
-        "Le vêtement lié dans Durty Cloth Tool, son aperçu en direct et son modèle, et l'Ajustement de vêtements"
+        "Le vêtement sélectionné dans Durty Cloth Tool : son aperçu en direct sur le ped et son modèle"
+    ),
+    "workspace.garment": "Ajustement de vêtements",
+    "workspace.garment.desc": (
+        "Rendre un vêtement de votre logiciel de vêtements prêt pour le jeu et l'ajouter à votre projet comme "
+        "nouveau vêtement (expérimental)"
     ),
     "workspace.ped": "Ped personnalisé",
     "workspace.ped.desc": "Transformer votre propre personnage en ped personnalisé pour Durty Cloth Tool",
     # ---- the panel ------------------------------------------------------------------------------------
-    "ped.panel": "Ped personnalisé (expérimental)",
+    "ped.panel": "Ped personnalisé",
     "ped.stage-title": "{number}. {title}",
     "ped.section.character": "Personnage",
     "ped.section.markers": "Marqueurs",
     "ped.section.rig": "Rig",
     "ped.section.check": "Vérification",
-    "ped.section.send": "Envoi",
+    "ped.section.send": "Création",
     "ped.status.none": "Aucun pour l'instant",
     "ped.status.vertices": "{count} sommets",
     "ped.status.rigging": "Rigging en cours",
@@ -31,13 +39,13 @@ TEXT = {
     "ped.status.no-problems": "Aucun problème",
     "ped.status.problems": "{count} points à examiner",
     "ped.status.sent": "Créé",
-    "ped.status.sending": "Envoi en cours",
-    "ped.status.not-sent": "Non envoyé",
+    "ped.status.sending": "Création en cours",
+    "ped.status.not-sent": "Non créé",
+    "ped.status.markers": "{placed} sur {total}",
     "ped.privacy": (
         "Le rigging et la création du ped se font dans Durty Cloth Tool sur cet ordinateur, à partir de vos propres "
         "fichiers GTA V. Rien de votre personnage ne va à gta.clothing."
     ),
-    "ped.heading.more": "Plus d'options",
     # ---- the next step --------------------------------------------------------------------------------
     "ped.next.character": (
         "Sélectionnez les maillages de votre personnage dans la vue 3D et choisissez Utiliser la sélection."
@@ -55,7 +63,7 @@ TEXT = {
         "Ensuite : vérifiez où Durty Cloth Tool a déplacé les marqueurs (en jaune), puis Appliquer le rig."
     ),
     "ped.next.check": "Ensuite : essayez les poses de test et Lancer les vérifications sous Vérification.",
-    "ped.next.send": "Ensuite : Créer le ped personnalisé sous Envoi.",
+    "ped.next.send": "Ensuite : nommez le ped et choisissez Créer le ped personnalisé.",
     "ped.next.sending": "Durty Cloth Tool attend votre choix : choisissez là-bas où créer le projet.",
     "ped.next.done": "Terminé : Durty Cloth Tool a créé le projet {name}. Lancez son build là-bas.",
     "ped.next.done-before": (
@@ -679,7 +687,9 @@ TEXT = {
     "ped.error.add-busy": (
         "Durty Cloth Tool est occupé avec un autre ped personnalisé ou un build. Réessayez quand il aura terminé."
     ),
-    "ped.error.add-denied": "Annulé dans Durty Cloth Tool. Renvoyez le personnage quand vous êtes prêt.",
+    "ped.error.add-denied": (
+        "Annulé dans Durty Cloth Tool. Choisissez à nouveau Créer le ped personnalisé quand vous êtes prêt."
+    ),
     "ped.error.model-rejected": (
         "Durty Cloth Tool n'a pas pu faire un ped à partir du personnage. Ses vérifications ci-dessous indiquent "
         "pourquoi."
@@ -688,9 +698,11 @@ TEXT = {
         "Durty Cloth Tool n'a pas pu créer le projet. Choisissez un autre dossier et renvoyez le personnage."
     ),
     "ped.error.add-disconnected": (
-        "La connexion à Durty Cloth Tool a pris fin avant sa réponse. Renvoyez le personnage."
+        "La connexion à Durty Cloth Tool a pris fin avant sa réponse. Choisissez à nouveau Créer le ped personnalisé."
     ),
-    "ped.error.add-timeout": "Durty Cloth Tool n'a pas répondu à temps. Renvoyez le personnage.",
+    "ped.error.add-timeout": (
+        "Durty Cloth Tool n'a pas répondu à temps. Choisissez à nouveau Créer le ped personnalisé."
+    ),
     "ped.error.add-unanswered": "Durty Cloth Tool n'a pas confirmé le retrait. Vérifiez sa liste de projets.",
     # ---- protocol errors --------------------------------------------------------------------------------
     "error.template-not-found": "Ce modèle n'est pas installé. Actualisez la liste et choisissez-en un autre.",

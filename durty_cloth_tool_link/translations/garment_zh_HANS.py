@@ -3,12 +3,29 @@
 """Simplified Chinese (简体中文): the garment fitting texts."""
 
 TEXT = {
-    "garment.panel": "服装适配（实验性）",
+    "garment.panel": "服装适配",
     "garment.panel.setup": "初始设置",
     "garment.panel.fit": "适配",
     "garment.panel.fix": "修正",
     "garment.panel.ready": "游戏就绪",
-    "garment.next.import": "导入一件服装，或选择你的服装并点击使用所选服装。",
+    "garment.panel.add": "添加到项目",
+    "experimental.note": "实验性功能：使用前请检查每个结果。",
+    "garment.status.no-garment": "还没有服装",
+    "garment.status.no-body": "还没有身体",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "标记 {count} / {total}",
+    "garment.status.aligned": "已对齐",
+    "garment.status.fitted": "已适配",
+    "garment.status.snapped": "已吸附",
+    "garment.status.not-snapped": "未吸附",
+    "garment.status.inside": "{count} 个在身体内",
+    "garment.status.blocking": "有问题需修复",
+    "garment.status.validated": "已验证",
+    "garment.status.not-validated": "未验证",
+    "garment.status.added": "已添加",
+    "garment.status.adding": "正在添加",
+    "garment.status.not-added": "未添加",
+    "garment.next.import": "导入一件服装，或选择你的服装并点击使用所选。",
     "garment.next.body": "下一步：在初始设置面板中添加 freemode 身体。",
     "garment.next.markers": "下一步：在适配面板中用自动标记放置标记，然后检查它们的位置。",
     "garment.next.check": "下一步：在修正面板中运行适配检查。",
@@ -122,17 +139,11 @@ TEXT = {
     "garment.heading.markers": "标记",
     "garment.heading.tpose": "T 字姿势模型",
     "garment.heading.backups": "备份",
-    "garment.heading.push": "离体间隙",
     "garment.heading.regions": "区域工具",
     "garment.heading.problems": "问题",
-    "garment.heading.check": "适配检查",
     "garment.heading.sculpt": "手动修正",
     "garment.heading.tears": "撕裂",
-    "garment.heading.prepare": "准备",
-    "garment.heading.combine": "材质",
-    "garment.heading.lods": "细节级别",
-    "garment.heading.validate": "检查",
-    "garment.op.use": "使用所选服装",
+    "garment.op.use": "使用所选",
     "garment.op.use.desc": "处理所选的网格对象",
     "garment.op.import": "导入服装",
     "garment.op.import.desc": (
@@ -193,9 +204,6 @@ TEXT = {
     "garment.body.hosted": "freemode 身体：{gender}，版本 {version}",
     "garment.body.object": "身体：{name}",
     "garment.body.downloading": "正在下载 freemode 身体…",
-    "garment.body.subtext": (
-        "身体由 gta.clothing 为你登录的账号提供，并保存在插件的文件夹中，因此每个版本只下载一次。"
-    ),
     "garment.body.cancelled": "身体下载已取消。",
     "garment.body.offline": (
         "Blender 的在线访问已关闭，且之前没有下载过身体。请允许在线访问，或使用身体文件。"
@@ -220,8 +228,9 @@ TEXT = {
     "garment.check.none": "运行适配检查，查看每个区域离身体多远。",
     "garment.check.measured": "测量值（mm）",
     "garment.check.value": "{p50}（{p10} 至 {p90}）",
+    "garment.check.usual-line": "常见：{range}",
     "garment.check.inside": "在身体内：{count} 个顶点（{share}%）",
-    "garment.advice.shoulders": "肩部与身体之间有空隙：把区域设为肩部后点击贴合身体，即可把它们拉向身体。",
+    "garment.advice.shoulders": "肩部与身体之间有空隙：在区域工具中把区域设为肩部后点击贴合身体，即可把它们拉向身体。",
     "garment.sculpt.running": "用抓起笔刷拖动以移动服装。身体以线框显示。",
     "garment.sculpt.subtext": "接受会保留形状；取消会恢复会话之前的形状。",
     "garment.pose.arms-up": "手臂上举",
@@ -371,22 +380,20 @@ TEXT = {
     # ---- adding to Durty Cloth Tool ----
     "error.item-limit": "项目中的服装数量已达到 Durty Cloth Tool 免费版允许的上限。",
     "garment.next.done": (
-        "完成：服装已在你的 Durty Cloth Tool 项目中。模型面板中的发送模型和将模型保存到服装可以更新它"
-        "（包含在 Durty Cloth Tool Ultimate 中）。"
+        "完成：服装已在你的 Durty Cloth Tool 项目中。关联的服装中的发送模型和将模型保存到服装可以更新它（包含在 Durty Cloth Tool Ultimate 中）。"
     ),
     "garment.next.validate-problems": "下一步：修复验证在游戏就绪面板中列出的问题，然后再次验证。",
     "garment.next.adding": "正在添加：Durty Cloth Tool 显示了这件服装。请在那里选择添加到项目或取消。",
-    "garment.next.connect": "下一步：连接到 Durty Cloth Tool（开始连接），以便把服装添加到项目中。",
-    "garment.next.project": "下一步：在 Durty Cloth Tool 中打开一个项目，然后在游戏就绪面板中添加服装。",
+    "garment.next.connect": "下一步：连接到 Durty Cloth Tool，以便把服装添加到项目中。",
+    "garment.next.project": "下一步：在 Durty Cloth Tool 中打开一个项目，然后点击添加到项目。",
     "garment.next.sollumz": "下一步：安装 Sollumz，以便把服装添加到 Durty Cloth Tool。",
     "garment.next.skeleton": (
-        "下一步：在游戏就绪面板中点击使用 Durty Cloth Tool 骨架，或点击添加到 Durty Cloth Tool 项目，"
-        "它也会完成这一步。"
+        "下一步：在游戏就绪面板中点击使用 Durty Cloth Tool "
+        "骨架，或点击添加到项目，它也会完成这一步。"
     ),
-    "garment.next.add": "下一步：在游戏就绪面板中点击添加到 Durty Cloth Tool 项目。",
-    "add.heading": "添加到 Durty Cloth Tool",
+    "garment.next.add-skeleton": "下一步：点击添加到项目，把服装放到 Durty Cloth Tool 骨架上并放进你的项目。",
+    "garment.next.add": "下一步：点击添加到项目，把服装放进你的 Durty Cloth Tool 项目。",
     "add.heading.variations": "颜色变体",
-    "add.heading.skeleton": "freemode 骨架",
     "add.target": "添加为：{slot}，{gender}。可在初始设置面板中更改这两项。",
     "add.variation.none": "还没有颜色贴图",
     "add.variations.subtext": "变体：{count} 个，最多 {limit} 个。",
@@ -405,7 +412,7 @@ TEXT = {
     "add.op.skeleton.desc": (
         "从 Durty Cloth Tool 获取初始设置面板中所选性别的 freemode 骨架，并把服装放到骨架上，供 Sollumz 使用"
     ),
-    "add.op.add": "添加到 Durty Cloth Tool 项目",
+    "add.op.add": "添加到项目",
     "add.op.add.desc": (
         "检查服装，用 Sollumz 导出，并作为新服装添加到 Durty Cloth Tool 中打开的项目。"
         "Durty Cloth Tool 会先征求你的确认"
@@ -460,12 +467,11 @@ TEXT = {
     "add.waiting": "Durty Cloth Tool 显示了这件服装。请在那里选择添加到项目或取消。",
     "add.waiting.subtext": "在你于 Durty Cloth Tool 中选择添加到项目之前，不会添加任何内容。在这里取消会撤回此次添加。",
     "add.withdrawing": "正在取消添加…",
-    "add.blocked": "添加被阻止：有 {count} 个问题需要先修复，已在游戏就绪面板中列出。",
+    "add.blocked": "添加被阻止：有 {count} 个问题需要先修复，已在添加到项目部分中列出。",
     "add.problems": "请先修复这些问题（{count}）：",
     "add.findings": "Durty Cloth Tool 的检查：{count}",
     "add.added.subtext": (
-        "Drawable Dictionary 已关联到新服装：模型面板中的发送模型和将模型保存到服装可以更新它"
-        "（包含在 Durty Cloth Tool Ultimate 中）。"
+        "Drawable Dictionary 已关联到新服装：关联的服装中的发送模型和将模型保存到服装可以更新它（包含在 Durty Cloth Tool Ultimate 中）。"
     ),
     "add.invalid": "无法发送此次添加：{detail}",
     "add.why.connect": "请连接到 Durty Cloth Tool，以便把服装添加到项目中。",
@@ -557,7 +563,6 @@ TEXT = {
     "garment.prop.orient.desc": "把仰面躺着或朝向后方的服装转过来，让它像 ped 一样站立",
     "garment.prop.keep-size": "保持尺寸",
     "garment.prop.keep-size.desc": "对齐到身体只移动和旋转服装，不按身体缩放",
-    "garment.heading.align": "对齐到身体",
     "garment.heading.options": "选项",
     "garment.op.align": "对齐到身体",
     "garment.op.align.desc": "移动并旋转服装（关闭保持尺寸时还会缩放），让它的标记落在身体的关节上，然后把它的手臂或腿转到身体的手臂或腿上",
@@ -612,8 +617,6 @@ TEXT = {
     "add.cancelled-local": "添加在发送任何内容之前已取消。Ctrl+Z 可以撤销它对服装做的更改。",
     "add.failed-undo": "{problem} Ctrl+Z 可以把服装恢复到添加之前的状态。",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.heading.service": "在 gta.clothing 上适配",
-    "garment.heading.weights": "权重",
     "garment.op.service-fit": "适配到身体",
     "garment.op.service-fit.desc": "把服装发送到 gta.clothing，由它把服装摆成游戏姿势、赋予 freemode 身体的权重并移出身体。会用掉今天的一次适配",
     "garment.op.service-weights": "传递权重",
@@ -719,7 +722,7 @@ TEXT = {
     "fit.warning.low-coverage": "服装只有一部分贴在身体上。离身体较远的部分在游戏中可能会动得很奇怪。",
     "fit.warning.marker-offset": "有些标记偏离了身体的关节。请检查肩部和肘部的标记。",
     "fit.warning.proportion-clamped": "服装的比例与 freemode 身体相差很大；有些比例被限制在范围内。",
-    "fit.warning.shape-strained": "摆姿势时有些区域被拉伸了。修正中的显示问题可以找到它们。",
+    "fit.warning.shape-strained": "摆姿势时有些区域被拉伸了。修正中问题部分的显示问题可以找到它们。",
     "fit.warning.attachment-fallback": "松散的部分被绑定到身体最近的部位。请在权重绘制模式中检查它们。",
     "fit.warning.unweighted": "有些顶点没有得到权重；角色移动时游戏会把它们留在原处。",
     "fit.done.fit": "已适配到身体：处于游戏姿势，带有 {bones} 根骨骼的权重。",
@@ -836,7 +839,6 @@ TEXT = {
     "garment.why.avatar-markers": "这个虚拟模特缺少此类型需要的一个标记。请选择未知，或手动放置。",
     "garment.why.avatar-moved": "服装在导入后已被移动，虚拟模特的标记不再与它对应。请选择未知，或手动移动标记。",
     "garment.done.import-rig": "已导入 {name}（{count} 个顶点），并为标记保留了随它导出的虚拟模特的关节。",
-    "garment.heading.snap": "锚点",
     "garment.op.snap": "吸附到锚点",
     "garment.op.snap.desc": "把道具移到身体上的锚点：帽子到头上，眼镜到眼前，耳饰到耳朵，手表或手镯到手腕上",
     "garment.info.snap": (
@@ -853,11 +855,10 @@ TEXT = {
     "garment.finding.anchor-far": "道具的中心距离它的锚点 {distance} cm：请吸附它或把它移近。",
     "add.info.anchor": "添加时，道具挂在它的锚点骨骼上，按 Durty Cloth Tool 的 freemode 骨架（由你的游戏文件生成）放置，并保持相对于它的位置。道具不需要权重。",
     "add.anchor.ready": "挂在 {name} 中的锚点（{anchor}）上。",
-    "add.anchor.missing": "锚点：{anchor}。添加到 Durty Cloth Tool 项目会把道具挂上去。",
+    "add.anchor.missing": "锚点：{anchor}。添加到项目会把道具挂上去。",
     "add.why.no-anchor": "Durty Cloth Tool 的骨架中没有可挂道具的 {bone} 骨骼。",
-    "add.prop.missing": "道具还没有挂在它的锚点上。添加到 Durty Cloth Tool 项目会完成这一步。",
+    "add.prop.missing": "道具还没有挂在它的锚点上。添加到项目会完成这一步。",
     "add.why.prop-skeleton": "道具不放到骨架上：它们挂在自己的锚点上。",
-    "garment.heading.split": "两件",
     "garment.op.split": "在腰部拆分",
     "garment.op.split.desc": "在腰部把连衣裙切成上衣和裙子：裙子成为用于下装槽位的独立服装",
     "garment.info.split": (

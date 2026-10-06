@@ -3,14 +3,29 @@
 """German (Deutsch): the garment fitting texts. Informal "du", as Durty Cloth Tool uses it."""
 
 TEXT = {
-    "garment.panel": "Kleidung anpassen (experimentell)",
+    "garment.panel": "Kleidung anpassen",
     "garment.panel.setup": "Einrichtung",
     "garment.panel.fit": "Anpassen",
     "garment.panel.fix": "Korrigieren",
     "garment.panel.ready": "Spielfertig",
-    "garment.next.import": (
-        "Importiere ein Kleidungsstück oder wähle deines aus und dann Ausgewähltes Kleidungsstück nutzen."
-    ),
+    "garment.panel.add": "Zum Projekt hinzufügen",
+    "experimental.note": "Experimentell: Prüfe jedes Ergebnis, bevor du es verwendest.",
+    "garment.status.no-garment": "Noch kein Kleidungsstück",
+    "garment.status.no-body": "Noch kein Körper",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "{count} von {total} Markern",
+    "garment.status.aligned": "Ausgerichtet",
+    "garment.status.fitted": "Angepasst",
+    "garment.status.snapped": "Gesetzt",
+    "garment.status.not-snapped": "Nicht gesetzt",
+    "garment.status.inside": "{count} im Körper",
+    "garment.status.blocking": "Probleme zu beheben",
+    "garment.status.validated": "Validiert",
+    "garment.status.not-validated": "Nicht validiert",
+    "garment.status.added": "Hinzugefügt",
+    "garment.status.adding": "Wird hinzugefügt",
+    "garment.status.not-added": "Nicht hinzugefügt",
+    "garment.next.import": "Importiere ein Kleidungsstück oder wähle deines aus und dann Auswahl nutzen.",
     "garment.next.body": "Weiter: Füge unter Einrichtung den Freemode-Körper hinzu.",
     "garment.next.markers": "Weiter: Setze die Marker unter Anpassen mit Auto-Marker und prüfe dann, wo sie sitzen.",
     "garment.next.check": "Weiter: Passform prüfen unter Korrigieren.",
@@ -154,17 +169,11 @@ TEXT = {
     "garment.heading.markers": "Marker",
     "garment.heading.tpose": "Modell in T-Pose",
     "garment.heading.backups": "Sicherungen",
-    "garment.heading.push": "Abstand zum Körper",
     "garment.heading.regions": "Bereichswerkzeuge",
     "garment.heading.problems": "Probleme",
-    "garment.heading.check": "Passformprüfung",
     "garment.heading.sculpt": "Von Hand korrigieren",
     "garment.heading.tears": "Risse",
-    "garment.heading.prepare": "Vorbereiten",
-    "garment.heading.combine": "Materialien",
-    "garment.heading.lods": "Detailstufen",
-    "garment.heading.validate": "Prüfungen",
-    "garment.op.use": "Ausgewähltes Kleidungsstück nutzen",
+    "garment.op.use": "Auswahl nutzen",
     "garment.op.use.desc": "Am ausgewählten Mesh-Objekt arbeiten",
     "garment.op.import": "Kleidungsstück importieren",
     "garment.op.import.desc": (
@@ -254,10 +263,6 @@ TEXT = {
     "garment.body.hosted": "Freemode-Körper: {gender}, Version {version}",
     "garment.body.object": "Körper: {name}",
     "garment.body.downloading": "Lade den Freemode-Körper herunter…",
-    "garment.body.subtext": (
-        "Der Körper kommt von gta.clothing für dein angemeldetes Konto und wird im Ordner des Add-ons aufbewahrt, "
-        "darum wird jede Version nur einmal heruntergeladen."
-    ),
     "garment.body.cancelled": "Der Download des Körpers wurde abgebrochen.",
     "garment.body.offline": (
         "Der Online-Zugriff von Blender ist aus, und bisher wurde kein Körper heruntergeladen. Erlaube den "
@@ -289,9 +294,11 @@ TEXT = {
     "garment.check.none": "Wähle Passform prüfen, um zu sehen, wie weit jeder Bereich vom Körper absteht.",
     "garment.check.measured": "Gemessen (mm)",
     "garment.check.value": "{p50} ({p10} bis {p90})",
+    "garment.check.usual-line": "Üblich: {range}",
     "garment.check.inside": "Im Körper: {count} Vertices ({share} %)",
     "garment.advice.shoulders": (
-        "Die Schultern stehen vom Körper ab: An den Körper anlegen mit Schultern bringt sie herunter."
+        "Die Schultern stehen vom Körper ab: An den Körper anlegen (Bereichswerkzeuge) mit Schultern bringt sie "
+        "herunter."
     ),
     "garment.sculpt.running": (
         "Ziehe mit dem Grab-Pinsel, um das Kleidungsstück zu bewegen. Der Körper wird als Drahtgittermodell gezeigt."
@@ -520,7 +527,8 @@ TEXT = {
     ),
     "garment.next.done": (
         "Fertig: Das Kleidungsstück ist in deinem Durty Cloth Tool Projekt. Modell senden und Modell im "
-        "Kleidungsstück speichern unter Modell aktualisieren es (in Durty Cloth Tool Ultimate enthalten)."
+        "Kleidungsstück speichern unter Verknüpfte Kleidung aktualisieren es (in Durty Cloth Tool Ultimate "
+        "enthalten)."
     ),
     "garment.next.validate-problems": (
         "Weiter: Behebe, was Validieren unter Spielfertig auflistet, und validiere dann erneut."
@@ -529,20 +537,19 @@ TEXT = {
         "Wird hinzugefügt: Durty Cloth Tool zeigt das Kleidungsstück. Wähle dort Zum Projekt hinzufügen oder Abbrechen."
     ),
     "garment.next.connect": (
-        "Weiter: Verbinde dich mit Durty Cloth Tool (Verbinden), um das Kleidungsstück einem Projekt hinzuzufügen."
+        "Weiter: Verbinde dich mit Durty Cloth Tool, um das Kleidungsstück einem Projekt hinzuzufügen."
     ),
-    "garment.next.project": (
-        "Weiter: Öffne ein Projekt in Durty Cloth Tool und füge das Kleidungsstück dann unter Spielfertig hinzu."
-    ),
+    "garment.next.project": "Weiter: Öffne ein Projekt in Durty Cloth Tool und wähle dann Zum Projekt hinzufügen.",
     "garment.next.sollumz": "Weiter: Installiere Sollumz, um das Kleidungsstück zu Durty Cloth Tool hinzuzufügen.",
     "garment.next.skeleton": (
-        "Weiter: Durty Cloth Tool Skelett nutzen unter Spielfertig oder Zum Durty Cloth Tool Projekt hinzufügen, "
-        "das es auch erledigt."
+        "Weiter: Durty Cloth Tool Skelett nutzen unter Spielfertig oder Zum Projekt hinzufügen, das es auch erledigt."
     ),
-    "garment.next.add": "Weiter: Zum Durty Cloth Tool Projekt hinzufügen unter Spielfertig.",
-    "add.heading": "Zu Durty Cloth Tool hinzufügen",
+    "garment.next.add-skeleton": (
+        "Weiter: Zum Projekt hinzufügen setzt das Kleidungsstück auf das Durty Cloth Tool Skelett und bringt es in "
+        "dein Projekt."
+    ),
+    "garment.next.add": "Weiter: Zum Projekt hinzufügen bringt das Kleidungsstück in dein Durty Cloth Tool Projekt.",
     "add.heading.variations": "Farbvarianten",
-    "add.heading.skeleton": "Freemode-Skelett",
     "add.target": "Es wird als {slot}, {gender} hinzugefügt. Ändere beides unter Einrichtung.",
     "add.variation.none": "Noch keine Farbtextur",
     "add.variations.subtext": "Varianten: {count} von höchstens {limit}.",
@@ -568,7 +575,7 @@ TEXT = {
         "Das Freemode-Skelett des Geschlechts unter Einrichtung aus Durty Cloth Tool holen und das Kleidungsstück "
         "daran binden, bereit für Sollumz"
     ),
-    "add.op.add": "Zum Durty Cloth Tool Projekt hinzufügen",
+    "add.op.add": "Zum Projekt hinzufügen",
     "add.op.add.desc": (
         "Das Kleidungsstück prüfen, mit Sollumz exportieren und dem in Durty Cloth Tool geöffneten Projekt als "
         "neues Kleidungsstück hinzufügen. Durty Cloth Tool fragt dich vorher"
@@ -641,12 +648,15 @@ TEXT = {
         "Hinzufügen zurück."
     ),
     "add.withdrawing": "Breche das Hinzufügen ab…",
-    "add.blocked": "Das Hinzufügen ist blockiert: Behebe zuerst {count} Probleme, aufgelistet unter Spielfertig.",
+    "add.blocked": (
+        "Das Hinzufügen ist blockiert: Behebe zuerst {count} Probleme, aufgelistet unter Zum Projekt hinzufügen."
+    ),
     "add.problems": "Behebe zuerst diese ({count}):",
     "add.findings": "Prüfungen von Durty Cloth Tool: {count}",
     "add.added.subtext": (
         "Das Drawable Dictionary ist mit dem neuen Kleidungsstück verknüpft: Modell senden und Modell im "
-        "Kleidungsstück speichern unter Modell aktualisieren es (in Durty Cloth Tool Ultimate enthalten)."
+        "Kleidungsstück speichern unter Verknüpfte Kleidung aktualisieren es (in Durty Cloth Tool Ultimate "
+        "enthalten)."
     ),
     "add.invalid": "Das Hinzufügen kann nicht gesendet werden: {detail}",
     "add.why.connect": "Verbinde dich mit Durty Cloth Tool, um das Kleidungsstück einem Projekt hinzuzufügen.",
@@ -814,7 +824,6 @@ TEXT = {
     "garment.prop.keep-size.desc": (
         "An Körper ausrichten verschiebt und dreht das Kleidungsstück nur, ohne es an den Körper anzupassen"
     ),
-    "garment.heading.align": "An Körper ausrichten",
     "garment.heading.options": "Optionen",
     "garment.op.align": "An Körper ausrichten",
     "garment.op.align.desc": (
@@ -948,8 +957,6 @@ TEXT = {
     ),
     "add.failed-undo": "{problem} Strg+Z setzt das Kleidungsstück auf den Stand vor dem Hinzufügen zurück.",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.heading.service": "Anpassen mit gta.clothing",
-    "garment.heading.weights": "Gewichte",
     "garment.op.service-fit": "An Körper anpassen",
     "garment.op.service-fit.desc": (
         "Schickt das Kleidungsstück an gta.clothing, das es in die Spielpose bringt, ihm die Gewichte des "
@@ -1175,7 +1182,7 @@ TEXT = {
         "Die Proportionen des Kleidungsstücks weichen stark vom Freemode-Körper ab; einige wurden begrenzt."
     ),
     "fit.warning.shape-strained": (
-        "Einige Bereiche wurden beim Posieren gedehnt. Probleme zeigen unter Korrigieren findet sie."
+        "Einige Bereiche wurden beim Posieren gedehnt. Probleme zeigen (unter Korrigieren, in Probleme) findet sie."
     ),
     "fit.warning.attachment-fallback": (
         "Lose Teile wurden mit dem nächsten Teil des Körpers gewichtet. Prüfe sie im Weight-Paint-Modus."
@@ -1374,7 +1381,6 @@ TEXT = {
     "garment.done.import-rig": (
         "{name} importiert ({count} Vertices) und die Gelenke des mitexportierten Avatars für die Marker behalten."
     ),
-    "garment.heading.snap": "Ankerpunkt",
     "garment.op.snap": "An Ankerpunkt setzen",
     "garment.op.snap.desc": (
         "Das Prop an seinen Ankerpunkt am Körper setzen: einen Hut auf den Kopf, eine Brille vor die Augen, Ohrschmuck "
@@ -1409,15 +1415,12 @@ TEXT = {
         "Tool (aus deinen Spieldateien), und behält seine Lage dazu. Es braucht keine Gewichte."
     ),
     "add.anchor.ready": "Hängt an seinem Ankerpunkt ({anchor}) in {name}.",
-    "add.anchor.missing": "Ankerpunkt: {anchor}. Zum Durty Cloth Tool Projekt hinzufügen hängt das Prop daran.",
+    "add.anchor.missing": "Ankerpunkt: {anchor}. Zum Projekt hinzufügen hängt das Prop daran.",
     "add.why.no-anchor": (
         "Das Skelett von Durty Cloth Tool hat keinen Knochen {bone}, an den das Prop gehängt werden kann."
     ),
-    "add.prop.missing": (
-        "Das Prop hängt noch nicht an seinem Ankerpunkt. Zum Durty Cloth Tool Projekt hinzufügen erledigt das."
-    ),
+    "add.prop.missing": "Das Prop hängt noch nicht an seinem Ankerpunkt. Zum Projekt hinzufügen erledigt das.",
     "add.why.prop-skeleton": "Props kommen nicht aufs Skelett: Sie hängen an ihrem Ankerpunkt.",
-    "garment.heading.split": "Zwei Teile",
     "garment.op.split": "An der Taille teilen",
     "garment.op.split.desc": (
         "Das Kleid an der Taille in ein Oberteil und einen Rock schneiden: Der Rock wird ein eigenes Kleidungsstück "

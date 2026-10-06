@@ -3,12 +3,29 @@
 """Hindi (हिन्दी): the garment fitting texts."""
 
 TEXT = {
-    "garment.panel": "कपड़े की फ़िटिंग (प्रायोगिक)",
+    "garment.panel": "कपड़े की फ़िटिंग",
     "garment.panel.setup": "सेटअप",
     "garment.panel.fit": "फ़िट",
     "garment.panel.fix": "सुधार",
     "garment.panel.ready": "गेम के लिए तैयार",
-    "garment.next.import": "कपड़ा इम्पोर्ट करें, या अपना कपड़ा चुनें और चुना गया कपड़ा इस्तेमाल करें चुनें।",
+    "garment.panel.add": "प्रोजेक्ट में जोड़ें",
+    "experimental.note": "प्रायोगिक: इस्तेमाल करने से पहले हर नतीजा जाँच लें।",
+    "garment.status.no-garment": "अभी कोई कपड़ा नहीं",
+    "garment.status.no-body": "अभी कोई बॉडी नहीं",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "{total} में से {count} मार्कर",
+    "garment.status.aligned": "संरेखित",
+    "garment.status.fitted": "फ़िट किया गया",
+    "garment.status.snapped": "रखा गया",
+    "garment.status.not-snapped": "नहीं रखा गया",
+    "garment.status.inside": "{count} बॉडी के अंदर",
+    "garment.status.blocking": "ठीक करने लायक समस्याएँ",
+    "garment.status.validated": "जाँचा गया",
+    "garment.status.not-validated": "जाँच नहीं हुई",
+    "garment.status.added": "जोड़ा गया",
+    "garment.status.adding": "जोड़ा जा रहा है",
+    "garment.status.not-added": "नहीं जोड़ा गया",
+    "garment.next.import": "कपड़ा इम्पोर्ट करें, या अपना कपड़ा चुनें और चयन इस्तेमाल करें चुनें।",
     "garment.next.body": "अगला चरण: सेटअप पैनल में फ़्रीमोड बॉडी जोड़ें।",
     "garment.next.markers": "अगला चरण: फ़िट पैनल में ऑटो मार्कर से मार्कर लगाएँ, फिर देखें कि वे कहाँ हैं।",
     "garment.next.check": "अगला चरण: सुधार पैनल में फ़िट जाँच चलाएँ।",
@@ -141,17 +158,11 @@ TEXT = {
     "garment.heading.markers": "मार्कर",
     "garment.heading.tpose": "T-पोज़ में मॉडल",
     "garment.heading.backups": "बैकअप",
-    "garment.heading.push": "बॉडी से दूरी",
     "garment.heading.regions": "क्षेत्र टूल",
     "garment.heading.problems": "समस्याएँ",
-    "garment.heading.check": "फ़िट जाँच",
     "garment.heading.sculpt": "हाथ से ठीक करें",
     "garment.heading.tears": "फटी सिलाई",
-    "garment.heading.prepare": "तैयारी",
-    "garment.heading.combine": "मटीरियल",
-    "garment.heading.lods": "डिटेल के स्तर",
-    "garment.heading.validate": "जाँच",
-    "garment.op.use": "चुना गया कपड़ा इस्तेमाल करें",
+    "garment.op.use": "चयन इस्तेमाल करें",
     "garment.op.use.desc": "चुने गए मेश ऑब्जेक्ट पर काम करें",
     "garment.op.import": "कपड़ा इम्पोर्ट करें",
     "garment.op.import.desc": (
@@ -231,10 +242,6 @@ TEXT = {
     "garment.body.hosted": "फ़्रीमोड बॉडी: {gender}, संस्करण {version}",
     "garment.body.object": "बॉडी: {name}",
     "garment.body.downloading": "फ़्रीमोड बॉडी डाउनलोड हो रही है…",
-    "garment.body.subtext": (
-        "बॉडी आपके साइन इन किए गए अकाउंट के लिए gta.clothing से आती है और ऐड-ऑन के फ़ोल्डर में रखी जाती है, "
-        "इसलिए हर संस्करण एक ही बार डाउनलोड होता है।"
-    ),
     "garment.body.cancelled": "बॉडी का डाउनलोड रद्द कर दिया गया।",
     "garment.body.offline": (
         "Blender का ऑनलाइन एक्सेस बंद है और पहले कोई बॉडी डाउनलोड नहीं हुई थी। ऑनलाइन एक्सेस चालू करें, या बॉडी "
@@ -264,9 +271,10 @@ TEXT = {
     "garment.check.none": "हर क्षेत्र बॉडी से कितनी दूर है, यह देखने के लिए फ़िट जाँच चलाएँ।",
     "garment.check.measured": "मापा गया (mm)",
     "garment.check.value": "{p50} ({p10} से {p90})",
+    "garment.check.usual-line": "सामान्य: {range}",
     "garment.check.inside": "बॉडी के अंदर: {count} वर्टेक्स ({share} %)",
     "garment.advice.shoulders": (
-        "कंधे बॉडी से उठे हुए हैं: क्षेत्र में कंधे चुनकर बॉडी से सटाएँ चलाएँ, इससे वे नीचे आ जाएँगे।"
+        "कंधे बॉडी से उठे हुए हैं: क्षेत्र टूल में क्षेत्र में कंधे चुनकर बॉडी से सटाएँ चलाएँ, इससे वे नीचे आ जाएँगे।"
     ),
     "garment.sculpt.running": "कपड़ा खिसकाने के लिए Grab ब्रश से खींचें। बॉडी वायरफ़्रेम के रूप में दिखती है।",
     "garment.sculpt.subtext": "स्वीकार करें आकार रखता है; रद्द करें सेशन से पहले का आकार वापस लाता है।",
@@ -462,8 +470,8 @@ TEXT = {
     # ---- adding to Durty Cloth Tool ----
     "error.item-limit": "प्रोजेक्ट में उतने कपड़े हैं जितने Durty Cloth Tool का मुफ़्त संस्करण अनुमति देता है।",
     "garment.next.done": (
-        "पूरा हुआ: कपड़ा आपके Durty Cloth Tool प्रोजेक्ट में है। इसे मॉडल पैनल में मॉडल भेजें और मॉडल को कपड़े "
-        "में सेव करें से अपडेट करें (Durty Cloth Tool Ultimate में शामिल)।"
+        "पूरा हुआ: कपड़ा आपके Durty Cloth Tool प्रोजेक्ट में है। इसे लिंक किया गया कपड़ा में मॉडल भेजें और मॉडल को "
+        "कपड़े में सेव करें से अपडेट करें (Durty Cloth Tool Ultimate में शामिल)।"
     ),
     "garment.next.validate-problems": (
         "अगला चरण: गेम के लिए तैयार पैनल में जाँचें जो समस्याएँ दिखाता है, उन्हें ठीक करें, फिर दोबारा जाँचें।"
@@ -471,21 +479,18 @@ TEXT = {
     "garment.next.adding": (
         "जोड़ा जा रहा है: Durty Cloth Tool कपड़ा दिखा रहा है। वहाँ प्रोजेक्ट में जोड़ें या रद्द करें चुनें।"
     ),
-    "garment.next.connect": (
-        "अगला चरण: कपड़े को किसी प्रोजेक्ट में जोड़ने के लिए कनेक्ट करें पैनल में Durty Cloth Tool से कनेक्ट करें।"
-    ),
-    "garment.next.project": (
-        "अगला चरण: Durty Cloth Tool में एक प्रोजेक्ट खोलें, फिर गेम के लिए तैयार पैनल में कपड़ा जोड़ें।"
-    ),
+    "garment.next.connect": "अगला चरण: कपड़े को किसी प्रोजेक्ट में जोड़ने के लिए Durty Cloth Tool से कनेक्ट करें।",
+    "garment.next.project": "अगला चरण: Durty Cloth Tool में एक प्रोजेक्ट खोलें, फिर प्रोजेक्ट में जोड़ें चुनें।",
     "garment.next.sollumz": "अगला चरण: कपड़े को Durty Cloth Tool में जोड़ने के लिए Sollumz इंस्टॉल करें।",
     "garment.next.skeleton": (
-        "अगला चरण: गेम के लिए तैयार पैनल में Durty Cloth Tool स्केलेटन इस्तेमाल करें चुनें, या Durty Cloth Tool "
-        "प्रोजेक्ट में जोड़ें, जो यह भी करता है।"
+        "अगला चरण: गेम के लिए तैयार पैनल में Durty Cloth Tool स्केलेटन इस्तेमाल करें चुनें, या प्रोजेक्ट में जोड़ें, "
+        "जो यह भी करता है।"
     ),
-    "garment.next.add": "अगला चरण: गेम के लिए तैयार पैनल में Durty Cloth Tool प्रोजेक्ट में जोड़ें।",
-    "add.heading": "Durty Cloth Tool में जोड़ें",
+    "garment.next.add-skeleton": (
+        "अगला चरण: प्रोजेक्ट में जोड़ें कपड़े को Durty Cloth Tool स्केलेटन पर रखता है और आपके प्रोजेक्ट में डालता है।"
+    ),
+    "garment.next.add": "अगला चरण: प्रोजेक्ट में जोड़ें कपड़े को आपके Durty Cloth Tool प्रोजेक्ट में डालता है।",
     "add.heading.variations": "रंग वैरिएशन",
-    "add.heading.skeleton": "फ़्रीमोड स्केलेटन",
     "add.target": "यह {slot}, {gender} के रूप में जुड़ेगा। दोनों को सेटअप पैनल में बदलें।",
     "add.variation.none": "अभी कोई रंग वाला टेक्सचर नहीं",
     "add.variations.subtext": "वैरिएशन: अधिकतम {limit} में से {count}।",
@@ -507,7 +512,7 @@ TEXT = {
         "सेटअप पैनल में चुने गए लिंग का फ़्रीमोड स्केलेटन Durty Cloth Tool से लें और कपड़े को उस पर लगाएँ, "
         "Sollumz के लिए तैयार"
     ),
-    "add.op.add": "Durty Cloth Tool प्रोजेक्ट में जोड़ें",
+    "add.op.add": "प्रोजेक्ट में जोड़ें",
     "add.op.add.desc": (
         "कपड़ा जाँचें, उसे Sollumz से एक्सपोर्ट करें और Durty Cloth Tool में खुले प्रोजेक्ट में नए कपड़े के रूप में "
         "जोड़ें। Durty Cloth Tool पहले आपसे पूछता है"
@@ -574,12 +579,12 @@ TEXT = {
         "अनुरोध वापस लेता है।"
     ),
     "add.withdrawing": "जोड़ना रद्द हो रहा है…",
-    "add.blocked": "जोड़ना रुका हुआ है: पहले {count} समस्याएँ ठीक करें, जो गेम के लिए तैयार पैनल में दी गई हैं।",
+    "add.blocked": "जोड़ना रुका हुआ है: पहले {count} समस्याएँ ठीक करें, जो प्रोजेक्ट में जोड़ें सेक्शन में दी गई हैं।",
     "add.problems": "पहले इन्हें ठीक करें ({count}):",
     "add.findings": "Durty Cloth Tool की जाँच: {count}",
     "add.added.subtext": (
-        "Drawable Dictionary नए कपड़े से लिंक है: इसे मॉडल पैनल में मॉडल भेजें और मॉडल को कपड़े में सेव करें से "
-        "अपडेट करें (Durty Cloth Tool Ultimate में शामिल)।"
+        "Drawable Dictionary नए कपड़े से लिंक है: इसे लिंक किया गया कपड़ा में मॉडल भेजें और मॉडल को कपड़े में सेव "
+        "करें से अपडेट करें (Durty Cloth Tool Ultimate में शामिल)।"
     ),
     "add.invalid": "जोड़ने का अनुरोध भेजा नहीं जा सकता: {detail}",
     "add.why.connect": "कपड़े को किसी प्रोजेक्ट में जोड़ने के लिए Durty Cloth Tool से कनेक्ट करें।",
@@ -706,7 +711,6 @@ TEXT = {
     "garment.prop.keep-size.desc": (
         "बॉडी से संरेखित करें कपड़े को सिर्फ़ खिसकाता और घुमाता है, बॉडी के हिसाब से स्केल नहीं करता"
     ),
-    "garment.heading.align": "बॉडी से संरेखित करें",
     "garment.heading.options": "विकल्प",
     "garment.op.align": "बॉडी से संरेखित करें",
     "garment.op.align.desc": (
@@ -829,8 +833,6 @@ TEXT = {
     ),
     "add.failed-undo": "{problem} Ctrl+Z कपड़े को जोड़ने से पहले जैसा था वैसा कर देता है।",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.heading.service": "gta.clothing पर फ़िट",
-    "garment.heading.weights": "वेट",
     "garment.op.service-fit": "बॉडी पर फ़िट करें",
     "garment.op.service-fit.desc": (
         "कपड़े को gta.clothing पर भेजें, जो उसे गेम के पोज़ में लाता है, उसे फ़्रीमोड बॉडी के वेट देता है और उसे बॉडी "
@@ -1009,7 +1011,9 @@ TEXT = {
     ),
     "fit.warning.marker-offset": "कुछ मार्कर बॉडी के जोड़ों से हटकर हैं। कंधे और कोहनी के मार्कर जाँचें।",
     "fit.warning.proportion-clamped": "कपड़े के अनुपात फ़्रीमोड बॉडी से बहुत अलग हैं; कुछ को सीमा में रखा गया।",
-    "fit.warning.shape-strained": "पोज़ देते समय कुछ हिस्से खिंच गए। सुधार में समस्याएँ दिखाएँ उन्हें ढूँढता है।",
+    "fit.warning.shape-strained": (
+        "पोज़ देते समय कुछ हिस्से खिंच गए। सुधार के समस्याएँ सेक्शन में समस्याएँ दिखाएँ उन्हें ढूँढता है।"
+    ),
     "fit.warning.attachment-fallback": (
         "ढीले हिस्सों को बॉडी के सबसे पास वाले हिस्से से वेट किया गया। उन्हें Weight Paint मोड में जाँचें।"
     ),
@@ -1182,7 +1186,6 @@ TEXT = {
     "garment.done.import-rig": (
         "{name} इम्पोर्ट किया ({count} वर्टेक्स) और उसके साथ एक्सपोर्ट हुए अवतार के जोड़ मार्करों के लिए रख लिए।"
     ),
-    "garment.heading.snap": "एंकर",
     "garment.op.snap": "एंकर पर रखें",
     "garment.op.snap.desc": (
         "प्रॉप को बॉडी पर उसके एंकर पर ले जाएँ: हैट सिर पर, चश्मा आँखों के आगे, कान का गहना कानों पर, घड़ी या ब्रेसलेट "
@@ -1207,11 +1210,10 @@ TEXT = {
         "बना) के हिसाब से रखी जाती है, और उसके हिसाब से अपनी जगह रखता है। इसे वेट की ज़रूरत नहीं होती।"
     ),
     "add.anchor.ready": "{name} में अपने एंकर ({anchor}) से लटकता है।",
-    "add.anchor.missing": "एंकर: {anchor}। Durty Cloth Tool प्रोजेक्ट में जोड़ें प्रॉप को उससे लटकाता है।",
+    "add.anchor.missing": "एंकर: {anchor}। प्रोजेक्ट में जोड़ें प्रॉप को उससे लटकाता है।",
     "add.why.no-anchor": "Durty Cloth Tool के स्केलेटन में {bone} हड्डी नहीं है जिससे प्रॉप लटकाया जा सके।",
-    "add.prop.missing": "प्रॉप अभी अपने एंकर से नहीं लटकता। Durty Cloth Tool प्रोजेक्ट में जोड़ें यह कर देता है।",
+    "add.prop.missing": "प्रॉप अभी अपने एंकर से नहीं लटकता। प्रोजेक्ट में जोड़ें यह कर देता है।",
     "add.why.prop-skeleton": "प्रॉप स्केलेटन पर नहीं जाते: वे अपने एंकर से लटकते हैं।",
-    "garment.heading.split": "दो हिस्से",
     "garment.op.split": "कमर पर बाँटें",
     "garment.op.split.desc": "ड्रेस को कमर पर टॉप और स्कर्ट में काटें: स्कर्ट टाँगें स्लॉट के लिए अलग कपड़ा बन जाती है",
     "garment.info.split": (

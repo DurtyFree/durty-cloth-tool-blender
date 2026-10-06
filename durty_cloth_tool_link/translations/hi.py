@@ -69,6 +69,9 @@ TEXT = {
     "setup.sign-in.signed-out": "आपने साइन आउट किया है। Creator Link इस्तेमाल करने के लिए फिर से साइन इन करें।",
     "linked.project": "प्रोजेक्ट: {name}",
     "linked.no-project": "Durty Cloth Tool में एक प्रोजेक्ट खोलें।",
+    "linked.offline": (
+        "Durty Cloth Tool कनेक्ट करें, ताकि वहाँ चुने गए कपड़े को ped पर लाइव पेंट कर सकें और उसका मॉडल भेज सकें।"
+    ),
     "linked.no-cloth": "यहाँ काम करने के लिए Durty Cloth Tool में एक कपड़ा चुनें।",
     "linked.variation": "वैरिएशन {letter}",
     "linked.number": "#{number}",

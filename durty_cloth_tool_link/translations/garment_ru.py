@@ -3,12 +3,29 @@
 """Russian (Русский): the garment fitting texts."""
 
 TEXT = {
-    "garment.panel": "Подгонка одежды (экспериментально)",
+    "garment.panel": "Подгонка одежды",
     "garment.panel.setup": "Настройка",
     "garment.panel.fit": "Подгонка",
     "garment.panel.fix": "Исправление",
     "garment.panel.ready": "Готово к игре",
-    "garment.next.import": "Импортируйте одежду или выделите свою и выберите Использовать выделенную одежду.",
+    "garment.panel.add": "Добавить в проект",
+    "experimental.note": "Экспериментальная функция: проверяйте каждый результат перед использованием.",
+    "garment.status.no-garment": "Одежды пока нет",
+    "garment.status.no-body": "Тела пока нет",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "Маркеров: {count} из {total}",
+    "garment.status.aligned": "Выровнено",
+    "garment.status.fitted": "Подогнано",
+    "garment.status.snapped": "Поставлено",
+    "garment.status.not-snapped": "Не поставлено",
+    "garment.status.inside": "Внутри тела: {count}",
+    "garment.status.blocking": "Есть проблемы",
+    "garment.status.validated": "Проверено",
+    "garment.status.not-validated": "Не проверено",
+    "garment.status.added": "Добавлено",
+    "garment.status.adding": "Добавление",
+    "garment.status.not-added": "Не добавлено",
+    "garment.next.import": "Импортируйте одежду или выделите свою и выберите Использовать выделенное.",
     "garment.next.body": "Далее: добавьте тело freemode в разделе Настройка.",
     "garment.next.markers": (
         "Далее: расставьте маркеры кнопкой Автомаркеры в разделе Подгонка, затем проверьте, где они стоят."
@@ -146,17 +163,11 @@ TEXT = {
     "garment.heading.markers": "Маркеры",
     "garment.heading.tpose": "Модель в T-позе",
     "garment.heading.backups": "Резервные копии",
-    "garment.heading.push": "Отступ от тела",
     "garment.heading.regions": "Инструменты для областей",
     "garment.heading.problems": "Проблемы",
-    "garment.heading.check": "Проверка посадки",
     "garment.heading.sculpt": "Ручная правка",
     "garment.heading.tears": "Разрывы",
-    "garment.heading.prepare": "Подготовка",
-    "garment.heading.combine": "Материалы",
-    "garment.heading.lods": "Уровни детализации",
-    "garment.heading.validate": "Проверки",
-    "garment.op.use": "Использовать выделенную одежду",
+    "garment.op.use": "Использовать выделенное",
     "garment.op.use.desc": "Работать с выделенным меш-объектом",
     "garment.op.import": "Импортировать одежду",
     "garment.op.import.desc": (
@@ -232,10 +243,6 @@ TEXT = {
     "garment.body.hosted": "Тело freemode: {gender}, версия {version}",
     "garment.body.object": "Тело: {name}",
     "garment.body.downloading": "Скачивание тела freemode…",
-    "garment.body.subtext": (
-        "Тело скачивается с gta.clothing для аккаунта, в который выполнен вход, и хранится в папке дополнения, "
-        "поэтому каждая версия скачивается один раз."
-    ),
     "garment.body.cancelled": "Скачивание тела отменено.",
     "garment.body.offline": (
         "Доступ Blender в интернет выключен, а тело раньше не скачивалось. Разрешите доступ в интернет или "
@@ -261,8 +268,12 @@ TEXT = {
     "garment.check.none": "Запустите проверку посадки, чтобы увидеть, насколько каждая область отстоит от тела.",
     "garment.check.measured": "Измерено (мм)",
     "garment.check.value": "{p50} (от {p10} до {p90})",
+    "garment.check.usual-line": "Обычно: {range}",
     "garment.check.inside": "Внутри тела: вершин {count} ({share} %)",
-    "garment.advice.shoulders": "Плечи отстоят от тела. Выберите Прижать к телу с областью Плечи, чтобы опустить их.",
+    "garment.advice.shoulders": (
+        "Плечи отстоят от тела. Выберите Прижать к телу (Инструменты для областей) с областью Плечи, чтобы опустить "
+        "их."
+    ),
     "garment.sculpt.running": "Тяните кистью Grab, чтобы двигать одежду. Тело показано каркасом.",
     "garment.sculpt.subtext": "Принять сохраняет форму; Отмена возвращает форму, какой она была до сеанса.",
     "garment.pose.arms-up": "Руки вверх",
@@ -465,27 +476,24 @@ TEXT = {
     "error.item-limit": "В проекте уже столько одежды, сколько позволяет бесплатная версия Durty Cloth Tool.",
     "garment.next.done": (
         "Готово: одежда в вашем проекте Durty Cloth Tool. Кнопки Отправить модель и Сохранить модель в одежду в "
-        "разделе Модель обновляют её (входят в Durty Cloth Tool Ultimate)."
+        "режиме Связанная одежда обновляют её (входят в Durty Cloth Tool Ultimate)."
     ),
     "garment.next.validate-problems": (
         "Далее: исправьте то, что перечисляет Проверить в разделе Готово к игре, затем проверьте снова."
     ),
     "garment.next.adding": "Добавление: Durty Cloth Tool показывает одежду. Выберите там Добавить в проект или Отмена.",
-    "garment.next.connect": (
-        "Далее: подключитесь к Durty Cloth Tool (Настройка подключения), чтобы добавить одежду в проект."
-    ),
-    "garment.next.project": (
-        "Далее: откройте проект в Durty Cloth Tool, затем добавьте одежду в разделе Готово к игре."
-    ),
+    "garment.next.connect": "Далее: подключитесь к Durty Cloth Tool, чтобы добавить одежду в проект.",
+    "garment.next.project": "Далее: откройте проект в Durty Cloth Tool, затем выберите Добавить в проект.",
     "garment.next.sollumz": "Далее: установите Sollumz, чтобы добавить одежду в Durty Cloth Tool.",
     "garment.next.skeleton": (
-        "Далее: выберите Использовать скелет Durty Cloth Tool в разделе Готово к игре или Добавить в проект Durty "
-        "Cloth Tool (эта кнопка тоже это делает)."
+        "Далее: выберите Использовать скелет Durty Cloth Tool в разделе Готово к игре или Добавить в проект (эта "
+        "кнопка тоже это делает)."
     ),
-    "garment.next.add": "Далее: выберите Добавить в проект Durty Cloth Tool в разделе Готово к игре.",
-    "add.heading": "Добавить в Durty Cloth Tool",
+    "garment.next.add-skeleton": (
+        "Далее: кнопка Добавить в проект перенесёт одежду на скелет Durty Cloth Tool и добавит её в ваш проект."
+    ),
+    "garment.next.add": "Далее: кнопка Добавить в проект добавит одежду в ваш проект Durty Cloth Tool.",
     "add.heading.variations": "Цветовые вариации",
-    "add.heading.skeleton": "Скелет freemode",
     "add.target": "Одежда добавится как {slot}, {gender}. Изменить оба можно в разделе Настройка.",
     "add.variation.none": "Цветовой текстуры пока нет",
     "add.variations.subtext": "Вариаций: {count} из максимум {limit}.",
@@ -512,7 +520,7 @@ TEXT = {
         "Получить из Durty Cloth Tool скелет freemode пола, выбранного в разделе Настройка, и надеть на него "
         "одежду, готовую для Sollumz"
     ),
-    "add.op.add": "Добавить в проект Durty Cloth Tool",
+    "add.op.add": "Добавить в проект",
     "add.op.add.desc": (
         "Проверить одежду, экспортировать её с помощью Sollumz и добавить как новую в проект, открытый в Durty "
         "Cloth Tool. Durty Cloth Tool сначала спросит вас"
@@ -579,13 +587,13 @@ TEXT = {
     ),
     "add.withdrawing": "Отмена добавления…",
     "add.blocked": (
-        "Добавление заблокировано: сначала исправьте проблемы ({count}), они перечислены в разделе Готово к игре."
+        "Добавление заблокировано: сначала исправьте проблемы ({count}), они перечислены в разделе Добавить в проект."
     ),
     "add.problems": "Сначала исправьте это ({count}):",
     "add.findings": "Проверки Durty Cloth Tool: {count}",
     "add.added.subtext": (
-        "Drawable Dictionary связан с новой одеждой: кнопки Отправить модель и Сохранить модель в одежду в "
-        "разделе Модель обновляют её (входят в Durty Cloth Tool Ultimate)."
+        "Drawable Dictionary связан с новой одеждой: кнопки Отправить модель и Сохранить модель в одежду в режиме "
+        "Связанная одежда обновляют её (входят в Durty Cloth Tool Ultimate)."
     ),
     "add.invalid": "Добавление нельзя отправить: {detail}",
     "add.why.connect": "Подключитесь к Durty Cloth Tool, чтобы добавить одежду в проект.",
@@ -736,7 +744,6 @@ TEXT = {
     "garment.prop.keep-size.desc": (
         "Выровнять по телу только двигает и поворачивает одежду, не подгоняя её размер к телу"
     ),
-    "garment.heading.align": "Выровнять по телу",
     "garment.heading.options": "Параметры",
     "garment.op.align": "Выровнять по телу",
     "garment.op.align.desc": (
@@ -855,8 +862,6 @@ TEXT = {
     "add.cancelled-local": "Добавление отменено до отправки. Ctrl+Z отменит то, что оно изменило в одежде.",
     "add.failed-undo": "{problem} Ctrl+Z вернёт одежду в состояние до добавления.",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.heading.service": "Подгонка на gta.clothing",
-    "garment.heading.weights": "Веса",
     "garment.op.service-fit": "Подогнать к телу",
     "garment.op.service-fit.desc": (
         "Отправляет одежду на gta.clothing, который ставит её в игровую позу, даёт ей веса тела freemode и выводит её "
@@ -1050,7 +1055,8 @@ TEXT = {
         "Пропорции одежды сильно отличаются от тела freemode; некоторые ограничены допустимым диапазоном."
     ),
     "fit.warning.shape-strained": (
-        "Некоторые области растянулись при постановке в позу. Показать проблемы в разделе Исправление найдёт их."
+        "Некоторые области растянулись при постановке в позу. Показать проблемы (в разделе Исправление, в группе "
+        "Проблемы) найдёт их."
     ),
     "fit.warning.attachment-fallback": (
         "Отдельные части получили веса ближайшей части тела. Проверьте их в режиме рисования весов."
@@ -1226,7 +1232,6 @@ TEXT = {
     "garment.done.import-rig": (
         "Импортирован {name} ({count} вершин); суставы аватара, экспортированного вместе с ним, сохранены для маркеров."
     ),
-    "garment.heading.snap": "Точка крепления",
     "garment.op.snap": "Поставить на точку крепления",
     "garment.op.snap.desc": (
         "Поставить аксессуар на его точку крепления на теле: шляпу на голову, очки перед глазами, украшение к ушам, "
@@ -1258,11 +1263,10 @@ TEXT = {
         "(из ваших игровых файлов), и сохраняет положение относительно неё. Веса ему не нужны."
     ),
     "add.anchor.ready": "Висит на точке крепления ({anchor}) в {name}.",
-    "add.anchor.missing": "Точка крепления: {anchor}. Добавить в проект Durty Cloth Tool повесит на неё аксессуар.",
+    "add.anchor.missing": "Точка крепления: {anchor}. Добавить в проект повесит на неё аксессуар.",
     "add.why.no-anchor": "В скелете Durty Cloth Tool нет кости {bone}, на которую можно повесить аксессуар.",
-    "add.prop.missing": "Аксессуар ещё не висит на точке крепления. Это сделает Добавить в проект Durty Cloth Tool.",
+    "add.prop.missing": "Аксессуар ещё не висит на точке крепления. Это сделает Добавить в проект.",
     "add.why.prop-skeleton": "Аксессуары не ставятся на скелет: они висят на своей точке крепления.",
-    "garment.heading.split": "Две вещи",
     "garment.op.split": "Разрезать по талии",
     "garment.op.split.desc": (
         "Разрезать платье по талии на верх и юбку: юбка становится отдельной одеждой для слота Ноги"

@@ -48,7 +48,7 @@ freemode cloth and add it to your Durty Cloth Tool project, and Custom Ped turns
   markers.
   **Game Ready** joins seams, sets the ped vertex colours, combines all materials into one texture with its
   transparency and maps, generates levels of detail and validates the result.
-- ➕ **Add to Durty Cloth Tool Project (Experimental).** Put a game-ready garment on the freemode skeleton, export it
+- ➕ **Add to Project (Experimental).** Put a game-ready garment on the freemode skeleton, export it
   with Sollumz and add it as a new cloth, with its colour variations, to the project open in Durty Cloth Tool.
   Durty Cloth Tool shows the cloth first, and nothing is added until you confirm it there.
 - 🧍 **Custom Ped (Experimental).** Turn a human character you made into a custom ped: check the character, place
@@ -162,6 +162,11 @@ Extensions > Check for Updates**. **Settings > Updates** in the DCT tab shows yo
 
 You do this once per Blender installation. The header of the **Durty Cloth Tool** panel then says **Connected**.
 
+**Work On**, under it, chooses what the tab shows: **Linked Cloth** (the cloth selected in Durty Cloth Tool, with its
+live preview and its model; the default), **Garment Fitting** or **Custom Ped**. A texture or model you open from
+Durty Cloth Tool switches it to Linked Cloth. Without Durty Cloth Tool, Linked Cloth shows **Connect** instead of its
+panels.
+
 ### Paint a texture live
 
 1. In Durty Cloth Tool, select a cloth and a texture variation. The **Linked Cloth** panel shows them.
@@ -182,8 +187,10 @@ Images can be up to 4096 by 4096 pixels. To start from the cloth's own texture, 
 
 ### Fit a garment (Experimental)
 
-Open **Garment Fitting (Experimental)** in the DCT tab. Its first line always tells you the next step, and the
-button for that step is the large one. Settings you rarely change sit in closed **Options** sections.
+Choose **Garment Fitting** under **Work On**. Its first line always tells you the next step, and the button for
+that step is the large one. Five numbered stages follow, each with how far it is on the right: the stage that holds
+the next step opens by itself, and a finished stage folds with a tick (you can open any of them). Settings you rarely
+change sit in closed **Options** sections.
 
 1. **Setup:** choose gender and **Garment Type** (a line below it says what the type sets up, and the slot sits under
    **Options** when the type may go into more than one), the **Avatar** the garment was draped on when you know it,
@@ -197,9 +204,9 @@ button for that step is the large one. Settings you rarely change sit in closed 
    on the body's joints. Once the garment has moved (Align to Body, a fit), choose Not Known to place them again.
    Then **Align to Body**: it moves and turns the garment so the markers sit on the body's joints, and turns its arms
    (or legs) onto the body's, so a T-pose becomes the game's pose without opening a seam. It keeps the
-   garment's size unless you turn off **Keep Size** in its options. Then **Fit to Body** (under **Fit on
-   gta.clothing**): gta.clothing puts the garment exactly in the game's pose, gives it the freemode body's weights
-   and moves it out of the body where it was inside. A progress bar shows how far it is, **Cancel** stops it (a fit
+   garment's size unless you turn off **Keep Size** in its options. Then **Fit to Body**: gta.clothing puts the
+   garment exactly in the game's pose, gives it the freemode body's weights and moves it out of the body where it
+   was inside. A progress bar shows how far it is, **Cancel** stops it (a fit
    that has already started still counts), and the panel shows your **Fits left today**. A spot where too many loose
    edges crowd (seams not joined yet, buttons, stitching) is found and selected before anything is sent. You can skip
    it and fit the garment by hand under **Fix**. Skirts, dresses and long coats get their thigh weights bridged
@@ -207,10 +214,11 @@ button for that step is the large one. Settings you rarely change sit in closed 
    or **Split at Waist** cuts it into a top and a skirt for the Legs slot. Props are not fitted: **Snap to Anchor**
    puts a hat on the head, glasses in front of the eyes, ear pieces at the ears or a watch around the wrist, and you
    move it by hand from there.
-3. **Fix:** **Run Fit Check** (its **Usual** column shows how far game clothing of the same kind sits from each
-   region), **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or sculpt by hand.
-   These tools wait for **Align to Body**, because they measure against the body, and again when a marker was
-   moved after it.
+3. **Fix:** **Run Fit Check** (its **Usual** values show how far game clothing of the same kind sits from each
+   region; in a narrow sidebar they go under each region) and **Push Out of Body**. Closed sections below hold the
+   rest: **Problems** (**Show Problems**), **Region Tools** (**Snug to Body** and **Relax Stretched**), **Fix by
+   Hand** (sculpting) and **Tears**. These tools wait for **Align to Body**, because they measure against the body,
+   and again when a marker was moved after it.
 4. **Game Ready:** **Prepare Garment** (which joins the seams without pulling any panel's own edge together, never
    joins the two fronts of an open jacket, and selects the spots where a seam stayed open) and **Combine Materials**
    (which keeps transparency, bakes normal, specular and emission maps, says when a texture file is missing, gives the
@@ -218,10 +226,13 @@ button for that step is the large one. Settings you rarely change sit in closed 
    of the texture); both show their progress in the status bar,
    the other garment tools wait for them, and **Esc** stops them and puts the garment back. Then the weights:
    **Transfer Weights** gets the freemode body's weights from gta.clothing for the garment as it is now (for example
-   after sculpting), or weight it yourself. Then **Generate LODs** and **Validate**.
+   after sculpting), or weight it yourself. Then **Generate LODs** and **Validate**. Each finished step's button
+   shows a tick.
+5. **Add to Project:** see below.
 
 Every step that changes the garment can be undone with **Ctrl+Z**, and the garment keeps backups of its shape for
-**Back One Step** and **Restore Pre-fit**; a fit from gta.clothing is one such step.
+**Back One Step** and **Restore Pre-fit** (in the closed **Backups** section after the stages); a fit from
+gta.clothing is one such step.
 
 **Fit to Body** and **Transfer Weights** send the garment's shape to gta.clothing: its vertex positions and
 triangles, its markers, and the gender, slot and category, never textures, materials, names or files. The first
@@ -233,7 +244,8 @@ panel says so. The panel explains every refusal and what to do about it. The [Ga
 
 ### Add the garment to your project (Experimental)
 
-The last part of **Game Ready** adds the garment as a new cloth to the project open in Durty Cloth Tool. You need:
+The last stage, **Add to Project**, adds the garment as a new cloth to the project open in Durty Cloth Tool. You
+need:
 
 - Durty Cloth Tool connected, with a freemode project open (a custom ped project takes no clothing this way), and
   GTA V set up in it: the freemode skeleton comes from your own game files.
@@ -251,10 +263,10 @@ Then:
    ped's skin (shorts, skirts and sandals turn it on: the Legs and Shoes slots replace the ped's legs and feet, so the
    bare skin has to be part of the cloth, which Durty Cloth Tool's own tools provide). Slot and gender are the ones
    chosen under **Setup**.
-2. Optionally use **Add Colour Variation** for more colour variations from other images in the same layout, up to
-   26, each with its own name. Each side of a picture must divide by four and be at most 4096 pixels; powers of two
-   up to 2048 pixels work best.
-3. Select **Add to Durty Cloth Tool Project**. The add-on checks the garment and lists anything that blocks the add
+2. Optionally open **Colour Variations** and use **Add Colour Variation** for more colour variations from other
+   images in the same layout, up to 26, each with its own name. Each side of a picture must divide by four and be at
+   most 4096 pixels; powers of two up to 2048 pixels work best.
+3. Select **Add to Project**. The add-on checks the garment and lists anything that blocks the add
    under the button. It puts the garment on the Durty Cloth Tool skeleton when needed (**Use Durty Cloth Tool
    Skeleton** does this on its own), exports it with Sollumz, writes the colour variations and sends it to Durty
    Cloth Tool, showing its progress; **Cancel** stops it at any point.
@@ -262,15 +274,15 @@ Then:
    **Cancel** in Blender withdraws the add while Durty Cloth Tool still asks.
 
 Durty Cloth Tool's plan limits apply to every add, and the panel says when the project is full. Once the cloth is
-added, the garment's model is linked to it, so **Push Model** and **Save Model to Cloth** update that cloth (with
-Durty Cloth Tool Ultimate), also when Durty Cloth Tool confirms the add only after a cancel. Undo in Blender does not
-remove the cloth from the project; remove it in Durty Cloth Tool. The
+added, the garment's model is linked to it, so **Push Model** and **Save Model to Cloth** under **Linked Cloth**
+update that cloth (with Durty Cloth Tool Ultimate), also when Durty Cloth Tool confirms the add only after a cancel.
+Undo in Blender does not remove the cloth from the project; remove it in Durty Cloth Tool. The
 [Add to a Project guide](https://docs.gta.clothing/creator-link/blender/add-to-a-project) has the details.
 
 ### Turn your character into a custom ped (Experimental)
 
-Choose **Custom Ped** at the top of the DCT tab (the garment tools hide meanwhile). The first line always names the
-next step, and its button is the large one. Five sections follow each other:
+Choose **Custom Ped** under **Work On** at the top of the DCT tab (the other tools hide meanwhile). The first line
+always names the next step, and its button is the large one. Five sections follow each other:
 
 1. **Character:** select every mesh of your character and choose **Use Selected**. The checks list what to fix, each
    with its button: transforms and modifiers to apply, an old rig to remove (the character keeps its pose), a size
@@ -289,7 +301,7 @@ next step, and its button is the large one. Five sections follow each other:
 4. **Check:** test poses (Arms Up, Squat, Walk Step and more, simple bends by bone name, not game animations) and
    **Run Checks**, which lists what Durty Cloth Tool would refuse (a vertex without weight, a bone moved after the
    rig) and where a pose stretches the character.
-5. **Send:** a name and a model name, then **Create Custom Ped**. Durty Cloth Tool shows the ped with its checks and
+5. **Create:** a name and a model name, then **Create Custom Ped**. Durty Cloth Tool shows the ped with its checks and
    asks where to create the project; nothing is created until you choose Create there.
 
 Rigging needs Durty Cloth Tool Ultimate; creating the project needs Advanced or Ultimate. Durty Cloth Tool needs your

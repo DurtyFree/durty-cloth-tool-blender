@@ -94,6 +94,9 @@ EN: Dict[str, str] = {
     # ---- linked cloth -------------------------------------------------------------------------------------
     "linked.project": "Project: {name}",
     "linked.no-project": "Open a project in Durty Cloth Tool.",
+    "linked.offline": (
+        "Connect Durty Cloth Tool to paint the cloth selected there live on the ped and to push its model."
+    ),
     "linked.no-cloth": "Select a cloth in Durty Cloth Tool to work on it here.",
     "linked.variation": "Variation {letter}",
     "linked.number": "#{number}",
@@ -553,12 +556,29 @@ EN: Dict[str, str] = {
     "feature.needsUltimate": "This is included in Durty Cloth Tool Ultimate.",
     "feature.unavailable": "This is not included in your Durty Cloth Tool plan.",
     # ---- garment fitting: panels and the next step ----------------------------------------------------------
-    "garment.panel": "Garment Fitting (Experimental)",
+    "garment.panel": "Garment Fitting",
     "garment.panel.setup": "Setup",
     "garment.panel.fit": "Fit",
     "garment.panel.fix": "Fix",
     "garment.panel.ready": "Game Ready",
-    "garment.next.import": "Import a garment, or select yours and choose Use Selected Garment.",
+    "garment.panel.add": "Add to Project",
+    "experimental.note": "Experimental: check every result before you use it.",
+    "garment.status.no-garment": "No garment yet",
+    "garment.status.no-body": "No body yet",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "{count} of {total} markers",
+    "garment.status.aligned": "Aligned",
+    "garment.status.fitted": "Fitted",
+    "garment.status.snapped": "Snapped",
+    "garment.status.not-snapped": "Not snapped",
+    "garment.status.inside": "{count} inside the body",
+    "garment.status.blocking": "Problems to fix",
+    "garment.status.validated": "Validated",
+    "garment.status.not-validated": "Not validated",
+    "garment.status.added": "Added",
+    "garment.status.adding": "Adding",
+    "garment.status.not-added": "Not added",
+    "garment.next.import": "Import a garment, or select yours and choose Use Selected.",
     "garment.next.body": "Next: add the freemode body under Setup.",
     "garment.next.markers": "Next: place the markers with Auto Markers under Fit, then check where they are.",
     "garment.next.check": "Next: run the fit check under Fix.",
@@ -568,8 +588,8 @@ EN: Dict[str, str] = {
     "garment.next.lods": "Next: Generate LODs under Game Ready.",
     "garment.next.validate": "Next: Validate under Game Ready.",
     "garment.next.done": (
-        "Done: the garment is in your Durty Cloth Tool project. Push Model and Save Model to Cloth under Model update "
-        "it (included in Durty Cloth Tool Ultimate)."
+        "Done: the garment is in your Durty Cloth Tool project. Push Model and Save Model to Cloth under Linked "
+        "Cloth update it (included in Durty Cloth Tool Ultimate)."
     ),
     "garment.next.sculpting": "Sculpting: drag with the Grab brush, then choose Accept or Cancel under Fix.",
     # ---- garment fitting: choices -------------------------------------------------------------------------
@@ -691,18 +711,12 @@ EN: Dict[str, str] = {
     "garment.heading.markers": "Markers",
     "garment.heading.tpose": "Model in T-pose",
     "garment.heading.backups": "Backups",
-    "garment.heading.push": "Clearance",
     "garment.heading.regions": "Region Tools",
     "garment.heading.problems": "Problems",
-    "garment.heading.check": "Fit Check",
     "garment.heading.sculpt": "Fix by Hand",
     "garment.heading.tears": "Tears",
-    "garment.heading.prepare": "Prepare",
-    "garment.heading.combine": "Materials",
-    "garment.heading.lods": "Levels of Detail",
-    "garment.heading.validate": "Checks",
     # ---- garment fitting: operators -----------------------------------------------------------------------
-    "garment.op.use": "Use Selected Garment",
+    "garment.op.use": "Use Selected",
     "garment.op.use.desc": "Work on the selected mesh object",
     "garment.op.import": "Import Garment",
     "garment.op.import.desc": (
@@ -774,10 +788,6 @@ EN: Dict[str, str] = {
     "garment.body.hosted": "Freemode body: {gender}, version {version}",
     "garment.body.object": "Body: {name}",
     "garment.body.downloading": "Downloading the freemode body…",
-    "garment.body.subtext": (
-        "The body comes from gta.clothing for your signed-in account and is kept in the add-on's folder, so each "
-        "version is downloaded once."
-    ),
     "garment.body.cancelled": "The body download was cancelled.",
     "garment.body.offline": (
         "Blender's online access is off and no body was downloaded before. Allow online access, or use a body file."
@@ -804,8 +814,11 @@ EN: Dict[str, str] = {
     "garment.check.none": "Run the fit check to see how far each region stands off the body.",
     "garment.check.measured": "Measured (mm)",
     "garment.check.value": "{p50} ({p10} to {p90})",
+    "garment.check.usual-line": "Usual: {range}",
     "garment.check.inside": "Inside the body: {count} vertices ({share} %)",
-    "garment.advice.shoulders": "The shoulders stand off the body: Snug to Body with Shoulders brings them down.",
+    "garment.advice.shoulders": (
+        "The shoulders stand off the body: Snug to Body (Region Tools) with Shoulders brings them down."
+    ),
     "garment.sculpt.running": "Drag with the Grab brush to move the garment. The body shows as a wireframe.",
     "garment.sculpt.subtext": "Accept keeps the shape; Cancel puts back the shape from before the session.",
     "garment.pose.arms-up": "Arms up",
@@ -996,13 +1009,16 @@ EN: Dict[str, str] = {
     # ---- garment fitting: adding to Durty Cloth Tool --------------------------------------------------------
     "garment.next.validate-problems": "Next: fix what Validate lists under Game Ready, then validate again.",
     "garment.next.adding": "Adding: Durty Cloth Tool shows the cloth. Choose Add to project or Cancel there.",
-    "garment.next.connect": "Next: connect to Durty Cloth Tool (Get Connected) to add the garment to a project.",
-    "garment.next.project": "Next: open a project in Durty Cloth Tool, then add the garment under Game Ready.",
+    "garment.next.connect": "Next: connect to Durty Cloth Tool to add the garment to a project.",
+    "garment.next.project": "Next: open a project in Durty Cloth Tool, then choose Add to Project.",
     "garment.next.sollumz": "Next: install Sollumz to add the garment to Durty Cloth Tool.",
     "garment.next.skeleton": (
-        "Next: Use Durty Cloth Tool Skeleton under Game Ready, or Add to Durty Cloth Tool Project, which does it too."
+        "Next: Use Durty Cloth Tool Skeleton under Game Ready, or Add to Project, which does it too."
     ),
-    "garment.next.add": "Next: Add to Durty Cloth Tool Project under Game Ready.",
+    "garment.next.add-skeleton": (
+        "Next: Add to Project puts the garment on the Durty Cloth Tool skeleton and into your project."
+    ),
+    "garment.next.add": "Next: Add to Project puts the garment into your Durty Cloth Tool project.",
     "garment.slot.berd": "Mask (berd)",
     "garment.slot.berd.desc": "Masks and face coverings",
     "garment.slot.hand": "Bag (hand)",
@@ -1116,7 +1132,6 @@ EN: Dict[str, str] = {
     "garment.done.import-rig": (
         "Imported {name} ({count} vertices) and kept the joints of the avatar exported with it for the markers."
     ),
-    "garment.heading.snap": "Anchor",
     "garment.op.snap": "Snap to Anchor",
     "garment.op.snap.desc": (
         "Move the prop onto its anchor on the body: a hat onto the head, glasses in front of the eyes, ear pieces to "
@@ -1141,11 +1156,10 @@ EN: Dict[str, str] = {
         "from your game files), and keeps its position relative to it. It needs no weights."
     ),
     "add.anchor.ready": "Hangs from its anchor ({anchor}) in {name}.",
-    "add.anchor.missing": "Anchor: {anchor}. Add to Durty Cloth Tool Project hangs the prop from it.",
+    "add.anchor.missing": "Anchor: {anchor}. Add to Project hangs the prop from it.",
     "add.why.no-anchor": "Durty Cloth Tool's skeleton has no {bone} bone to hang the prop from.",
-    "add.prop.missing": "The prop does not hang from its anchor yet. Add to Durty Cloth Tool Project does that.",
+    "add.prop.missing": "The prop does not hang from its anchor yet. Add to Project does that.",
     "add.why.prop-skeleton": "Props do not go onto the skeleton: they hang from their anchor.",
-    "garment.heading.split": "Two Pieces",
     "garment.op.split": "Split at Waist",
     "garment.op.split.desc": (
         "Cut the dress at its waist into a top and a skirt: the skirt becomes its own garment for the Legs slot"
@@ -1179,9 +1193,7 @@ EN: Dict[str, str] = {
         "islands without room or far off: check it, or unwrap the garment again, then combine again."
     ),
     "garment.why.uv-degenerate": "The garment's UV map has no area anywhere. Unwrap the garment first.",
-    "add.heading": "Add to Durty Cloth Tool",
     "add.heading.variations": "Colour Variations",
-    "add.heading.skeleton": "Freemode Skeleton",
     "add.target": "It goes in as {slot}, {gender}. Change both under Setup.",
     "add.variation.none": "No colour texture yet",
     "add.variations.subtext": "Variations: {count} of at most {limit}.",
@@ -1203,7 +1215,7 @@ EN: Dict[str, str] = {
         "Get the freemode skeleton of the gender under Setup from Durty Cloth Tool and put the garment on it, ready "
         "for Sollumz"
     ),
-    "add.op.add": "Add to Durty Cloth Tool Project",
+    "add.op.add": "Add to Project",
     "add.op.add.desc": (
         "Check the garment, export it with Sollumz and add it as a new cloth to the project open in Durty Cloth Tool. "
         "Durty Cloth Tool asks you first"
@@ -1265,12 +1277,12 @@ EN: Dict[str, str] = {
         "Nothing is added until you choose Add to project in Durty Cloth Tool. Cancel here withdraws the add."
     ),
     "add.withdrawing": "Cancelling the add…",
-    "add.blocked": "The add is blocked: {count} problems to fix first, listed under Game Ready.",
+    "add.blocked": "The add is blocked: {count} problems to fix first, listed under Add to Project.",
     "add.problems": "Fix these first ({count}):",
     "add.findings": "Durty Cloth Tool's checks: {count}",
     "add.added.subtext": (
-        "The Drawable Dictionary is linked to the new cloth: Push Model and Save Model to Cloth under Model update it "
-        "(included in Durty Cloth Tool Ultimate)."
+        "The Drawable Dictionary is linked to the new cloth: Push Model and Save Model to Cloth under Linked Cloth "
+        "update it (included in Durty Cloth Tool Ultimate)."
     ),
     "add.invalid": "The add cannot be sent: {detail}",
     "add.why.connect": "Connect to Durty Cloth Tool to add the garment to a project.",
@@ -1396,7 +1408,6 @@ EN: Dict[str, str] = {
     "garment.prop.orient.desc": "Turn a garment that lies on its back or faces backwards so it stands as the ped does",
     "garment.prop.keep-size": "Keep Size",
     "garment.prop.keep-size.desc": "Align to Body only moves and turns the garment, without scaling it to the body",
-    "garment.heading.align": "Align to Body",
     "garment.heading.options": "Options",
     "garment.op.align": "Align to Body",
     "garment.op.align.desc": (
@@ -1517,8 +1528,6 @@ EN: Dict[str, str] = {
         "The add was cancelled before anything was sent. Ctrl+Z undoes what it changed on the garment."
     ),
     "add.failed-undo": "{problem} Ctrl+Z puts the garment back as it was before the add.",
-    "garment.heading.service": "Fit on gta.clothing",
-    "garment.heading.weights": "Weights",
     "garment.op.service-fit": "Fit to Body",
     "garment.op.service-fit.desc": (
         "Send the garment to gta.clothing, which puts it in the game's pose, gives it the freemode body's weights and "
@@ -1690,7 +1699,7 @@ EN: Dict[str, str] = {
         "The garment's proportions are far from the freemode body's; some were kept within range."
     ),
     "fit.warning.shape-strained": (
-        "Some areas stretched while the garment was posed. Show Problems under Fix finds them."
+        "Some areas stretched while the garment was posed. Show Problems (under Fix, in Problems) finds them."
     ),
     "fit.warning.attachment-fallback": (
         "Loose parts were weighted to the nearest part of the body. Check them in Weight Paint mode."

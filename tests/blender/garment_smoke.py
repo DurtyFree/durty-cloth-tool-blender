@@ -157,6 +157,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     users_cube.name = "users_cube"
     users_shape = positions(users_cube).copy()
 
+    scene.dct_link.workspace = "GARMENT"  # the DCT tab's Garment Fitting view, until the end of this smoke
     log = draw_everything(package, state, "garment fitting, nothing chosen")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the garment panels draw and say how to start", "Import a garment" in labels
@@ -588,6 +589,10 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     # Nothing else in the scene changed.
     check("the user's other objects are untouched", np.abs(positions(users_cube) - users_shape).max() == 0
           and users_cube.name == "users_cube")
+    scene.dct_link.workspace = "CLOTHING"
+    log = draw_everything(package, state, "linked cloth again")
+    check("Linked Cloth hides Garment Fitting", not any(entry[0] == "operator" and entry[1].startswith("dct_link.fit_")
+                                                        for entry in log))
     return results
 
 
@@ -957,15 +962,15 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
              what=what)
 
     def add(what):
-        """Add to Durty Cloth Tool Project, and the add's own job until it has sent the add or stopped."""
+        """Add to Project, and the add's own job until it has sent the add or stopped."""
         result = bpy.ops.dct_link.fit_add_to_dct()
         finish_job(what)
         return result
 
     log = draw_everything(package, state, "garment ready to add")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
-    check("Game Ready offers the add with its name, variations and skeleton",
-          "Add to Durty Cloth Tool" in labels and ("operator", "dct_link.fit_add_to_dct") in log
+    check("Add to Project offers the add with its name and variations, Game Ready the skeleton",
+          "Add to Project" in labels and ("operator", "dct_link.fit_add_to_dct") in log
           and ("operator", "dct_link.fit_use_skeleton") in log and ("prop", "item_name") in log
           and ("prop", "first_title") in log and "not on the Durty Cloth Tool skeleton" in labels, labels[-600:])
 
@@ -997,7 +1002,7 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     log = draw_everything(package, state, "garment on the skeleton")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the panel shows the skeleton and the next step", "On the Female Durty Cloth Tool skeleton" in labels
-          and "Next: Add to Durty Cloth Tool Project" in labels, labels[labels.find("Garment Fitting"):][:300]
+          and "Next: Add to Project" in labels, labels[labels.find("Garment Fitting"):][:300]
           + " ... " + labels[labels.find("Freemode Skeleton"):][:300])
 
     # What blocks the add is listed before anything is sent.
@@ -1032,7 +1037,7 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     # The add: Durty Cloth Tool adds the cloth and answers with its binding and findings.
     dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING),
                       "findings": [{"code": "non-power-of-two", "severity": "warning"}]}
-    check("Add to Durty Cloth Tool Project runs", "FINISHED" in add("the add"))
+    check("Add to Project runs", "FINISHED" in add("the add"))
     pump(addon, lambda: not ctrl.item_add.adding, timeout=30, what="the add")
     header, files = dct.item_adds[-1]
     names = [name for name, _ in files]

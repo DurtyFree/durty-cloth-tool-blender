@@ -65,6 +65,7 @@ TEXT = {
     "setup.sign-in.signed-out": "لقد سجّلت الخروج. سجّل الدخول مرة أخرى لاستخدام Creator Link.",
     "linked.project": "المشروع: {name}",
     "linked.no-project": "افتح مشروعًا في Durty Cloth Tool.",
+    "linked.offline": "اتصل بـ Durty Cloth Tool لتلوين قطعة الملابس المحددة هناك مباشرةً على الـ ped وإرسال نموذجها.",
     "linked.no-cloth": "حدد قطعة ملابس في Durty Cloth Tool للعمل عليها هنا.",
     "linked.variation": "التنويعة {letter}",
     "linked.number": "رقم {number}",

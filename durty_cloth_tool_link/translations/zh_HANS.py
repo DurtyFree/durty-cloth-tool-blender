@@ -60,6 +60,7 @@ TEXT = {
     "setup.sign-in.signed-out": "你已退出登录。重新登录即可使用 Creator Link。",
     "linked.project": "项目：{name}",
     "linked.no-project": "请在 Durty Cloth Tool 中打开一个项目。",
+    "linked.offline": "连接 Durty Cloth Tool，即可在 ped 上实时绘制在那里选中的服装并发送它的模型。",
     "linked.no-cloth": "在 Durty Cloth Tool 中选择一件服装，即可在这里处理它。",
     "linked.variation": "变体 {letter}",
     "linked.number": "#{number}",

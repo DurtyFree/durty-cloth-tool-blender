@@ -323,9 +323,8 @@ def draw_everything(package, state, label):
     ped_ui = sys.modules[package + ".ui_ped"]
     log = []
     panels = (ui.DCTLINK_PT_main, ui.DCTLINK_PT_details, ui.DCTLINK_PT_setup, ui.DCTLINK_PT_linked,
-              ui.DCTLINK_PT_live, ui.DCTLINK_PT_model, garment_ui.DCTLINK_PT_garment,
-              garment_ui.DCTLINK_PT_garment_setup, garment_ui.DCTLINK_PT_garment_fit, garment_ui.DCTLINK_PT_garment_fix,
-              garment_ui.DCTLINK_PT_garment_ready, ped_ui.DCTLINK_PT_ped, ui.DCTLINK_PT_settings)
+              ui.DCTLINK_PT_live, ui.DCTLINK_PT_model, garment_ui.DCTLINK_PT_garment, ped_ui.DCTLINK_PT_ped,
+              ui.DCTLINK_PT_settings)
     for panel in panels:
         if panel.poll(bpy.context) if hasattr(panel, "poll") else True:
             instance = type("P", (), {"layout": FakeLayout(log)})()

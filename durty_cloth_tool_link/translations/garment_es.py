@@ -3,12 +3,29 @@
 """Spanish (Español): the garment fitting texts."""
 
 TEXT = {
-    "garment.panel": "Ajuste de prendas (experimental)",
+    "garment.panel": "Ajuste de prendas",
     "garment.panel.setup": "Configuración",
     "garment.panel.fit": "Ajuste",
     "garment.panel.fix": "Corregir",
     "garment.panel.ready": "Listo para el juego",
-    "garment.next.import": "Importa una prenda, o selecciona la tuya y elige Usar prenda seleccionada.",
+    "garment.panel.add": "Añadir al proyecto",
+    "experimental.note": "Experimental: comprueba cada resultado antes de usarlo.",
+    "garment.status.no-garment": "Aún sin prenda",
+    "garment.status.no-body": "Aún sin cuerpo",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "{count} de {total} marcadores",
+    "garment.status.aligned": "Alineada",
+    "garment.status.fitted": "Ajustada",
+    "garment.status.snapped": "Colocado",
+    "garment.status.not-snapped": "Sin colocar",
+    "garment.status.inside": "{count} dentro del cuerpo",
+    "garment.status.blocking": "Problemas por corregir",
+    "garment.status.validated": "Validada",
+    "garment.status.not-validated": "Sin validar",
+    "garment.status.added": "Añadida",
+    "garment.status.adding": "Añadiendo",
+    "garment.status.not-added": "Sin añadir",
+    "garment.next.import": "Importa una prenda, o selecciona la tuya y elige Usar selección.",
     "garment.next.body": "Siguiente: añade el cuerpo freemode en Configuración.",
     "garment.next.markers": (
         "Siguiente: coloca los marcadores con Marcadores automáticos en Ajuste y luego comprueba dónde están."
@@ -151,17 +168,11 @@ TEXT = {
     "garment.heading.markers": "Marcadores",
     "garment.heading.tpose": "Modelo en T-pose",
     "garment.heading.backups": "Copias de seguridad",
-    "garment.heading.push": "Holgura",
     "garment.heading.regions": "Herramientas de región",
     "garment.heading.problems": "Problemas",
-    "garment.heading.check": "Comprobación de ajuste",
     "garment.heading.sculpt": "Corregir a mano",
     "garment.heading.tears": "Desgarros",
-    "garment.heading.prepare": "Preparar",
-    "garment.heading.combine": "Materiales",
-    "garment.heading.lods": "Niveles de detalle",
-    "garment.heading.validate": "Revisiones",
-    "garment.op.use": "Usar prenda seleccionada",
+    "garment.op.use": "Usar selección",
     "garment.op.use.desc": "Trabajar sobre el objeto de malla seleccionado",
     "garment.op.import": "Importar prenda",
     "garment.op.import.desc": (
@@ -246,10 +257,6 @@ TEXT = {
     "garment.body.hosted": "Cuerpo freemode: {gender}, versión {version}",
     "garment.body.object": "Cuerpo: {name}",
     "garment.body.downloading": "Descargando el cuerpo freemode…",
-    "garment.body.subtext": (
-        "El cuerpo viene de gta.clothing para tu cuenta con sesión iniciada y se guarda en la carpeta del "
-        "complemento, así que cada versión se descarga una vez."
-    ),
     "garment.body.cancelled": "Se canceló la descarga del cuerpo.",
     "garment.body.offline": (
         "El acceso en línea de Blender está desactivado y no se descargó ningún cuerpo antes. Permite el acceso en "
@@ -281,8 +288,11 @@ TEXT = {
     "garment.check.none": "Usa Comprobar ajuste para ver a qué distancia del cuerpo queda cada región.",
     "garment.check.measured": "Medido (mm)",
     "garment.check.value": "{p50} ({p10} a {p90})",
+    "garment.check.usual-line": "Habitual: {range}",
     "garment.check.inside": "Dentro del cuerpo: {count} vértices ({share} %)",
-    "garment.advice.shoulders": "Los hombros se separan del cuerpo: Ceñir al cuerpo con Hombros los baja.",
+    "garment.advice.shoulders": (
+        "Los hombros se separan del cuerpo: Ceñir al cuerpo (Herramientas de región) con Hombros los baja."
+    ),
     "garment.sculpt.running": (
         "Arrastra con el pincel Arrastrar para mover la prenda. El cuerpo se muestra como estructura de alambre."
     ),
@@ -499,27 +509,24 @@ TEXT = {
     "error.item-limit": "El proyecto ya tiene tantas prendas como permite la versión gratuita de Durty Cloth Tool.",
     "garment.next.done": (
         "Hecho: la prenda está en tu proyecto de Durty Cloth Tool. Enviar modelo y Guardar modelo en la prenda, en "
-        "Modelo, la actualizan (incluidos en Durty Cloth Tool Ultimate)."
+        "Prenda vinculada, la actualizan (incluidos en Durty Cloth Tool Ultimate)."
     ),
     "garment.next.validate-problems": (
         "Siguiente: corrige lo que Validar muestra en Listo para el juego y luego vuelve a validar."
     ),
     "garment.next.adding": "Añadiendo: Durty Cloth Tool muestra la prenda. Elige Añadir al proyecto o Cancelar allí.",
-    "garment.next.connect": (
-        "Siguiente: conéctate con Durty Cloth Tool (Conectar) para añadir la prenda a un proyecto."
-    ),
-    "garment.next.project": (
-        "Siguiente: abre un proyecto en Durty Cloth Tool y luego añade la prenda en Listo para el juego."
-    ),
+    "garment.next.connect": "Siguiente: conéctate con Durty Cloth Tool para añadir la prenda a un proyecto.",
+    "garment.next.project": "Siguiente: abre un proyecto en Durty Cloth Tool y luego elige Añadir al proyecto.",
     "garment.next.sollumz": "Siguiente: instala Sollumz para añadir la prenda a Durty Cloth Tool.",
     "garment.next.skeleton": (
-        "Siguiente: Usar esqueleto de Durty Cloth Tool en Listo para el juego, o Añadir al proyecto de Durty Cloth "
-        "Tool, que también lo hace."
+        "Siguiente: Usar esqueleto de Durty Cloth Tool en Listo para el juego, o Añadir al proyecto, que también lo "
+        "hace."
     ),
-    "garment.next.add": "Siguiente: Añadir al proyecto de Durty Cloth Tool en Listo para el juego.",
-    "add.heading": "Añadir a Durty Cloth Tool",
+    "garment.next.add-skeleton": (
+        "Siguiente: Añadir al proyecto pone la prenda en el esqueleto de Durty Cloth Tool y en tu proyecto."
+    ),
+    "garment.next.add": "Siguiente: Añadir al proyecto pone la prenda en tu proyecto de Durty Cloth Tool.",
     "add.heading.variations": "Variantes de color",
-    "add.heading.skeleton": "Esqueleto freemode",
     "add.target": "Se añade como {slot}, {gender}. Cambia ambos en Configuración.",
     "add.variation.none": "Aún no hay textura de color",
     "add.variations.subtext": "Variantes: {count} de {limit} como máximo.",
@@ -549,7 +556,7 @@ TEXT = {
         "Obtener de Durty Cloth Tool el esqueleto freemode del género elegido en Configuración y poner la prenda "
         "en él, lista para Sollumz"
     ),
-    "add.op.add": "Añadir al proyecto de Durty Cloth Tool",
+    "add.op.add": "Añadir al proyecto",
     "add.op.add.desc": (
         "Revisar la prenda, exportarla con Sollumz y añadirla como prenda nueva al proyecto abierto en Durty Cloth "
         "Tool. Durty Cloth Tool te pregunta antes"
@@ -620,13 +627,13 @@ TEXT = {
     ),
     "add.withdrawing": "Cancelando la adición…",
     "add.blocked": (
-        "La adición está bloqueada: primero hay que corregir {count} problemas, que aparecen en Listo para el juego."
+        "La adición está bloqueada: primero hay que corregir {count} problemas, que aparecen en Añadir al proyecto."
     ),
     "add.problems": "Corrige esto primero ({count}):",
     "add.findings": "Revisiones de Durty Cloth Tool: {count}",
     "add.added.subtext": (
         "El Drawable Dictionary está vinculado a la prenda nueva: Enviar modelo y Guardar modelo en la prenda, en "
-        "Modelo, la actualizan (incluidos en Durty Cloth Tool Ultimate)."
+        "Prenda vinculada, la actualizan (incluidos en Durty Cloth Tool Ultimate)."
     ),
     "add.invalid": "La adición no se puede enviar: {detail}",
     "add.why.connect": "Conéctate con Durty Cloth Tool para añadir la prenda a un proyecto.",
@@ -777,7 +784,6 @@ TEXT = {
     ),
     "garment.prop.keep-size": "Mantener tamaño",
     "garment.prop.keep-size.desc": "Alinear al cuerpo solo mueve y gira la prenda, sin escalarla al cuerpo",
-    "garment.heading.align": "Alinear al cuerpo",
     "garment.heading.options": "Opciones",
     "garment.op.align": "Alinear al cuerpo",
     "garment.op.align.desc": (
@@ -909,8 +915,6 @@ TEXT = {
     "add.cancelled-local": "Se canceló la adición antes de enviar nada. Ctrl+Z deshace lo que cambió en la prenda.",
     "add.failed-undo": "{problem} Ctrl+Z devuelve la prenda a como estaba antes de la adición.",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.heading.service": "Ajuste en gta.clothing",
-    "garment.heading.weights": "Pesos",
     "garment.op.service-fit": "Ajustar al cuerpo",
     "garment.op.service-fit.desc": (
         "Envía la prenda a gta.clothing, que la pone en la pose del juego, le da los pesos del cuerpo freemode y la "
@@ -1112,7 +1116,8 @@ TEXT = {
         "Las proporciones de la prenda se alejan mucho de las del cuerpo freemode; algunas se limitaron."
     ),
     "fit.warning.shape-strained": (
-        "Algunas zonas se estiraron al posar la prenda. Mostrar problemas en Corregir las encuentra."
+        "Algunas zonas se estiraron al posar la prenda. Mostrar problemas (en Corregir, dentro de Problemas) las "
+        "encuentra."
     ),
     "fit.warning.attachment-fallback": (
         "Las partes sueltas se ponderaron a la parte más cercana del cuerpo. Revísalas en el modo Pintura de pesos."
@@ -1302,7 +1307,6 @@ TEXT = {
         "Se importó {name} ({count} vértices) y se guardaron para los marcadores las articulaciones del avatar "
         "exportado con ella."
     ),
-    "garment.heading.snap": "Anclaje",
     "garment.op.snap": "Colocar en el anclaje",
     "garment.op.snap.desc": (
         "Llevar el accesorio a su anclaje en el cuerpo: un sombrero a la cabeza, unas gafas delante de los ojos, un "
@@ -1332,13 +1336,10 @@ TEXT = {
         "Tool (hecho con tus archivos del juego), y conserva su posición respecto a él. No necesita pesos."
     ),
     "add.anchor.ready": "Cuelga de su anclaje ({anchor}) en {name}.",
-    "add.anchor.missing": "Anclaje: {anchor}. Añadir al proyecto de Durty Cloth Tool cuelga el accesorio de él.",
+    "add.anchor.missing": "Anclaje: {anchor}. Añadir al proyecto cuelga el accesorio de él.",
     "add.why.no-anchor": "El esqueleto de Durty Cloth Tool no tiene un hueso {bone} del que colgar el accesorio.",
-    "add.prop.missing": (
-        "El accesorio aún no cuelga de su anclaje. Añadir al proyecto de Durty Cloth Tool se encarga de ello."
-    ),
+    "add.prop.missing": "El accesorio aún no cuelga de su anclaje. Añadir al proyecto se encarga de ello.",
     "add.why.prop-skeleton": "Los accesorios no van al esqueleto: cuelgan de su anclaje.",
-    "garment.heading.split": "Dos piezas",
     "garment.op.split": "Cortar por la cintura",
     "garment.op.split.desc": (
         "Cortar el vestido por la cintura en una parte superior y una falda: la falda pasa a ser una prenda propia "

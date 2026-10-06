@@ -13,19 +13,25 @@ from typing import Dict
 EN: Dict[str, str] = {
     # ---- the switch in the DCT tab --------------------------------------------------------------------
     "workspace.prop": "Work On",
-    "workspace.prop.desc": "What the DCT tab shows: the clothing tools or the custom ped tools",
-    "workspace.clothing": "Clothing",
-    "workspace.clothing.desc": "The cloth linked in Durty Cloth Tool, its live preview and model, and Garment Fitting",
+    "workspace.prop.desc": (
+        "What the DCT tab shows: the cloth linked in Durty Cloth Tool, Garment Fitting or Custom Ped"
+    ),
+    "workspace.clothing": "Linked Cloth",
+    "workspace.clothing.desc": "The cloth selected in Durty Cloth Tool: its live preview on the ped and its model",
+    "workspace.garment": "Garment Fitting",
+    "workspace.garment.desc": (
+        "Make a garment from your clothing app game-ready and add it to your project as a new cloth (experimental)"
+    ),
     "workspace.ped": "Custom Ped",
     "workspace.ped.desc": "Turn your own character into a custom ped for Durty Cloth Tool",
     # ---- the panel ------------------------------------------------------------------------------------
-    "ped.panel": "Custom Ped (Experimental)",
+    "ped.panel": "Custom Ped",
     "ped.stage-title": "{number}. {title}",
     "ped.section.character": "Character",
     "ped.section.markers": "Markers",
     "ped.section.rig": "Rig",
     "ped.section.check": "Check",
-    "ped.section.send": "Send",
+    "ped.section.send": "Create",
     "ped.status.none": "None yet",
     "ped.status.vertices": "{count} vertices",
     "ped.status.rigging": "Rigging",
@@ -37,13 +43,13 @@ EN: Dict[str, str] = {
     "ped.status.no-problems": "No problems",
     "ped.status.problems": "{count} findings",
     "ped.status.sent": "Created",
-    "ped.status.sending": "Sending",
-    "ped.status.not-sent": "Not sent",
+    "ped.status.sending": "Creating",
+    "ped.status.not-sent": "Not created",
+    "ped.status.markers": "{placed} of {total}",
     "ped.privacy": (
         "Rigging and creating the ped happen in Durty Cloth Tool on this computer, from your own GTA V files. Nothing "
         "of your character goes to gta.clothing."
     ),
-    "ped.heading.more": "More Options",
     # ---- the next step --------------------------------------------------------------------------------
     "ped.next.character": "Select your character's meshes in the 3D view and choose Use Selected.",
     "ped.next.fix": "Next: fix what the checks under Character name.",
@@ -55,7 +61,7 @@ EN: Dict[str, str] = {
     "ped.next.rigging": "Durty Cloth Tool is rigging your character. Blender stays usable meanwhile.",
     "ped.next.approve": "Next: check where Durty Cloth Tool moved the markers (yellow), then Apply Rig.",
     "ped.next.check": "Next: try the test poses and Run Checks under Check.",
-    "ped.next.send": "Next: Create Custom Ped under Send.",
+    "ped.next.send": "Next: name the ped and choose Create Custom Ped.",
     "ped.next.sending": "Waiting for you in Durty Cloth Tool: choose where to create the project there.",
     "ped.next.done": "Done: Durty Cloth Tool created the project {name}. Build it there.",
     "ped.next.done-before": "Done: Durty Cloth Tool created a project from this character. Build it there.",
@@ -566,11 +572,13 @@ EN: Dict[str, str] = {
     "ped.error.rig-disconnected": "The connection to Durty Cloth Tool ended during the rig. Rig again.",
     "ped.error.rig-timeout": "Durty Cloth Tool did not finish the rig in time. Rig again.",
     "ped.error.add-busy": "Durty Cloth Tool is busy with another custom ped or a build. Try again when it has finished.",
-    "ped.error.add-denied": "Cancelled in Durty Cloth Tool. Send the character again when you are ready.",
+    "ped.error.add-denied": "Cancelled in Durty Cloth Tool. Choose Create Custom Ped again when you are ready.",
     "ped.error.model-rejected": "Durty Cloth Tool could not make a ped from the character. Its checks below say why.",
     "ped.error.save-failed": "Durty Cloth Tool could not create the project. Choose another folder and send again.",
-    "ped.error.add-disconnected": "The connection to Durty Cloth Tool ended before it answered. Send the character again.",
-    "ped.error.add-timeout": "Durty Cloth Tool did not answer in time. Send the character again.",
+    "ped.error.add-disconnected": (
+        "The connection to Durty Cloth Tool ended before it answered. Choose Create Custom Ped again."
+    ),
+    "ped.error.add-timeout": "Durty Cloth Tool did not answer in time. Choose Create Custom Ped again.",
     "ped.error.add-unanswered": "Durty Cloth Tool did not confirm the withdrawal. Check its project list.",
     # ---- protocol errors --------------------------------------------------------------------------------
     "error.template-not-found": "This template is not installed. Refresh the list and choose another one.",

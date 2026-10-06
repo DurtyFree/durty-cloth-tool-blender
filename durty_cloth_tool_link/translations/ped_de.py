@@ -4,20 +4,27 @@
 
 TEXT = {
     "workspace.prop": "Arbeiten an",
-    "workspace.prop.desc": "Was der DCT-Tab zeigt: die Kleidungswerkzeuge oder die Werkzeuge für eigene Peds",
-    "workspace.clothing": "Kleidung",
+    "workspace.prop.desc": (
+        "Was der DCT-Tab zeigt: die in Durty Cloth Tool verknüpfte Kleidung, Kleidung anpassen oder Eigener Ped"
+    ),
+    "workspace.clothing": "Verknüpfte Kleidung",
     "workspace.clothing.desc": (
-        "Die in Durty Cloth Tool verknüpfte Kleidung, ihre Live-Vorschau und ihr Modell sowie Kleidung anpassen"
+        "Die in Durty Cloth Tool ausgewählte Kleidung: ihre Live-Vorschau auf dem Ped und ihr Modell"
+    ),
+    "workspace.garment": "Kleidung anpassen",
+    "workspace.garment.desc": (
+        "Mach ein Kleidungsstück aus deinem Kleidungsprogramm spielfertig und füge es deinem Projekt als neue "
+        "Kleidung hinzu (experimentell)"
     ),
     "workspace.ped": "Eigener Ped",
     "workspace.ped.desc": "Mach aus deiner Figur einen eigenen Ped für Durty Cloth Tool",
-    "ped.panel": "Eigener Ped (experimentell)",
+    "ped.panel": "Eigener Ped",
     "ped.stage-title": "{number}. {title}",
     "ped.section.character": "Figur",
     "ped.section.markers": "Marker",
     "ped.section.rig": "Rig",
     "ped.section.check": "Prüfen",
-    "ped.section.send": "Senden",
+    "ped.section.send": "Erstellen",
     "ped.status.none": "Noch keine",
     "ped.status.vertices": "{count} Vertices",
     "ped.status.rigging": "Wird geriggt",
@@ -29,13 +36,13 @@ TEXT = {
     "ped.status.no-problems": "Keine Probleme",
     "ped.status.problems": "{count} Befunde",
     "ped.status.sent": "Erstellt",
-    "ped.status.sending": "Wird gesendet",
-    "ped.status.not-sent": "Nicht gesendet",
+    "ped.status.sending": "Wird erstellt",
+    "ped.status.not-sent": "Nicht erstellt",
+    "ped.status.markers": "{placed} von {total}",
     "ped.privacy": (
         "Das Riggen und das Erstellen des Peds passieren in Durty Cloth Tool auf diesem Computer, aus deinen eigenen "
         "GTA V Dateien. Nichts von deiner Figur geht an gta.clothing."
     ),
-    "ped.heading.more": "Weitere Optionen",
     "ped.next.character": "Wähle die Meshes deiner Figur in der 3D-Ansicht aus und dann Auswahl nutzen.",
     "ped.next.fix": "Weiter: Behebe, was die Prüfungen unter Figur nennen.",
     "ped.next.markers": "Weiter: Setze die Marker unter Marker. Die Klickhilfe zeigt dir jeden Punkt.",
@@ -46,7 +53,7 @@ TEXT = {
     "ped.next.rigging": "Durty Cloth Tool riggt deine Figur. Blender bleibt währenddessen nutzbar.",
     "ped.next.approve": "Weiter: Prüfe, wohin Durty Cloth Tool die Marker verschoben hat (gelb), dann Rig anwenden.",
     "ped.next.check": "Weiter: Probiere die Testposen aus und wähle Prüfungen ausführen unter Prüfen.",
-    "ped.next.send": "Weiter: Eigenen Ped erstellen unter Senden.",
+    "ped.next.send": "Weiter: Gib dem Ped einen Namen und wähle Eigenen Ped erstellen.",
     "ped.next.sending": "Durty Cloth Tool wartet auf dich: Wähle dort, wo das Projekt erstellt wird.",
     "ped.next.done": "Fertig: Durty Cloth Tool hat das Projekt {name} erstellt. Baue es dort.",
     "ped.next.done-before": "Fertig: Durty Cloth Tool hat aus dieser Figur ein Projekt erstellt. Baue es dort.",
@@ -631,7 +638,7 @@ TEXT = {
         "Durty Cloth Tool ist mit einem anderen eigenen Ped oder einem Build beschäftigt. Versuche es erneut, wenn es "
         "fertig ist."
     ),
-    "ped.error.add-denied": "In Durty Cloth Tool abgebrochen. Sende die Figur erneut, wenn du bereit bist.",
+    "ped.error.add-denied": "In Durty Cloth Tool abgebrochen. Wähle Eigenen Ped erstellen erneut, wenn du bereit bist.",
     "ped.error.model-rejected": (
         "Durty Cloth Tool konnte aus der Figur keinen Ped machen. Seine Prüfungen unten zeigen, warum."
     ),
@@ -639,9 +646,10 @@ TEXT = {
         "Durty Cloth Tool konnte das Projekt nicht erstellen. Wähle einen anderen Ordner und sende erneut."
     ),
     "ped.error.add-disconnected": (
-        "Die Verbindung zu Durty Cloth Tool wurde unterbrochen, bevor es geantwortet hat. Sende die Figur erneut."
+        "Die Verbindung zu Durty Cloth Tool wurde unterbrochen, bevor es geantwortet hat. Wähle Eigenen Ped "
+        "erstellen erneut."
     ),
-    "ped.error.add-timeout": "Durty Cloth Tool hat nicht rechtzeitig geantwortet. Sende die Figur erneut.",
+    "ped.error.add-timeout": "Durty Cloth Tool hat nicht rechtzeitig geantwortet. Wähle Eigenen Ped erstellen erneut.",
     "ped.error.add-unanswered": "Durty Cloth Tool hat das Zurückziehen nicht bestätigt. Prüfe seine Projektliste.",
     "error.template-not-found": "Diese Vorlage ist nicht installiert. Aktualisiere die Liste und wähle eine andere.",
     "error.mesh-too-large": "Die Figur hat zu viele Vertices oder Dreiecke. Reduziere zuerst eine Kopie.",

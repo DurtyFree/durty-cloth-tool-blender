@@ -2,13 +2,13 @@
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
 """Custom Ped (Experimental) in the DCT tab: turning your own character into a custom ped, in five stages.
 
-The panel shows when the DCT tab's switch is on Custom Ped (the garment panels then hide). Its first line names the
-next step, and below it each stage is a section that opens when it is the next one and folds to its header (with a
-check mark) once done: Character (the meshes, their checks with a fix each, the part roles), Markers (the click
-guide, Auto Markers, markers from an old rig, mirror), Rig (the template, the rights notice, the rig in Durty Cloth
-Tool with its progress, the refined markers to approve, the report), Check (test poses and the local checks) and Send
-(name, model name and the custom ped project Durty Cloth Tool creates). Only the next step's button is large; rarely
-used settings sit in closed More Options sections. Every change to the character can be undone.
+The panel shows when the DCT tab's Work On is Custom Ped (the other views then hide). Its first line names the next
+step, and below it each stage is a section that opens when it is the next one and folds to its header (with a check
+mark) once done: Character (the meshes, their checks with a fix each, the part roles), Markers (the click guide, Auto
+Markers, markers from an old rig, mirror), Rig (the template, the rights notice, the rig in Durty Cloth Tool with its
+progress, the refined markers to approve, the report), Check (test poses and the local checks) and Create (name, model
+name and the custom ped project Durty Cloth Tool creates). Only the next step's button is large; rarely used settings
+sit in closed Options sections. Every change to the character can be undone.
 """
 
 from __future__ import annotations
@@ -194,7 +194,7 @@ def advance(context: Any) -> None:
 
 def options_section(layout: Any, name: str) -> Optional[Any]:
     header, body = layout.panel(f"dct_link_ped_{name}", default_closed=True)
-    header.label(text=t("ped.heading.more"), icon="PREFERENCES", translate=False)
+    header.label(text=t("garment.heading.options"), icon="PREFERENCES", translate=False)
     return body
 
 
@@ -1362,7 +1362,9 @@ def draw_character(layout: Any, context: Any) -> None:
         guide(layout, context, "ped.character.none")
         step(layout, context, DCTLINK_OT_ped_use_selected.bl_idname, "ped.op.use-selected", "RESTRICT_SELECT_OFF")
         return
-    row = layout.row()
+    # The character's name with Use Selected beside it, or Use Selected under it when the two would be cut.
+    side_by_side = ui.fits_side_by_side(context, (collection.name, t("ped.op.use-selected")))
+    row = layout.row() if side_by_side else layout.column(align=True)
     row.label(text=collection.name, icon="OUTLINER_COLLECTION", translate=False)
     operator(row, DCTLINK_OT_ped_use_selected.bl_idname, "ped.op.use-selected", "RESTRICT_SELECT_OFF")
     found = facts(context, collection)
@@ -1632,7 +1634,7 @@ def stage_status(context: Any, stage: str) -> Tuple[str, bool]:
             return t("ped.status.none"), False
         return t("ped.status.vertices", count=facts(context, collection).vertices), current.checks_ok or current.rigged
     if stage == "markers":
-        return (t("ped.markers.placed", placed=current.markers, total=len(ped.BODY_MARKERS)),
+        return (t("ped.status.markers", placed=current.markers, total=len(ped.BODY_MARKERS)),
                 current.markers == len(ped.BODY_MARKERS) and not current.marker_problems)
     if stage == "rig":
         if current.rigging:
@@ -1675,6 +1677,8 @@ def _draw_main(layout: Any, context: Any) -> None:
         wrapped(layout, context, t("ped.next.done-before"), "FORWARD")
     else:
         wrapped(layout, context, t(key), "FORWARD")
+    if collection is None:
+        subtext(layout, context, "experimental.note", indent=True)
     if RUNTIME.notice is not None:
         layout.separator(factor=GAP_SMALL)
         level, message = RUNTIME.notice
@@ -1684,12 +1688,8 @@ def _draw_main(layout: Any, context: Any) -> None:
         layout.separator(factor=GAP_SMALL)
         header, body = layout.panel_prop(settings_, f"open_{stage}")
         status, done = stage_status(context, stage)
-        row = header.row()
-        row.label(text=t("ped.stage-title", number=number, title=msg(f"ped.section.{stage}")),
-                  icon="CHECKMARK" if done else "NONE", translate=False)
-        right = row.row()
-        right.alignment = "RIGHT"
-        right.label(text=status, translate=False)
+        ui.stage_header(header, context, t("ped.stage-title", number=number, title=msg(f"ped.section.{stage}")),
+                        status, done)
         if body is not None:
             STAGE_DRAW[stage](body, context)
     if collection is not None:

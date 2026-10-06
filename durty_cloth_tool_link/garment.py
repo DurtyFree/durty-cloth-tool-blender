@@ -239,6 +239,8 @@ class FlowState(NamedTuple):
     added: bool = False
     #: A prop: snapped to its anchor (``aligned``) instead of fitted, never weighted, added without the skeleton.
     prop: bool = False
+    #: The gender chosen under Setup (for the stage's status).
+    gender: str = "male"
 
 
 #: The operator each step's hint points at (the panel draws that button as the one to press next).
@@ -257,6 +259,7 @@ STEP_OPERATORS = {
     "garment.next.lods": "dct_link.fit_lods",
     "garment.next.validate": "dct_link.fit_validate",
     "garment.next.skeleton": "dct_link.fit_use_skeleton",
+    "garment.next.add-skeleton": "dct_link.fit_add_to_dct",
     "garment.next.add": "dct_link.fit_add_to_dct",
 }
 
@@ -307,8 +310,84 @@ def next_step(state: FlowState) -> str:
     if not state.sollumz:
         return "garment.next.sollumz"
     if not state.skeleton and not state.prop:
-        return "garment.next.skeleton"
+        return "garment.next.add-skeleton"  # the add puts the weighted garment on the skeleton itself
     return "garment.next.add"
+
+
+#: The panel's stages, in order: each is a section that opens while it holds the next step.
+STAGES = ("setup", "fit", "fix", "ready", "add")
+_STAGE_OF_STEP = {
+    "garment.next.import": "setup", "garment.next.body": "setup",
+    "garment.next.markers": "fit", "garment.next.align": "fit", "garment.next.snap": "fit", "garment.next.fit": "fit",
+    "garment.next.check": "fix", "garment.next.push": "fix", "garment.next.sculpting": "fix",
+    "garment.next.prepare": "ready", "garment.next.combine": "ready", "garment.next.weights": "ready",
+    "garment.next.lods": "ready", "garment.next.validate": "ready", "garment.next.validate-problems": "ready",
+    "garment.next.skeleton": "ready",
+}
+
+
+def stage_of(state: FlowState) -> str:
+    """The stage whose section holds the next step (Use Durty Cloth Tool Skeleton, before the weights, is Game
+    Ready's; everything after Validate is Add to Project's)."""
+    return _STAGE_OF_STEP.get(next_step(state), "add")
+
+
+class StageStatus(NamedTuple):
+    """A stage header's short status: its text key and fields (``None``: no status), the fields that are text keys
+    themselves, and whether the work has moved past the stage (its tick)."""
+
+    key: Optional[str]
+    fields: Dict[str, Any]
+    keys: Dict[str, str]
+    done: bool
+
+
+def stage_status(state: FlowState, stage: str) -> StageStatus:
+    """What a stage's header says. A stage the work has moved past says only what it finished, never what was left
+    out (Prepare Garment clears the fit check, so a done Fix never says "Not checked" beside its tick)."""
+    current = stage_of(state)
+    done = STAGES.index(stage) < STAGES.index(current) or (stage == "add" and state.added)
+
+    def status(key: Optional[str], **fields: Any) -> StageStatus:
+        return StageStatus(key, fields, {}, done)
+
+    if stage == "setup":
+        if not state.garment:
+            return status("garment.status.no-garment")
+        if not state.body:
+            return status("garment.status.no-body")
+        return StageStatus("garment.status.setup", {}, {"type": f"garment.category.{state.category}",
+                                                         "gender": f"gender.{state.gender}"}, done)
+    if stage == "fit":
+        total = len(markers_for(state.category))
+        if state.prop:
+            return status("garment.status.snapped" if state.aligned else None if done else "garment.status.not-snapped")
+        if state.fitted:
+            return status("garment.status.fitted")
+        if state.aligned and total:
+            return status("garment.status.aligned")
+        if total and not done:
+            return status("garment.status.markers", count=min(state.markers, total), total=total)
+        return status(None)
+    if stage == "fix":
+        if state.prop or (done and (not state.checked or state.inside)):
+            return status(None)
+        if not state.checked:
+            return status("ped.status.not-checked")
+        if state.inside:
+            return status("garment.status.inside", count=state.inside)
+        return status("ped.status.no-problems")
+    if stage == "ready":
+        if state.findings == "blocking":
+            return status("garment.status.blocking")
+        if state.validated or state.findings in ("clean", "warnings"):
+            return status("garment.status.validated")
+        return status(None if done else "garment.status.not-validated")
+    if state.added:
+        return status("garment.status.added")
+    if state.adding:
+        return status("garment.status.adding")
+    return status("garment.status.not-added")
 
 
 # --------------------------------------------------------------------------------------------------

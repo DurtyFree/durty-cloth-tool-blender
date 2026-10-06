@@ -5,10 +5,11 @@
 Panels, in the order every Creator Link plugin uses: Durty Cloth Tool (the logo, the connection status with the
 details in a popover, and the Help menu with Help, Community, Copy Diagnostics and About), Get Connected (only while
 setup is incomplete), Linked Cloth (the cloth's picture and details, and its maps to open), Live Preview (with the
-Texture Checks while it runs), Model and Settings. Garment Fitting (:mod:`ui_garment`) sits between Model and
-Settings. A switch under the status chooses what the tab works on: Clothing (Linked Cloth, Live Preview, Model and
-Garment Fitting) or Custom Ped (:mod:`ui_ped`), so the two never show together. Every text comes from :mod:`strings` in Blender's interface
-language; texts drawn here are translated already, so layouts get ``translate=False``.
+Texture Checks while it runs), Model and Settings. Work On, under the status, chooses what the tab shows between them:
+Linked Cloth (Linked Cloth, Live Preview and Model, once Durty Cloth Tool is connected), Garment Fitting
+(:mod:`ui_garment`) or Custom Ped (:mod:`ui_ped`), so unrelated tools never show together. Every text comes from
+:mod:`strings` in Blender's interface language; texts drawn here are translated already, so layouts get
+``translate=False``.
 
 Layout rules (the Creator Link spacing intent, in Blender's own means): one enlarged primary action per panel
 (:data:`PRIMARY_SCALE`); groups are separated by space (:data:`GAP`), never by extra frames; prose wraps to the
@@ -53,12 +54,13 @@ PROSE_LINE_SCALE = 0.85
 PROSE_MEASURE = 70
 # Sizes in interface units (pixels at a scale of 1, measured in Blender 4.5 and 5.2): the panel content's left
 # inset, its right inset including the sidebar's tab column, an icon with its gap, the room a label keeps free at
-# its end, and a button's padding around its icon and text.
+# its end, a button's padding around its icon and text, and a section header's fold arrow with its gap.
 _LEFT = 16
 _RIGHT = 36
 _ICON = 26
 _TEXT_END = 6
 _BUTTON = 30
+_FOLD = 40
 
 #: Failures an operator reports to the user instead of raising.
 EXPECTED_FAILURES = (LinkError, auth.AuthError, tokens.SecretStoreError, ValueError, OSError)
@@ -208,6 +210,23 @@ def fits_side_by_side(context: Any, labels: Iterable[str], width: Optional[float
     return all(measure(label) + _BUTTON * _scale(context) <= each for label in labels)
 
 
+def stage_header(layout: Any, context: Any, title: str, status: str, done: bool) -> None:
+    """A numbered stage's header (Garment Fitting, Custom Ped): its title, with a tick once done, and its short status
+    at the right when both fit; the title is never the one cut short."""
+    row = layout.row()
+    row.label(text=title, icon="CHECKMARK" if done else "NONE", translate=False)
+    if not status:
+        return
+    measure = _measure(context)
+    scale = _scale(context)
+    # The fold arrow with its gap, the gap between the two texts and, once done, the tick (measured in Blender 5.2).
+    room = content_width(context) - (_FOLD + 2 * _TEXT_END + (_ICON if done else 0)) * scale
+    if measure(title) + measure(status) <= room:
+        right = row.row()
+        right.alignment = "RIGHT"
+        right.label(text=status, translate=False)
+
+
 def button_group(layout: Any, context: Any, keys: Iterable[str], width: Optional[float] = None) -> Any:
     """A row for buttons that fit side by side, otherwise a column that stacks them."""
     texts = [t(key) for key in keys]
@@ -291,6 +310,40 @@ def draw_details(layout: Any, context: Any) -> None:
         operator(layout, "dct_link.disconnect", "op.disconnect", "UNLINKED")
     else:
         operator(layout, "dct_link.connect", "op.connect", "LINKED")
+
+
+def draw_workspace(layout: Any, context: Any, settings_: Any) -> None:
+    """Work On: a dropdown (three names never fit side by side in a sidebar), labelled while the label and the
+    longest name fit beside each other."""
+    measure = _measure(context)
+    scale = _scale(context)
+    width = content_width(context)
+    longest = max(measure(t(key)) for key in ("workspace.clothing", "workspace.garment", "workspace.ped"))
+    label = t("workspace.prop")
+    if (measure(label) + _TEXT_END * scale <= MAP_LABEL_FACTOR * width
+            and longest + (_ICON + _BUTTON) * scale <= (1.0 - MAP_LABEL_FACTOR) * width):
+        row = layout.row(align=True)
+        split = row.split(factor=MAP_LABEL_FACTOR, align=True)
+        split.label(text=label, translate=False)
+        split.prop(settings_, "workspace", text="")
+    else:
+        layout.prop(settings_, "workspace", text="")
+
+
+def draw_linked_offline(layout: Any, context: Any) -> None:
+    """Linked Cloth without Durty Cloth Tool: one sentence and Connect, instead of panels of disabled controls. The
+    states the status explains with their own button (disconnected or signed out in Durty Cloth Tool, versions that
+    do not match) and setup (Get Connected) say it already."""
+    ctrl = state.get()
+    if workspace(context) != "CLOTHING" or ctrl.setup_needed or _working_panels_shown(context):
+        return
+    if ctrl.dct_signed_out or ctrl.dct_disconnected or ctrl.incompatible is not None:
+        return
+    layout.separator(factor=GAP)
+    wrapped(layout, context, t("linked.offline"), "UNLINKED")
+    if not ctrl.connecting:
+        layout.separator(factor=GAP_SMALL)
+        primary(layout, "dct_link.connect", "op.connect", "LINKED")
 
 
 # ---- setup --------------------------------------------------------------------------------------------
@@ -848,9 +901,11 @@ class DCTLINK_PG_scene(PropertyGroup):
         description=EN["prop.auto-push.desc"],
         translation_context=CONTEXT,
     )
+    # The stored numbers stay as they were saved: Linked Cloth 0 (it was "Clothing"), Custom Ped 1, Garment Fitting 2.
     workspace: EnumProperty(
         name=EN["workspace.prop"],
-        items=(("CLOTHING", EN["workspace.clothing"], EN["workspace.clothing.desc"], "MOD_CLOTH", 0),
+        items=(("CLOTHING", EN["workspace.clothing"], EN["workspace.clothing.desc"], "LINKED", 0),
+               ("GARMENT", EN["workspace.garment"], EN["workspace.garment.desc"], "MOD_CLOTH", 2),
                ("PED", EN["workspace.ped"], EN["workspace.ped.desc"], "OUTLINER_OB_ARMATURE", 1)),
         default="CLOTHING",
         description=EN["workspace.prop.desc"],
@@ -859,7 +914,7 @@ class DCTLINK_PG_scene(PropertyGroup):
 
 
 def workspace(context: Any) -> str:
-    """What the DCT tab works on: ``CLOTHING`` or ``PED``."""
+    """What the DCT tab works on: ``CLOTHING`` (the linked cloth), ``GARMENT`` (Garment Fitting) or ``PED``."""
     settings_ = getattr(getattr(context, "scene", None), "dct_link", None)
     return getattr(settings_, "workspace", "CLOTHING") if settings_ is not None else "CLOTHING"
 
@@ -1562,7 +1617,8 @@ class DCTLINK_PT_main(_DCTPanel, Panel):
         settings_ = getattr(context.scene, "dct_link", None)
         if settings_ is not None:
             self.layout.separator(factor=GAP_SMALL)
-            self.layout.row(align=True).prop(settings_, "workspace", expand=True)
+            draw_workspace(self.layout, context, settings_)
+            draw_linked_offline(self.layout, context)
 
 
 class DCTLINK_PT_details(Panel):
@@ -1608,10 +1664,13 @@ class DCTLINK_PT_linked(_SubPanel, Panel):
 
 
 def _working_panels_shown(context: Any = None) -> bool:
-    """Linked work (live preview, model) is shown once setup is done, while the tab works on clothing; until then Get
-    Connected has the focus."""
-    return (state.controller is not None and not state.controller.setup_needed
-            and workspace(context or bpy.context) == "CLOTHING")
+    """Live Preview and Model show while the tab works on the linked cloth and Durty Cloth Tool is connected (or a
+    live preview or a pushed model is still running); until then Get Connected, or the line with Connect, has the
+    focus."""
+    ctrl = state.controller
+    if ctrl is None or ctrl.setup_needed or workspace(context or bpy.context) != "CLOTHING":
+        return False
+    return ctrl.ready or ctrl.stream.active or ctrl.model.lease is not None
 
 
 class DCTLINK_PT_live(_SubPanel, Panel):

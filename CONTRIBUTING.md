@@ -34,7 +34,7 @@ Only `durty_cloth_tool_link/` goes into the extension archive. Inside it:
   other languages.
 - `link.py` runs the connection, the sign-in, the live preview and the model pushes. `bundle.py` collects a Sollumz
   export, `pixels.py` converts Blender's pixels.
-- `garment*.py` are the Garment Fitting tools, and `ui_garment.py` their panels.
+- `garment*.py` are the Garment Fitting tools, and `ui_garment.py` their panel.
 - `ped*.py` are Custom Ped: `ped.py` the markers, checks and rig maths, `ped_link.py` its part of the link,
   `ped_host.py` its Blender side, `ped_strings.py` its English texts, and `ui_ped.py` its panel.
 - `host.py`, `state.py`, `ui.py`, `ui_garment.py`, `garment_host.py`, `ui_ped.py`, `ped_host.py`, `preferences.py` and
@@ -96,8 +96,9 @@ states against the fakes and saves a cropped screenshot of the sidebar for each:
 python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --out <folder>
 ```
 
-Add `--expanded` to open every collapsed panel, `--language de_DE` or `--theme light` for variants, `--scenario
-garment` for Garment Fitting and `--scenario ped` for Custom Ped. Blender opens a window and quits by itself.
+Add `--expanded` to open every collapsed panel, `--language de_DE` or `--theme light` for variants, `--text-size 14`
+for what a narrower sidebar cuts off or wraps, `--scenario garment` for Garment Fitting and `--scenario ped` for
+Custom Ped. Blender opens a window and quits by itself.
 
 ### Measuring an avatar
 

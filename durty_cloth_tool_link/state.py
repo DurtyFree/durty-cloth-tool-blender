@@ -101,6 +101,7 @@ class BlenderDocuments:
         if scene is not None:
             scene.dct_link.image = image  # the image the live preview streams
             scene.dct_link.target = document.target
+            scene.dct_link.workspace = "CLOTHING"  # the DCT tab shows it in Linked Cloth
         host.push_undo("Open Texture from Durty Cloth Tool")
         source = host.BlenderImageSource(image, document.target)
         return link.OpenedImage(source, source.width, source.height, source.conversion, image.name, source.warning,
@@ -128,6 +129,7 @@ class BlenderDocuments:
         scene = window.scene if window is not None else current_scene()
         if scene is not None:
             scene.dct_link.auto_push = True  # each change is sent again, as for a model pushed by hand
+            scene.dct_link.workspace = "CLOTHING"  # the DCT tab shows it in Linked Cloth
         host.push_undo("Open Model from Durty Cloth Tool")
         return link.ImportedModel(root.name, lambda: push_model(root), warnings)
 

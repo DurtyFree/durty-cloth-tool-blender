@@ -291,7 +291,7 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     check("Run Checks (armature back) runs", "FINISHED" in bpy.ops.dct_link.ped_run_checks())
     check("Run Checks passes again", collection.get(ph.CHECKED) == 1)
     log = draw_everything(package, state, "custom ped, checked")
-    check("the next step is Send", ("operator", "dct_link.ped_send") in log)
+    check("the next step is Create Custom Ped", ("operator", "dct_link.ped_send") in log)
 
     # Rig again: the applied rig becomes the previous one.
     check("Rig Again runs", "FINISHED" in bpy.ops.dct_link.ped_rig())
@@ -330,7 +330,7 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     pump(addon, lambda: ctrl.peds.rig is not None, what="the third rig")
     check("Apply Rig (third) runs", "FINISHED" in bpy.ops.dct_link.ped_apply_rig())
 
-    # Send.
+    # Create.
     props.ped_name = "Smoke Hero"
     props.model_name = "a_m_y_smoke"
     check("a model name like the game's own peds is refused", refused(bpy.ops.dct_link.ped_send, "game"))
@@ -379,7 +379,7 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     # Undo takes the rig back.
     scene.dct_link.workspace = "CLOTHING"
     log = draw_everything(package, state, "clothing again")
-    check("Clothing hides the Custom Ped panel again", not any(e[0] == "operator" and e[1].startswith("dct_link.ped_")
+    check("Linked Cloth hides the Custom Ped panel again", not any(e[0] == "operator" and e[1].startswith("dct_link.ped_")
                                                                for e in log))
     for obj in list(collection.all_objects) + [old_rig]:
         bpy.data.objects.remove(obj)

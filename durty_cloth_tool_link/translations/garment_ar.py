@@ -3,12 +3,29 @@
 """Arabic (العربية): the garment fitting texts."""
 
 TEXT = {
-    "garment.panel": "ملاءمة الملابس (تجريبي)",
+    "garment.panel": "ملاءمة الملابس",
     "garment.panel.setup": "الإعداد",
     "garment.panel.fit": "الملاءمة",
     "garment.panel.fix": "الإصلاح",
     "garment.panel.ready": "جاهز للعبة",
-    "garment.next.import": "استورد قطعة ملابس، أو حدد قطعتك واختر استخدام قطعة الملابس المحددة.",
+    "garment.panel.add": "إضافة إلى المشروع",
+    "experimental.note": "تجريبي: افحص كل نتيجة قبل استخدامها.",
+    "garment.status.no-garment": "لا توجد قطعة ملابس بعد",
+    "garment.status.no-body": "لا يوجد جسم بعد",
+    "garment.status.setup": "{type} · {gender}",
+    "garment.status.markers": "{count} من {total} علامات",
+    "garment.status.aligned": "تمت المحاذاة",
+    "garment.status.fitted": "تمت الملاءمة",
+    "garment.status.snapped": "تم الوضع",
+    "garment.status.not-snapped": "لم يوضع",
+    "garment.status.inside": "{count} داخل الجسم",
+    "garment.status.blocking": "مشكلات يجب إصلاحها",
+    "garment.status.validated": "تم التحقق",
+    "garment.status.not-validated": "لم يتم التحقق",
+    "garment.status.added": "تمت الإضافة",
+    "garment.status.adding": "جارٍ الإضافة",
+    "garment.status.not-added": "لم تتم الإضافة",
+    "garment.next.import": "استورد قطعة ملابس، أو حدد قطعتك واختر استخدام المحدد.",
     "garment.next.body": "التالي: أضف جسم freemode في لوحة الإعداد.",
     "garment.next.markers": (
         "التالي: ضع العلامات باستخدام علامات تلقائية في لوحة الملاءمة، ثم تحقق من مواضعها."
@@ -139,17 +156,11 @@ TEXT = {
     "garment.heading.markers": "العلامات",
     "garment.heading.tpose": "نموذج بوضعية T",
     "garment.heading.backups": "النسخ الاحتياطية",
-    "garment.heading.push": "المسافة عن الجسم",
     "garment.heading.regions": "أدوات المناطق",
     "garment.heading.problems": "المشكلات",
-    "garment.heading.check": "فحص الملاءمة",
     "garment.heading.sculpt": "الإصلاح يدويًا",
     "garment.heading.tears": "التمزقات",
-    "garment.heading.prepare": "التجهيز",
-    "garment.heading.combine": "المواد",
-    "garment.heading.lods": "مستويات التفاصيل",
-    "garment.heading.validate": "الفحوصات",
-    "garment.op.use": "استخدام قطعة الملابس المحددة",
+    "garment.op.use": "استخدام المحدد",
     "garment.op.use.desc": "العمل على كائن الشبكة المحدد",
     "garment.op.import": "استيراد قطعة ملابس",
     "garment.op.import.desc": (
@@ -226,10 +237,6 @@ TEXT = {
     "garment.body.hosted": "جسم freemode: {gender}، الإصدار {version}",
     "garment.body.object": "الجسم: {name}",
     "garment.body.downloading": "جارٍ تنزيل جسم freemode…",
-    "garment.body.subtext": (
-        "يأتي الجسم من gta.clothing لحسابك الذي سجّلت الدخول به ويُحفظ في مجلد الإضافة، لذا يُنزَّل كل إصدار مرة "
-        "واحدة."
-    ),
     "garment.body.cancelled": "تم إلغاء تنزيل الجسم.",
     "garment.body.offline": (
         "الوصول إلى الإنترنت في Blender متوقف ولم يُنزَّل أي جسم من قبل. اسمح بالوصول إلى الإنترنت، أو استخدم ملف "
@@ -255,9 +262,10 @@ TEXT = {
     "garment.check.none": "شغّل فحص الملاءمة لترى بُعد كل منطقة عن الجسم.",
     "garment.check.measured": "المقيس (mm)",
     "garment.check.value": "{p50} ({p10} إلى {p90})",
+    "garment.check.usual-line": "المعتاد: {range}",
     "garment.check.inside": "داخل الجسم: {count} رأسًا ({share} %)",
     "garment.advice.shoulders": (
-        "الكتفان بعيدان عن الجسم: اختر المنطقة الكتفان ثم استخدم تقريب من الجسم لإنزالهما."
+        "الكتفان بعيدان عن الجسم: في أدوات المناطق اختر المنطقة الكتفان ثم استخدم تقريب من الجسم لإنزالهما."
     ),
     "garment.sculpt.running": "اسحب بفرشاة Grab لتحريك قطعة الملابس. يظهر الجسم كإطار سلكي.",
     "garment.sculpt.subtext": "قبول يحتفظ بالشكل؛ إلغاء يعيد الشكل كما كان قبل الجلسة.",
@@ -450,22 +458,23 @@ TEXT = {
     # ---- adding to Durty Cloth Tool ----
     "error.item-limit": "يحتوي المشروع على أكبر عدد من الملابس يسمح به الإصدار المجاني من Durty Cloth Tool.",
     "garment.next.done": (
-        "تم: قطعة الملابس في مشروع Durty Cloth Tool الخاص بك. يحدّثها إرسال النموذج وحفظ النموذج في قطعة الملابس "
-        "في لوحة النموذج (مضمّن في Durty Cloth Tool Ultimate)."
+        "تم: قطعة الملابس في مشروع Durty Cloth Tool الخاص بك. يحدّثها إرسال النموذج وحفظ النموذج في قطعة الملابس ضمن "
+        "الملابس المرتبطة (مضمّن في Durty Cloth Tool Ultimate)."
     ),
     "garment.next.validate-problems": "التالي: أصلح ما يسرده التحقق في لوحة جاهز للعبة، ثم تحقق مرة أخرى.",
     "garment.next.adding": "جارٍ الإضافة: يعرض Durty Cloth Tool قطعة الملابس. اختر إضافة إلى المشروع أو إلغاء هناك.",
-    "garment.next.connect": "التالي: اتصل بـ Durty Cloth Tool (بدء الاتصال) لإضافة قطعة الملابس إلى مشروع.",
-    "garment.next.project": "التالي: افتح مشروعًا في Durty Cloth Tool، ثم أضف قطعة الملابس في لوحة جاهز للعبة.",
+    "garment.next.connect": "التالي: اتصل بـ Durty Cloth Tool لإضافة قطعة الملابس إلى مشروع.",
+    "garment.next.project": "التالي: افتح مشروعًا في Durty Cloth Tool، ثم اختر إضافة إلى المشروع.",
     "garment.next.sollumz": "التالي: ثبّت Sollumz لإضافة قطعة الملابس إلى Durty Cloth Tool.",
     "garment.next.skeleton": (
-        "التالي: اختر استخدام هيكل Durty Cloth Tool العظمي في لوحة جاهز للعبة، أو إضافة إلى مشروع Durty Cloth "
-        "Tool، التي تفعل ذلك أيضًا."
+        "التالي: اختر استخدام هيكل Durty Cloth Tool العظمي في لوحة جاهز للعبة، أو إضافة إلى المشروع، التي تفعل ذلك "
+        "أيضًا."
     ),
-    "garment.next.add": "التالي: إضافة إلى مشروع Durty Cloth Tool في لوحة جاهز للعبة.",
-    "add.heading": "الإضافة إلى Durty Cloth Tool",
+    "garment.next.add-skeleton": (
+        "التالي: يضع إضافة إلى المشروع قطعة الملابس على هيكل Durty Cloth Tool العظمي وفي مشروعك."
+    ),
+    "garment.next.add": "التالي: يضع إضافة إلى المشروع قطعة الملابس في مشروع Durty Cloth Tool الخاص بك.",
     "add.heading.variations": "التنويعات اللونية",
-    "add.heading.skeleton": "هيكل freemode العظمي",
     "add.target": "تُضاف في الخانة {slot} ({gender}). غيّر كليهما في لوحة الإعداد.",
     "add.variation.none": "لا يوجد نسيج لون بعد",
     "add.variations.subtext": "التنويعات: {count} من {limit} على الأكثر.",
@@ -485,7 +494,7 @@ TEXT = {
         "جلب هيكل freemode العظمي للجنس المحدد في لوحة الإعداد من Durty Cloth Tool ووضع قطعة الملابس عليه، جاهزة "
         "لـ Sollumz"
     ),
-    "add.op.add": "إضافة إلى مشروع Durty Cloth Tool",
+    "add.op.add": "إضافة إلى المشروع",
     "add.op.add.desc": (
         "فحص قطعة الملابس وتصديرها باستخدام Sollumz وإضافتها كقطعة ملابس جديدة إلى المشروع المفتوح في Durty Cloth "
         "Tool. يسألك Durty Cloth Tool أولًا"
@@ -547,12 +556,12 @@ TEXT = {
     "add.waiting": "يعرض Durty Cloth Tool قطعة الملابس. اختر إضافة إلى المشروع أو إلغاء هناك.",
     "add.waiting.subtext": "لا يُضاف شيء حتى تختار إضافة إلى المشروع في Durty Cloth Tool. يسحب إلغاء هنا طلب الإضافة.",
     "add.withdrawing": "جارٍ إلغاء عملية الإضافة…",
-    "add.blocked": "عملية الإضافة محظورة: أصلح أولًا المشكلات المدرجة في لوحة جاهز للعبة ({count}).",
+    "add.blocked": "عملية الإضافة محظورة: أصلح أولًا المشكلات المدرجة في قسم إضافة إلى المشروع ({count}).",
     "add.problems": "أصلح هذه أولًا ({count}):",
     "add.findings": "فحوصات Durty Cloth Tool: {count}",
     "add.added.subtext": (
-        "الـ Drawable Dictionary مرتبط بقطعة الملابس الجديدة: يحدّثه إرسال النموذج وحفظ النموذج في قطعة الملابس في "
-        "لوحة النموذج (مضمّن في Durty Cloth Tool Ultimate)."
+        "الـ Drawable Dictionary مرتبط بقطعة الملابس الجديدة: يحدّثه إرسال النموذج وحفظ النموذج في قطعة الملابس ضمن "
+        "الملابس المرتبطة (مضمّن في Durty Cloth Tool Ultimate)."
     ),
     "add.invalid": "لا يمكن إرسال طلب الإضافة: {detail}",
     "add.why.connect": "اتصل بـ Durty Cloth Tool لإضافة قطعة الملابس إلى مشروع.",
@@ -668,7 +677,6 @@ TEXT = {
     "garment.prop.orient.desc": "تدوير قطعة ملابس مستلقية على ظهرها أو متجهة إلى الخلف لتقف كما يقف الـ ped",
     "garment.prop.keep-size": "الإبقاء على الحجم",
     "garment.prop.keep-size.desc": "تكتفي محاذاة مع الجسم بتحريك قطعة الملابس وتدويرها دون تغيير حجمها ليناسب الجسم",
-    "garment.heading.align": "محاذاة مع الجسم",
     "garment.heading.options": "الخيارات",
     "garment.op.align": "محاذاة مع الجسم",
     "garment.op.align.desc": (
@@ -772,8 +780,6 @@ TEXT = {
     "add.cancelled-local": "أُلغيت الإضافة قبل إرسال أي شيء. يتراجع Ctrl+Z عما غيّرته في قطعة الملابس.",
     "add.failed-undo": "{problem} يعيد Ctrl+Z قطعة الملابس كما كانت قبل الإضافة.",
     # ---- garment fitting on gta.clothing ------------------------------------------------------------------
-    "garment.heading.service": "الملاءمة على gta.clothing",
-    "garment.heading.weights": "الأوزان",
     "garment.op.service-fit": "ملاءمة مع الجسم",
     "garment.op.service-fit.desc": (
         "أرسل قطعة الملابس إلى gta.clothing، فيضعها في وضعية اللعبة ويعطيها أوزان جسم freemode ويخرجها من الجسم. "
@@ -931,7 +937,9 @@ TEXT = {
     ),
     "fit.warning.marker-offset": "بعض العلامات بعيدة عن مفاصل الجسم. تحقق من علامات الكتفين والمرفقين.",
     "fit.warning.proportion-clamped": "نِسب قطعة الملابس بعيدة جدًا عن نِسب جسم freemode؛ حُصر بعضها ضمن النطاق.",
-    "fit.warning.shape-strained": "تمددت بعض المناطق أثناء وضع الوضعية. يجدها إظهار المشكلات في الإصلاح.",
+    "fit.warning.shape-strained": (
+        "تمددت بعض المناطق أثناء وضع الوضعية. يجدها إظهار المشكلات (في الإصلاح، ضمن المشكلات)."
+    ),
     "fit.warning.attachment-fallback": "رُبطت الأجزاء السائبة بأقرب جزء من الجسم. تحقق منها في وضع Weight Paint.",
     "fit.warning.unweighted": "لم تحصل بعض الرؤوس على أوزان؛ تتركها اللعبة خلفها عندما تتحرك الشخصية.",
     "fit.done.fit": "تمت الملاءمة مع الجسم: في وضعية اللعبة، بأوزان لـ{bones} عظمة.",
@@ -1091,7 +1099,6 @@ TEXT = {
         "تحركت قطعة الملابس منذ استيرادها، لذا لم تعد علامات الأفاتار تطابقها. اختر غير معروف، أو حرّك العلامات يدويًا."
     ),
     "garment.done.import-rig": "استُوردت {name} ({count} رأسًا) واحتُفظ بمفاصل الأفاتار المصدَّر معها من أجل العلامات.",
-    "garment.heading.snap": "نقطة التثبيت",
     "garment.op.snap": "الوضع على نقطة التثبيت",
     "garment.op.snap.desc": (
         "نقل الإكسسوار إلى نقطة تثبيته على الجسم: القبعة إلى الرأس، والنظارة أمام العينين، وحلية الأذن إلى الأذنين، "
@@ -1116,11 +1123,10 @@ TEXT = {
         "ملفات لعبتك)، ويحتفظ بموضعه بالنسبة إليها. لا يحتاج إلى أوزان."
     ),
     "add.anchor.ready": "يتدلى من نقطة تثبيته ({anchor}) في {name}.",
-    "add.anchor.missing": "نقطة التثبيت: {anchor}. يعلّق إضافة إلى مشروع Durty Cloth Tool الإكسسوار بها.",
+    "add.anchor.missing": "نقطة التثبيت: {anchor}. يعلّق إضافة إلى المشروع الإكسسوار بها.",
     "add.why.no-anchor": "ليس في هيكل Durty Cloth Tool العظمي عظمة {bone} يُعلَّق بها الإكسسوار.",
-    "add.prop.missing": "الإكسسوار غير معلّق بنقطة تثبيته بعد. يتولى ذلك إضافة إلى مشروع Durty Cloth Tool.",
+    "add.prop.missing": "الإكسسوار غير معلّق بنقطة تثبيته بعد. يتولى ذلك إضافة إلى المشروع.",
     "add.why.prop-skeleton": "لا توضع الإكسسوارات على الهيكل العظمي: إنها تتدلى من نقطة تثبيتها.",
-    "garment.heading.split": "قطعتان",
     "garment.op.split": "التقسيم عند الخصر",
     "garment.op.split.desc": "قصّ الفستان عند خصره إلى قطعة علوية وتنورة: تصبح التنورة قطعة ملابس مستقلة لخانة الساقين",
     "garment.info.split": (

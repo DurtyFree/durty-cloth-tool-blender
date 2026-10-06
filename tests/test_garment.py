@@ -470,11 +470,11 @@ def test_the_next_step_walks_through_the_local_flow():
                      "garment.next.weights",
                      "garment.next.lods", "garment.next.validate",
                      "garment.next.validate-problems", "garment.next.connect", "garment.next.project",
-                     "garment.next.skeleton", "garment.next.add", "garment.next.adding", "garment.next.done"]
+                     "garment.next.add-skeleton", "garment.next.add", "garment.next.adding", "garment.next.done"]
     # Warnings do not hold the add back; without Sollumz there is nothing to export.
     warned = garment.FlowState(garment=True, body=True, markers=11, prepared=True, lods=True, findings="warnings",
                                connected=True, project=True, weighted=True)
-    assert garment.next_step(warned) == "garment.next.skeleton"
+    assert garment.next_step(warned) == "garment.next.add-skeleton"
     assert garment.next_step(warned._replace(sollumz=False)) == "garment.next.sollumz"
     # A T-pose garment is aligned like any other: Align to Body turns its arms to the body.
     tpose = garment.FlowState(garment=True, body=True, markers=11, source_pose="t_pose")
@@ -491,7 +491,52 @@ def test_the_next_step_walks_through_the_local_flow():
     assert garment.next_step(unweighted) == "garment.next.skeleton"
     assert garment.next_step(unweighted._replace(skeleton=True)) == "garment.next.weights"
     assert garment.next_step(prepared._replace(prepared=False, aligned=True, checked=True)) == "garment.next.prepare"
-    assert set(garment.STEP_OPERATORS) <= set(steps) | {"garment.next.prepare", "garment.next.snap"}
+    assert set(garment.STEP_OPERATORS) <= set(steps) | {"garment.next.prepare", "garment.next.snap",
+                                                        "garment.next.skeleton"}
+
+
+def test_the_open_stage_is_the_one_that_holds_the_next_step():
+    """The panel opens the stage of the next step and folds the others: a step mapped to the wrong stage would put
+    its large button into a closed section, and a stage that went back would fold the work in progress."""
+    state = garment.FlowState()
+    stages = []
+    for change in ({}, {"garment": True}, {"body": True}, {"markers": 11}, {"aligned": True}, {"fitted": True},
+                   {"checked": True, "inside": 4}, {"inside": 0}, {"prepared": True, "materials": 3},
+                   {"materials": 1}, {"connected": True}, {"skeleton": True}, {"weighted": True}, {"lods": True},
+                   {"validated": True, "findings": "clean"}, {"project": True, "skeleton": False},
+                   {"skeleton": True}, {"adding": True}, {"adding": False, "added": True}):
+        state = state._replace(**change)
+        stages.append(garment.stage_of(state))
+    assert stages == ["setup", "setup", "fit", "fit", "fit", "fix", "fix", "ready", "ready", "ready", "ready",
+                      "ready", "ready", "ready", "add", "add", "add", "add", "add"]
+    # Use Durty Cloth Tool Skeleton is part of Game Ready before the weights; after them the add does it.
+    assert garment.stage_of(garment.FlowState(garment=True, body=True, markers=11, prepared=True,
+                                              connected=True)) == "ready"
+    assert garment.stage_of(state._replace(sculpting=True)) == "fix"
+    assert set(garment.STAGES) == set(stages)
+    # Every step's button lives in its stage's section: the large button is never in a folded one.
+    assert garment.STEP_OPERATORS["garment.next.add-skeleton"] == garment.STEP_OPERATORS["garment.next.add"]
+
+
+def test_a_finished_stage_never_says_what_was_left_out():
+    """A ticked stage beside "Not checked" or "3 of 11 markers" contradicts itself: Prepare Garment clears the fit
+    check, so every garment that reaches Game Ready would show it under Fix."""
+    prepared = garment.FlowState(garment=True, body=True, markers=11, aligned=True, fitted=True, prepared=True,
+                                 checked=False, gender="female")
+    fix = garment.stage_status(prepared, "fix")
+    assert fix.done and fix.key is None
+    assert garment.stage_status(prepared._replace(checked=True), "fix").key == "ped.status.no-problems"
+    fit = garment.stage_status(prepared._replace(markers=3, aligned=False, fitted=False), "fit")
+    assert fit.done and fit.key is None
+    setup = garment.stage_status(prepared, "setup")
+    assert setup.done and setup.keys == {"type": "garment.category.tshirt", "gender": "gender.female"}
+    # The stage in progress says what is still open.
+    checking = garment.FlowState(garment=True, body=True, markers=11, aligned=True, fitted=True)
+    assert garment.stage_status(checking, "fix") == garment.StageStatus("ped.status.not-checked", {}, {}, False)
+    assert garment.stage_status(checking._replace(markers=3, aligned=False, fitted=False), "fit").fields == {
+        "count": 3, "total": 11}
+    added = garment.stage_status(checking._replace(added=True), "add")
+    assert added.done and added.key == "garment.status.added"
 
 
 def test_a_prop_is_snapped_and_added_without_weights_or_skeleton():

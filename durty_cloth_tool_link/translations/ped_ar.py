@@ -4,18 +4,24 @@
 
 TEXT = {
     "workspace.prop": "العمل على",
-    "workspace.prop.desc": "ما تعرضه علامة التبويب DCT: أدوات الملابس أو أدوات الـ ped المخصص",
-    "workspace.clothing": "الملابس",
-    "workspace.clothing.desc": "قطعة الملابس المرتبطة في Durty Cloth Tool ومعاينتها المباشرة ونموذجها، وملاءمة الملابس",
+    "workspace.prop.desc": (
+        "ما تعرضه علامة التبويب DCT: قطعة الملابس المرتبطة في Durty Cloth Tool، أو ملاءمة الملابس، أو الـ ped المخصص"
+    ),
+    "workspace.clothing": "الملابس المرتبطة",
+    "workspace.clothing.desc": "قطعة الملابس المحددة في Durty Cloth Tool: معاينتها المباشرة على الـ ped ونموذجها",
+    "workspace.garment": "ملاءمة الملابس",
+    "workspace.garment.desc": (
+        "جهّز قطعة ملابس من تطبيق الملابس لديك للعبة وأضفها إلى مشروعك كقطعة ملابس جديدة (تجريبي)"
+    ),
     "workspace.ped": "ped مخصص",
     "workspace.ped.desc": "تحويل شخصيتك الخاصة إلى ped مخصص لـ Durty Cloth Tool",
-    "ped.panel": "ped مخصص (تجريبي)",
+    "ped.panel": "ped مخصص",
     "ped.stage-title": "{number}. {title}",
     "ped.section.character": "الشخصية",
     "ped.section.markers": "العلامات",
     "ped.section.rig": "التجهيز بالعظام",
     "ped.section.check": "الفحص",
-    "ped.section.send": "الإرسال",
+    "ped.section.send": "الإنشاء",
     "ped.status.none": "لا شيء بعد",
     "ped.status.vertices": "الرؤوس: {count}",
     "ped.status.rigging": "جارٍ التجهيز بالعظام",
@@ -27,13 +33,13 @@ TEXT = {
     "ped.status.no-problems": "لا مشكلات",
     "ped.status.problems": "الملاحظات: {count}",
     "ped.status.sent": "تم الإنشاء",
-    "ped.status.sending": "جارٍ الإرسال",
-    "ped.status.not-sent": "لم يُرسل",
+    "ped.status.sending": "جارٍ الإنشاء",
+    "ped.status.not-sent": "لم يُنشأ",
+    "ped.status.markers": "{placed} من {total}",
     "ped.privacy": (
         "يجري التجهيز بالعظام وإنشاء الـ ped في Durty Cloth Tool على هذا الحاسوب، من ملفات GTA V الخاصة بك. لا يذهب أي "
         "شيء من شخصيتك إلى gta.clothing."
     ),
-    "ped.heading.more": "مزيد من الخيارات",
     "ped.next.character": "حدد شبكات شخصيتك في العرض ثلاثي الأبعاد واختر استخدام المحدد.",
     "ped.next.fix": "التالي: أصلح ما تذكره الفحوصات في قسم الشخصية.",
     "ped.next.markers": "التالي: ضع العلامات في قسم العلامات. يُظهر دليل النقر كل نقطة.",
@@ -46,7 +52,7 @@ TEXT = {
         "التالي: تحقق من المواضع التي نقل إليها Durty Cloth Tool العلامات (بالأصفر)، ثم اختر تطبيق التجهيز العظمي."
     ),
     "ped.next.check": "التالي: جرّب وضعيات الاختبار واختر تشغيل الفحوصات في قسم الفحص.",
-    "ped.next.send": "التالي: إنشاء ped مخصص في قسم الإرسال.",
+    "ped.next.send": "التالي: سمِّ الـ ped واختر إنشاء ped مخصص.",
     "ped.next.sending": "بانتظارك في Durty Cloth Tool: اختر هناك مكان إنشاء المشروع.",
     "ped.next.done": "تم: أنشأ Durty Cloth Tool المشروع {name}. ابنِه هناك.",
     "ped.next.done-before": "تم: أنشأ Durty Cloth Tool مشروعًا من هذه الشخصية. ابنِه هناك.",
@@ -544,11 +550,11 @@ TEXT = {
     "ped.error.rig-disconnected": "انقطع الاتصال بـ Durty Cloth Tool أثناء التجهيز بالعظام. أعد التجهيز بالعظام.",
     "ped.error.rig-timeout": "لم ينهِ Durty Cloth Tool التجهيز بالعظام في الوقت المناسب. أعد التجهيز بالعظام.",
     "ped.error.add-busy": "Durty Cloth Tool مشغول بـ ped مخصص آخر أو بعملية بناء. حاول مرة أخرى عندما ينتهي.",
-    "ped.error.add-denied": "أُلغي في Durty Cloth Tool. أرسل الشخصية مرة أخرى عندما تكون جاهزًا.",
+    "ped.error.add-denied": "أُلغي في Durty Cloth Tool. اختر إنشاء ped مخصص مرة أخرى عندما تكون جاهزًا.",
     "ped.error.model-rejected": "تعذّر على Durty Cloth Tool صنع ped من الشخصية. توضح فحوصاته أدناه السبب.",
     "ped.error.save-failed": "تعذّر على Durty Cloth Tool إنشاء المشروع. اختر مجلدًا آخر وأرسل مرة أخرى.",
-    "ped.error.add-disconnected": "انقطع الاتصال بـ Durty Cloth Tool قبل أن يرد. أرسل الشخصية مرة أخرى.",
-    "ped.error.add-timeout": "لم يرد Durty Cloth Tool في الوقت المناسب. أرسل الشخصية مرة أخرى.",
+    "ped.error.add-disconnected": "انقطع الاتصال بـ Durty Cloth Tool قبل أن يرد. اختر إنشاء ped مخصص مرة أخرى.",
+    "ped.error.add-timeout": "لم يرد Durty Cloth Tool في الوقت المناسب. اختر إنشاء ped مخصص مرة أخرى.",
     "ped.error.add-unanswered": "لم يؤكد Durty Cloth Tool السحب. تحقق من قائمة مشاريعه.",
     "error.template-not-found": "هذا القالب غير مثبّت. حدّث القائمة واختر قالبًا آخر.",
     "error.mesh-too-large": (

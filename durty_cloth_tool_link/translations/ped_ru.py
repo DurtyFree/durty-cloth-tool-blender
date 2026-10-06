@@ -5,21 +5,26 @@
 TEXT = {
     # ---- the switch in the DCT tab --------------------------------------------------------------------
     "workspace.prop": "Режим работы",
-    "workspace.prop.desc": "Что показывает вкладка DCT: инструменты для одежды или для пользовательского ped",
-    "workspace.clothing": "Одежда",
-    "workspace.clothing.desc": (
-        "Одежда, связанная в Durty Cloth Tool, её живой предпросмотр и модель, а также Подгонка одежды"
+    "workspace.prop.desc": (
+        "Что показывает вкладка DCT: одежду, связанную в Durty Cloth Tool, Подгонку одежды или Пользовательский ped"
+    ),
+    "workspace.clothing": "Связанная одежда",
+    "workspace.clothing.desc": "Одежда, выбранная в Durty Cloth Tool: её живой предпросмотр на ped и её модель",
+    "workspace.garment": "Подгонка одежды",
+    "workspace.garment.desc": (
+        "Подготовить одежду из вашей программы для одежды к игре и добавить её в проект как новую одежду "
+        "(экспериментально)"
     ),
     "workspace.ped": "Пользовательский ped",
     "workspace.ped.desc": "Превратить своего персонажа в пользовательский ped для Durty Cloth Tool",
     # ---- the panel ------------------------------------------------------------------------------------
-    "ped.panel": "Пользовательский ped (экспериментально)",
+    "ped.panel": "Пользовательский ped",
     "ped.stage-title": "{number}. {title}",
     "ped.section.character": "Персонаж",
     "ped.section.markers": "Маркеры",
     "ped.section.rig": "Риг",
     "ped.section.check": "Проверка",
-    "ped.section.send": "Отправка",
+    "ped.section.send": "Создание",
     "ped.status.none": "Пока нет",
     "ped.status.vertices": "Вершин: {count}",
     "ped.status.rigging": "Риггинг",
@@ -31,13 +36,13 @@ TEXT = {
     "ped.status.no-problems": "Проблем нет",
     "ped.status.problems": "Замечаний: {count}",
     "ped.status.sent": "Создано",
-    "ped.status.sending": "Отправка",
-    "ped.status.not-sent": "Не отправлено",
+    "ped.status.sending": "Создаётся",
+    "ped.status.not-sent": "Не создано",
+    "ped.status.markers": "{placed} из {total}",
     "ped.privacy": (
         "Риг и создание ped выполняются в Durty Cloth Tool на этом компьютере, из ваших собственных файлов GTA V. "
         "Ничего из вашего персонажа не уходит на gta.clothing."
     ),
-    "ped.heading.more": "Дополнительные параметры",
     # ---- the next step --------------------------------------------------------------------------------
     "ped.next.character": "Выделите меши персонажа в 3D-виде и выберите Использовать выделенное.",
     "ped.next.fix": "Далее: исправьте то, что указывают проверки в разделе Персонаж.",
@@ -51,7 +56,7 @@ TEXT = {
         "Далее: проверьте, куда Durty Cloth Tool передвинул маркеры (жёлтые), затем выберите Применить риг."
     ),
     "ped.next.check": "Далее: попробуйте тестовые позы и выберите Запустить проверки в разделе Проверка.",
-    "ped.next.send": "Далее: выберите Создать пользовательский ped в разделе Отправка.",
+    "ped.next.send": "Далее: дайте ped имя и выберите Создать пользовательский ped.",
     "ped.next.sending": "Ждёт вас в Durty Cloth Tool: выберите там, где создать проект.",
     "ped.next.done": "Готово: Durty Cloth Tool создал проект {name}. Соберите его там.",
     "ped.next.done-before": "Готово: Durty Cloth Tool создал проект из этого персонажа. Соберите его там.",
@@ -597,15 +602,17 @@ TEXT = {
     "ped.error.add-busy": (
         "Durty Cloth Tool занят другим пользовательским ped или сборкой. Попробуйте снова, когда он закончит."
     ),
-    "ped.error.add-denied": "Отменено в Durty Cloth Tool. Отправьте персонажа снова, когда будете готовы.",
+    "ped.error.add-denied": (
+        "Отменено в Durty Cloth Tool. Когда будете готовы, снова выберите Создать пользовательский ped."
+    ),
     "ped.error.model-rejected": (
         "Durty Cloth Tool не смог сделать ped из персонажа. Его проверки ниже объясняют почему."
     ),
     "ped.error.save-failed": "Durty Cloth Tool не смог создать проект. Выберите другую папку и отправьте снова.",
     "ped.error.add-disconnected": (
-        "Связь с Durty Cloth Tool потеряна до того, как он ответил. Отправьте персонажа снова."
+        "Связь с Durty Cloth Tool потеряна до того, как он ответил. Снова выберите Создать пользовательский ped."
     ),
-    "ped.error.add-timeout": "Durty Cloth Tool не ответил вовремя. Отправьте персонажа снова.",
+    "ped.error.add-timeout": "Durty Cloth Tool не ответил вовремя. Снова выберите Создать пользовательский ped.",
     "ped.error.add-unanswered": "Durty Cloth Tool не подтвердил отзыв. Проверьте его список проектов.",
     # ---- protocol errors --------------------------------------------------------------------------------
     "error.template-not-found": "Этот шаблон не установлен. Обновите список и выберите другой.",
