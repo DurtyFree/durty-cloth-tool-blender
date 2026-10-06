@@ -274,6 +274,7 @@ TEXT = {
     "garment.check.value": "{p50} ({p10} से {p90})",
     "garment.check.usual-line": "सामान्य: {range}",
     "garment.check.inside": "बॉडी के अंदर: {count} वर्टेक्स ({share} %)",
+    "garment.check.inside.one": "बॉडी के अंदर: {count} वर्टेक्स ({share} %)",
     "garment.advice.shoulders": (
         "कंधे बॉडी से उठे हुए हैं: क्षेत्र टूल में क्षेत्र में कंधे चुनकर बॉडी से सटाएँ चलाएँ, इससे वे नीचे आ जाएँगे।"
     ),
@@ -284,18 +285,25 @@ TEXT = {
     "garment.pose.legs-forward": "टाँगें आगे",
     "garment.pose.twist": "घुमाव",
     "garment.tears.pose": "{pose}: सिलाई के {count} बिंदु खुलते हैं, {gap} mm तक",
+    "garment.tears.pose.one": "{pose}: सिलाई का {count} बिंदु खुलता है, {gap} mm तक",
     "garment.tears.pose-clean": "{pose}: कोई सिलाई नहीं खुलती",
     "garment.validate.clean": "CLEAN: ठीक करने को कुछ नहीं।",
     "garment.finding.non-finite": "{count} बिंदुओं के कोऑर्डिनेट खराब हैं।",
+    "garment.finding.non-finite.one": "{count} बिंदु के कोऑर्डिनेट खराब हैं।",
     "garment.finding.no-uv": "कपड़े में कोई UV मैप नहीं है, इसलिए वह टेक्सचर नहीं दिखा सकता।",
     "garment.finding.uv-outside": "{count} UV बिंदु 0 से 1 वाले वर्ग के बाहर हैं; गेम वहाँ टेक्सचर दोहराता है।",
+    "garment.finding.uv-outside.one": "{count} UV बिंदु 0 से 1 वाले वर्ग के बाहर है; गेम वहाँ टेक्सचर दोहराता है।",
     "garment.finding.uv-area": "UV लेआउट टेक्सचर का केवल {area} % इस्तेमाल करता है।",
     "garment.finding.no-weights": "अभी रिग नहीं हुआ: कपड़े को फ़्रीमोड स्केलेटन के बोन पर वेट करें।",
     "garment.finding.unweighted": (
         "{count} वर्टेक्स पर कोई वेट नहीं है; ped के हिलने पर गेम उन्हें पीछे छोड़ देता है।"
     ),
+    "garment.finding.unweighted.one": "{count} वर्टेक्स पर कोई वेट नहीं है; ped के हिलने पर गेम उसे पीछे छोड़ देता है।",
     "garment.finding.influences": (
         "{count} वर्टेक्स {limit} से ज़्यादा बोन से हिलते हैं; गेम केवल {limit} इस्तेमाल करता है।"
+    ),
+    "garment.finding.influences.one": (
+        "{count} वर्टेक्स {limit} से ज़्यादा बोन से हिलता है; गेम केवल {limit} इस्तेमाल करता है।"
     ),
     "garment.finding.colour-missing": "Color 1 नहीं है। कपड़ा तैयार करें चलाने पर यह जुड़ जाता है।",
     "garment.finding.colour-format": (
@@ -352,6 +360,7 @@ TEXT = {
     "garment.done.body": "फ़्रीमोड बॉडी जोड़ी गई ({gender}, संस्करण {version})।",
     "garment.done.body-file": "{name} को बॉडी के रूप में जोड़ा गया।",
     "garment.done.markers": "{count} मार्कर लगाए गए। फ़िटिंग से पहले जो सही जगह पर न हों, उन्हें खिसकाएँ।",
+    "garment.done.markers.one": "{count} मार्कर लगाया गया। फ़िटिंग से पहले अगर वह सही जगह पर न हो, तो उसे खिसकाएँ।",
     "garment.done.mirror": "बाएँ मार्कर दाईं तरफ़ मिरर किए गए।",
     "garment.done.preset-saved": "पोज़ प्रीसेट {name} सेव किया गया।",
     "garment.done.preset-loaded": "पोज़ प्रीसेट {name} लोड किया गया।",
@@ -365,7 +374,8 @@ TEXT = {
         "{region} के {moved} वर्टेक्स स्मूद किए गए (तुलना के लिए फ़िटिंग से पहले का आकार मौजूद नहीं है)।"
     ),
     "garment.done.problems": "अंदर: {inside}, बहुत पास: {close}, खिंचे हुए: {stretched}, उठे हुए: {floating}।",
-    "garment.done.check": "फ़िट जाँच पूरी हुई। बॉडी के अंदर: {inside} वर्टेक्स।",
+    "garment.done.check": "फ़िट जाँच पूरी हुई। बॉडी के अंदर: {count} वर्टेक्स।",
+    "garment.done.check.one": "फ़िट जाँच पूरी हुई। बॉडी के अंदर: {count} वर्टेक्स।",
     "garment.done.sculpt-start": "स्कल्प्ट सेशन शुरू हुआ।",
     "garment.done.accept": (
         "स्कल्प्ट किया गया आकार रखा गया: {moved} वर्टेक्स खिसकाए गए। बॉडी के अंदर: पहले {before}, अब {after}।"
@@ -373,6 +383,9 @@ TEXT = {
     "garment.done.cancel-sculpt": "स्कल्प्टिंग रद्द की गई: कपड़ा सेशन से पहले वाले आकार में वापस है।",
     "garment.done.tears": (
         "किसी टेस्ट पोज़ में सिलाई के {count} वर्टेक्स खुल जाते हैं। वे DCT Tears नाम के vertex group में हैं।"
+    ),
+    "garment.done.tears.one": (
+        "किसी टेस्ट पोज़ में सिलाई का {count} वर्टेक्स खुल जाता है। वह DCT Tears नाम के vertex group में है।"
     ),
     "garment.done.no-tears": "टेस्ट पोज़ में कोई सिलाई नहीं खुलती।",
     "garment.done.tears-welded": (
@@ -574,6 +587,7 @@ TEXT = {
     "add.fetching": "Durty Cloth Tool से {gender} फ़्रीमोड स्केलेटन लिया जा रहा है…",
     "add.progress.skeleton": "Durty Cloth Tool से फ़्रीमोड स्केलेटन लिया जा रहा है…",
     "add.sent": "{name} {count} रंग वैरिएशन के साथ भेजा गया। Durty Cloth Tool में प्रोजेक्ट में जोड़ें चुनें।",
+    "add.sent.one": "{name} {count} रंग वैरिएशन के साथ भेजा गया। Durty Cloth Tool में प्रोजेक्ट में जोड़ें चुनें।",
     "add.waiting": "Durty Cloth Tool कपड़ा दिखा रहा है। वहाँ प्रोजेक्ट में जोड़ें या रद्द करें चुनें।",
     "add.waiting.subtext": (
         "जब तक आप Durty Cloth Tool में प्रोजेक्ट में जोड़ें न चुनें, कुछ नहीं जोड़ा जाता। यहाँ रद्द करें जोड़ने का "
@@ -581,6 +595,7 @@ TEXT = {
     ),
     "add.withdrawing": "जोड़ना रद्द हो रहा है…",
     "add.blocked": "जोड़ना रुका हुआ है: पहले {count} समस्याएँ ठीक करें, जो प्रोजेक्ट में जोड़ें सेक्शन में दी गई हैं।",
+    "add.blocked.one": "जोड़ना रुका हुआ है: पहले {count} समस्या ठीक करें, जो प्रोजेक्ट में जोड़ें सेक्शन में दी गई है।",
     "add.problems": "पहले इन्हें ठीक करें ({count}):",
     "add.findings": "Durty Cloth Tool की जाँच: {count}",
     "add.added.subtext": (
@@ -602,6 +617,10 @@ TEXT = {
     "add.why.unknown-groups": (
         "{count} vertex group फ़्रीमोड स्केलेटन के बोन नहीं हैं: {names}। उनका नाम बदलें या उन्हें हटाएँ; गेम "
         "उन्हें रूट के साथ हिलाएगा।"
+    ),
+    "add.why.unknown-groups.one": (
+        "{count} vertex group फ़्रीमोड स्केलेटन का बोन नहीं है: {names}। उसका नाम बदलें या उसे हटाएँ; गेम उसे रूट के "
+        "साथ हिलाएगा।"
     ),
     "add.why.name-empty": "कपड़े को एक नाम दें।",
     "add.why.name-invalid": "कपड़े के नाम में अधिकतम {limit} अक्षर हो सकते हैं और कोई कंट्रोल कैरेक्टर नहीं।",
@@ -771,6 +790,7 @@ TEXT = {
     "garment.done.import-avatar": "{name} इम्पोर्ट किया गया ({count} वर्टेक्स), साथ आए अवतार के बिना।",
     "garment.done.back": "पिछले चरण से पहले का आकार वापस लाया गया।",
     "garment.done.remove-backups": "{count} बैकअप हटाए गए।",
+    "garment.done.remove-backups.one": "{count} बैकअप हटाया गया।",
     "garment.done.push-deep": (
         "{moved} वर्टेक्स खिसकाए गए। बॉडी के अंदर: पहले {before}, अब {after}। {deep} खिसकाने के लिए बहुत गहरे हैं (कोई "
         "आस्तीन बॉडी के आर-पार?): उन्हें हाथ से ठीक करें।"
@@ -959,7 +979,9 @@ TEXT = {
     "fit.error.cancelled": "फ़िट रद्द कर दिया गया।",
     "fit.error.other": "gta.clothing ने फ़िट मना कर दिया ({code})।",
     "fit.wait.minutes": "लगभग {count} मिनट में",
+    "fit.wait.minutes.one": "लगभग {count} मिनट में",
     "fit.wait.hours": "लगभग {count} घंटे में",
+    "fit.wait.hours.one": "लगभग {count} घंटे में",
     "fit.wait.later": "कल",
     "fit.refunded": "यह फ़िट आज में नहीं गिना जाता।",
     "fit.counted": "यह फ़िट आज में गिना जाता है।",
@@ -1024,6 +1046,7 @@ TEXT = {
     "fit.done.weights": "वेट ट्रांसफ़र हो गए: {bones} हड्डियाँ।",
     "fit.done.not-on-body": "कपड़ा बॉडी पर नहीं है, इसलिए कुछ नहीं बदला। पहले उसे बॉडी से संरेखित करें।",
     "fit.done.unweighted": "{count} वर्टेक्स को वेट नहीं मिले।",
+    "fit.done.unweighted.one": "{count} वर्टेक्स को वेट नहीं मिले।",
     "fit.changed": "फ़िट होने के दौरान कपड़ा बदल गया, इसलिए नतीजा लागू नहीं किया गया। फिर से फ़िट करें।",
     "garment.next.fit": (
         "अगला चरण: फ़िट पैनल में बॉडी पर फ़िट करें, या सुधार में फ़िट जाँच चलाएँ और कपड़े को हाथ से फ़िट करें।"
@@ -1052,9 +1075,19 @@ TEXT = {
         "दोनों ओर एक जैसे वेट देता है; अगर गेम में दरार दिखे, तो अपने कपड़ों वाले ऐप में उन सीम को सिलकर फिर से "
         "एक्सपोर्ट करें, या उन्हें हाथ से जोड़ें।"
     ),
+    "garment.done.prepare-open.one": (
+        "तैयार हो गया, लेकिन {count} सीम वर्टेक्स को पास वाले पैनल पर कोई जोड़ीदार नहीं मिला ({welded} जुड़े): वहाँ "
+        "पैनल पूरी तरह नहीं मिलते। वह चुना हुआ है: उसे देखने के लिए Tab दबाएँ। बॉडी पर फ़िट करें फिर भी सीम के दोनों "
+        "ओर एक जैसे वेट देता है; अगर गेम में दरार दिखे, तो अपने कपड़ों वाले ऐप में उस सीम को सिलकर फिर से एक्सपोर्ट "
+        "करें, या उसे हाथ से जोड़ें।"
+    ),
     "garment.done.combine-missing": (
         "मिला दिया गया, लेकिन {count} टेक्सचर नहीं मिले और उनके पिक्सेल के बिना बेक हुए: {names}। इमेज फ़ाइलें वहाँ "
         "रखें जहाँ मटीरियल उन्हें ढूँढते हैं (या उन्हें पैक करें), फिर दोबारा मिलाएँ।"
+    ),
+    "garment.done.combine-missing.one": (
+        "मिला दिया गया, लेकिन {count} टेक्सचर नहीं मिला और उसके पिक्सेल के बिना बेक हुआ: {names}। इमेज फ़ाइल वहाँ रखें "
+        "जहाँ मटीरियल उसे ढूँढता है (या उसे पैक करें), फिर दोबारा मिलाएँ।"
     ),
     "garment.done.step-cancelled": "{step} रद्द किया गया; कपड़ा पहले जैसा है।",
     "garment.step.status": "{step}: {stage} ({total} में से {done})। Esc इस चरण के अंत में रद्द करता है।",
@@ -1231,6 +1264,7 @@ TEXT = {
         "स्कर्ट या कोट के पल्लों के वेट बीच से दोनों जाँघों में बाँटें, ताकि टाँगों के बीच का कपड़ा न बँटे"
     ),
     "garment.done.bridge": "{count} वर्टेक्स के जाँघ के वेट दोनों टाँगों के बीच जोड़े।",
+    "garment.done.bridge.one": "{count} वर्टेक्स के जाँघ के वेट दोनों टाँगों के बीच जोड़े।",
     "garment.why.no-bridge": "सिर्फ़ स्कर्ट, ड्रेस और लंबे कोट ही टाँगों के बीच जोड़े जाते हैं।",
     "garment.why.no-leg-weights": (
         "कपड़े में अभी जोड़ने के लिए जाँघ के वेट नहीं हैं। पहले इसे बॉडी पर फ़िट करें या वेट ट्रांसफ़र करें।"

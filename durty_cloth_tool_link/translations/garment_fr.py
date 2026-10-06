@@ -296,6 +296,7 @@ TEXT = {
     "garment.check.value": "{p50} ({p10} à {p90})",
     "garment.check.usual-line": "Habituel : {range}",
     "garment.check.inside": "Dans le corps : {count} sommets ({share} %)",
+    "garment.check.inside.one": "Dans le corps : {count} sommet ({share} %)",
     "garment.advice.shoulders": (
         "Les épaules sont décollées du corps : Plaquer au corps (Outils de zone) avec Épaules les rabaisse."
     ),
@@ -308,13 +309,16 @@ TEXT = {
     "garment.pose.legs-forward": "Jambes en avant",
     "garment.pose.twist": "Torsion",
     "garment.tears.pose": "{pose} : {count} points de couture ouverts, jusqu'à {gap} mm",
+    "garment.tears.pose.one": "{pose} : {count} point de couture ouvert, jusqu'à {gap} mm",
     "garment.tears.pose-clean": "{pose} : aucune couture ne s'ouvre",
     "garment.validate.clean": "CLEAN : rien à corriger.",
     "garment.finding.non-finite": "{count} points ont des coordonnées invalides.",
+    "garment.finding.non-finite.one": "{count} point a des coordonnées invalides.",
     "garment.finding.no-uv": "Le vêtement n'a pas de carte UV, il ne peut donc pas afficher de texture.",
     "garment.finding.uv-outside": (
         "{count} points UV se trouvent hors du carré 0 à 1 ; le jeu y répète la texture."
     ),
+    "garment.finding.uv-outside.one": "{count} point UV se trouve hors du carré 0 à 1 ; le jeu y répète la texture.",
     "garment.finding.uv-area": "La disposition UV n'utilise que {area} % de la texture.",
     "garment.finding.no-weights": (
         "Pas encore riggé : attribuez au vêtement des poids sur les os du squelette freemode."
@@ -322,8 +326,14 @@ TEXT = {
     "garment.finding.unweighted": (
         "{count} sommets n'ont pas de poids ; le jeu les laisse sur place quand le ped bouge."
     ),
+    "garment.finding.unweighted.one": (
+        "{count} sommet n'a pas de poids ; le jeu le laisse sur place quand le ped bouge."
+    ),
     "garment.finding.influences": (
         "{count} sommets sont déplacés par plus de {limit} os ; le jeu n'en utilise que {limit}."
+    ),
+    "garment.finding.influences.one": (
+        "{count} sommet est déplacé par plus de {limit} os ; le jeu n'en utilise que {limit}."
     ),
     "garment.finding.colour-missing": "Color 1 est absent. Préparer le vêtement l'ajoute.",
     "garment.finding.colour-format": (
@@ -395,6 +405,7 @@ TEXT = {
     "garment.done.body": "Corps freemode ajouté ({gender}, version {version}).",
     "garment.done.body-file": "{name} ajouté comme corps.",
     "garment.done.markers": "{count} marqueurs placés. Déplacez ceux qui sont mal placés avant l'ajustement.",
+    "garment.done.markers.one": "{count} marqueur placé. Déplacez-le avant l'ajustement s'il est mal placé.",
     "garment.done.mirror": "Marqueurs de gauche reproduits en miroir à droite.",
     "garment.done.preset-saved": "Préréglage de pose {name} enregistré.",
     "garment.done.preset-loaded": "Préréglage de pose {name} chargé.",
@@ -413,7 +424,8 @@ TEXT = {
     "garment.done.problems": (
         "Dans le corps : {inside}, trop près : {close}, étirés : {stretched}, décollés : {floating}."
     ),
-    "garment.done.check": "Contrôle de l'ajustement terminé. Dans le corps : {inside} sommets.",
+    "garment.done.check": "Contrôle de l'ajustement terminé. Dans le corps : {count} sommets.",
+    "garment.done.check.one": "Contrôle de l'ajustement terminé. Dans le corps : {count} sommet.",
     "garment.done.sculpt-start": "Session de sculpture lancée.",
     "garment.done.accept": (
         "Forme sculptée conservée : {moved} sommets déplacés. Dans le corps : {before} avant, {after} maintenant."
@@ -421,6 +433,9 @@ TEXT = {
     "garment.done.cancel-sculpt": "Sculpture annulée : le vêtement a retrouvé sa forme d'avant la session.",
     "garment.done.tears": (
         "{count} sommets de couture s'ouvrent dans une pose de test. Ils sont dans le groupe de sommets DCT Tears."
+    ),
+    "garment.done.tears.one": (
+        "{count} sommet de couture s'ouvre dans une pose de test. Il est dans le groupe de sommets DCT Tears."
     ),
     "garment.done.no-tears": "Aucune couture ne s'ouvre dans les poses de test.",
     "garment.done.tears-welded": (
@@ -641,6 +656,9 @@ TEXT = {
     "add.fetching": "Récupération du squelette freemode ({gender}) depuis Durty Cloth Tool…",
     "add.progress.skeleton": "Récupération du squelette freemode depuis Durty Cloth Tool…",
     "add.sent": "{name} envoyé avec {count} variantes de couleur. Choisissez Ajouter au projet dans Durty Cloth Tool.",
+    "add.sent.one": (
+        "{name} envoyé avec {count} variante de couleur. Choisissez Ajouter au projet dans Durty Cloth Tool."
+    ),
     "add.waiting": "Durty Cloth Tool affiche le vêtement. Choisissez Ajouter au projet ou Annuler là-bas.",
     "add.waiting.subtext": (
         "Rien n'est ajouté tant que vous ne choisissez pas Ajouter au projet dans Durty Cloth Tool. Annuler ici retire "
@@ -648,6 +666,7 @@ TEXT = {
     ),
     "add.withdrawing": "Annulation de l'ajout…",
     "add.blocked": "L'ajout est bloqué : {count} problèmes à corriger d'abord, listés sous Ajouter au projet.",
+    "add.blocked.one": "L'ajout est bloqué : {count} problème à corriger d'abord, listé sous Ajouter au projet.",
     "add.problems": "Corrigez d'abord ceux-ci ({count}) :",
     "add.findings": "Vérifications de Durty Cloth Tool : {count}",
     "add.added.subtext": (
@@ -671,6 +690,10 @@ TEXT = {
     "add.why.unknown-groups": (
         "{count} groupes de sommets ne sont pas des os du squelette freemode : {names}. Renommez-les ou "
         "supprimez-les ; le jeu les déplacerait avec l'os racine."
+    ),
+    "add.why.unknown-groups.one": (
+        "{count} groupe de sommets n'est pas un os du squelette freemode : {names}. Renommez-le ou supprimez-le ; le "
+        "jeu le déplacerait avec l'os racine."
     ),
     "add.why.name-empty": "Donnez un nom au vêtement.",
     "add.why.name-invalid": (
@@ -890,6 +913,7 @@ TEXT = {
     "garment.done.import-avatar": "{name} importé ({count} sommets), sans l'avatar qui l'accompagnait.",
     "garment.done.back": "La forme d'avant la dernière étape est rétablie.",
     "garment.done.remove-backups": "{count} sauvegardes supprimées.",
+    "garment.done.remove-backups.one": "{count} sauvegarde supprimée.",
     "garment.done.push-deep": (
         "{moved} sommets déplacés. Dans le corps : {before} avant, {after} maintenant. {deep} sont trop profonds pour "
         "être déplacés (une manche à travers le corps ?) : corrigez-les à la main."
@@ -1091,7 +1115,9 @@ TEXT = {
     "fit.error.cancelled": "L'ajustement a été annulé.",
     "fit.error.other": "gta.clothing a refusé l'ajustement ({code}).",
     "fit.wait.minutes": "dans environ {count} minutes",
+    "fit.wait.minutes.one": "dans environ {count} minute",
     "fit.wait.hours": "dans environ {count} heures",
+    "fit.wait.hours.one": "dans environ {count} heure",
     "fit.wait.later": "demain",
     "fit.refunded": "Cet ajustement ne compte pas pour aujourd'hui.",
     "fit.counted": "Cet ajustement compte pour aujourd'hui.",
@@ -1180,6 +1206,7 @@ TEXT = {
         "Le vêtement ne repose pas sur le corps, donc rien n'a changé. Alignez-le d'abord sur le corps."
     ),
     "fit.done.unweighted": "{count} sommets n'ont reçu aucun poids.",
+    "fit.done.unweighted.one": "{count} sommet n'a reçu aucun poids.",
     "fit.changed": (
         "Le vêtement a changé pendant l'ajustement, donc le résultat n'a pas été appliqué. Ajustez à nouveau."
     ),
@@ -1212,9 +1239,20 @@ TEXT = {
         "dans le jeu, cousez ces coutures dans votre application de vêtements et exportez à nouveau, ou réunissez-les "
         "à la main."
     ),
+    "garment.done.prepare-open.one": (
+        "Préparé, mais {count} sommet de couture n'a trouvé aucun partenaire sur la pièce voisine ({welded} réunis) : "
+        "les pièces ne se rejoignent pas tout à fait à cet endroit. Il est sélectionné : appuyez sur Tab pour le voir. "
+        "Ajuster au corps donne quand même les mêmes poids aux deux côtés d'une couture ; si un trou apparaît dans le "
+        "jeu, cousez cette couture dans votre application de vêtements et exportez à nouveau, ou réunissez-la à la "
+        "main."
+    ),
     "garment.done.combine-missing": (
         "Combiné, mais {count} textures sont introuvables et ont été cuites sans leurs pixels : {names}. Placez les "
         "fichiers d'image là où les matériaux les attendent (ou empaquetez-les), puis combinez à nouveau."
+    ),
+    "garment.done.combine-missing.one": (
+        "Combiné, mais {count} texture est introuvable et a été cuite sans ses pixels : {names}. Placez le fichier "
+        "d'image là où le matériau l'attend (ou empaquetez-le), puis combinez à nouveau."
     ),
     "garment.done.step-cancelled": "{step} a été annulé ; le vêtement est comme avant.",
     "garment.step.status": "{step} : {stage} ({done} sur {total}). Échap annule à la fin de cette étape.",
@@ -1422,6 +1460,7 @@ TEXT = {
         "tissu entre les jambes ne se sépare pas"
     ),
     "garment.done.bridge": "Poids des cuisses de {count} sommets reliés d'une jambe à l'autre.",
+    "garment.done.bridge.one": "Poids des cuisses de {count} sommet reliés d'une jambe à l'autre.",
     "garment.why.no-bridge": "Seuls les jupes, robes et manteaux longs sont reliés d'une jambe à l'autre.",
     "garment.why.no-leg-weights": (
         "Le vêtement n'a pas encore de poids des cuisses à relier. Ajustez-le au corps ou transférez d'abord les poids."

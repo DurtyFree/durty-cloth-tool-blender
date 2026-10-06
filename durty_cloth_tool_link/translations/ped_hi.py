@@ -33,6 +33,7 @@ TEXT = {
     "ped.status.not-checked": "जाँचा नहीं गया",
     "ped.status.no-problems": "कोई समस्या नहीं",
     "ped.status.problems": "नतीजे: {count}",
+    "ped.status.problems.one": "नतीजे: {count}",
     "ped.status.sent": "बनाया गया",
     "ped.status.sending": "बनाया जा रहा है",
     "ped.status.not-sent": "नहीं बनाया गया",
@@ -58,7 +59,7 @@ TEXT = {
     "ped.character.none": (
         "3D व्यू में अपने कैरेक्टर का हर मेश (बॉडी, सिर, बाल, आँखें) चुनें, फिर चयन इस्तेमाल करें चुनें।"
     ),
-    "ped.character.facts": "{objects} ऑब्जेक्ट, {vertices} वर्टेक्स, {triangles} ट्रायंगल, {materials} मटीरियल",
+    "ped.character.facts": "{vertices} वर्टेक्स · {triangles} ट्रायंगल · ऑब्जेक्ट: {objects} · मटीरियल: {materials}",
     "ped.prop.character": "कैरेक्टर",
     "ped.prop.character.desc": "वह कलेक्शन जिसमें आपके कैरेक्टर के मेश हैं",
     "ped.op.use-selected": "चयन इस्तेमाल करें",
@@ -67,6 +68,7 @@ TEXT = {
         "कलेक्शन में चले जाते हैं"
     ),
     "ped.done.use-selected": "{name} आपका कैरेक्टर है ({count} मेश)।",
+    "ped.done.use-selected.one": "{name} आपका कैरेक्टर है ({count} मेश)।",
     "ped.check.none": "कैरेक्टर में कोई मेश नहीं है।",
     "ped.check.rigged": "कैरेक्टर रिग किया हुआ है। उसका रूप या आकार बदलने के लिए रिग सेक्शन में रिग हटाएँ चुनें।",
     "ped.check.rigged-changed": (
@@ -75,7 +77,14 @@ TEXT = {
     "ped.check.transforms": (
         "{count} मेश खिसकाए, घुमाए या स्केल किए गए हैं। उनके ट्रांसफ़ॉर्म लागू करें ताकि कैरेक्टर अपना आकार बनाए रखे।"
     ),
+    "ped.check.transforms.one": (
+        "{count} मेश खिसकाया, घुमाया या स्केल किया गया है। उसके ट्रांसफ़ॉर्म लागू करें ताकि कैरेक्टर अपना आकार बनाए "
+        "रखे।"
+    ),
     "ped.check.modifiers": (
+        "{count} मेश पर मॉडिफ़ायर हैं ({names})। उन्हें लागू करें ताकि रिग वही देखे जो आप देखते हैं।"
+    ),
+    "ped.check.modifiers.one": (
         "{count} मेश पर मॉडिफ़ायर हैं ({names})। उन्हें लागू करें ताकि रिग वही देखे जो आप देखते हैं।"
     ),
     "ped.check.old-rig": (
@@ -83,6 +92,10 @@ TEXT = {
         "उसके जोड़ों पर मार्कर लगा सकता है।"
     ),
     "ped.check.shape-keys": (
+        "{count} मेश में shape keys हैं, जो रिग के साथ नहीं चलतीं। जो आकार आप देखते हैं, उसे बनाए रखने के लिए उन्हें "
+        "हटाएँ।"
+    ),
+    "ped.check.shape-keys.one": (
         "{count} मेश में shape keys हैं, जो रिग के साथ नहीं चलतीं। जो आकार आप देखते हैं, उसे बनाए रखने के लिए उन्हें "
         "हटाएँ।"
     ),
@@ -122,10 +135,12 @@ TEXT = {
     "ped.op.apply-transforms": "ट्रांसफ़ॉर्म लागू करें",
     "ped.op.apply-transforms.desc": "हर मेश की जगह, घुमाव और स्केल उसमें बेक करें, उसका रूप बनाए रखते हुए",
     "ped.done.transforms": "{count} मेश के ट्रांसफ़ॉर्म लागू किए गए।",
+    "ped.done.transforms.one": "{count} मेश के ट्रांसफ़ॉर्म लागू किए गए।",
     "ped.op.apply-modifiers": "मॉडिफ़ायर लागू करें",
     "ped.op.apply-modifiers.desc": "कैरेक्टर के मेश का हर मॉडिफ़ायर लागू करें (Armature मॉडिफ़ायर को छोड़कर)",
     "ped.confirm.modifiers": "कैरेक्टर के मेश के सभी मॉडिफ़ायर लागू करें? उसके बाद उनकी सेटिंग्स नहीं रहतीं।",
     "ped.done.modifiers": "{count} मॉडिफ़ायर लागू किए गए।",
+    "ped.done.modifiers.one": "{count} मॉडिफ़ायर लागू किया गया।",
     "ped.op.remove-old-rig": "पुराना रिग हटाएँ",
     "ped.op.remove-old-rig.desc": (
         "कैरेक्टर को उसके साथ आए आर्मेचर से अलग करें: वह अपना मौजूदा पोज़ रखता है, आर्मेचर छिपा रहता है"
@@ -139,6 +154,7 @@ TEXT = {
     "ped.op.remove-shape-keys.desc": "कैरेक्टर के मेश की shape keys हटाएँ, उनका दिख रहा आकार बनाए रखते हुए",
     "ped.confirm.shape-keys": "कैरेक्टर की सभी shape keys हटाएँ? अभी दिख रहा आकार बना रहता है।",
     "ped.done.shape-keys": "{count} मेश की shape keys हटाई गईं।",
+    "ped.done.shape-keys.one": "{count} मेश की shape keys हटाई गईं।",
     "ped.op.scale": "स्केल करें",
     "ped.op.scale.desc": "कैरेक्टर को ओरिजिन के आसपास स्केल करें, जैसे इकाई बदलने पर होता है",
     "ped.op.scale-by": "{factor} से स्केल करें",
@@ -356,6 +372,7 @@ TEXT = {
     "ped.result.review": "जाँच ज़रूरी (भरोसा {percent} %)",
     "ped.result.markers": "({names})",
     "ped.result.moved": "Durty Cloth Tool ने {count} मार्कर बॉडी के बीच में खिसकाए (3D व्यू में पीले):",
+    "ped.result.moved.one": "Durty Cloth Tool ने {count} मार्कर बॉडी के बीच में खिसकाया (3D व्यू में पीला):",
     "ped.result.move": "{marker}: {cm} cm",
     "ped.result.subtext": (
         "रिग लागू करें आर्मेचर बनाता है और मेश को उनके वेट और गेम का रेस्ट पोज़ देता है। आपका कैरेक्टर अपना रूप बनाए "
@@ -383,6 +400,7 @@ TEXT = {
     "ped.warning.marker_offset": (
         "{count} मार्कर बॉडी के बीच से 2 cm से ज़्यादा हटकर थे ({value} mm तक)। उन्हें जाँचें।"
     ),
+    "ped.warning.marker_offset.one": "{count} मार्कर बॉडी के बीच से 2 cm से ज़्यादा हटकर था ({value} mm)। उसे जाँचें।",
     "ped.warning.asymmetric_markers": "बाएँ और दाएँ मार्कर में 5 % से ज़्यादा अंतर है। दोनों तरफ़ जाँचें।",
     "ped.warning.proportion_out_of_range": (
         "कुछ अनुपात टेम्पलेट के अनुपात से बहुत अलग हैं। ज़्यादा मिलती-जुलती बनावट वाला टेम्पलेट बेहतर हिलता है।"
@@ -396,7 +414,9 @@ TEXT = {
     "ped.warning.inpainted_large": "कई वेट उनके पड़ोसियों से भरे गए। टेस्ट पोज़ जाँचें।",
     "ped.warning.non_deforming_moved": "कुछ वेट ऐसे बोन से हटाए गए जो मेश को कभी नहीं हिलाते।",
     "ped.warning.empty_rows_refilled": "{count} वर्टेक्स पर कोई वेट नहीं था, इसलिए उन्होंने अपने पड़ोसियों के वेट लिए।",
+    "ped.warning.empty_rows_refilled.one": "{count} वर्टेक्स पर कोई वेट नहीं था, इसलिए उसने अपने पड़ोसियों के वेट लिए।",
     "ped.warning.floating_parts": "{count} ढीले हिस्से सबसे पास के बोन से जोड़े गए।",
+    "ped.warning.floating_parts.one": "{count} ढीला हिस्सा सबसे पास के बोन से जोड़ा गया।",
     "ped.warning.rest_strain": (
         "गेम के रेस्ट पोज़ में कुछ ट्रायंगल मुड़ जाते हैं। टेस्ट पोज़ में गेम का रेस्ट पोज़ चुनें और कंधे व कूल्हे "
         "देखें।"
@@ -452,20 +472,34 @@ TEXT = {
     "ped.done.checks": (
         "जाँच चलाएँ को देखने लायक {count} चीज़ें मिलीं; ऐसा कुछ नहीं जिसे Durty Cloth Tool अस्वीकार करे।"
     ),
+    "ped.done.checks.one": (
+        "जाँच चलाएँ को देखने लायक {count} चीज़ मिली; ऐसा कुछ नहीं जिसे Durty Cloth Tool अस्वीकार करे।"
+    ),
     "ped.done.checks-refused": "जाँच चलाएँ को {count} ऐसी समस्याएँ मिलीं जिन्हें Durty Cloth Tool अस्वीकार करेगा।",
+    "ped.done.checks-refused.one": "जाँच चलाएँ को {count} ऐसी समस्या मिली जिसे Durty Cloth Tool अस्वीकार करेगा।",
     "ped.local.none": "कोई समस्या नहीं मिली।",
     "ped.local.unweighted": (
         "{count} वर्टेक्स पर कोई वेट नहीं है। Durty Cloth Tool उन्हें अस्वीकार करता है: उन्हें वेट करें।"
     ),
+    "ped.local.unweighted.one": (
+        "{count} वर्टेक्स पर कोई वेट नहीं है। Durty Cloth Tool उसे अस्वीकार करता है: उसे वेट करें।"
+    ),
     "ped.local.too-many": "{count} वर्टेक्स चार से ज़्यादा बोन से हिलते हैं। गेम सबसे मज़बूत चार रखता है।",
+    "ped.local.too-many.one": "{count} वर्टेक्स चार से ज़्यादा बोन से हिलता है। गेम सबसे मज़बूत चार रखता है।",
     "ped.local.non-deforming": "{count} वर्टेक्स ऐसे बोन पर वेट किए गए हैं जो मेश को कभी नहीं हिलाते।",
+    "ped.local.non-deforming.one": "{count} वर्टेक्स ऐसे बोन पर वेट किया गया है जो मेश को कभी नहीं हिलाते।",
     "ped.local.unknown-groups": "जो vertex group बोन नहीं हैं ({names}), उन्हें छोड़ दिया जाता है।",
     "ped.local.armature-changed": (
         "रिग के बाद {count} बोन खिसकाए या घुमाए गए ({names})। उसे पूर्ववत करें या फिर से रिग करें: बोन टेम्पलेट का "
         "घुमाव रखते हैं।"
     ),
+    "ped.local.armature-changed.one": (
+        "रिग के बाद {count} बोन खिसकाया या घुमाया गया ({names})। उसे पूर्ववत करें या फिर से रिग करें: बोन टेम्पलेट का "
+        "घुमाव रखते हैं।"
+    ),
     "ped.local.mesh-changed": "रिग के बाद मेश बदल गए (वर्टेक्स जोड़े या हटाए गए)। फिर से रिग करें।",
     "ped.local.strain": "{pose} में {count} वर्टेक्स बहुत खिंचते या दबते हैं।",
+    "ped.local.strain.one": "{pose} में {count} वर्टेक्स बहुत खिंचता या दबता है।",
     "ped.local.hint": (
         "चरम पोज़ में छोटी सिलवटें सामान्य हैं। बड़ी सिलवटों के लिए कोई मार्कर खिसकाएँ और फिर से रिग करें।"
     ),

@@ -6,7 +6,8 @@ Logic never stores or compares displayed text: it passes keys and :class:`Msg` v
 and the interface renders them in Blender's interface language when it draws. The English text is also the
 message id Blender's translation system looks up (``translations`` registers the eight other languages under
 :data:`CONTEXT`). Texts use ``str.format`` fields (``{name}``); a translation keeps exactly the fields of the
-English text. Logs, the system console and Copy Diagnostics stay English.
+English text. A text about a number of things has a second form for exactly one, under the same key ending in
+``.one`` (:func:`form`). Logs, the system console and Copy Diagnostics stay English.
 
 Blender conventions: labels, buttons and panel titles in Title Case; descriptions, tooltips and messages are
 sentences. Product, platform and format names are never translated (Durty Cloth Tool, Creator Link,
@@ -817,6 +818,7 @@ EN: Dict[str, str] = {
     "garment.check.value": "{p50} ({p10} to {p90})",
     "garment.check.usual-line": "Usual: {range}",
     "garment.check.inside": "Inside the body: {count} vertices ({share} %)",
+    "garment.check.inside.one": "Inside the body: {count} vertex ({share} %)",
     "garment.advice.shoulders": (
         "The shoulders stand off the body: Snug to Body (Region Tools) with Shoulders brings them down."
     ),
@@ -827,16 +829,23 @@ EN: Dict[str, str] = {
     "garment.pose.legs-forward": "Legs forward",
     "garment.pose.twist": "Twist",
     "garment.tears.pose": "{pose}: {count} seam points open, up to {gap} mm",
+    "garment.tears.pose.one": "{pose}: {count} seam point opens, up to {gap} mm",
     "garment.tears.pose-clean": "{pose}: no seam opens",
     # ---- garment fitting: game ready ----------------------------------------------------------------------
     "garment.validate.clean": "CLEAN: nothing to fix.",
     "garment.finding.non-finite": "{count} points have broken coordinates.",
+    "garment.finding.non-finite.one": "{count} point has broken coordinates.",
     "garment.finding.no-uv": "The garment has no UV map, so it cannot show a texture.",
     "garment.finding.uv-outside": "{count} UV points lie outside the 0 to 1 square; the game repeats the texture there.",
+    "garment.finding.uv-outside.one": (
+        "{count} UV point lies outside the 0 to 1 square; the game repeats the texture there."
+    ),
     "garment.finding.uv-area": "The UV layout uses only {area} % of the texture.",
     "garment.finding.no-weights": "Not rigged yet: weight the garment to the freemode skeleton's bones.",
     "garment.finding.unweighted": "{count} vertices have no weights; the game leaves them behind when the ped moves.",
+    "garment.finding.unweighted.one": "{count} vertex has no weights; the game leaves it behind when the ped moves.",
     "garment.finding.influences": "{count} vertices are moved by more than {limit} bones; the game uses only {limit}.",
+    "garment.finding.influences.one": "{count} vertex is moved by more than {limit} bones; the game uses only {limit}.",
     "garment.finding.colour-missing": "Color 1 is missing. Prepare Garment adds it.",
     "garment.finding.colour-format": (
         "Color 1 is not a face corner byte colour, as Sollumz needs it. Prepare Garment replaces it."
@@ -895,6 +904,7 @@ EN: Dict[str, str] = {
     "garment.done.body": "Added the freemode body ({gender}, version {version}).",
     "garment.done.body-file": "Added {name} as the body.",
     "garment.done.markers": "Placed {count} markers. Move any that are off before fitting.",
+    "garment.done.markers.one": "Placed {count} marker. Move it if it is off before fitting.",
     "garment.done.mirror": "Mirrored the left markers to the right.",
     "garment.done.preset-saved": "Saved the pose preset {name}.",
     "garment.done.preset-loaded": "Loaded the pose preset {name}.",
@@ -908,11 +918,13 @@ EN: Dict[str, str] = {
         "Smoothed {moved} vertices of {region} (the shape from before fitting is not there to compare with)."
     ),
     "garment.done.problems": "Inside: {inside}, too close: {close}, stretched: {stretched}, floating: {floating}.",
-    "garment.done.check": "Fit check done. Inside the body: {inside} vertices.",
+    "garment.done.check": "Fit check done. Inside the body: {count} vertices.",
+    "garment.done.check.one": "Fit check done. Inside the body: {count} vertex.",
     "garment.done.sculpt-start": "Sculpt session started.",
     "garment.done.accept": "Kept the sculpted shape: moved {moved} vertices. Inside the body: {before} before, {after} now.",
     "garment.done.cancel-sculpt": "Sculpting cancelled: the garment is back to its shape from before the session.",
     "garment.done.tears": "{count} seam vertices open up in a test pose. They are in the vertex group DCT Tears.",
+    "garment.done.tears.one": "{count} seam vertex opens up in a test pose. It is in the vertex group DCT Tears.",
     "garment.done.no-tears": "No seam opens in the test poses.",
     "garment.done.tears-welded": (
         "The seams are joined, so none can open here. Check the cloth moving on the ped in Durty Cloth Tool's 3D "
@@ -1180,6 +1192,7 @@ EN: Dict[str, str] = {
         "legs does not split"
     ),
     "garment.done.bridge": "Bridged the thigh weights of {count} vertices across the legs.",
+    "garment.done.bridge.one": "Bridged the thigh weights of {count} vertex across the legs.",
     "garment.why.no-bridge": "Only skirts, dresses and long coats are bridged across the legs.",
     "garment.why.no-leg-weights": (
         "The garment has no thigh weights to bridge yet. Fit it to the body or transfer the weights first."
@@ -1273,12 +1286,14 @@ EN: Dict[str, str] = {
     "add.fetching": "Getting the {gender} freemode skeleton from Durty Cloth Tool…",
     "add.progress.skeleton": "Getting the freemode skeleton from Durty Cloth Tool…",
     "add.sent": "Sent {name} with {count} colour variations. Choose Add to project in Durty Cloth Tool.",
+    "add.sent.one": "Sent {name} with {count} colour variation. Choose Add to project in Durty Cloth Tool.",
     "add.waiting": "Durty Cloth Tool shows the cloth. Choose Add to project or Cancel there.",
     "add.waiting.subtext": (
         "Nothing is added until you choose Add to project in Durty Cloth Tool. Cancel here withdraws the add."
     ),
     "add.withdrawing": "Cancelling the add…",
     "add.blocked": "The add is blocked: {count} problems to fix first, listed under Add to Project.",
+    "add.blocked.one": "The add is blocked: {count} problem to fix first, listed under Add to Project.",
     "add.problems": "Fix these first ({count}):",
     "add.findings": "Durty Cloth Tool's checks: {count}",
     "add.added.subtext": (
@@ -1298,8 +1313,12 @@ EN: Dict[str, str] = {
         "named after them, such as SKEL_Spine3)."
     ),
     "add.why.unknown-groups": (
-        "{count} vertex groups are no bones of the freemode skeleton: {names}. Rename or remove them; the game would "
+        "{count} vertex groups are not bones of the freemode skeleton: {names}. Rename or remove them; the game would "
         "move them with the root."
+    ),
+    "add.why.unknown-groups.one": (
+        "{count} vertex group is not a bone of the freemode skeleton: {names}. Rename or remove it; the game would "
+        "move it with the root."
     ),
     "add.why.name-empty": "Give the cloth a name.",
     "add.why.name-invalid": "The cloth's name may have at most {limit} characters and no control characters.",
@@ -1468,6 +1487,7 @@ EN: Dict[str, str] = {
     "garment.done.import-avatar": "Imported {name} ({count} vertices) without the avatar that came with it.",
     "garment.done.back": "Put back the shape from before the last step.",
     "garment.done.remove-backups": "Removed {count} backups.",
+    "garment.done.remove-backups.one": "Removed {count} backup.",
     "garment.done.push-deep": (
         "Moved {moved} vertices. Inside the body: {before} before, {after} now. {deep} lie too deep to move (a sleeve "
         "through the body?): fix them by hand."
@@ -1646,7 +1666,9 @@ EN: Dict[str, str] = {
     "fit.error.cancelled": "The fit was cancelled.",
     "fit.error.other": "gta.clothing refused the fit ({code}).",
     "fit.wait.minutes": "in about {count} minutes",
+    "fit.wait.minutes.one": "in about {count} minute",
     "fit.wait.hours": "in about {count} hours",
+    "fit.wait.hours.one": "in about {count} hour",
     "fit.wait.later": "tomorrow",
     "fit.refunded": "This fit does not count against today's fits.",
     "fit.counted": "This fit counts against today's fits.",
@@ -1711,6 +1733,7 @@ EN: Dict[str, str] = {
     "fit.done.weights": "Weights transferred: {bones} bones.",
     "fit.done.not-on-body": "The garment does not lie on the body, so nothing changed. Align it to the body first.",
     "fit.done.unweighted": "{count} vertices got no weights.",
+    "fit.done.unweighted.one": "{count} vertex got no weights.",
     "fit.changed": "The garment changed while it was being fitted, so the result was not applied. Fit again.",
     "garment.next.fit": "Next: Fit to Body under Fit, or run the fit check under Fix and fit the garment by hand.",
     "garment.check.reference": "Usual",
@@ -1735,9 +1758,19 @@ EN: Dict[str, str] = {
         "seam the same weights; if a gap shows in the game, sew those seams in your clothing app and export again, or "
         "join them by hand."
     ),
+    "garment.done.prepare-open.one": (
+        "Prepared, but {count} seam vertex found no partner on the panel next to it ({welded} joined): the panels do "
+        "not quite meet there. It is selected: press Tab to see it. Fit to Body still gives both sides of a seam the "
+        "same weights; if a gap shows in the game, sew that seam in your clothing app and export again, or join it by "
+        "hand."
+    ),
     "garment.done.combine-missing": (
         "Combined, but {count} textures could not be found and were baked without their pixels: {names}. Put the image "
         "files where the materials expect them (or pack them), then combine again."
+    ),
+    "garment.done.combine-missing.one": (
+        "Combined, but {count} texture could not be found and was baked without its pixels: {names}. Put the image "
+        "file where the material expects it (or pack it), then combine again."
     ),
     "garment.done.step-cancelled": "{step} was cancelled; the garment is as it was before.",
     "garment.step.status": "{step}: {stage} ({done} of {total}). Esc cancels at the end of this stage.",
@@ -1792,13 +1825,29 @@ def set_translators(iface: Optional[Callable[[str], str]], tip: Optional[Callabl
     _tip = tip or iface or _identity
 
 
+#: The end of the key of a text's form for exactly one thing: ``"add.sent.one"`` ("Sent {name} with {count} colour
+#: variation.") next to ``"add.sent"`` (every other count). A message whose ``count`` is 1 shows its ``.one`` form
+#: when its text has one (:func:`form`), so logic passes the plain key and the count. Blender looks texts up by their
+#: English text, so every language translates both forms; a language with more plural forms (Russian, Arabic) words
+#: the other form so that it reads right with any number ("Groups: {count}").
+ONE = ".one"
+
+
+def form(message: Msg) -> str:
+    """The key ``message`` is shown with: its ``.one`` form when its ``count`` is exactly 1 and it has one."""
+    count = message.fields.get("count")
+    if count == 1 and not isinstance(count, bool) and message.key + ONE in EN:
+        return message.key + ONE
+    return message.key
+
+
 def _render(message: Text, translate: Callable[[str], str]) -> str:
     if isinstance(message, str):
         return message  # already a finished text (a name, a number, a detail from another program)
     fields: Dict[str, Any] = {"apps": translate(EN["path.connected-apps"]), "edit": translate(EN["path.edit-in-app"])}
     for name, value in message.fields.items():
         fields[name] = _render(value, translate) if isinstance(value, Msg) else value
-    english_text = EN[message.key]
+    english_text = EN[form(message)]
     try:
         return translate(english_text).format(**fields)
     except (KeyError, IndexError, ValueError):

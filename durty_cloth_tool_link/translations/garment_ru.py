@@ -271,6 +271,7 @@ TEXT = {
     "garment.check.value": "{p50} (от {p10} до {p90})",
     "garment.check.usual-line": "Обычно: {range}",
     "garment.check.inside": "Внутри тела: вершин {count} ({share} %)",
+    "garment.check.inside.one": "Внутри тела: {count} вершина ({share} %)",
     "garment.advice.shoulders": (
         "Плечи отстоят от тела. Выберите Прижать к телу (Инструменты для областей) с областью Плечи, чтобы опустить "
         "их."
@@ -282,16 +283,23 @@ TEXT = {
     "garment.pose.legs-forward": "Ноги вперёд",
     "garment.pose.twist": "Скручивание",
     "garment.tears.pose": "{pose}: точек шва расходится: {count}, до {gap} мм",
+    "garment.tears.pose.one": "{pose}: расходится {count} точка шва, до {gap} мм",
     "garment.tears.pose-clean": "{pose}: швы не расходятся",
     "garment.validate.clean": "CLEAN: исправлять нечего.",
     "garment.finding.non-finite": "Точек с испорченными координатами: {count}.",
+    "garment.finding.non-finite.one": "У {count} точки испорчены координаты.",
     "garment.finding.no-uv": "У одежды нет UV-развёртки, поэтому на ней не может быть текстуры.",
     "garment.finding.uv-outside": "UV-точек вне квадрата от 0 до 1: {count}; там игра повторяет текстуру.",
+    "garment.finding.uv-outside.one": "{count} UV-точка лежит вне квадрата от 0 до 1; там игра повторяет текстуру.",
     "garment.finding.uv-area": "UV-раскладка использует только {area} % текстуры.",
     "garment.finding.no-weights": "Риг ещё не сделан: назначьте одежде веса костей скелета freemode.",
     "garment.finding.unweighted": "Вершин без весов: {count}; когда ped двигается, игра оставляет их на месте.",
+    "garment.finding.unweighted.one": "{count} вершина без весов; когда ped двигается, игра оставляет её на месте.",
     "garment.finding.influences": (
         "Вершин, на которые влияет больше {limit} костей: {count}; игра использует только {limit}."
+    ),
+    "garment.finding.influences.one": (
+        "На {count} вершину влияет больше {limit} костей; игра использует только {limit}."
     ),
     "garment.finding.colour-missing": "Нет Color 1. Его добавляет кнопка Подготовить одежду.",
     "garment.finding.colour-format": (
@@ -353,6 +361,7 @@ TEXT = {
     "garment.done.body": "Тело freemode добавлено ({gender}, версия {version}).",
     "garment.done.body-file": "Добавлено как тело: {name}.",
     "garment.done.markers": "Маркеров расставлено: {count}. До подгонки передвиньте те, что стоят не на месте.",
+    "garment.done.markers.one": "Расставлен {count} маркер. До подгонки передвиньте его, если он стоит не на месте.",
     "garment.done.mirror": "Левые маркеры отражены на правую сторону.",
     "garment.done.preset-saved": "Пресет позы сохранён: {name}.",
     "garment.done.preset-loaded": "Пресет позы загружен: {name}.",
@@ -368,7 +377,8 @@ TEXT = {
     "garment.done.problems": (
         "Внутри: {inside}, слишком близко: {close}, растянуто: {stretched}, отстаёт: {floating}."
     ),
-    "garment.done.check": "Проверка посадки выполнена. Внутри тела вершин: {inside}.",
+    "garment.done.check": "Проверка посадки выполнена. Внутри тела вершин: {count}.",
+    "garment.done.check.one": "Проверка посадки выполнена. Внутри тела {count} вершина.",
     "garment.done.sculpt-start": "Сеанс скульптинга начат.",
     "garment.done.accept": (
         "Форма после скульптинга сохранена, перемещено вершин: {moved}. Внутри тела: было {before}, сейчас {after}."
@@ -377,6 +387,7 @@ TEXT = {
     "garment.done.tears": (
         "Вершин шва, расходящихся в тестовой позе: {count}. Они собраны в группе вершин DCT Tears."
     ),
+    "garment.done.tears.one": "{count} вершина шва расходится в тестовой позе. Она в группе вершин DCT Tears.",
     "garment.done.no-tears": "В тестовых позах швы не расходятся.",
     "garment.done.tears-welded": (
         "Швы соединены, здесь ни один не может разойтись. Проверьте одежду в движении на ped в 3D-просмотре Durty "
@@ -581,6 +592,7 @@ TEXT = {
     "add.fetching": "Получение скелета freemode ({gender}) из Durty Cloth Tool…",
     "add.progress.skeleton": "Получение скелета freemode из Durty Cloth Tool…",
     "add.sent": "Отправлено: {name}, цветовых вариаций: {count}. Выберите Добавить в проект в Durty Cloth Tool.",
+    "add.sent.one": "Отправлено: {name}, {count} цветовая вариация. Выберите Добавить в проект в Durty Cloth Tool.",
     "add.waiting": "Durty Cloth Tool показывает одежду. Выберите там Добавить в проект или Отмена.",
     "add.waiting.subtext": (
         "Ничего не добавляется, пока вы не выберете Добавить в проект в Durty Cloth Tool. Отмена здесь отзывает "
@@ -589,6 +601,9 @@ TEXT = {
     "add.withdrawing": "Отмена добавления…",
     "add.blocked": (
         "Добавление заблокировано: сначала исправьте проблемы ({count}), они перечислены в разделе Добавить в проект."
+    ),
+    "add.blocked.one": (
+        "Добавление заблокировано: сначала исправьте {count} проблему, она указана в разделе Добавить в проект."
     ),
     "add.problems": "Сначала исправьте это ({count}):",
     "add.findings": "Проверки Durty Cloth Tool: {count}",
@@ -613,6 +628,10 @@ TEXT = {
     "add.why.unknown-groups": (
         "Группы вершин, которых нет среди костей скелета freemode ({count}): {names}. Переименуйте или удалите "
         "их, иначе игра будет двигать их вместе с корневой костью."
+    ),
+    "add.why.unknown-groups.one": (
+        "{count} группа вершин не является костью скелета freemode: {names}. Переименуйте или удалите её, иначе игра "
+        "будет двигать её вместе с корневой костью."
     ),
     "add.why.name-empty": "Дайте одежде название.",
     "add.why.name-invalid": (
@@ -802,6 +821,7 @@ TEXT = {
     "garment.done.import-avatar": "Импортировано: {name} (вершин: {count}), без аватара, который был в файле.",
     "garment.done.back": "Возвращена форма до последнего шага.",
     "garment.done.remove-backups": "Удалено резервных копий: {count}.",
+    "garment.done.remove-backups.one": "Удалена {count} резервная копия.",
     "garment.done.push-deep": (
         "Перемещено вершин: {moved}. Внутри тела: было {before}, сейчас {after}. Слишком глубоко, чтобы двигать: "
         "{deep} (рукав сквозь тело?), исправьте их вручную."
@@ -997,7 +1017,9 @@ TEXT = {
     "fit.error.cancelled": "Подгонка отменена.",
     "fit.error.other": "gta.clothing отклонил подгонку ({code}).",
     "fit.wait.minutes": "примерно через {count} мин.",
+    "fit.wait.minutes.one": "примерно через {count} мин.",
     "fit.wait.hours": "примерно через {count} ч.",
+    "fit.wait.hours.one": "примерно через {count} ч.",
     "fit.wait.later": "завтра",
     "fit.refunded": "Эта подгонка не засчитывается за сегодня.",
     "fit.counted": "Эта подгонка засчитывается за сегодня.",
@@ -1070,6 +1092,7 @@ TEXT = {
     "fit.done.weights": "Веса перенесены: {bones} костей.",
     "fit.done.not-on-body": "Одежда не лежит на теле, поэтому ничего не изменилось. Сначала выровняйте её по телу.",
     "fit.done.unweighted": "Вершин без весов: {count}.",
+    "fit.done.unweighted.one": "{count} вершина не получила весов.",
     "fit.changed": "Одежда изменилась во время подгонки, поэтому результат не применён. Подгоните снова.",
     "garment.next.fit": (
         "Далее: Подогнать к телу в разделе Подгонка, или запустите проверку посадки в разделе Исправление и подгоните "
@@ -1097,9 +1120,19 @@ TEXT = {
         "шва одинаковые веса; если в игре видна щель, сшейте эти швы в программе для одежды и экспортируйте снова или "
         "соедините их вручную."
     ),
+    "garment.done.prepare-open.one": (
+        "Подготовлено, но {count} вершина шва не нашла пары на соседней детали (соединено {welded}): детали там не "
+        "совсем сходятся. Она выделена: нажмите Tab, чтобы её увидеть. Подогнать к телу всё равно даёт обеим сторонам "
+        "шва одинаковые веса; если в игре видна щель, сшейте этот шов в программе для одежды и экспортируйте снова или "
+        "соедините его вручную."
+    ),
     "garment.done.combine-missing": (
         "Объединено, но {count} текстур не найдены и запечены без своих пикселей: {names}. Положите файлы изображений "
         "туда, где их ждут материалы (или упакуйте их), затем объедините снова."
+    ),
+    "garment.done.combine-missing.one": (
+        "Объединено, но {count} текстура не найдена и запечена без своих пикселей: {names}. Положите файл изображения "
+        "туда, где его ждёт материал (или упакуйте его), затем объедините снова."
     ),
     "garment.done.step-cancelled": "{step}: отменено; одежда такая же, как до этого.",
     "garment.step.status": "{step}: {stage} ({done} из {total}). Esc отменяет по окончании этого этапа.",
@@ -1289,6 +1322,7 @@ TEXT = {
         "разделялась"
     ),
     "garment.done.bridge": "Веса бёдер {count} вершин связаны между ногами.",
+    "garment.done.bridge.one": "Веса бёдер {count} вершины связаны между ногами.",
     "garment.why.no-bridge": "Между ногами связываются только юбки, платья и длинные пальто.",
     "garment.why.no-leg-weights": (
         "У одежды ещё нет весов бёдер, которые можно связать. Сначала подгоните её к телу или перенесите веса."

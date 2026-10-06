@@ -37,6 +37,7 @@ TEXT = {
     "ped.status.not-checked": "Não verificado",
     "ped.status.no-problems": "Sem problemas",
     "ped.status.problems": "Ocorrências: {count}",
+    "ped.status.problems.one": "Ocorrências: {count}",
     "ped.status.sent": "Criado",
     "ped.status.sending": "Criando",
     "ped.status.not-sent": "Não criado",
@@ -69,7 +70,7 @@ TEXT = {
         "Selecione todas as malhas do seu personagem (corpo, cabeça, cabelo, olhos) na vista 3D e depois escolha Usar "
         "seleção."
     ),
-    "ped.character.facts": "{objects} objetos, {vertices} vértices, {triangles} triângulos, {materials} materiais",
+    "ped.character.facts": "{vertices} vértices · {triangles} triângulos · objetos: {objects} · materiais: {materials}",
     "ped.prop.character": "Personagem",
     "ped.prop.character.desc": "A coleção que contém as malhas do seu personagem",
     "ped.op.use-selected": "Usar seleção",
@@ -78,6 +79,7 @@ TEXT = {
         "para uma nova"
     ),
     "ped.done.use-selected": "{name} é o seu personagem ({count} malhas).",
+    "ped.done.use-selected.one": "{name} é o seu personagem ({count} malha).",
     "ped.check.none": "O personagem não tem malhas.",
     "ped.check.rigged": "O personagem já tem rig. Use Remover rig em Rig para mudar a forma ou o tamanho dele.",
     "ped.check.rigged-changed": (
@@ -88,13 +90,23 @@ TEXT = {
         "{count} malhas estão movidas, giradas ou escaladas. Aplique as transformações delas para o personagem manter "
         "a forma."
     ),
+    "ped.check.transforms.one": (
+        "{count} malha está movida, girada ou escalada. Aplique as transformações dela para o personagem manter a "
+        "forma."
+    ),
     "ped.check.modifiers": "{count} malhas têm modificadores ({names}). Aplique-os para que o rig veja o que você vê.",
+    "ped.check.modifiers.one": (
+        "{count} malha tem modificadores ({names}). Aplique-os para que o rig veja o que você vê."
+    ),
     "ped.check.old-rig": (
         "O personagem usa o rig {name}. Remova o rig antigo: o personagem mantém a pose, e Do rig antigo ainda pode "
         "posicionar os marcadores nas articulações dele."
     ),
     "ped.check.shape-keys": (
         "{count} malhas têm shape keys, que não acompanham o rig. Remova-as para manter a forma que você vê."
+    ),
+    "ped.check.shape-keys.one": (
+        "{count} malha tem shape keys, que não acompanham o rig. Remova-as para manter a forma que você vê."
     ),
     "ped.check.lying": "O personagem parece estar deitado (é mais comprido do que alto). Colocá-lo em pé?",
     "ped.check.upside-down": "O personagem parece estar de cabeça para baixo. Desvirá-lo?",
@@ -139,6 +151,7 @@ TEXT = {
         "Incorporar em cada malha a posição, a rotação e a escala dela, sem mudar a aparência"
     ),
     "ped.done.transforms": "Transformações de {count} malhas aplicadas.",
+    "ped.done.transforms.one": "Transformações de {count} malha aplicadas.",
     "ped.op.apply-modifiers": "Aplicar modificadores",
     "ped.op.apply-modifiers.desc": (
         "Aplicar todos os modificadores das malhas do personagem (exceto o modificador Armature)"
@@ -147,6 +160,7 @@ TEXT = {
         "Aplicar todos os modificadores das malhas do personagem? As configurações deles se perdem depois."
     ),
     "ped.done.modifiers": "{count} modificadores aplicados.",
+    "ped.done.modifiers.one": "{count} modificador aplicado.",
     "ped.op.remove-old-rig": "Remover rig antigo",
     "ped.op.remove-old-rig.desc": (
         "Tirar o personagem da armature com que ele veio: ele mantém a pose atual, e a armature fica oculta"
@@ -162,6 +176,7 @@ TEXT = {
     ),
     "ped.confirm.shape-keys": "Remover todas as shape keys do personagem? A forma que você vê agora continua.",
     "ped.done.shape-keys": "Shape keys de {count} malhas removidas.",
+    "ped.done.shape-keys.one": "Shape keys de {count} malha removidas.",
     "ped.op.scale": "Escalar",
     "ped.op.scale.desc": "Escalar o personagem em torno da origem, como faz uma mudança de unidades",
     "ped.op.scale-by": "Escalar por {factor}",
@@ -409,6 +424,7 @@ TEXT = {
     "ped.result.review": "Precisa de revisão (confiança {percent} %)",
     "ped.result.markers": "({names})",
     "ped.result.moved": "O Durty Cloth Tool moveu {count} marcadores para o meio do corpo (amarelos na vista 3D):",
+    "ped.result.moved.one": "O Durty Cloth Tool moveu {count} marcador para o meio do corpo (amarelo na vista 3D):",
     "ped.result.move": "{marker}: {cm} cm",
     "ped.result.subtext": (
         "Aplicar rig cria a armature e dá às malhas os pesos e a pose de repouso do jogo. O seu personagem mantém a "
@@ -439,6 +455,7 @@ TEXT = {
     "ped.warning.marker_offset": (
         "{count} marcadores estavam a mais de 2 cm do meio do corpo (até {value} mm). Confira-os."
     ),
+    "ped.warning.marker_offset.one": "{count} marcador estava a mais de 2 cm do meio do corpo ({value} mm). Confira-o.",
     "ped.warning.asymmetric_markers": (
         "Os marcadores da esquerda e da direita diferem mais de 5 %. Confira os dois lados."
     ),
@@ -456,7 +473,9 @@ TEXT = {
     "ped.warning.inpainted_large": "Muitos pesos foram preenchidos a partir dos vizinhos. Confira as poses de teste.",
     "ped.warning.non_deforming_moved": "Alguns pesos foram tirados de ossos que nunca movem a malha.",
     "ped.warning.empty_rows_refilled": "{count} vértices não tinham pesos e receberam os dos vizinhos.",
+    "ped.warning.empty_rows_refilled.one": "{count} vértice não tinha pesos e recebeu os dos vizinhos.",
     "ped.warning.floating_parts": "{count} partes soltas foram presas ao osso mais próximo.",
+    "ped.warning.floating_parts.one": "{count} parte solta foi presa ao osso mais próximo.",
     "ped.warning.rest_strain": (
         "Alguns triângulos se dobram na pose de repouso do jogo. Olhe os ombros e os quadris em Pose de repouso do "
         "jogo."
@@ -519,20 +538,32 @@ TEXT = {
     "ped.done.checks": (
         "Executar verificações encontrou {count} pontos para conferir; nada que o Durty Cloth Tool recusaria."
     ),
+    "ped.done.checks.one": (
+        "Executar verificações encontrou {count} ponto para conferir; nada que o Durty Cloth Tool recusaria."
+    ),
     "ped.done.checks-refused": "Executar verificações encontrou {count} problemas que o Durty Cloth Tool recusaria.",
+    "ped.done.checks-refused.one": "Executar verificações encontrou {count} problema que o Durty Cloth Tool recusaria.",
     "ped.local.none": "Nenhum problema encontrado.",
     "ped.local.unweighted": "{count} vértices não têm peso. O Durty Cloth Tool os recusa: dê pesos a eles.",
+    "ped.local.unweighted.one": "{count} vértice não tem peso. O Durty Cloth Tool o recusa: dê pesos a ele.",
     "ped.local.too-many": "{count} vértices têm mais de quatro ossos. O jogo mantém os quatro mais fortes.",
+    "ped.local.too-many.one": "{count} vértice tem mais de quatro ossos. O jogo mantém os quatro mais fortes.",
     "ped.local.non-deforming": "{count} vértices têm pesos em ossos que nunca movem a malha.",
+    "ped.local.non-deforming.one": "{count} vértice tem pesos em ossos que nunca movem a malha.",
     "ped.local.unknown-groups": "Grupos de vértices que não são ossos ({names}) ficam de fora.",
     "ped.local.armature-changed": (
         "{count} ossos foram movidos ou girados depois do rig ({names}). Desfaça isso ou faça o rig de novo: os ossos "
+        "mantêm a rotação do modelo base."
+    ),
+    "ped.local.armature-changed.one": (
+        "{count} osso foi movido ou girado depois do rig ({names}). Desfaça isso ou faça o rig de novo: os ossos "
         "mantêm a rotação do modelo base."
     ),
     "ped.local.mesh-changed": (
         "As malhas mudaram depois do rig (vértices adicionados ou removidos). Faça o rig de novo."
     ),
     "ped.local.strain": "{count} vértices esticam ou se comprimem muito em {pose}.",
+    "ped.local.strain.one": "{count} vértice estica ou se comprime muito em {pose}.",
     "ped.local.hint": (
         "Pequenos vincos em poses extremas são normais. Para vincos maiores, mova um marcador e faça o rig de novo."
     ),

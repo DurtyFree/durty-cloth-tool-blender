@@ -149,6 +149,9 @@ Arabic.
   tests fail when a key is missing, when its `{fields}` differ from the English text, or when a protected name such
   as Durty Cloth Tool, Creator Link, gta.clothing, Blender or Sollumz is translated.
 - If you cannot translate a language, say so in the pull request, and we will fill it in before merging.
+- A text that counts things (`{count} vertex groups ...`) can have a second key ending in `.one` for exactly one
+  thing (`{count} vertex group ...`); the add-on shows it when `count` is 1. Translate both. Where your language has
+  more plural forms, word the other form so that it reads right with any number (`Groups: {count}`).
 - Labels, buttons and panel titles use Title Case; descriptions, tooltips and messages are sentences. German uses the
   informal "du". Arabic is translated but not mirrored.
 - Logs, the system console and Copy Diagnostics stay English.

@@ -1527,7 +1527,7 @@ class DCTLINK_OT_fit_check(_MeshOp):
             report = garment.fit_report(data["clearance"], regions)
             obj[gh.FIT_REPORT] = report.to_json()
             gh.set_flag(obj, "dct_checked")
-            return msg("garment.done.check", inside=report.inside)
+            return msg("garment.done.check", count=report.inside)
 
         return self.run(context, check, backup=False)
 

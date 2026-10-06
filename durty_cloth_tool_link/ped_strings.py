@@ -42,6 +42,7 @@ EN: Dict[str, str] = {
     "ped.status.not-checked": "Not checked",
     "ped.status.no-problems": "No problems",
     "ped.status.problems": "{count} findings",
+    "ped.status.problems.one": "{count} finding",
     "ped.status.sent": "Created",
     "ped.status.sending": "Creating",
     "ped.status.not-sent": "Not created",
@@ -69,7 +70,7 @@ EN: Dict[str, str] = {
     "ped.character.none": (
         "Select every mesh of your character (body, head, hair, eyes) in the 3D view, then choose Use Selected."
     ),
-    "ped.character.facts": "{objects} objects, {vertices} vertices, {triangles} triangles, {materials} materials",
+    "ped.character.facts": "{vertices} vertices · {triangles} triangles · objects: {objects} · materials: {materials}",
     "ped.prop.character": "Character",
     "ped.prop.character.desc": "The collection that holds your character's meshes",
     "ped.op.use-selected": "Use Selected",
@@ -78,6 +79,7 @@ EN: Dict[str, str] = {
         "new one"
     ),
     "ped.done.use-selected": "{name} is your character ({count} meshes).",
+    "ped.done.use-selected.one": "{name} is your character ({count} mesh).",
     "ped.check.none": "The character has no meshes.",
     "ped.check.rigged": "The character is rigged. Remove Rig under Rig to change its shape or size.",
     "ped.check.rigged-changed": (
@@ -86,13 +88,20 @@ EN: Dict[str, str] = {
     "ped.check.transforms": (
         "{count} meshes are moved, turned or scaled. Apply their transforms so the character keeps its shape."
     ),
+    "ped.check.transforms.one": (
+        "{count} mesh is moved, turned or scaled. Apply its transforms so the character keeps its shape."
+    ),
     "ped.check.modifiers": "{count} meshes have modifiers ({names}). Apply them so the rig sees what you see.",
+    "ped.check.modifiers.one": "{count} mesh has modifiers ({names}). Apply them so the rig sees what you see.",
     "ped.check.old-rig": (
         "The character is rigged to {name}. Remove the old rig: the character keeps its pose, and From Old Rig can "
         "still place the markers on its joints."
     ),
     "ped.check.shape-keys": (
         "{count} meshes have shape keys, which do not follow the rig. Remove them to keep the shape you see."
+    ),
+    "ped.check.shape-keys.one": (
+        "{count} mesh has shape keys, which do not follow the rig. Remove them to keep the shape you see."
     ),
     "ped.check.lying": "The character seems to lie down (it is longer than it is tall). Stand it up?",
     "ped.check.upside-down": "The character seems to stand on its head. Turn it over?",
@@ -130,10 +139,12 @@ EN: Dict[str, str] = {
     "ped.op.apply-transforms": "Apply Transforms",
     "ped.op.apply-transforms.desc": "Bake each mesh's position, rotation and scale into it, keeping how it looks",
     "ped.done.transforms": "Applied the transforms of {count} meshes.",
+    "ped.done.transforms.one": "Applied the transforms of {count} mesh.",
     "ped.op.apply-modifiers": "Apply Modifiers",
     "ped.op.apply-modifiers.desc": "Apply every modifier of the character's meshes (an Armature excepted)",
     "ped.confirm.modifiers": "Apply every modifier of the character's meshes? Their settings are gone afterwards.",
     "ped.done.modifiers": "Applied {count} modifiers.",
+    "ped.done.modifiers.one": "Applied {count} modifier.",
     "ped.op.remove-old-rig": "Remove Old Rig",
     "ped.op.remove-old-rig.desc": (
         "Take the character off the armature it came with: it keeps its current pose, the armature stays hidden"
@@ -147,6 +158,7 @@ EN: Dict[str, str] = {
     "ped.op.remove-shape-keys.desc": "Remove the shape keys of the character's meshes, keeping the shape they show",
     "ped.confirm.shape-keys": "Remove all shape keys of the character? The shape you see now stays.",
     "ped.done.shape-keys": "Removed the shape keys of {count} meshes.",
+    "ped.done.shape-keys.one": "Removed the shape keys of {count} mesh.",
     "ped.op.scale": "Scale",
     "ped.op.scale.desc": "Scale the character about the origin, as a change of units does",
     "ped.op.scale-by": "Scale by {factor}",
@@ -367,6 +379,9 @@ EN: Dict[str, str] = {
     "ped.result.review": "Needs review (confidence {percent} %)",
     "ped.result.markers": "({names})",
     "ped.result.moved": "Durty Cloth Tool moved {count} markers onto the middle of the body (yellow in the 3D view):",
+    "ped.result.moved.one": (
+        "Durty Cloth Tool moved {count} marker onto the middle of the body (yellow in the 3D view):"
+    ),
     "ped.result.move": "{marker}: {cm} cm",
     "ped.result.subtext": (
         "Apply Rig builds the armature and gives the meshes their weights and the game's rest pose. Your character "
@@ -395,6 +410,9 @@ EN: Dict[str, str] = {
     "ped.warning.marker_offset": (
         "{count} markers sat more than 2 cm off the middle of the body (up to {value} mm). Check them."
     ),
+    "ped.warning.marker_offset.one": (
+        "{count} marker sat more than 2 cm off the middle of the body ({value} mm). Check it."
+    ),
     "ped.warning.asymmetric_markers": "The left and right markers differ by more than 5 %. Check both sides.",
     "ped.warning.proportion_out_of_range": (
         "Some proportions are far from the template's. A template of a closer build moves better."
@@ -410,7 +428,9 @@ EN: Dict[str, str] = {
     "ped.warning.inpainted_large": "Many weights were filled in from their neighbours. Check the test poses.",
     "ped.warning.non_deforming_moved": "Some weights were moved off bones that never move the mesh.",
     "ped.warning.empty_rows_refilled": "{count} vertices had no weights and took their neighbours'.",
+    "ped.warning.empty_rows_refilled.one": "{count} vertex had no weights and took its neighbours'.",
     "ped.warning.floating_parts": "{count} loose parts were bound to the nearest bone.",
+    "ped.warning.floating_parts.one": "{count} loose part was bound to the nearest bone.",
     "ped.warning.rest_strain": (
         "Some triangles fold in the game's rest pose. Look at the shoulders and hips in the Game Rest Pose."
     ),
@@ -457,18 +477,28 @@ EN: Dict[str, str] = {
     "ped.op.run-checks.desc": "Check the weights, the armature and the meshes against the rig, and the test poses",
     "ped.op.show-finding.desc": "Select the vertices this finding concerns",
     "ped.done.checks": "Run Checks found {count} things to look at; nothing Durty Cloth Tool would refuse.",
+    "ped.done.checks.one": "Run Checks found {count} thing to look at; nothing Durty Cloth Tool would refuse.",
     "ped.done.checks-refused": "Run Checks found {count} problems Durty Cloth Tool would refuse.",
+    "ped.done.checks-refused.one": "Run Checks found {count} problem Durty Cloth Tool would refuse.",
     "ped.local.none": "No problems found.",
     "ped.local.unweighted": "{count} vertices have no weight. Durty Cloth Tool refuses them: weight them.",
+    "ped.local.unweighted.one": "{count} vertex has no weight. Durty Cloth Tool refuses it: weight it.",
     "ped.local.too-many": "{count} vertices have more than four bones. The game keeps the four strongest.",
+    "ped.local.too-many.one": "{count} vertex has more than four bones. The game keeps the four strongest.",
     "ped.local.non-deforming": "{count} vertices are weighted to bones that never move the mesh.",
+    "ped.local.non-deforming.one": "{count} vertex is weighted to bones that never move the mesh.",
     "ped.local.unknown-groups": "Vertex groups that are not bones ({names}) are left out.",
     "ped.local.armature-changed": (
         "{count} bones were moved or turned after the rig ({names}). Undo that or rig again: bones keep the "
         "template's rotation."
     ),
+    "ped.local.armature-changed.one": (
+        "{count} bone was moved or turned after the rig ({names}). Undo that or rig again: bones keep the template's "
+        "rotation."
+    ),
     "ped.local.mesh-changed": "The meshes changed after the rig (vertices added or removed). Rig again.",
     "ped.local.strain": "{count} vertices stretch or squash a lot in {pose}.",
+    "ped.local.strain.one": "{count} vertex stretches or squashes a lot in {pose}.",
     "ped.local.hint": "Small creases in extreme poses are normal. For bigger ones, move a marker and rig again.",
     # ---- 5. Send --------------------------------------------------------------------------------------
     "ped.prop.name": "Ped Name",

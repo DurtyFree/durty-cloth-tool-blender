@@ -105,6 +105,33 @@ def test_no_letters_from_another_script(language):
                 assert script in ("LATIN", expected), (key, character)
 
 
+def test_a_count_of_one_reads_in_the_singular():
+    """The add listed "1 vertex groups are no bones of the freemode skeleton": a text about a number of things shows
+    its .one form when the count is exactly 1, in English and through a translation."""
+    one = strings.msg("add.why.unknown-groups", count=1, names="Group")
+    assert strings.english(one).startswith("1 vertex group is not a bone of the freemode skeleton: Group.")
+    assert strings.english(strings.msg("add.why.unknown-groups", count=2, names="A, B")).startswith(
+        "2 vertex groups are not bones")
+    assert strings.english(strings.msg("fit.wait.minutes", count=1)) == "in about 1 minute"
+    assert strings.english(strings.msg("fit.wait.minutes", count=0)) == "in about 0 minutes"
+    german = translations.table("de")
+    by_english = {EN[key]: text for key, text in german.items()}
+    strings.set_translators(lambda text: by_english.get(text, text))
+    try:
+        assert strings.text(one).startswith("1 Punktgruppe ist kein Knochen des Freemode-Skeletts: Group.")
+    finally:
+        strings.set_translators(None)
+
+
+def test_every_form_for_one_has_the_fields_of_its_other_form():
+    """The .one form replaces its other form only by the count, so it may neither lose nor need a field."""
+    for key, english in EN.items():
+        if key.endswith(strings.ONE):
+            other = key[:-len(strings.ONE)]
+            assert other in EN, key
+            assert "count" in fields(english) and fields(english) == fields(EN[other]), key
+
+
 def test_a_broken_translation_falls_back_to_english():
     strings.set_translators(lambda text: "{missing}" if text == EN["details.status"] else text)
     try:

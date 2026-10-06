@@ -265,6 +265,7 @@ TEXT = {
     "garment.check.value": "{p50} ({p10} إلى {p90})",
     "garment.check.usual-line": "المعتاد: {range}",
     "garment.check.inside": "داخل الجسم: {count} رأسًا ({share} %)",
+    "garment.check.inside.one": "داخل الجسم: {count} رأس ({share} %)",
     "garment.advice.shoulders": (
         "الكتفان بعيدان عن الجسم: في أدوات المناطق اختر المنطقة الكتفان ثم استخدم تقريب من الجسم لإنزالهما."
     ),
@@ -275,15 +276,20 @@ TEXT = {
     "garment.pose.legs-forward": "الساقان إلى الأمام",
     "garment.pose.twist": "التواء",
     "garment.tears.pose": "{pose}: تنفتح {count} نقطة في الدرزات، حتى {gap} mm",
+    "garment.tears.pose.one": "{pose}: تنفتح {count} نقطة في الدرزات، حتى {gap} mm",
     "garment.tears.pose-clean": "{pose}: لا تنفتح أي درزة",
     "garment.validate.clean": "CLEAN: لا شيء لإصلاحه.",
     "garment.finding.non-finite": "إحداثيات {count} نقطة معطوبة.",
+    "garment.finding.non-finite.one": "إحداثيات {count} نقطة معطوبة.",
     "garment.finding.no-uv": "لا تحتوي قطعة الملابس على خريطة UV، لذا لا يمكنها عرض نسيج.",
     "garment.finding.uv-outside": "{count} نقطة UV تقع خارج المربع من 0 إلى 1؛ تكرر اللعبة النسيج هناك.",
+    "garment.finding.uv-outside.one": "{count} نقطة UV تقع خارج المربع من 0 إلى 1؛ تكرر اللعبة النسيج هناك.",
     "garment.finding.uv-area": "يستخدم تخطيط UV {area} % فقط من النسيج.",
     "garment.finding.no-weights": "لم تُجهَّز بالعظام بعد: امنح قطعة الملابس أوزانًا على عظام هيكل freemode العظمي.",
     "garment.finding.unweighted": "{count} رأسًا بلا أوزان؛ تتركها اللعبة خلفها عندما يتحرك الـ ped.",
+    "garment.finding.unweighted.one": "{count} رأس بلا أوزان؛ تتركه اللعبة خلفها عندما يتحرك الـ ped.",
     "garment.finding.influences": "{count} رأسًا تحركها أكثر من {limit} عظام؛ تستخدم اللعبة {limit} فقط.",
+    "garment.finding.influences.one": "{count} رأس تحركه أكثر من {limit} عظام؛ تستخدم اللعبة {limit} فقط.",
     "garment.finding.colour-missing": "Color 1 مفقود. يضيفه تجهيز قطعة الملابس.",
     "garment.finding.colour-format": (
         "Color 1 ليس لون Byte Color على Face Corner كما يحتاجه Sollumz. يستبدله تجهيز قطعة الملابس."
@@ -344,6 +350,7 @@ TEXT = {
     "garment.done.body": "تمت إضافة جسم freemode ({gender}، الإصدار {version}).",
     "garment.done.body-file": "تمت إضافة {name} كجسم.",
     "garment.done.markers": "العلامات الموضوعة: {count}. حرّك أي علامة في غير موضعها قبل الملاءمة.",
+    "garment.done.markers.one": "العلامات الموضوعة: {count}. حرّك العلامة إن كانت في غير موضعها قبل الملاءمة.",
     "garment.done.mirror": "تم عكس علامات اليسار إلى اليمين.",
     "garment.done.preset-saved": "تم حفظ إعداد الوضعية المسبق {name}.",
     "garment.done.preset-loaded": "تم تحميل إعداد الوضعية المسبق {name}.",
@@ -357,7 +364,8 @@ TEXT = {
         "تم تنعيم {moved} رأسًا في المنطقة {region} (شكل ما قبل الملاءمة غير موجود للمقارنة به)."
     ),
     "garment.done.problems": "داخل الجسم: {inside}، قريب جدًا: {close}، متمدد: {stretched}، عائم: {floating}.",
-    "garment.done.check": "اكتمل فحص الملاءمة. داخل الجسم: {inside} رأسًا.",
+    "garment.done.check": "اكتمل فحص الملاءمة. داخل الجسم: {count} رأسًا.",
+    "garment.done.check.one": "اكتمل فحص الملاءمة. داخل الجسم: {count} رأس.",
     "garment.done.sculpt-start": "بدأت جلسة النحت.",
     "garment.done.accept": (
         "تم الاحتفاظ بالشكل المنحوت: نُقل {moved} رأسًا. داخل الجسم: {before} قبل، و{after} الآن."
@@ -366,6 +374,7 @@ TEXT = {
     "garment.done.tears": (
         "{count} رأسًا من الدرزات تنفتح في وضعية اختبار. وهي في مجموعة الرؤوس DCT Tears."
     ),
+    "garment.done.tears.one": "{count} رأس من الدرزات ينفتح في وضعية اختبار. وهو في مجموعة الرؤوس DCT Tears.",
     "garment.done.no-tears": "لا تنفتح أي درزة في وضعيات الاختبار.",
     "garment.done.tears-welded": (
         "الدرزات موصولة، فلا يمكن أن تنفتح أي منها هنا. تحقق من قطعة الملابس وهي تتحرك على الـ ped في المعاينة ثلاثية "
@@ -554,10 +563,12 @@ TEXT = {
     "add.fetching": "جارٍ جلب هيكل freemode العظمي ({gender}) من Durty Cloth Tool…",
     "add.progress.skeleton": "جارٍ جلب هيكل freemode العظمي من Durty Cloth Tool…",
     "add.sent": "أُرسل {name} (التنويعات اللونية: {count}). اختر إضافة إلى المشروع في Durty Cloth Tool.",
+    "add.sent.one": "أُرسل {name} (التنويعات اللونية: {count}). اختر إضافة إلى المشروع في Durty Cloth Tool.",
     "add.waiting": "يعرض Durty Cloth Tool قطعة الملابس. اختر إضافة إلى المشروع أو إلغاء هناك.",
     "add.waiting.subtext": "لا يُضاف شيء حتى تختار إضافة إلى المشروع في Durty Cloth Tool. يسحب إلغاء هنا طلب الإضافة.",
     "add.withdrawing": "جارٍ إلغاء عملية الإضافة…",
     "add.blocked": "عملية الإضافة محظورة: أصلح أولًا المشكلات المدرجة في قسم إضافة إلى المشروع ({count}).",
+    "add.blocked.one": "عملية الإضافة محظورة: أصلح أولًا المشكلة المدرجة في قسم إضافة إلى المشروع ({count}).",
     "add.problems": "أصلح هذه أولًا ({count}):",
     "add.findings": "فحوصات Durty Cloth Tool: {count}",
     "add.added.subtext": (
@@ -579,6 +590,10 @@ TEXT = {
     "add.why.unknown-groups": (
         "مجموعات رؤوس ليست من عظام هيكل freemode العظمي ({count}): {names}. أعد تسميتها أو أزلها؛ ستحركها اللعبة "
         "مع عظمة الجذر."
+    ),
+    "add.why.unknown-groups.one": (
+        "مجموعة رؤوس ليست من عظام هيكل freemode العظمي ({count}): {names}. أعد تسميتها أو أزلها؛ ستحركها اللعبة مع "
+        "عظمة الجذر."
     ),
     "add.why.name-empty": "امنح قطعة الملابس اسمًا.",
     "add.why.name-invalid": "يمكن أن يحتوي اسم قطعة الملابس على {limit} حرفًا على الأكثر، ودون أحرف تحكم.",
@@ -728,6 +743,7 @@ TEXT = {
     "garment.done.import-avatar": "تم استيراد {name} (الرؤوس: {count}) دون الأفاتار الذي جاء معها.",
     "garment.done.back": "تمت استعادة الشكل قبل آخر خطوة.",
     "garment.done.remove-backups": "أُزيلت النسخ الاحتياطية: {count}.",
+    "garment.done.remove-backups.one": "أُزيلت النسخ الاحتياطية: {count}.",
     "garment.done.push-deep": (
         "تم نقل {moved} رأسًا. داخل الجسم: {before} قبل، و{after} الآن. {deep} عميقة جدًا لا يمكن نقلها (كمّ يخترق "
         "الجسم؟): أصلحها يدويًا."
@@ -891,7 +907,9 @@ TEXT = {
     "fit.error.cancelled": "أُلغيت الملاءمة.",
     "fit.error.other": "رفض gta.clothing الملاءمة ({code}).",
     "fit.wait.minutes": "بعد نحو {count} دقيقة",
+    "fit.wait.minutes.one": "بعد نحو {count} دقيقة",
     "fit.wait.hours": "بعد نحو {count} ساعة",
+    "fit.wait.hours.one": "بعد نحو {count} ساعة",
     "fit.wait.later": "غدًا",
     "fit.refunded": "لا تُحسب هذه الملاءمة من اليوم.",
     "fit.counted": "تُحسب هذه الملاءمة من اليوم.",
@@ -948,6 +966,7 @@ TEXT = {
     "fit.done.weights": "نُقلت الأوزان: {bones} عظمة.",
     "fit.done.not-on-body": "قطعة الملابس لا تستقر على الجسم، لذلك لم يتغير شيء. حاذِها مع الجسم أولًا.",
     "fit.done.unweighted": "لم يحصل {count} رأس على أوزان.",
+    "fit.done.unweighted.one": "لم يحصل {count} رأس على أوزان.",
     "fit.changed": "تغيّرت قطعة الملابس أثناء الملاءمة، لذلك لم تُطبَّق النتيجة. لائم مرة أخرى.",
     "garment.next.fit": (
         "التالي: ملاءمة مع الجسم في لوحة الملاءمة، أو شغّل فحص الملاءمة في الإصلاح ولائم قطعة الملابس يدويًا."
@@ -971,9 +990,18 @@ TEXT = {
         "هناك. إنها محددة: اضغط Tab لرؤيتها. تمنح ملاءمة مع الجسم جانبي الخياطة الأوزان نفسها مع ذلك؛ إذا ظهرت فجوة في "
         "اللعبة، فاخِط هذه الخياطات في تطبيق الملابس لديك وصدّرها مرة أخرى، أو صِلها يدويًا."
     ),
+    "garment.done.prepare-open.one": (
+        "تم التجهيز، لكن {count} رأس خياطة لم يجد نظيرًا على القطعة المجاورة (وُصل {welded}): القطع لا تلتقي تمامًا "
+        "هناك. إنه محدد: اضغط Tab لرؤيته. تمنح ملاءمة مع الجسم جانبي الخياطة الأوزان نفسها مع ذلك؛ إذا ظهرت فجوة في "
+        "اللعبة، فاخِط هذه الخياطة في تطبيق الملابس لديك وصدّرها مرة أخرى، أو صِلها يدويًا."
+    ),
     "garment.done.combine-missing": (
         "تم الدمج، لكن تعذّر العثور على {count} خامة فخُبزت دون بكسلاتها: {names}. ضع ملفات الصور حيث تتوقعها المواد "
         "(أو احزمها)، ثم ادمج مرة أخرى."
+    ),
+    "garment.done.combine-missing.one": (
+        "تم الدمج، لكن تعذّر العثور على {count} خامة فخُبزت دون بكسلاتها: {names}. ضع ملف الصورة حيث تتوقعه المادة (أو "
+        "احزمه)، ثم ادمج مرة أخرى."
     ),
     "garment.done.step-cancelled": "أُلغي {step}؛ قطعة الملابس كما كانت.",
     "garment.step.status": "{step}: {stage} ({done} من {total}). يلغي Esc عند نهاية هذه المرحلة.",
@@ -1144,6 +1172,7 @@ TEXT = {
         "توزيع أوزان التنورة أو أطراف المعطف على الفخذين كليهما عبر المنتصف، كي لا ينقسم القماش بين الساقين"
     ),
     "garment.done.bridge": "وُصلت أوزان الفخذين لـ {count} رأسًا بين الساقين.",
+    "garment.done.bridge.one": "وُصلت أوزان الفخذين لـ {count} رأس بين الساقين.",
     "garment.why.no-bridge": "التنانير والفساتين والمعاطف الطويلة وحدها توصل بين الساقين.",
     "garment.why.no-leg-weights": "ليس لقطعة الملابس أوزان فخذين لوصلها بعد. لائمها مع الجسم أو انقل الأوزان أولًا.",
     "garment.done.combine-walls": (

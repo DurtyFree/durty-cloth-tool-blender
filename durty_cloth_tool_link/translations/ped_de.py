@@ -35,6 +35,7 @@ TEXT = {
     "ped.status.not-checked": "Nicht geprüft",
     "ped.status.no-problems": "Keine Probleme",
     "ped.status.problems": "{count} Befunde",
+    "ped.status.problems.one": "{count} Befund",
     "ped.status.sent": "Erstellt",
     "ped.status.sending": "Wird erstellt",
     "ped.status.not-sent": "Nicht erstellt",
@@ -60,7 +61,7 @@ TEXT = {
     "ped.character.none": (
         "Wähle jedes Mesh deiner Figur (Körper, Kopf, Haare, Augen) in der 3D-Ansicht aus und dann Auswahl nutzen."
     ),
-    "ped.character.facts": "{objects} Objekte, {vertices} Vertices, {triangles} Dreiecke, {materials} Materialien",
+    "ped.character.facts": "{vertices} Vertices · {triangles} Dreiecke · Objekte: {objects} · Materialien: {materials}",
     "ped.prop.character": "Figur",
     "ped.prop.character.desc": "Die Sammlung mit den Meshes deiner Figur",
     "ped.op.use-selected": "Auswahl nutzen",
@@ -69,6 +70,7 @@ TEXT = {
         "eine neue"
     ),
     "ped.done.use-selected": "{name} ist deine Figur ({count} Meshes).",
+    "ped.done.use-selected.one": "{name} ist deine Figur ({count} Mesh).",
     "ped.check.none": "Die Figur hat keine Meshes.",
     "ped.check.rigged": "Die Figur ist geriggt. Wähle Rig entfernen unter Rig, um ihre Form oder Größe zu ändern.",
     "ped.check.rigged-changed": (
@@ -79,8 +81,15 @@ TEXT = {
         "{count} Meshes sind verschoben, gedreht oder skaliert. Wende ihre Transformationen an, damit die Figur ihre "
         "Form behält."
     ),
+    "ped.check.transforms.one": (
+        "{count} Mesh ist verschoben, gedreht oder skaliert. Wende seine Transformationen an, damit die Figur ihre "
+        "Form behält."
+    ),
     "ped.check.modifiers": (
         "{count} Meshes haben Modifikatoren ({names}). Wende sie an, damit das Rig sieht, was du siehst."
+    ),
+    "ped.check.modifiers.one": (
+        "{count} Mesh hat Modifikatoren ({names}). Wende sie an, damit das Rig sieht, was du siehst."
     ),
     "ped.check.old-rig": (
         "Die Figur ist an {name} geriggt. Entferne das alte Rig: Die Figur behält ihre Pose, und Vom alten Rig kann "
@@ -88,6 +97,10 @@ TEXT = {
     ),
     "ped.check.shape-keys": (
         "{count} Meshes haben Formschlüssel, die dem Rig nicht folgen. Entferne sie, um die Form zu behalten, die du "
+        "siehst."
+    ),
+    "ped.check.shape-keys.one": (
+        "{count} Mesh hat Formschlüssel, die dem Rig nicht folgen. Entferne sie, um die Form zu behalten, die du "
         "siehst."
     ),
     "ped.check.lying": "Die Figur scheint zu liegen (sie ist länger als hoch). Aufstellen?",
@@ -132,10 +145,12 @@ TEXT = {
         "Position, Drehung und Skalierung jedes Meshes in das Mesh übernehmen, ohne sein Aussehen zu ändern"
     ),
     "ped.done.transforms": "Die Transformationen von {count} Meshes wurden angewendet.",
+    "ped.done.transforms.one": "Die Transformationen von {count} Mesh wurden angewendet.",
     "ped.op.apply-modifiers": "Modifikatoren anwenden",
     "ped.op.apply-modifiers.desc": "Jeden Modifikator der Meshes der Figur anwenden (außer einem Armature-Modifikator)",
     "ped.confirm.modifiers": "Jeden Modifikator der Meshes der Figur anwenden? Ihre Einstellungen sind danach weg.",
     "ped.done.modifiers": "{count} Modifikatoren angewendet.",
+    "ped.done.modifiers.one": "{count} Modifikator angewendet.",
     "ped.op.remove-old-rig": "Altes Rig entfernen",
     "ped.op.remove-old-rig.desc": (
         "Die Figur von der mitgelieferten Armature lösen: Sie behält ihre aktuelle Pose, die Armature bleibt "
@@ -152,6 +167,7 @@ TEXT = {
     ),
     "ped.confirm.shape-keys": "Alle Formschlüssel der Figur entfernen? Die Form, die du jetzt siehst, bleibt.",
     "ped.done.shape-keys": "Die Formschlüssel von {count} Meshes wurden entfernt.",
+    "ped.done.shape-keys.one": "Die Formschlüssel von {count} Mesh wurden entfernt.",
     "ped.op.scale": "Skalieren",
     "ped.op.scale.desc": "Die Figur um den Ursprung skalieren, wie es ein Wechsel der Einheit tut",
     "ped.op.scale-by": "Mit Faktor {factor} skalieren",
@@ -390,6 +406,9 @@ TEXT = {
     "ped.result.moved": (
         "Durty Cloth Tool hat {count} Marker in die Mitte des Körpers verschoben (gelb in der 3D-Ansicht):"
     ),
+    "ped.result.moved.one": (
+        "Durty Cloth Tool hat {count} Marker in die Mitte des Körpers verschoben (gelb in der 3D-Ansicht):"
+    ),
     "ped.result.move": "{marker}: {cm} cm",
     "ped.result.subtext": (
         "Rig anwenden baut die Armature und gibt den Meshes ihre Gewichte und die Ruhepose des Spiels. Deine Figur "
@@ -420,6 +439,9 @@ TEXT = {
     "ped.warning.marker_offset": (
         "{count} Marker lagen mehr als 2 cm neben der Mitte des Körpers (bis zu {value} mm). Prüfe sie."
     ),
+    "ped.warning.marker_offset.one": (
+        "{count} Marker lag mehr als 2 cm neben der Mitte des Körpers ({value} mm). Prüfe ihn."
+    ),
     "ped.warning.asymmetric_markers": (
         "Die linken und rechten Marker weichen um mehr als 5 % voneinander ab. Prüfe beide Seiten."
     ),
@@ -438,7 +460,9 @@ TEXT = {
     "ped.warning.inpainted_large": "Viele Gewichte wurden aus ihren Nachbarn aufgefüllt. Prüfe die Testposen.",
     "ped.warning.non_deforming_moved": "Einige Gewichte wurden von Knochen genommen, die das Mesh nie bewegen.",
     "ped.warning.empty_rows_refilled": "{count} Vertices hatten keine Gewichte und haben die ihrer Nachbarn bekommen.",
+    "ped.warning.empty_rows_refilled.one": "{count} Vertex hatte keine Gewichte und hat die seiner Nachbarn bekommen.",
     "ped.warning.floating_parts": "{count} lose Teile wurden an den nächsten Knochen gebunden.",
+    "ped.warning.floating_parts.one": "{count} loses Teil wurde an den nächsten Knochen gebunden.",
     "ped.warning.rest_strain": (
         "Einige Dreiecke klappen in der Ruhepose des Spiels um. Sieh dir in der Testpose Spiel-Ruhepose die Schultern "
         "und Hüften an."
@@ -499,22 +523,36 @@ TEXT = {
     "ped.done.checks": (
         "Prüfungen ausführen hat {count} Dinge zum Ansehen gefunden; nichts, was Durty Cloth Tool ablehnen würde."
     ),
+    "ped.done.checks.one": (
+        "Prüfungen ausführen hat {count} Ding zum Ansehen gefunden; nichts, was Durty Cloth Tool ablehnen würde."
+    ),
     "ped.done.checks-refused": (
         "Prüfungen ausführen hat {count} Probleme gefunden, die Durty Cloth Tool ablehnen würde."
     ),
+    "ped.done.checks-refused.one": (
+        "Prüfungen ausführen hat {count} Problem gefunden, das Durty Cloth Tool ablehnen würde."
+    ),
     "ped.local.none": "Keine Probleme gefunden.",
     "ped.local.unweighted": "{count} Vertices haben kein Gewicht. Durty Cloth Tool lehnt sie ab: Gewichte sie.",
+    "ped.local.unweighted.one": "{count} Vertex hat kein Gewicht. Durty Cloth Tool lehnt ihn ab: Gewichte ihn.",
     "ped.local.too-many": "{count} Vertices haben mehr als vier Knochen. Das Spiel behält die vier stärksten.",
+    "ped.local.too-many.one": "{count} Vertex hat mehr als vier Knochen. Das Spiel behält die vier stärksten.",
     "ped.local.non-deforming": "{count} Vertices sind auf Knochen gewichtet, die das Mesh nie bewegen.",
+    "ped.local.non-deforming.one": "{count} Vertex ist auf Knochen gewichtet, die das Mesh nie bewegen.",
     "ped.local.unknown-groups": "Vertexgruppen, die keine Knochen sind ({names}), werden weggelassen.",
     "ped.local.armature-changed": (
         "{count} Knochen wurden nach dem Riggen verschoben oder gedreht ({names}). Mach das rückgängig oder rigge "
+        "erneut: Knochen behalten die Drehung der Vorlage."
+    ),
+    "ped.local.armature-changed.one": (
+        "{count} Knochen wurde nach dem Riggen verschoben oder gedreht ({names}). Mach das rückgängig oder rigge "
         "erneut: Knochen behalten die Drehung der Vorlage."
     ),
     "ped.local.mesh-changed": (
         "Die Meshes haben sich nach dem Riggen geändert (Vertices hinzugefügt oder entfernt). Rigge erneut."
     ),
     "ped.local.strain": "{count} Vertices werden in {pose} stark gedehnt oder gestaucht.",
+    "ped.local.strain.one": "{count} Vertex wird in {pose} stark gedehnt oder gestaucht.",
     "ped.local.hint": (
         "Kleine Falten in extremen Posen sind normal. Bei größeren verschiebe einen Marker und rigge erneut."
     ),

@@ -291,6 +291,7 @@ TEXT = {
     "garment.check.value": "{p50} ({p10} a {p90})",
     "garment.check.usual-line": "Habitual: {range}",
     "garment.check.inside": "Dentro del cuerpo: {count} vértices ({share} %)",
+    "garment.check.inside.one": "Dentro del cuerpo: {count} vértice ({share} %)",
     "garment.advice.shoulders": (
         "Los hombros se separan del cuerpo: Ceñir al cuerpo (Herramientas de región) con Hombros los baja."
     ),
@@ -303,19 +304,26 @@ TEXT = {
     "garment.pose.legs-forward": "Piernas hacia delante",
     "garment.pose.twist": "Torsión",
     "garment.tears.pose": "{pose}: {count} puntos de costura abiertos, hasta {gap} mm",
+    "garment.tears.pose.one": "{pose}: {count} punto de costura abierto, hasta {gap} mm",
     "garment.tears.pose-clean": "{pose}: no se abre ninguna costura",
     "garment.validate.clean": "CLEAN: nada que corregir.",
     "garment.finding.non-finite": "{count} puntos tienen coordenadas no válidas.",
+    "garment.finding.non-finite.one": "{count} punto tiene coordenadas no válidas.",
     "garment.finding.no-uv": "La prenda no tiene mapa UV, así que no puede mostrar una textura.",
     "garment.finding.uv-outside": (
         "{count} puntos UV quedan fuera del cuadrado de 0 a 1; el juego repite la textura allí."
+    ),
+    "garment.finding.uv-outside.one": (
+        "{count} punto UV queda fuera del cuadrado de 0 a 1; el juego repite la textura allí."
     ),
     "garment.finding.uv-area": "La distribución UV usa solo el {area} % de la textura.",
     "garment.finding.no-weights": "Aún sin rigging: asígnale a la prenda pesos de los huesos del esqueleto freemode.",
     "garment.finding.unweighted": (
         "{count} vértices no tienen pesos; el juego los deja atrás cuando el ped se mueve."
     ),
+    "garment.finding.unweighted.one": "{count} vértice no tiene pesos; el juego lo deja atrás cuando el ped se mueve.",
     "garment.finding.influences": "{count} vértices los mueven más de {limit} huesos; el juego solo usa {limit}.",
+    "garment.finding.influences.one": "A {count} vértice lo mueven más de {limit} huesos; el juego solo usa {limit}.",
     "garment.finding.colour-missing": "Falta Color 1. Preparar prenda lo añade.",
     "garment.finding.colour-format": (
         "Color 1 no es un color byte de esquina de cara, como lo necesita Sollumz. Preparar prenda lo reemplaza."
@@ -382,6 +390,7 @@ TEXT = {
     "garment.done.body": "Se añadió el cuerpo freemode ({gender}, versión {version}).",
     "garment.done.body-file": "Se añadió {name} como cuerpo.",
     "garment.done.markers": "Se colocaron {count} marcadores. Mueve los que no estén en su sitio antes del ajuste.",
+    "garment.done.markers.one": "Se colocó {count} marcador. Muévelo antes del ajuste si no está en su sitio.",
     "garment.done.mirror": "Se reflejaron los marcadores izquierdos en el lado derecho.",
     "garment.done.preset-saved": "Se guardó el preajuste de pose {name}.",
     "garment.done.preset-loaded": "Se cargó el preajuste de pose {name}.",
@@ -397,7 +406,8 @@ TEXT = {
     "garment.done.problems": (
         "Dentro: {inside}, demasiado cerca: {close}, estirado: {stretched}, flotante: {floating}."
     ),
-    "garment.done.check": "Comprobación de ajuste hecha. Dentro del cuerpo: {inside} vértices.",
+    "garment.done.check": "Comprobación de ajuste hecha. Dentro del cuerpo: {count} vértices.",
+    "garment.done.check.one": "Comprobación de ajuste hecha. Dentro del cuerpo: {count} vértice.",
     "garment.done.sculpt-start": "Sesión de esculpido iniciada.",
     "garment.done.accept": (
         "Se conservó la forma esculpida: se movieron {moved} vértices. Dentro del cuerpo: {before} antes, {after} "
@@ -406,6 +416,9 @@ TEXT = {
     "garment.done.cancel-sculpt": "Esculpido cancelado: la prenda vuelve a su forma de antes de la sesión.",
     "garment.done.tears": (
         "{count} vértices de costura se abren en una pose de prueba. Están en el grupo de vértices DCT Tears."
+    ),
+    "garment.done.tears.one": (
+        "{count} vértice de costura se abre en una pose de prueba. Está en el grupo de vértices DCT Tears."
     ),
     "garment.done.no-tears": "No se abre ninguna costura en las poses de prueba.",
     "garment.done.tears-welded": (
@@ -622,6 +635,7 @@ TEXT = {
     "add.fetching": "Obteniendo de Durty Cloth Tool el esqueleto freemode ({gender})…",
     "add.progress.skeleton": "Obteniendo el esqueleto freemode de Durty Cloth Tool…",
     "add.sent": "Se envió {name} con {count} variantes de color. Elige Añadir al proyecto en Durty Cloth Tool.",
+    "add.sent.one": "Se envió {name} con {count} variante de color. Elige Añadir al proyecto en Durty Cloth Tool.",
     "add.waiting": "Durty Cloth Tool muestra la prenda. Elige Añadir al proyecto o Cancelar allí.",
     "add.waiting.subtext": (
         "No se añade nada hasta que elijas Añadir al proyecto en Durty Cloth Tool. Cancelar aquí retira la adición."
@@ -629,6 +643,9 @@ TEXT = {
     "add.withdrawing": "Cancelando la adición…",
     "add.blocked": (
         "La adición está bloqueada: primero hay que corregir {count} problemas, que aparecen en Añadir al proyecto."
+    ),
+    "add.blocked.one": (
+        "La adición está bloqueada: primero hay que corregir {count} problema, que aparece en Añadir al proyecto."
     ),
     "add.problems": "Corrige esto primero ({count}):",
     "add.findings": "Revisiones de Durty Cloth Tool: {count}",
@@ -653,6 +670,10 @@ TEXT = {
     "add.why.unknown-groups": (
         "{count} grupos de vértices no son huesos del esqueleto freemode: {names}. Cámbiales el nombre o "
         "elimínalos; el juego los movería con el hueso raíz."
+    ),
+    "add.why.unknown-groups.one": (
+        "{count} grupo de vértices no es un hueso del esqueleto freemode: {names}. Cámbiale el nombre o elimínalo; el "
+        "juego lo movería con el hueso raíz."
     ),
     "add.why.name-empty": "Da a la prenda un nombre.",
     "add.why.name-invalid": (
@@ -855,6 +876,7 @@ TEXT = {
     "garment.done.import-avatar": "Se importó {name} ({count} vértices) sin el avatar que venía con ella.",
     "garment.done.back": "Se recuperó la forma de antes del último paso.",
     "garment.done.remove-backups": "Se quitaron {count} copias de seguridad.",
+    "garment.done.remove-backups.one": "Se quitó {count} copia de seguridad.",
     "garment.done.push-deep": (
         "Se movieron {moved} vértices. Dentro del cuerpo: {before} antes, {after} ahora. {deep} están demasiado dentro "
         "para moverlos (¿una manga atraviesa el cuerpo?): corrígelos a mano."
@@ -1050,7 +1072,9 @@ TEXT = {
     "fit.error.cancelled": "El ajuste se canceló.",
     "fit.error.other": "gta.clothing rechazó el ajuste ({code}).",
     "fit.wait.minutes": "en unos {count} minutos",
+    "fit.wait.minutes.one": "en aproximadamente {count} minuto",
     "fit.wait.hours": "en unas {count} horas",
+    "fit.wait.hours.one": "en aproximadamente {count} hora",
     "fit.wait.later": "mañana",
     "fit.refunded": "Este ajuste no cuenta para hoy.",
     "fit.counted": "Este ajuste cuenta para hoy.",
@@ -1131,6 +1155,7 @@ TEXT = {
     "fit.done.weights": "Pesos transferidos: {bones} huesos.",
     "fit.done.not-on-body": "La prenda no está sobre el cuerpo, así que nada cambió. Alinéala primero al cuerpo.",
     "fit.done.unweighted": "{count} vértices no recibieron pesos.",
+    "fit.done.unweighted.one": "{count} vértice no recibió pesos.",
     "fit.changed": "La prenda cambió mientras se ajustaba, así que no se aplicó el resultado. Vuelve a ajustar.",
     "garment.next.fit": (
         "Siguiente: Ajustar al cuerpo en Ajuste, o comprueba el ajuste en Corregir y ajusta la prenda a mano."
@@ -1159,9 +1184,19 @@ TEXT = {
         "los mismos pesos a ambos lados de una costura; si en el juego se ve un hueco, cose esas costuras en tu "
         "programa de ropa y vuelve a exportar, o únelos a mano."
     ),
+    "garment.done.prepare-open.one": (
+        "Preparada, pero {count} vértice de costura no encontró pareja en la pieza vecina ({welded} unidos): las "
+        "piezas no llegan a juntarse ahí. Está seleccionado: pulsa Tab para verlo. Ajustar al cuerpo da igualmente los "
+        "mismos pesos a ambos lados de una costura; si en el juego se ve un hueco, cose esa costura en tu programa de "
+        "ropa y vuelve a exportar, o únela a mano."
+    ),
     "garment.done.combine-missing": (
         "Combinada, pero no se encontraron {count} texturas y se hornearon sin sus píxeles: {names}. Pon los archivos "
         "de imagen donde los esperan los materiales (o empaquétalos) y vuelve a combinar."
+    ),
+    "garment.done.combine-missing.one": (
+        "Combinada, pero no se encontró {count} textura y se horneó sin sus píxeles: {names}. Pon el archivo de imagen "
+        "donde lo espera el material (o empaquétalo) y vuelve a combinar."
     ),
     "garment.done.step-cancelled": "{step} se canceló; la prenda está como antes.",
     "garment.step.status": "{step}: {stage} ({done} de {total}). Esc cancela al terminar esta etapa.",
@@ -1364,6 +1399,7 @@ TEXT = {
         "la tela entre las piernas no se separe"
     ),
     "garment.done.bridge": "Se unieron de una pierna a otra los pesos de los muslos de {count} vértices.",
+    "garment.done.bridge.one": "Se unieron de una pierna a otra los pesos de los muslos de {count} vértice.",
     "garment.why.no-bridge": "Solo las faldas, los vestidos y los abrigos largos se unen de una pierna a otra.",
     "garment.why.no-leg-weights": (
         "La prenda aún no tiene pesos de los muslos que unir. Ajústala al cuerpo o transfiere primero los pesos."

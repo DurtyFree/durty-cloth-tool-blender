@@ -231,6 +231,7 @@ TEXT = {
     "garment.check.value": "{p50}（{p10} 至 {p90}）",
     "garment.check.usual-line": "常见：{range}",
     "garment.check.inside": "在身体内：{count} 个顶点（{share}%）",
+    "garment.check.inside.one": "在身体内：{count} 个顶点（{share}%）",
     "garment.advice.shoulders": "肩部与身体之间有空隙：在区域工具中把区域设为肩部后点击贴合身体，即可把它们拉向身体。",
     "garment.sculpt.running": "用抓起笔刷拖动以移动服装。身体以线框显示。",
     "garment.sculpt.subtext": "接受会保留形状；取消会恢复会话之前的形状。",
@@ -239,15 +240,20 @@ TEXT = {
     "garment.pose.legs-forward": "腿部前伸",
     "garment.pose.twist": "扭转",
     "garment.tears.pose": "{pose}：{count} 个接缝点裂开，最大 {gap} mm",
+    "garment.tears.pose.one": "{pose}：{count} 个接缝点裂开，最大 {gap} mm",
     "garment.tears.pose-clean": "{pose}：没有接缝裂开",
     "garment.validate.clean": "CLEAN：没有需要修复的问题。",
     "garment.finding.non-finite": "{count} 个点的坐标已损坏。",
+    "garment.finding.non-finite.one": "{count} 个点的坐标已损坏。",
     "garment.finding.no-uv": "服装没有 UV 贴图，因此无法显示任何贴图。",
     "garment.finding.uv-outside": "{count} 个 UV 点位于 0 到 1 的方形范围之外；游戏会在那里重复贴图。",
+    "garment.finding.uv-outside.one": "{count} 个 UV 点位于 0 到 1 的方形范围之外；游戏会在那里重复贴图。",
     "garment.finding.uv-area": "UV 布局只使用了贴图的 {area}%。",
     "garment.finding.no-weights": "尚未绑定：请为服装分配 freemode 骨架骨骼的权重。",
     "garment.finding.unweighted": "{count} 个顶点没有权重；ped 移动时，游戏会把它们留在原地。",
+    "garment.finding.unweighted.one": "{count} 个顶点没有权重；ped 移动时，游戏会把它留在原地。",
     "garment.finding.influences": "{count} 个顶点受超过 {limit} 根骨骼影响；游戏只使用 {limit} 根。",
+    "garment.finding.influences.one": "{count} 个顶点受超过 {limit} 根骨骼影响；游戏只使用 {limit} 根。",
     "garment.finding.colour-missing": "缺少 Color 1。准备服装会添加它。",
     "garment.finding.colour-format": (
         "Color 1 不是 Sollumz 所需的面拐（Face Corner）字节颜色（Byte Color）。准备服装会替换它。"
@@ -300,6 +306,7 @@ TEXT = {
     "garment.done.body": "已添加 freemode 身体（{gender}，版本 {version}）。",
     "garment.done.body-file": "已将 {name} 添加为身体。",
     "garment.done.markers": "已放置 {count} 个标记。适配前请移动位置不对的标记。",
+    "garment.done.markers.one": "已放置 {count} 个标记。适配前如果位置不对，请移动它。",
     "garment.done.mirror": "已把左侧标记镜像到右侧。",
     "garment.done.preset-saved": "已保存姿势预设 {name}。",
     "garment.done.preset-loaded": "已加载姿势预设 {name}。",
@@ -311,13 +318,15 @@ TEXT = {
     "garment.done.relax": "已放松 {region} 的 {moved} 个顶点。",
     "garment.done.relax-smooth": "已平滑 {region} 的 {moved} 个顶点（没有适配前的形状可供比较）。",
     "garment.done.problems": "在身体内：{inside}，太近：{close}，被拉伸：{stretched}，悬空：{floating}。",
-    "garment.done.check": "适配检查完成。在身体内：{inside} 个顶点。",
+    "garment.done.check": "适配检查完成。在身体内：{count} 个顶点。",
+    "garment.done.check.one": "适配检查完成。在身体内：{count} 个顶点。",
     "garment.done.sculpt-start": "雕刻会话已开始。",
     "garment.done.accept": (
         "已保留雕刻后的形状：移动了 {moved} 个顶点。在身体内：之前 {before} 个，现在 {after} 个。"
     ),
     "garment.done.cancel-sculpt": "已取消雕刻：服装已恢复到会话之前的形状。",
     "garment.done.tears": "{count} 个接缝顶点在测试姿势中裂开。它们位于顶点组 DCT Tears 中。",
+    "garment.done.tears.one": "{count} 个接缝顶点在测试姿势中裂开。它位于顶点组 DCT Tears 中。",
     "garment.done.no-tears": "在测试姿势中没有接缝裂开。",
     "garment.done.tears-welded": "接缝已经合并，因此这里不会有接缝裂开。请在 Durty Cloth Tool 的 3D 预览中查看服装在 ped 上运动时的效果。",
     "garment.done.prepare": (
@@ -465,10 +474,12 @@ TEXT = {
     "add.fetching": "正在从 Durty Cloth Tool 获取{gender}性 freemode 骨架…",
     "add.progress.skeleton": "正在从 Durty Cloth Tool 获取 freemode 骨架…",
     "add.sent": "已发送 {name}，包含 {count} 个颜色变体。请在 Durty Cloth Tool 中选择添加到项目。",
+    "add.sent.one": "已发送 {name}，包含 {count} 个颜色变体。请在 Durty Cloth Tool 中选择添加到项目。",
     "add.waiting": "Durty Cloth Tool 显示了这件服装。请在那里选择添加到项目或取消。",
     "add.waiting.subtext": "在你于 Durty Cloth Tool 中选择添加到项目之前，不会添加任何内容。在这里取消会撤回此次添加。",
     "add.withdrawing": "正在取消添加…",
     "add.blocked": "添加被阻止：有 {count} 个问题需要先修复，已在添加到项目部分中列出。",
+    "add.blocked.one": "添加被阻止：有 {count} 个问题需要先修复，已在添加到项目部分中列出。",
     "add.problems": "请先修复这些问题（{count}）：",
     "add.findings": "Durty Cloth Tool 的检查：{count}",
     "add.added.subtext": (
@@ -488,6 +499,7 @@ TEXT = {
     "add.why.unknown-groups": (
         "{count} 个顶点组不是 freemode 骨架的骨骼：{names}。请重命名或移除它们；游戏会让它们随根骨骼移动。"
     ),
+    "add.why.unknown-groups.one": "{count} 个顶点组不是 freemode 骨架的骨骼：{names}。请重命名或移除它；游戏会让它随根骨骼移动。",
     "add.why.name-empty": "请为服装起一个名称。",
     "add.why.name-invalid": "服装名称最多 {limit} 个字符，且不能包含控制字符。",
     "add.why.combine": "服装有 {count} 个材质。请先点击合并材质：每个颜色变体对应一张贴图。",
@@ -597,6 +609,7 @@ TEXT = {
     "garment.done.import-avatar": "已导入 {name}（{count} 个顶点），未包含随附的虚拟模特。",
     "garment.done.back": "已恢复上一步之前的形状。",
     "garment.done.remove-backups": "已移除 {count} 个备份。",
+    "garment.done.remove-backups.one": "已移除 {count} 个备份。",
     "garment.done.push-deep": "已移动 {moved} 个顶点。在身体内：之前 {before} 个，现在 {after} 个。有 {deep} 个陷得太深无法移动（袖子穿过了身体？）：请手动修正。",
     "garment.done.prepare-thick": "已准备加厚导出：跨部件合并了 {welded} 个顶点，移除了 {walls} 面内壁，共 {triangles} 个三角面。",
     "garment.done.cancel-sculpt-lost": "雕刻会话已结束，但其起始形状已丢失。Ctrl+Z 仍然保留着它。",
@@ -691,7 +704,9 @@ TEXT = {
     "fit.error.cancelled": "适配已取消。",
     "fit.error.other": "gta.clothing 拒绝了这次适配（{code}）。",
     "fit.wait.minutes": "大约 {count} 分钟后",
+    "fit.wait.minutes.one": "大约 {count} 分钟后",
     "fit.wait.hours": "大约 {count} 小时后",
+    "fit.wait.hours.one": "大约 {count} 小时后",
     "fit.wait.later": "明天",
     "fit.refunded": "这次适配不计入今天的次数。",
     "fit.counted": "这次适配计入今天的次数。",
@@ -731,6 +746,7 @@ TEXT = {
     "fit.done.weights": "权重已传递：{bones} 根骨骼。",
     "fit.done.not-on-body": "服装没有贴在身体上，因此没有任何改变。请先把它对齐到身体。",
     "fit.done.unweighted": "{count} 个顶点没有得到权重。",
+    "fit.done.unweighted.one": "{count} 个顶点没有得到权重。",
     "fit.changed": "适配过程中服装发生了变化，因此没有应用结果。请重新适配。",
     "garment.next.fit": "下一步：在适配面板中使用适配到身体，或在修正中运行适配检查并手动适配服装。",
     "garment.check.reference": "常见",
@@ -745,7 +761,12 @@ TEXT = {
         "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} 个）：那里的裁片没有完全对齐。它们已被选中：按 Tab "
         "即可看到。适配到身体仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这些接缝并重新导出，或手动连接它们。"
     ),
+    "garment.done.prepare-open.one": (
+        "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} 个）：那里的裁片没有完全对齐。它已被选中：按 Tab "
+        "即可看到。适配到身体仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这条接缝并重新导出，或手动连接它。"
+    ),
     "garment.done.combine-missing": "已合并，但有 {count} 张纹理找不到，烘焙时没有它们的像素：{names}。请把图像文件放到材质期望的位置（或打包它们），然后重新合并。",
+    "garment.done.combine-missing.one": "已合并，但有 {count} 张纹理找不到，烘焙时没有它的像素：{names}。请把图像文件放到材质期望的位置（或打包它），然后重新合并。",
     "garment.done.step-cancelled": "{step}已取消；服装保持原样。",
     "garment.step.status": "{step}：{stage}（第 {done} / {total} 步）。按 Esc 会在这一步结束时取消。",
     "garment.stage.seams": "正在查找接缝",
@@ -872,6 +893,7 @@ TEXT = {
     "garment.op.bridge": "连接大腿权重",
     "garment.op.bridge.desc": "把裙子或大衣衣摆的权重跨过中间分给两条大腿，这样两腿之间的布料不会分开",
     "garment.done.bridge": "已在两腿之间连接 {count} 个顶点的大腿权重。",
+    "garment.done.bridge.one": "已在两腿之间连接 {count} 个顶点的大腿权重。",
     "garment.why.no-bridge": "只有裙子、连衣裙和长大衣会在两腿之间连接。",
     "garment.why.no-leg-weights": "这件服装还没有可连接的大腿权重。请先适配到身体或传递权重。",
     "garment.done.combine-walls": (

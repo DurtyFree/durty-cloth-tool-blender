@@ -38,6 +38,7 @@ TEXT = {
     "ped.status.not-checked": "Non vérifié",
     "ped.status.no-problems": "Aucun problème",
     "ped.status.problems": "{count} points à examiner",
+    "ped.status.problems.one": "{count} point à examiner",
     "ped.status.sent": "Créé",
     "ped.status.sending": "Création en cours",
     "ped.status.not-sent": "Non créé",
@@ -74,7 +75,7 @@ TEXT = {
         "Sélectionnez tous les maillages de votre personnage (corps, tête, cheveux, yeux) dans la vue 3D, puis "
         "choisissez Utiliser la sélection."
     ),
-    "ped.character.facts": "{objects} objets, {vertices} sommets, {triangles} triangles, {materials} matériaux",
+    "ped.character.facts": "{vertices} sommets · {triangles} triangles · objets : {objects} · matériaux : {materials}",
     "ped.prop.character": "Personnage",
     "ped.prop.character.desc": "La collection qui contient les maillages de votre personnage",
     "ped.op.use-selected": "Utiliser la sélection",
@@ -83,6 +84,7 @@ TEXT = {
         "déplacés dans une nouvelle collection"
     ),
     "ped.done.use-selected": "{name} est votre personnage ({count} maillages).",
+    "ped.done.use-selected.one": "{name} est votre personnage ({count} maillage).",
     "ped.check.none": "Le personnage n'a aucun maillage.",
     "ped.check.rigged": (
         "Le personnage est riggé. Utilisez Supprimer le rig sous Rig pour changer sa forme ou sa taille."
@@ -95,8 +97,15 @@ TEXT = {
         "{count} maillages sont déplacés, tournés ou mis à l'échelle. Appliquez leurs transformations pour que le "
         "personnage garde sa forme."
     ),
+    "ped.check.transforms.one": (
+        "{count} maillage est déplacé, tourné ou mis à l'échelle. Appliquez ses transformations pour que le personnage "
+        "garde sa forme."
+    ),
     "ped.check.modifiers": (
         "{count} maillages ont des modificateurs ({names}). Appliquez-les pour que le rig voie ce que vous voyez."
+    ),
+    "ped.check.modifiers.one": (
+        "{count} maillage a des modificateurs ({names}). Appliquez-les pour que le rig voie ce que vous voyez."
     ),
     "ped.check.old-rig": (
         "Le personnage est riggé sur {name}. Supprimez l'ancien rig : le personnage garde sa pose, et Depuis l'ancien "
@@ -105,6 +114,10 @@ TEXT = {
     "ped.check.shape-keys": (
         "{count} maillages ont des clés de forme, qui ne suivent pas le rig. Supprimez-les pour garder la forme que "
         "vous voyez."
+    ),
+    "ped.check.shape-keys.one": (
+        "{count} maillage a des clés de forme, qui ne suivent pas le rig. Supprimez-les pour garder la forme que vous "
+        "voyez."
     ),
     "ped.check.lying": "Le personnage semble couché (il est plus long que haut). Le redresser ?",
     "ped.check.upside-down": "Le personnage semble se tenir sur la tête. Le retourner ?",
@@ -151,6 +164,7 @@ TEXT = {
         "Intégrer à chaque maillage sa position, sa rotation et son échelle, sans changer son apparence"
     ),
     "ped.done.transforms": "Transformations de {count} maillages appliquées.",
+    "ped.done.transforms.one": "Transformations de {count} maillage appliquées.",
     "ped.op.apply-modifiers": "Appliquer les modificateurs",
     "ped.op.apply-modifiers.desc": (
         "Appliquer chaque modificateur des maillages du personnage (sauf un modificateur Armature)"
@@ -159,6 +173,7 @@ TEXT = {
         "Appliquer chaque modificateur des maillages du personnage ? Leurs réglages sont perdus ensuite."
     ),
     "ped.done.modifiers": "{count} modificateurs appliqués.",
+    "ped.done.modifiers.one": "{count} modificateur appliqué.",
     "ped.op.remove-old-rig": "Supprimer l'ancien rig",
     "ped.op.remove-old-rig.desc": (
         "Détacher le personnage de l'armature avec laquelle il est venu : il garde sa pose actuelle, l'armature reste "
@@ -177,6 +192,7 @@ TEXT = {
         "Supprimer toutes les clés de forme du personnage ? La forme que vous voyez maintenant reste."
     ),
     "ped.done.shape-keys": "Clés de forme de {count} maillages supprimées.",
+    "ped.done.shape-keys.one": "Clés de forme de {count} maillage supprimées.",
     "ped.op.scale": "Mettre à l'échelle",
     "ped.op.scale.desc": "Mettre le personnage à l'échelle autour de l'origine, comme le fait un changement d'unité",
     "ped.op.scale-by": "Mettre à l'échelle × {factor}",
@@ -429,6 +445,9 @@ TEXT = {
     "ped.result.review": "À vérifier (confiance {percent} %)",
     "ped.result.markers": "({names})",
     "ped.result.moved": "Durty Cloth Tool a déplacé {count} marqueurs au milieu du corps (en jaune dans la vue 3D) :",
+    "ped.result.moved.one": (
+        "Durty Cloth Tool a déplacé {count} marqueur au milieu du corps (en jaune dans la vue 3D) :"
+    ),
     "ped.result.move": "{marker} : {cm} cm",
     "ped.result.subtext": (
         "Appliquer le rig construit l'armature et donne aux maillages leurs poids et la pose de repos du jeu. Votre "
@@ -459,6 +478,9 @@ TEXT = {
     "ped.warning.marker_offset": (
         "{count} marqueurs étaient à plus de 2 cm du milieu du corps (jusqu'à {value} mm). Vérifiez-les."
     ),
+    "ped.warning.marker_offset.one": (
+        "{count} marqueur était à plus de 2 cm du milieu du corps ({value} mm). Vérifiez-le."
+    ),
     "ped.warning.asymmetric_markers": (
         "Les marqueurs gauches et droits diffèrent de plus de 5 %. Vérifiez les deux côtés."
     ),
@@ -478,7 +500,9 @@ TEXT = {
     ),
     "ped.warning.non_deforming_moved": "Certains poids ont été retirés d'os qui ne déplacent jamais le maillage.",
     "ped.warning.empty_rows_refilled": "{count} sommets n'avaient pas de poids et ont pris ceux de leurs voisins.",
+    "ped.warning.empty_rows_refilled.one": "{count} sommet n'avait pas de poids et a pris ceux de ses voisins.",
     "ped.warning.floating_parts": "{count} parties isolées ont été rattachées à l'os le plus proche.",
+    "ped.warning.floating_parts.one": "{count} partie isolée a été rattachée à l'os le plus proche.",
     "ped.warning.rest_strain": (
         "Certains triangles se replient dans la pose de repos du jeu. Regardez les épaules et les hanches dans Pose de "
         "repos du jeu."
@@ -544,20 +568,34 @@ TEXT = {
     "ped.done.checks": (
         "Lancer les vérifications a relevé {count} points à examiner ; rien que Durty Cloth Tool refuserait."
     ),
+    "ped.done.checks.one": (
+        "Lancer les vérifications a relevé {count} point à examiner ; rien que Durty Cloth Tool refuserait."
+    ),
     "ped.done.checks-refused": "Lancer les vérifications a relevé {count} problèmes que Durty Cloth Tool refuserait.",
+    "ped.done.checks-refused.one": (
+        "Lancer les vérifications a relevé {count} problème que Durty Cloth Tool refuserait."
+    ),
     "ped.local.none": "Aucun problème trouvé.",
     "ped.local.unweighted": "{count} sommets n'ont pas de poids. Durty Cloth Tool les refuse : pondérez-les.",
+    "ped.local.unweighted.one": "{count} sommet n'a pas de poids. Durty Cloth Tool le refuse : pondérez-le.",
     "ped.local.too-many": "{count} sommets ont plus de quatre os. Le jeu garde les quatre plus forts.",
+    "ped.local.too-many.one": "{count} sommet a plus de quatre os. Le jeu garde les quatre plus forts.",
     "ped.local.non-deforming": "{count} sommets sont pondérés sur des os qui ne déplacent jamais le maillage.",
+    "ped.local.non-deforming.one": "{count} sommet est pondéré sur des os qui ne déplacent jamais le maillage.",
     "ped.local.unknown-groups": "Les groupes de sommets qui ne sont pas des os ({names}) sont laissés de côté.",
     "ped.local.armature-changed": (
         "{count} os ont été déplacés ou tournés après le rig ({names}). Annulez cela ou riggez de nouveau : les os "
         "gardent la rotation du modèle."
     ),
+    "ped.local.armature-changed.one": (
+        "{count} os a été déplacé ou tourné après le rig ({names}). Annulez cela ou riggez de nouveau : les os gardent "
+        "la rotation du modèle."
+    ),
     "ped.local.mesh-changed": (
         "Les maillages ont changé après le rig (sommets ajoutés ou supprimés). Riggez de nouveau."
     ),
     "ped.local.strain": "{count} sommets s'étirent ou s'écrasent beaucoup dans {pose}.",
+    "ped.local.strain.one": "{count} sommet s'étire ou s'écrase beaucoup dans {pose}.",
     "ped.local.hint": (
         "De petits plis dans les poses extrêmes sont normaux. Pour des plis plus grands, déplacez un marqueur et "
         "riggez de nouveau."

@@ -38,6 +38,7 @@ TEXT = {
     "ped.status.not-checked": "Sin comprobar",
     "ped.status.no-problems": "Sin problemas",
     "ped.status.problems": "{count} hallazgos",
+    "ped.status.problems.one": "{count} hallazgo",
     "ped.status.sent": "Creado",
     "ped.status.sending": "Creando",
     "ped.status.not-sent": "Sin crear",
@@ -70,7 +71,9 @@ TEXT = {
         "Selecciona todas las mallas de tu personaje (cuerpo, cabeza, pelo, ojos) en la vista 3D y luego elige Usar "
         "selección."
     ),
-    "ped.character.facts": "{objects} objetos, {vertices} vértices, {triangles} triángulos, {materials} materiales",
+    "ped.character.facts": (
+        "{vertices} vértices · {triangles} triángulos · objetos: {objects} · materiales: {materials}"
+    ),
     "ped.prop.character": "Personaje",
     "ped.prop.character.desc": "La colección que contiene las mallas de tu personaje",
     "ped.op.use-selected": "Usar selección",
@@ -78,6 +81,7 @@ TEXT = {
         "Usar las mallas seleccionadas como tu personaje. Si no están en una colección propia, se mueven a una nueva"
     ),
     "ped.done.use-selected": "{name} es tu personaje ({count} mallas).",
+    "ped.done.use-selected.one": "{name} es tu personaje ({count} malla).",
     "ped.check.none": "El personaje no tiene mallas.",
     "ped.check.rigged": "El personaje ya tiene rig. Usa Quitar rig en Rig para cambiar su forma o su tamaño.",
     "ped.check.rigged-changed": (
@@ -87,8 +91,15 @@ TEXT = {
         "{count} mallas están movidas, giradas o escaladas. Aplica sus transformaciones para que el personaje conserve "
         "su forma."
     ),
+    "ped.check.transforms.one": (
+        "{count} malla está movida, girada o escalada. Aplica sus transformaciones para que el personaje conserve su "
+        "forma."
+    ),
     "ped.check.modifiers": (
         "{count} mallas tienen modificadores ({names}). Aplícalos para que el rig vea lo mismo que tú."
+    ),
+    "ped.check.modifiers.one": (
+        "{count} malla tiene modificadores ({names}). Aplícalos para que el rig vea lo mismo que tú."
     ),
     "ped.check.old-rig": (
         "El personaje usa el rig {name}. Quita el rig antiguo: el personaje conserva su pose, y Desde el rig antiguo "
@@ -96,6 +107,9 @@ TEXT = {
     ),
     "ped.check.shape-keys": (
         "{count} mallas tienen formas clave, que no siguen el rig. Quítalas para conservar la forma que ves."
+    ),
+    "ped.check.shape-keys.one": (
+        "{count} malla tiene formas clave, que no siguen el rig. Quítalas para conservar la forma que ves."
     ),
     "ped.check.lying": "El personaje parece estar tumbado (es más largo que alto). ¿Ponerlo de pie?",
     "ped.check.upside-down": "El personaje parece estar cabeza abajo. ¿Darle la vuelta?",
@@ -135,6 +149,7 @@ TEXT = {
     "ped.op.apply-transforms": "Aplicar transformaciones",
     "ped.op.apply-transforms.desc": "Integrar en cada malla su posición, rotación y escala, sin cambiar cómo se ve",
     "ped.done.transforms": "Se aplicaron las transformaciones de {count} mallas.",
+    "ped.done.transforms.one": "Se aplicaron las transformaciones de {count} malla.",
     "ped.op.apply-modifiers": "Aplicar modificadores",
     "ped.op.apply-modifiers.desc": (
         "Aplicar todos los modificadores de las mallas del personaje (salvo un modificador Esqueleto)"
@@ -143,6 +158,7 @@ TEXT = {
         "¿Aplicar todos los modificadores de las mallas del personaje? Después sus ajustes desaparecen."
     ),
     "ped.done.modifiers": "Se aplicaron {count} modificadores.",
+    "ped.done.modifiers.one": "Se aplicó {count} modificador.",
     "ped.op.remove-old-rig": "Quitar rig antiguo",
     "ped.op.remove-old-rig.desc": (
         "Separar el personaje del esqueleto con el que venía: conserva su pose actual y el esqueleto queda oculto"
@@ -158,6 +174,7 @@ TEXT = {
     ),
     "ped.confirm.shape-keys": "¿Quitar todas las formas clave del personaje? Se conserva la forma que ves ahora.",
     "ped.done.shape-keys": "Se quitaron las formas clave de {count} mallas.",
+    "ped.done.shape-keys.one": "Se quitaron las formas clave de {count} malla.",
     "ped.op.scale": "Escalar",
     "ped.op.scale.desc": "Escalar el personaje respecto al origen, como lo hace un cambio de unidades",
     "ped.op.scale-by": "Escalar por {factor}",
@@ -409,6 +426,9 @@ TEXT = {
     "ped.result.review": "Necesita revisión (confianza {percent} %)",
     "ped.result.markers": "({names})",
     "ped.result.moved": "Durty Cloth Tool movió {count} marcadores al centro del cuerpo (en amarillo en la vista 3D):",
+    "ped.result.moved.one": (
+        "Durty Cloth Tool movió {count} marcador al centro del cuerpo (en amarillo en la vista 3D):"
+    ),
     "ped.result.move": "{marker}: {cm} cm",
     "ped.result.subtext": (
         "Aplicar rig crea el esqueleto y da a las mallas sus pesos y la pose de reposo del juego. Tu personaje "
@@ -439,6 +459,9 @@ TEXT = {
     "ped.warning.marker_offset": (
         "{count} marcadores estaban a más de 2 cm del centro del cuerpo (hasta {value} mm). Revísalos."
     ),
+    "ped.warning.marker_offset.one": (
+        "{count} marcador estaba a más de 2 cm del centro del cuerpo ({value} mm). Revísalo."
+    ),
     "ped.warning.asymmetric_markers": (
         "Los marcadores izquierdos y derechos difieren en más del 5 %. Revisa ambos lados."
     ),
@@ -457,7 +480,9 @@ TEXT = {
     "ped.warning.inpainted_large": "Muchos pesos se rellenaron a partir de sus vecinos. Revisa las poses de prueba.",
     "ped.warning.non_deforming_moved": "Algunos pesos se quitaron de huesos que nunca mueven la malla.",
     "ped.warning.empty_rows_refilled": "{count} vértices no tenían pesos y tomaron los de sus vecinos.",
+    "ped.warning.empty_rows_refilled.one": "{count} vértice no tenía pesos y tomó los de sus vecinos.",
     "ped.warning.floating_parts": "{count} partes sueltas se unieron al hueso más cercano.",
+    "ped.warning.floating_parts.one": "{count} parte suelta se unió al hueso más cercano.",
     "ped.warning.rest_strain": (
         "Algunos triángulos se pliegan en la pose de reposo del juego. Mira los hombros y las caderas en Pose de "
         "reposo del juego."
@@ -521,20 +546,32 @@ TEXT = {
     "ped.done.checks": (
         "Ejecutar comprobaciones encontró {count} cosas que revisar; nada que Durty Cloth Tool rechazaría."
     ),
+    "ped.done.checks.one": (
+        "Ejecutar comprobaciones encontró {count} cosa que revisar; nada que Durty Cloth Tool rechazaría."
+    ),
     "ped.done.checks-refused": "Ejecutar comprobaciones encontró {count} problemas que Durty Cloth Tool rechazaría.",
+    "ped.done.checks-refused.one": "Ejecutar comprobaciones encontró {count} problema que Durty Cloth Tool rechazaría.",
     "ped.local.none": "No se encontraron problemas.",
     "ped.local.unweighted": "{count} vértices no tienen peso. Durty Cloth Tool los rechaza: asígnales pesos.",
+    "ped.local.unweighted.one": "{count} vértice no tiene peso. Durty Cloth Tool lo rechaza: asígnale pesos.",
     "ped.local.too-many": "{count} vértices tienen más de cuatro huesos. El juego conserva los cuatro más fuertes.",
+    "ped.local.too-many.one": "{count} vértice tiene más de cuatro huesos. El juego conserva los cuatro más fuertes.",
     "ped.local.non-deforming": "{count} vértices tienen pesos de huesos que nunca mueven la malla.",
+    "ped.local.non-deforming.one": "{count} vértice tiene pesos de huesos que nunca mueven la malla.",
     "ped.local.unknown-groups": "Los grupos de vértices que no son huesos ({names}) se omiten.",
     "ped.local.armature-changed": (
         "{count} huesos se movieron o giraron después del rig ({names}). Deshazlo o vuelve a hacer el rig: los huesos "
+        "conservan la rotación de la plantilla."
+    ),
+    "ped.local.armature-changed.one": (
+        "{count} hueso se movió o giró después del rig ({names}). Deshazlo o vuelve a hacer el rig: los huesos "
         "conservan la rotación de la plantilla."
     ),
     "ped.local.mesh-changed": (
         "Las mallas cambiaron después del rig (se añadieron o quitaron vértices). Vuelve a hacer el rig."
     ),
     "ped.local.strain": "{count} vértices se estiran o se aplastan mucho en {pose}.",
+    "ped.local.strain.one": "{count} vértice se estira o se aplasta mucho en {pose}.",
     "ped.local.hint": (
         "Los pliegues pequeños en poses extremas son normales. Para pliegues mayores, mueve un marcador y vuelve a "
         "hacer el rig."

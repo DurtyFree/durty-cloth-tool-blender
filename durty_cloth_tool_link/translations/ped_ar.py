@@ -32,6 +32,7 @@ TEXT = {
     "ped.status.not-checked": "لم يُفحص",
     "ped.status.no-problems": "لا مشكلات",
     "ped.status.problems": "الملاحظات: {count}",
+    "ped.status.problems.one": "الملاحظات: {count}",
     "ped.status.sent": "تم الإنشاء",
     "ped.status.sending": "جارٍ الإنشاء",
     "ped.status.not-sent": "لم يُنشأ",
@@ -59,12 +60,13 @@ TEXT = {
     "ped.character.none": (
         "حدد كل شبكات شخصيتك (الجسم والرأس والشعر والعينين) في العرض ثلاثي الأبعاد، ثم اختر استخدام المحدد."
     ),
-    "ped.character.facts": "الكائنات: {objects}، الرؤوس: {vertices}، المثلثات: {triangles}، المواد: {materials}",
+    "ped.character.facts": "الرؤوس: {vertices} · المثلثات: {triangles} · الكائنات: {objects} · المواد: {materials}",
     "ped.prop.character": "الشخصية",
     "ped.prop.character.desc": "المجموعة (Collection) التي تحتوي على شبكات شخصيتك",
     "ped.op.use-selected": "استخدام المحدد",
     "ped.op.use-selected.desc": "استخدام الشبكات المحددة كشخصيتك. إن لم تكن في مجموعة خاصة بها، تُنقل إلى مجموعة جديدة",
     "ped.done.use-selected": "{name} هي شخصيتك (الشبكات: {count}).",
+    "ped.done.use-selected.one": "{name} هي شخصيتك (الشبكات: {count}).",
     "ped.check.none": "لا تحتوي الشخصية على أي شبكة.",
     "ped.check.rigged": (
         "الشخصية مُجهَّزة بالعظام. استخدم إزالة التجهيز العظمي في قسم التجهيز بالعظام لتغيير شكلها أو حجمها."
@@ -75,7 +77,13 @@ TEXT = {
     "ped.check.transforms": (
         "عدد الشبكات المحرّكة أو المُدارة أو المغيّر حجمها: {count}. طبّق تحويلاتها لتحتفظ الشخصية بشكلها."
     ),
+    "ped.check.transforms.one": (
+        "عدد الشبكات المحرّكة أو المُدارة أو المغيّر حجمها: {count}. طبّق تحويلاتها لتحتفظ الشخصية بشكلها."
+    ),
     "ped.check.modifiers": (
+        "عدد الشبكات التي تحمل مُعدِّلات ({names}): {count}. طبّقها ليرى التجهيز بالعظام ما تراه أنت."
+    ),
+    "ped.check.modifiers.one": (
         "عدد الشبكات التي تحمل مُعدِّلات ({names}): {count}. طبّقها ليرى التجهيز بالعظام ما تراه أنت."
     ),
     "ped.check.old-rig": (
@@ -83,6 +91,10 @@ TEXT = {
         "وضع العلامات على مفاصله."
     ),
     "ped.check.shape-keys": (
+        "عدد الشبكات التي تحمل مفاتيح شكل (Shape Keys): {count}، وهي لا تتبع التجهيز العظمي. أزلها لتحتفظ بالشكل الذي "
+        "تراه."
+    ),
+    "ped.check.shape-keys.one": (
         "عدد الشبكات التي تحمل مفاتيح شكل (Shape Keys): {count}، وهي لا تتبع التجهيز العظمي. أزلها لتحتفظ بالشكل الذي "
         "تراه."
     ),
@@ -122,10 +134,12 @@ TEXT = {
     "ped.op.apply-transforms": "تطبيق التحويلات",
     "ped.op.apply-transforms.desc": "دمج موضع كل شبكة ودورانها وحجمها فيها، مع الحفاظ على مظهرها",
     "ped.done.transforms": "تم تطبيق التحويلات على الشبكات: {count}.",
+    "ped.done.transforms.one": "تم تطبيق التحويلات على الشبكات: {count}.",
     "ped.op.apply-modifiers": "تطبيق المُعدِّلات",
     "ped.op.apply-modifiers.desc": "تطبيق كل مُعدِّلات شبكات الشخصية (باستثناء Armature)",
     "ped.confirm.modifiers": "هل تريد تطبيق كل مُعدِّلات شبكات الشخصية؟ تضيع إعداداتها بعد ذلك.",
     "ped.done.modifiers": "تم تطبيق المُعدِّلات: {count}.",
+    "ped.done.modifiers.one": "تم تطبيق المُعدِّلات: {count}.",
     "ped.op.remove-old-rig": "إزالة التجهيز القديم",
     "ped.op.remove-old-rig.desc": (
         "فصل الشخصية عن الهيكل العظمي (Armature) الذي جاءت معه: تحتفظ بوضعيتها الحالية، ويبقى الهيكل العظمي مخفيًا"
@@ -139,6 +153,7 @@ TEXT = {
     "ped.op.remove-shape-keys.desc": "إزالة مفاتيح الشكل من شبكات الشخصية، مع الإبقاء على الشكل الذي تعرضه",
     "ped.confirm.shape-keys": "هل تريد إزالة كل مفاتيح الشكل من الشخصية؟ يبقى الشكل الذي تراه الآن.",
     "ped.done.shape-keys": "تمت إزالة مفاتيح الشكل من الشبكات: {count}.",
+    "ped.done.shape-keys.one": "تمت إزالة مفاتيح الشكل من الشبكات: {count}.",
     "ped.op.scale": "تغيير الحجم",
     "ped.op.scale.desc": "تغيير حجم الشخصية حول نقطة الأصل، كما يفعل تغيير الوحدات",
     "ped.op.scale-by": "تغيير الحجم بمعامل {factor}",
@@ -352,6 +367,9 @@ TEXT = {
     "ped.result.review": "يحتاج إلى مراجعة (الثقة {percent} %)",
     "ped.result.markers": "({names})",
     "ped.result.moved": "نقل Durty Cloth Tool {count} من العلامات إلى منتصف الجسم (بالأصفر في العرض ثلاثي الأبعاد):",
+    "ped.result.moved.one": (
+        "نقل Durty Cloth Tool {count} من العلامات إلى منتصف الجسم (بالأصفر في العرض ثلاثي الأبعاد):"
+    ),
     "ped.result.move": "{marker}: {cm} سم",
     "ped.result.subtext": (
         "يبني تطبيق التجهيز العظمي الهيكل العظمي (Armature) ويعطي الشبكات أوزانها ووضعية الراحة في اللعبة. تحتفظ "
@@ -381,6 +399,9 @@ TEXT = {
     "ped.warning.marker_offset": (
         "كانت {count} من العلامات تبعد أكثر من 2 سم عن منتصف الجسم (حتى {value} مم). تحقق منها."
     ),
+    "ped.warning.marker_offset.one": (
+        "كانت {count} من العلامات تبعد أكثر من 2 سم عن منتصف الجسم ({value} مم). تحقق منها."
+    ),
     "ped.warning.asymmetric_markers": "تختلف العلامات اليسرى واليمنى بأكثر من 5 %. تحقق من الجانبين.",
     "ped.warning.proportion_out_of_range": "بعض النِّسب بعيدة عن نِسب القالب. القالب ذو البنية الأقرب يتحرك بشكل أفضل.",
     "ped.warning.ragdoll_mismatch": (
@@ -391,7 +412,9 @@ TEXT = {
     "ped.warning.inpainted_large": "مُلئت أوزان كثيرة من الرؤوس المجاورة. تحقق من وضعيات الاختبار.",
     "ped.warning.non_deforming_moved": "نُقلت بعض الأوزان عن عظام لا تحرّك الشبكة أبدًا.",
     "ped.warning.empty_rows_refilled": "كانت {count} من الرؤوس بلا أوزان فأخذت أوزان الرؤوس المجاورة.",
+    "ped.warning.empty_rows_refilled.one": "كانت {count} من الرؤوس بلا أوزان فأخذت أوزان الرؤوس المجاورة.",
     "ped.warning.floating_parts": "رُبطت {count} من الأجزاء السائبة بأقرب عظمة.",
+    "ped.warning.floating_parts.one": "رُبطت {count} من الأجزاء السائبة بأقرب عظمة.",
     "ped.warning.rest_strain": (
         "تنطوي بعض المثلثات في وضعية الراحة في اللعبة. انظر إلى الكتفين والوركين باختيار وضعية الراحة في اللعبة."
     ),
@@ -439,18 +462,28 @@ TEXT = {
     "ped.op.run-checks.desc": "فحص الأوزان والهيكل العظمي والشبكات مقارنة بالتجهيز العظمي، وفحص وضعيات الاختبار",
     "ped.op.show-finding.desc": "تحديد الرؤوس التي تخصها هذه الملاحظة",
     "ped.done.checks": "وجد تشغيل الفحوصات أمورًا تستحق النظر: {count}؛ ولا شيء سيرفضه Durty Cloth Tool.",
+    "ped.done.checks.one": "وجد تشغيل الفحوصات أمورًا تستحق النظر: {count}؛ ولا شيء سيرفضه Durty Cloth Tool.",
     "ped.done.checks-refused": "وجد تشغيل الفحوصات مشكلات سيرفضها Durty Cloth Tool: {count}.",
+    "ped.done.checks-refused.one": "وجد تشغيل الفحوصات مشكلات سيرفضها Durty Cloth Tool: {count}.",
     "ped.local.none": "لم يُعثر على مشكلات.",
     "ped.local.unweighted": "عدد الرؤوس بلا وزن: {count}. يرفضها Durty Cloth Tool: امنحها أوزانًا.",
+    "ped.local.unweighted.one": "عدد الرؤوس بلا وزن: {count}. يرفضها Durty Cloth Tool: امنحها أوزانًا.",
     "ped.local.too-many": "عدد الرؤوس التي تحركها أكثر من أربع عظام: {count}. تحتفظ اللعبة بالأربع الأقوى.",
+    "ped.local.too-many.one": "عدد الرؤوس التي تحركها أكثر من أربع عظام: {count}. تحتفظ اللعبة بالأربع الأقوى.",
     "ped.local.non-deforming": "عدد الرؤوس ذات الأوزان على عظام لا تحرّك الشبكة أبدًا: {count}.",
+    "ped.local.non-deforming.one": "عدد الرؤوس ذات الأوزان على عظام لا تحرّك الشبكة أبدًا: {count}.",
     "ped.local.unknown-groups": "تُستبعد مجموعات الرؤوس التي ليست عظامًا ({names}).",
     "ped.local.armature-changed": (
         "حُرّكت أو أُديرت عظام بعد التجهيز بالعظام ({names})، عددها {count}. تراجع عن ذلك أو أعد التجهيز بالعظام: "
         "تحتفظ العظام بدوران القالب."
     ),
+    "ped.local.armature-changed.one": (
+        "حُرّكت أو أُديرت عظام بعد التجهيز بالعظام ({names})، عددها {count}. تراجع عن ذلك أو أعد التجهيز بالعظام: "
+        "تحتفظ العظام بدوران القالب."
+    ),
     "ped.local.mesh-changed": "تغيّرت الشبكات بعد التجهيز بالعظام (أُضيفت رؤوس أو أُزيلت). أعد التجهيز بالعظام.",
     "ped.local.strain": "تتمدد {count} من الرؤوس أو تنضغط كثيرًا في {pose}.",
+    "ped.local.strain.one": "تتمدد {count} من الرؤوس أو تنضغط كثيرًا في {pose}.",
     "ped.local.hint": "التجاعيد الصغيرة في الوضعيات القصوى طبيعية. للتجاعيد الأكبر، حرّك علامة وأعد التجهيز بالعظام.",
     "ped.prop.name": "اسم الـ ped",
     "ped.prop.name.desc": "الاسم الذي يعرضه Durty Cloth Tool لهذا الـ ped",

@@ -297,6 +297,7 @@ TEXT = {
     "garment.check.value": "{p50} ({p10} bis {p90})",
     "garment.check.usual-line": "Üblich: {range}",
     "garment.check.inside": "Im Körper: {count} Vertices ({share} %)",
+    "garment.check.inside.one": "Im Körper: {count} Vertex ({share} %)",
     "garment.advice.shoulders": (
         "Die Schultern stehen vom Körper ab: An den Körper anlegen (Bereichswerkzeuge) mit Schultern bringt sie "
         "herunter."
@@ -312,12 +313,17 @@ TEXT = {
     "garment.pose.legs-forward": "Beine nach vorn",
     "garment.pose.twist": "Drehung",
     "garment.tears.pose": "{pose}: {count} Nahtpunkte offen, bis zu {gap} mm",
+    "garment.tears.pose.one": "{pose}: {count} Nahtpunkt offen, bis zu {gap} mm",
     "garment.tears.pose-clean": "{pose}: Keine Naht geht auf",
     "garment.validate.clean": "CLEAN: nichts zu beheben.",
     "garment.finding.non-finite": "{count} Punkte haben fehlerhafte Koordinaten.",
+    "garment.finding.non-finite.one": "{count} Punkt hat fehlerhafte Koordinaten.",
     "garment.finding.no-uv": "Das Kleidungsstück hat keine UV-Map, darum kann es keine Textur zeigen.",
     "garment.finding.uv-outside": (
         "{count} UV-Punkte liegen außerhalb des Quadrats von 0 bis 1; dort wiederholt das Spiel die Textur."
+    ),
+    "garment.finding.uv-outside.one": (
+        "{count} UV-Punkt liegt außerhalb des Quadrats von 0 bis 1; dort wiederholt das Spiel die Textur."
     ),
     "garment.finding.uv-area": "Das UV-Layout nutzt nur {area} % der Textur.",
     "garment.finding.no-weights": (
@@ -326,8 +332,14 @@ TEXT = {
     "garment.finding.unweighted": (
         "{count} Vertices haben keine Gewichte; das Spiel lässt sie zurück, wenn sich das Ped bewegt."
     ),
+    "garment.finding.unweighted.one": (
+        "{count} Vertex hat keine Gewichte; das Spiel lässt ihn zurück, wenn sich das Ped bewegt."
+    ),
     "garment.finding.influences": (
         "{count} Vertices werden von mehr als {limit} Knochen bewegt; das Spiel nutzt nur {limit}."
+    ),
+    "garment.finding.influences.one": (
+        "{count} Vertex wird von mehr als {limit} Knochen bewegt; das Spiel nutzt nur {limit}."
     ),
     "garment.finding.colour-missing": "Color 1 fehlt. Kleidungsstück vorbereiten fügt sie hinzu.",
     "garment.finding.colour-format": (
@@ -394,6 +406,7 @@ TEXT = {
     "garment.done.body": "Freemode-Körper hinzugefügt ({gender}, Version {version}).",
     "garment.done.body-file": "{name} als Körper hinzugefügt.",
     "garment.done.markers": "{count} Marker gesetzt. Verschiebe alle, die danebenliegen, vor dem Anpassen.",
+    "garment.done.markers.one": "{count} Marker gesetzt. Verschiebe ihn vor dem Anpassen, falls er danebenliegt.",
     "garment.done.mirror": "Die linken Marker wurden nach rechts gespiegelt.",
     "garment.done.preset-saved": "Pose-Voreinstellung {name} gespeichert.",
     "garment.done.preset-loaded": "Pose-Voreinstellung {name} geladen.",
@@ -411,7 +424,8 @@ TEXT = {
     "garment.done.problems": (
         "Im Körper: {inside}, zu nah: {close}, gedehnt: {stretched}, abstehend: {floating}."
     ),
-    "garment.done.check": "Passformprüfung fertig. Im Körper: {inside} Vertices.",
+    "garment.done.check": "Passformprüfung fertig. Im Körper: {count} Vertices.",
+    "garment.done.check.one": "Passformprüfung fertig. Im Körper: {count} Vertex.",
     "garment.done.sculpt-start": "Sculpting-Sitzung gestartet.",
     "garment.done.accept": (
         "Bearbeitete Form übernommen: {moved} Vertices verschoben. Im Körper: vorher {before}, jetzt {after}."
@@ -422,6 +436,7 @@ TEXT = {
     "garment.done.tears": (
         "{count} Naht-Vertices gehen in einer Testpose auf. Sie sind in der Punktgruppe DCT Tears."
     ),
+    "garment.done.tears.one": "{count} Naht-Vertex geht in einer Testpose auf. Er ist in der Punktgruppe DCT Tears.",
     "garment.done.no-tears": "In den Testposen geht keine Naht auf.",
     "garment.done.tears-welded": (
         "Die Nähte sind verbunden, hier kann also keine aufgehen. Prüfe das Kleidungsstück in Bewegung am Ped in der "
@@ -643,6 +658,7 @@ TEXT = {
     "add.fetching": "Hole das Freemode-Skelett ({gender}) aus Durty Cloth Tool…",
     "add.progress.skeleton": "Hole das Freemode-Skelett aus Durty Cloth Tool…",
     "add.sent": "{name} mit {count} Farbvarianten gesendet. Wähle Zum Projekt hinzufügen in Durty Cloth Tool.",
+    "add.sent.one": "{name} mit {count} Farbvariante gesendet. Wähle Zum Projekt hinzufügen in Durty Cloth Tool.",
     "add.waiting": "Durty Cloth Tool zeigt das Kleidungsstück. Wähle dort Zum Projekt hinzufügen oder Abbrechen.",
     "add.waiting.subtext": (
         "Nichts wird hinzugefügt, bis du in Durty Cloth Tool Zum Projekt hinzufügen wählst. Abbrechen hier zieht das "
@@ -651,6 +667,9 @@ TEXT = {
     "add.withdrawing": "Breche das Hinzufügen ab…",
     "add.blocked": (
         "Das Hinzufügen ist blockiert: Behebe zuerst {count} Probleme, aufgelistet unter Zum Projekt hinzufügen."
+    ),
+    "add.blocked.one": (
+        "Das Hinzufügen ist blockiert: Behebe zuerst {count} Problem, aufgelistet unter Zum Projekt hinzufügen."
     ),
     "add.problems": "Behebe zuerst diese ({count}):",
     "add.findings": "Prüfungen von Durty Cloth Tool: {count}",
@@ -676,6 +695,10 @@ TEXT = {
     "add.why.unknown-groups": (
         "{count} Punktgruppen sind keine Knochen des Freemode-Skeletts: {names}. Benenne sie um oder entferne sie; "
         "das Spiel würde sie mit dem Root-Knochen bewegen."
+    ),
+    "add.why.unknown-groups.one": (
+        "{count} Punktgruppe ist kein Knochen des Freemode-Skeletts: {names}. Benenne sie um oder entferne sie; das "
+        "Spiel würde sie mit dem Root-Knochen bewegen."
     ),
     "add.why.name-empty": "Gib dem Kleidungsstück einen Namen.",
     "add.why.name-invalid": (
@@ -894,6 +917,7 @@ TEXT = {
     "garment.done.import-avatar": "{name} importiert ({count} Vertices), ohne den Avatar, der mitgekommen ist.",
     "garment.done.back": "Die Form von vor dem letzten Schritt ist zurück.",
     "garment.done.remove-backups": "{count} Sicherungen entfernt.",
+    "garment.done.remove-backups.one": "{count} Sicherung entfernt.",
     "garment.done.push-deep": (
         "{moved} Vertices verschoben. Im Körper: vorher {before}, jetzt {after}. {deep} liegen zu tief, um sie zu "
         "verschieben (ein Ärmel durch den Körper?): korrigiere sie von Hand."
@@ -1107,7 +1131,9 @@ TEXT = {
     "fit.error.cancelled": "Die Anpassung wurde abgebrochen.",
     "fit.error.other": "gta.clothing hat die Anpassung abgelehnt ({code}).",
     "fit.wait.minutes": "in etwa {count} Minuten",
+    "fit.wait.minutes.one": "in etwa {count} Minute",
     "fit.wait.hours": "in etwa {count} Stunden",
+    "fit.wait.hours.one": "in etwa {count} Stunde",
     "fit.wait.later": "morgen",
     "fit.refunded": "Diese Anpassung zählt nicht für heute.",
     "fit.counted": "Diese Anpassung zählt für heute.",
@@ -1200,6 +1226,7 @@ TEXT = {
         "Das Kleidungsstück liegt nicht am Körper, also hat sich nichts geändert. Richte es zuerst am Körper aus."
     ),
     "fit.done.unweighted": "{count} Vertices haben keine Gewichte bekommen.",
+    "fit.done.unweighted.one": "{count} Vertex hat keine Gewichte bekommen.",
     "fit.changed": (
         "Das Kleidungsstück hat sich während des Anpassens geändert, daher wurde das Ergebnis nicht übernommen. Passe "
         "erneut an."
@@ -1231,9 +1258,19 @@ TEXT = {
         "anpassen gibt beiden Seiten einer Naht trotzdem dieselben Gewichte; zeigt sich im Spiel eine Lücke, vernähe "
         "diese Nähte in deiner Kleidungs-App und exportiere erneut, oder verbinde sie von Hand."
     ),
+    "garment.done.prepare-open.one": (
+        "Vorbereitet, aber {count} Naht-Vertex fand keinen Partner am Nachbarteil ({welded} verbunden): Die "
+        "Schnittteile treffen sich dort nicht ganz. Er ist ausgewählt: Drücke Tab, um ihn zu sehen. An Körper anpassen "
+        "gibt beiden Seiten einer Naht trotzdem dieselben Gewichte; zeigt sich im Spiel eine Lücke, vernähe diese Naht "
+        "in deiner Kleidungs-App und exportiere erneut, oder verbinde sie von Hand."
+    ),
     "garment.done.combine-missing": (
         "Zusammengefasst, aber {count} Texturen wurden nicht gefunden und ohne ihre Pixel gebacken: {names}. Lege die "
         "Bilddateien dorthin, wo die Materialien sie erwarten (oder packe sie), und fasse erneut zusammen."
+    ),
+    "garment.done.combine-missing.one": (
+        "Zusammengefasst, aber {count} Textur wurde nicht gefunden und ohne ihre Pixel gebacken: {names}. Lege die "
+        "Bilddatei dorthin, wo das Material sie erwartet (oder packe sie), und fasse erneut zusammen."
     ),
     "garment.done.step-cancelled": "{step} wurde abgebrochen; das Kleidungsstück ist wie vorher.",
     "garment.step.status": "{step}: {stage} ({done} von {total}). Esc bricht am Ende dieses Schritts ab.",
@@ -1445,6 +1482,7 @@ TEXT = {
         "sich der Stoff zwischen den Beinen nicht teilt"
     ),
     "garment.done.bridge": "Die Oberschenkel-Gewichte von {count} Vertices über die Beine hinweg verbunden.",
+    "garment.done.bridge.one": "Die Oberschenkel-Gewichte von {count} Vertex über die Beine hinweg verbunden.",
     "garment.why.no-bridge": "Nur Röcke, Kleider und lange Mäntel werden über die Beine hinweg verbunden.",
     "garment.why.no-leg-weights": (
         "Das Kleidungsstück hat noch keine Oberschenkel-Gewichte zum Verbinden. Passe es an den Körper an oder "
