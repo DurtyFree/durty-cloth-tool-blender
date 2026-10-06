@@ -1123,9 +1123,11 @@ class WithdrawableRequest(Request):
     ``disconnected``, or ``cancelled`` / ``timeout`` when a withdrawn request got no answer in time.
 
     When it times out, the session first withdraws it (its cancel message) and waits a short grace for DCT's answer,
-    exactly as :meth:`cancel` does. When DCT answers a withdrawn ``item.add`` after the grace, on the same
-    connection, the session emits ``item-add-late(request, ItemAddResult)``: the user may have chosen Add just as
-    the withdrawal arrived, so a host keeps listening for that event rather than for the request."""
+    exactly as :meth:`cancel` does. When DCT answers a withdrawn ``item.add`` or ``ped.add`` after the grace, on the
+    same connection, the session emits ``item-add-late(request, ItemAddResult)`` or ``ped-add-late(request,
+    PedAddResult)``: the user may have chosen Add (or created the project) just as the withdrawal arrived, so a host
+    keeps listening for that event rather than for the request. A rig has no late event: a late rig changes
+    nothing in DCT."""
 
     #: The message that withdraws this request.
     cancel_type = "item.addCancel"
@@ -1306,7 +1308,9 @@ class LinkSession:
     ``dct-disconnected()`` (the user disconnected this app in DCT, said over a connection DCT had welcomed; the
     session stopped and connects again only after :meth:`start`), ``item-add-late(request, ItemAddResult)`` (DCT
     answered a withdrawn :meth:`add_item` after the request had failed for want of an answer, on the same
-    connection: the cloth may have been added after all), ``error(LinkError)``, ``disconnected(code, reason)``.
+    connection: the cloth may have been added after all), ``ped-add-late(request, PedAddResult)`` (the same for a
+    withdrawn :meth:`add_ped`: the custom ped project may have been created after all), ``error(LinkError)``,
+    ``disconnected(code, reason)``.
 
     ``keepalive_thread`` (polling mode only): when the host's thread does not poll for a while, a daemon thread
     answers DCT's keep-alive pings and reads what arrives, so a long block of the host's thread (a bake) does not
@@ -1410,8 +1414,9 @@ class LinkSession:
         self._signed_out_tries = 0  # dct-signed-out answers in a row (for the growing wait)
         # DCT requests answered with host.result on one connection (its epoch), oldest first.
         self._answered_host_requests: Tuple[int, "collections.OrderedDict[str, None]"] = (-1, collections.OrderedDict())
-        # Withdrawn adds that failed for want of an answer on this connection, oldest first (item-add-late).
-        self._late_adds: "collections.OrderedDict[str, ItemAddRequest]" = collections.OrderedDict()
+        # Withdrawn adds (item.add, ped.add) that failed for want of an answer on this connection, oldest first
+        # (item-add-late, ped-add-late).
+        self._late_adds: "collections.OrderedDict[str, Union[ItemAddRequest, PedAddRequest]]" = collections.OrderedDict()
 
     # ---- events and host calls ---------------------------------------------------------------------
 
@@ -2269,10 +2274,15 @@ class LinkSession:
         re_id = message.get("re")
         if re_id:
             self._release_slot(re_id)
-        if re_id and kind in ("item.addResult", "error") and re_id in self._late_adds:
-            late = self._late_adds.pop(re_id)
-            result = ItemAddResult(False, message["code"], None, []) if kind == "error" else _item_add_answer(message)
-            self._emit("item-add-late", late, result)
+        late = self._late_adds.get(re_id) if re_id else None
+        if late is not None and kind in ("error", "item.addResult" if isinstance(late, ItemAddRequest) else "ped.addResult"):
+            del self._late_adds[re_id]
+            if isinstance(late, ItemAddRequest):
+                item = ItemAddResult(False, message["code"], None, []) if kind == "error" else _item_add_answer(message)
+                self._emit("item-add-late", late, item)
+            else:
+                ped = PedAddResult(False, message["code"], None, []) if kind == "error" else _ped_add_answer(message)
+                self._emit("ped-add-late", late, ped)
             return
         request = self._pending.get(re_id) if re_id else None
         if kind == "error":
@@ -2502,8 +2512,9 @@ class LinkSession:
                     self._pending.pop(request.id, None)
                     self._finish_request(request, error=LinkError(
                         request._withdrawn, f"DCT did not answer the withdrawn {request.type}"))
-                    if isinstance(request, ItemAddRequest):
-                        # DCT may still answer it (the user chose Add as the withdrawal arrived): report that answer.
+                    if isinstance(request, (ItemAddRequest, PedAddRequest)):
+                        # DCT may still answer it (the user chose Add, or created the ped project, as the withdrawal
+                        # arrived): report that answer.
                         self._late_adds[request.id] = request
                         while len(self._late_adds) > _MAX_LATE_ADDS:
                             self._late_adds.popitem(last=False)
@@ -2779,8 +2790,10 @@ class LinkSession:
         pairs (a mesh not listed is ``body``). ``rights_confirmed`` must be True. A broken rule raises ``ValueError``
         before anything is sent; the GLB is sent without a copy.
 
-        Resolves with a :class:`PedAddResult`, whatever DCT decided. It takes no service slot;
-        :meth:`PedAddRequest.cancel` (or a timeout) sends ``ped.addCancel``. Callable from any thread."""
+        Resolves with a :class:`PedAddResult`, whatever DCT decided. Fails with :class:`LinkError` only when no answer
+        came: ``disconnected``, or ``timeout`` / ``cancelled`` when the withdrawn add (:meth:`PedAddRequest.cancel`, or
+        a timeout, sends ``ped.addCancel``) got no answer within 10 seconds; DCT's answer after that arrives as the
+        ``ped-add-late`` event. It takes no service slot. Callable from any thread."""
         if rights_confirmed is not True:
             raise ValueError("the user has not confirmed the rights notice for this character; DCT refuses an add without it")
         sha256, chunks = ped_module.plan_ped_add_upload(glb)

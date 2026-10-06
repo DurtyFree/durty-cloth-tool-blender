@@ -15,6 +15,7 @@ import pytest
 
 from durty_cloth_tool_link import link, ped, ped_link, strings
 from durty_cloth_tool_link.dct_link import protocol
+from durty_cloth_tool_link.dct_link import session as link_session
 from durty_cloth_tool_link.strings import UserError
 from tests.support import fake_dct, mannequin
 from tests.support.fake_dct import FakeDct
@@ -324,6 +325,48 @@ def test_a_bad_model_name_is_refused_before_anything_is_sent(tmp_path, dct, api)
         ctrl.peds.start_add("a_m_y_tester_01", "Hero", "Hero", glb(2000), rights=True, rig=None, ragdoll=None,
                             parts=[], character="c1")
     assert refused.value.message.key == "ped.invalid" and not dct.ped_add_headers
+
+
+def test_a_project_created_after_the_cancel_is_still_linked(tmp_path, dct, api, monkeypatch):
+    # The user chose Create in Durty Cloth Tool a moment before the cancel arrived, and creating the project took
+    # longer than the add-on waits: dct_link reports the answer as ped-add-late.
+    monkeypatch.setattr(link_session, "_ADD_CANCEL_GRACE_SECONDS", 0.2)
+    ctrl = connected(tmp_path, dct, api)
+    peds = ctrl.peds
+    linked = []
+    peds.on_created = linked.append
+    dct.hold_ped_adds = True
+    dct.ignore_cancels = True
+    peds.start_add("a_m_y_tester_01", "Hero", "my_hero", glb(2000), rights=True, rig=None, ragdoll=None, parts=[],
+                   character="c1")
+    drive(ctrl, lambda: bool(dct.ped_adds))
+    assert peds.cancel_add()
+    drive(ctrl, lambda: not peds.sending)
+    assert peds.add_status.message.key == "ped.error.add-unanswered" and peds.created is None and not linked
+    assert peds.add_problem() is None  # another send may start meanwhile
+    dct.release_ped_adds()
+    drive(ctrl, lambda: bool(linked))
+    assert linked == [{"name": "Hero", "model": "my_hero", "template": "a_m_y_tester_01", "character": "c1"}]
+    assert peds.add_status == link.Notice("WARNING", strings.msg("ped.send.created-late", name="Hero",
+                                                                 model="my_hero"))
+    ctrl.disconnect()
+
+
+def test_a_late_refusal_confirms_the_withdrawal(tmp_path, dct, api, monkeypatch):
+    monkeypatch.setattr(link_session, "_ADD_CANCEL_GRACE_SECONDS", 0.2)
+    ctrl = connected(tmp_path, dct, api)
+    peds = ctrl.peds
+    dct.hold_ped_adds = True
+    dct.ignore_cancels = True
+    peds.start_add("a_m_y_tester_01", "Hero", "my_hero", glb(2000), rights=True, rig=None, ragdoll=None, parts=[],
+                   character="c1")
+    drive(ctrl, lambda: bool(dct.ped_adds))
+    peds.cancel_add()
+    drive(ctrl, lambda: not peds.sending)
+    dct.release_ped_adds({"ok": False, "code": "request-denied", "findings": []})
+    drive(ctrl, lambda: peds.add_status.message.key == "ped.send.withdrawn")
+    assert peds.created is None
+    ctrl.disconnect()
 
 
 def test_another_file_withdraws_what_runs(tmp_path, dct, api):

@@ -96,6 +96,8 @@ class PedLink:
     #: (seconds).
     RIG_TIMEOUT = 600.0
     ADD_TIMEOUT = 900.0
+    #: Withdrawn adds without an answer the add-on still listens for, at most this many (the oldest go).
+    MAX_LATE = 4
 
     def __init__(self, controller: Any) -> None:
         self.controller = controller
@@ -130,6 +132,9 @@ class PedLink:
         #: it was made from; ``on_created`` hears of it (Blender keeps it on the character).
         self.created: Optional[Dict[str, str]] = None
         self.on_created: Optional[Any] = None
+        #: Withdrawn adds that ended without Durty Cloth Tool's answer, which it may still give (``ped-add-late``: its
+        #: user chose Create just as the withdrawal arrived): ``(request, what was sent)``, newest last.
+        self._late: List[Tuple[Request, Dict[str, Any]]] = []
 
     # ---- state ---------------------------------------------------------------------------------------
 
@@ -157,6 +162,7 @@ class PedLink:
         session = self.controller.ready_session()
         if session is not self._watched:
             session.on("disconnected", self._on_disconnected)
+            session.on("ped-add-late", self.on_late)
             self._watched = session
         problem = self.feature(feature)
         if problem is not None:
@@ -363,18 +369,16 @@ class PedLink:
         if request.error is not None:
             code = request.error.code
             self.controller._remember_error(code)
+            if withdrawn and code in ("cancelled", "timeout"):
+                self._late.append((request, dict(self.add_sent or {})))  # Durty Cloth Tool may still answer it
+                del self._late[:-self.MAX_LATE]
             self.add_status = describe(code, ADD_KEYS)
             self.findings = []
         else:
             result: PedAddResult = request.result()
             self.findings = garment_add.sorted_findings(result.findings)
             if result.ok and result.project is not None:
-                self.created = dict(result.project, character=(self.add_sent or {}).get("character", ""))
-                if self.on_created is not None:
-                    try:
-                        self.on_created(dict(self.created))
-                    except Exception:  # noqa: BLE001 - the project exists; only Blender's note of it failed
-                        traceback.print_exc()
+                self._created(result.project, self.add_sent or {})
                 self.add_status = Notice("INFO", msg("ped.send.created", name=result.project.get("name", ""),
                                                      model=result.project.get("model", ""),
                                                      template=result.project.get("template", "")))
@@ -384,6 +388,38 @@ class PedLink:
                     self.add_status = Notice("INFO", msg("ped.send.withdrawn"))
                 else:
                     self.add_status = describe(result.code, ADD_KEYS)
+        self.controller.touch()
+
+    def _created(self, project: Dict[str, str], sent: Dict[str, Any]) -> None:
+        """Keeps the project Durty Cloth Tool created and tells Blender, which notes it on the character."""
+        self.created = dict(project, character=sent.get("character", ""))
+        if self.on_created is not None:
+            try:
+                self.on_created(dict(self.created))
+            except Exception:  # noqa: BLE001 - the project exists; only Blender's note of it failed
+                traceback.print_exc()
+
+    def on_late(self, request: Request, result: Any) -> None:
+        """dct_link's ``ped-add-late``: Durty Cloth Tool answered a withdrawn add after it had failed for want of an
+        answer. When it created the project after all, the character is linked to it and the panel says so; a refusal
+        only confirms the withdrawal."""
+        entry = next((e for e in self._late if e[0] is request), None)
+        if entry is None:
+            return
+        self._late.remove(entry)
+        sent = entry[1]
+        shown = not self.sending and (self.add_sent or {}).get("character") == sent.get("character")
+        if not getattr(result, "ok", False) or result.project is None:
+            if shown:
+                self.add_status = Notice("INFO", msg("ped.send.withdrawn"))
+                self.controller.touch()
+            return
+        self._created(result.project, sent)
+        if not self.sending:  # a running add keeps the panel; the character still shows the project as done
+            self.add_sent = sent
+            self.findings = garment_add.sorted_findings(result.findings)
+            self.add_status = Notice("WARNING", msg("ped.send.created-late", name=result.project.get("name", ""),
+                                                    model=result.project.get("model", "")))
         self.controller.touch()
 
     # ---- another file --------------------------------------------------------------------------------

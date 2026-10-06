@@ -507,6 +507,10 @@ EN: Dict[str, str] = {
     "ped.send.withdrawing": "Withdrawing the character.",
     "ped.send.withdrawn": "Withdrawn: Durty Cloth Tool created nothing.",
     "ped.send.created": "Durty Cloth Tool created the project {name} with the ped {model} from {template}.",
+    "ped.send.created-late": (
+        "Durty Cloth Tool created the project {name} with the ped {model} after all: Create was chosen there just as "
+        "the character was withdrawn."
+    ),
     "ped.send.findings": "Durty Cloth Tool's checks ({count}):",
     "ped.send.next": (
         "Check the ped's behaviour in Durty Cloth Tool (ped type, movement, voice), then build the project."

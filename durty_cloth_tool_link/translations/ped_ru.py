@@ -532,6 +532,10 @@ TEXT = {
     "ped.send.withdrawing": "Отзыв персонажа.",
     "ped.send.withdrawn": "Отозвано: Durty Cloth Tool ничего не создал.",
     "ped.send.created": "Durty Cloth Tool создал проект {name} с ped {model} по шаблону {template}.",
+    "ped.send.created-late": (
+        "Durty Cloth Tool всё же создал проект {name} с ped {model}: там выбрали «Создать» как раз в тот "
+        "момент, когда персонажа отозвали."
+    ),
     "ped.send.findings": "Проверки Durty Cloth Tool ({count}):",
     "ped.send.next": "Проверьте поведение ped в Durty Cloth Tool (тип ped, движения, голос), затем соберите проект.",
     "ped.finding.rig-mismatch": (

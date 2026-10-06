@@ -576,6 +576,10 @@ TEXT = {
     "ped.send.withdrawing": "Retirando el personaje.",
     "ped.send.withdrawn": "Retirado: Durty Cloth Tool no creó nada.",
     "ped.send.created": "Durty Cloth Tool creó el proyecto {name} con el ped {model} a partir de {template}.",
+    "ped.send.created-late": (
+        "Durty Cloth Tool creó el proyecto {name} con el ped {model} después de todo: se eligió Crear allí "
+        "justo cuando se retiró el personaje."
+    ),
     "ped.send.findings": "Revisiones de Durty Cloth Tool ({count}):",
     "ped.send.next": (
         "Revisa el comportamiento del ped en Durty Cloth Tool (tipo de ped, movimiento, voz) y luego compila el "

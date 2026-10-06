@@ -504,6 +504,10 @@ TEXT = {
     "ped.send.withdrawing": "कैरेक्टर वापस लिया जा रहा है।",
     "ped.send.withdrawn": "वापस लिया गया: Durty Cloth Tool ने कुछ नहीं बनाया।",
     "ped.send.created": "Durty Cloth Tool ने {template} से ped {model} के साथ प्रोजेक्ट {name} बनाया।",
+    "ped.send.created-late": (
+        "Durty Cloth Tool ने आखिरकार प्रोजेक्ट {name} को ped {model} के साथ बना दिया: कैरेक्टर वापस लिए जाने "
+        "के ठीक उसी समय वहाँ Create चुना गया था।"
+    ),
     "ped.send.findings": "Durty Cloth Tool की जाँच ({count}):",
     "ped.send.next": (
         "Durty Cloth Tool में ped का व्यवहार जाँचें (ped का प्रकार, चाल, आवाज़), फिर प्रोजेक्ट बिल्ड करें।"

@@ -486,6 +486,10 @@ TEXT = {
     "ped.send.withdrawing": "جارٍ سحب الشخصية.",
     "ped.send.withdrawn": "تم السحب: لم ينشئ Durty Cloth Tool شيئًا.",
     "ped.send.created": "أنشأ Durty Cloth Tool المشروع {name} مع الـ ped {model} من {template}.",
+    "ped.send.created-late": (
+        "أنشأ Durty Cloth Tool المشروع {name} مع الـ ped {model} في النهاية: اختير الإنشاء هناك في اللحظة "
+        "التي سُحبت فيها الشخصية."
+    ),
     "ped.send.findings": "فحوصات Durty Cloth Tool ({count}):",
     "ped.send.next": "تحقق من سلوك الـ ped في Durty Cloth Tool (نوع الـ ped، والحركة، والصوت)، ثم ابنِ المشروع.",
     "ped.finding.rig-mismatch": (

@@ -383,6 +383,9 @@ TEXT = {
     "ped.send.withdrawing": "正在撤回角色。",
     "ped.send.withdrawn": "已撤回：Durty Cloth Tool 没有创建任何内容。",
     "ped.send.created": "Durty Cloth Tool 已创建项目 {name}，其中的 ped {model} 基于 {template}。",
+    "ped.send.created-late": (
+        "Durty Cloth Tool 最终还是创建了项目 {name}，其中的 ped 为 {model}：就在撤回角色的同时，那边选择了“创建”。"
+    ),
     "ped.send.findings": "Durty Cloth Tool 的检查（{count}）：",
     "ped.send.next": "请在 Durty Cloth Tool 中检查 ped 的行为（ped 类型、移动方式、语音），然后构建项目。",
     "ped.finding.rig-mismatch": "骨架与模板或绑定的不一致：有骨骼被移动或旋转过。请再次应用绑定，或重新绑定。",

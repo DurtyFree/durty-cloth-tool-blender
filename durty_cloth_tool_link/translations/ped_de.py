@@ -554,6 +554,10 @@ TEXT = {
     "ped.send.withdrawing": "Die Figur wird zurückgezogen.",
     "ped.send.withdrawn": "Zurückgezogen: Durty Cloth Tool hat nichts erstellt.",
     "ped.send.created": "Durty Cloth Tool hat das Projekt {name} mit dem Ped {model} aus {template} erstellt.",
+    "ped.send.created-late": (
+        "Durty Cloth Tool hat das Projekt {name} mit dem Ped {model} doch erstellt: Dort wurde Erstellen "
+        "gewählt, gerade als die Figur zurückgezogen wurde."
+    ),
     "ped.send.findings": "Prüfungen von Durty Cloth Tool ({count}):",
     "ped.send.next": (
         "Prüfe das Verhalten des Peds in Durty Cloth Tool (Ped-Typ, Bewegung, Stimme) und baue dann das Projekt."

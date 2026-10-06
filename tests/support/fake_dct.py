@@ -554,6 +554,8 @@ class Connection:
                 self.ped_upload = {"header": m, "chunks": []}
         elif kind == "ped.addCancel":
             server.ped_add_cancels.append(m["re"])
+            if server.ignore_cancels and m["re"] in self.waiting_ped_adds:
+                return  # "the user" chose Create a moment before: release_ped_adds() answers later
             upload = self.ped_upload
             if upload is not None and upload["header"]["id"] == m["re"]:
                 self.ped_upload = None
@@ -840,7 +842,8 @@ class FakeDct:
         self.item_adds: List[Any] = []  # (header, [(name, data)]) per item.add received
         #: Message types the fake answers as unknown, as a DCT older than the add-on does.
         self.unknown_types: set = set()
-        #: Leave item.addCancel unanswered (DCT already adds the cloth); release_adds() answers later.
+        #: Leave item.addCancel (and the ped.addCancel of a waiting ped.add) unanswered (DCT already adds the cloth or
+        #: creates the project); release_adds() and release_ped_adds() answer later.
         self.ignore_cancels = False
         #: The templates ped.templates lists (made-up models; ``group`` decides whether Show All is needed).
         self.ped_templates: List[Dict[str, Any]] = [
