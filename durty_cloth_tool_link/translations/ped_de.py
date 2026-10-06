@@ -532,7 +532,14 @@ TEXT = {
         "Schüsse, Stürze und die Ragdoll nutzen im Spiel die Formen dieses Körpers. Wähle einen großen für eine viel "
         "größere Figur."
     ),
-    "ped.texture": "Bild {name}: {problem}",
+    "ped.texture.too-large": "Das Bild {name} ist an einer Seite größer als 4096 Pixel. Durty Cloth Tool lehnt es ab.",
+    "ped.texture.not-multiple-of-four": (
+        "Breite oder Höhe des Bilds {name} ist nicht durch vier teilbar. Durty Cloth Tool lehnt es ab."
+    ),
+    "ped.texture.non-power-of-two": (
+        "Die Größe des Bilds {name} ist keine Zweierpotenz (etwa 1024 oder 2048). Es geht, aber solche Größen "
+        "sehen am besten aus."
+    ),
     "ped.op.send": "Eigenen Ped erstellen",
     "ped.op.send.desc": (
         "Die geriggte Figur in der Ruhepose des Spiels exportieren und an Durty Cloth Tool senden, das ein neues "
@@ -596,6 +603,7 @@ TEXT = {
         "{suggestion}."
     ),
     "ped.why.name": "Gib dem Ped einen Namen.",
+    "ped.why.transforms-first": "Wende zuerst die Transformationen an.",
     "ped.why.refused-checks": (
         "Prüfungen ausführen hat Probleme gefunden, die Durty Cloth Tool ablehnen würde. Behebe sie zuerst."
     ),

@@ -466,7 +466,13 @@ TEXT = {
     "ped.ragdoll.subtext": (
         "تستخدم الرصاصات والسقطات والـ Ragdoll أشكال هذا الجسم في اللعبة. اختر جسمًا ضخمًا لشخصية أكبر بكثير."
     ),
-    "ped.texture": "الصورة {name}: {problem}",
+    "ped.texture.too-large": "الصورة {name} أكبر من 4096 بكسل في أحد جانبيها. يرفضها Durty Cloth Tool.",
+    "ped.texture.not-multiple-of-four": (
+        "عرض الصورة {name} أو ارتفاعها لا يقبل القسمة على أربعة. يرفضها Durty Cloth Tool."
+    ),
+    "ped.texture.non-power-of-two": (
+        "حجم الصورة {name} ليس من قوى العدد اثنين (مثل 1024 أو 2048). تعمل، لكن هذه الأحجام تبدو أفضل."
+    ),
     "ped.op.send": "إنشاء ped مخصص",
     "ped.op.send.desc": (
         "تصدير الشخصية المُجهَّزة بالعظام في وضعية الراحة في اللعبة وإرسالها إلى Durty Cloth Tool، الذي ينشئ مشروع ped "
@@ -519,6 +525,7 @@ TEXT = {
         "الأسماء التي تبدأ بـ {prefix} تخص شخصيات ped الخاصة باللعبة. اختر اسمًا آخر، مثل {suggestion}."
     ),
     "ped.why.name": "امنح الـ ped اسمًا.",
+    "ped.why.transforms-first": "طبّق التحويلات أولًا.",
     "ped.why.refused-checks": "وجد تشغيل الفحوصات مشكلات سيرفضها Durty Cloth Tool. أصلحها أولًا.",
     "ped.why.textures": "إحدى الصور كبيرة جدًا أو لا يقبل حجمها القسمة على أربعة. أصلحها أولًا.",
     "ped.why.sending": "يجري إرسال ped مخصص.",

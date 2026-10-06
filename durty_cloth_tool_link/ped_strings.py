@@ -486,7 +486,13 @@ EN: Dict[str, str] = {
         "Bullets, falls and the ragdoll use this body's shapes in the game. Choose a large one for a much bigger "
         "character."
     ),
-    "ped.texture": "Image {name}: {problem}",
+    "ped.texture.too-large": "The image {name} is larger than 4096 pixels on a side. Durty Cloth Tool refuses it.",
+    "ped.texture.not-multiple-of-four": (
+        "The width or height of the image {name} does not divide by four. Durty Cloth Tool refuses it."
+    ),
+    "ped.texture.non-power-of-two": (
+        "The image {name} is not a power of two in size (such as 1024 or 2048). It works, but such sizes look best."
+    ),
     "ped.op.send": "Create Custom Ped",
     "ped.op.send.desc": (
         "Export the rigged character in the game's rest pose and send it to Durty Cloth Tool, which creates a new "
@@ -540,6 +546,7 @@ EN: Dict[str, str] = {
     "ped.why.model": "The model name is a lowercase letter, then 2 to 31 lowercase letters, digits or underscores.",
     "ped.why.model-game": "Names starting with {prefix} belong to the game's own peds. Choose another, such as {suggestion}.",
     "ped.why.name": "Give the ped a name.",
+    "ped.why.transforms-first": "Apply the transforms first.",
     "ped.why.refused-checks": "Run Checks found problems Durty Cloth Tool would refuse. Fix them first.",
     "ped.why.textures": "An image is too large or its size does not divide by four. Fix it first.",
     "ped.why.sending": "A custom ped is being sent.",

@@ -16,6 +16,7 @@ import traceback
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from . import garment_add, ped, settings
+from .dct_link import protocol
 from .dct_link.session import PedAddResult, PedRefusal, PedRigRefusal, PedTemplates, Request
 from .link import Notice
 from .strings import EN, Msg, UserError, msg
@@ -115,6 +116,11 @@ class PedLink:
         self.rig_status: Optional[Notice] = None
         #: Why Durty Cloth Tool refused the last rig, line by line (:class:`ped.ReportLine`).
         self.refusal: List[ped.ReportLine] = []
+        #: The rigs Durty Cloth Tool computed on the connection open now, by job: the character and when. Durty Cloth
+        #: Tool keeps a rig for that connection only, and job names start again with each connection, so a job of an
+        #: earlier connection (or an earlier Blender) could name another character's rig there.
+        self.jobs: Dict[str, Tuple[str, float]] = {}
+        self._watched: Any = None
         # Sending.
         self.add_request: Optional[Request] = None
         self.add_sent: Optional[Dict[str, Any]] = None
@@ -149,6 +155,9 @@ class PedLink:
 
     def _session(self, feature: str) -> Any:
         session = self.controller.ready_session()
+        if session is not self._watched:
+            session.on("disconnected", self._on_disconnected)
+            self._watched = session
         problem = self.feature(feature)
         if problem is not None:
             raise UserError(problem)
@@ -274,8 +283,22 @@ class PedLink:
             else:
                 self.rig = result
                 self.job = result.job
+                self.jobs[result.job] = ((self.rig_sent or {}).get("character", ""), time.time())
                 self.rig_status = None
         self.controller.touch()
+
+    def _on_disconnected(self, *_args: Any) -> None:
+        self.jobs.clear()  # Durty Cloth Tool forgets the connection's rigs with it
+
+    def rig_job(self, job: Optional[str], character: str) -> Optional[str]:
+        """``job`` when Durty Cloth Tool may still hold it for this character on the open connection; ``None``
+        otherwise (Durty Cloth Tool then checks the character against the template alone)."""
+        entry = self.jobs.get(job or "")
+        if entry is None or entry[0] != character:
+            return None
+        if time.time() - entry[1] > protocol.PED_RIG_RESULT_MINUTES * 60 - 60:
+            return None
+        return job
 
     def take_rig(self) -> Tuple[Any, Dict[str, Any]]:
         """The rig waiting to be applied and what was sent for it; it is no longer waiting afterwards."""

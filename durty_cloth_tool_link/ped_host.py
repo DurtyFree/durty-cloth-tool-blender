@@ -97,6 +97,9 @@ def character_id(collection: Any) -> str:
     if not isinstance(current, str) or not current or taken:
         current = secrets.token_hex(6)
         collection[CHARACTER] = current
+        for key in (RIGHTS, SENT):  # a copy is another character: its rights are confirmed anew
+            if key in collection:
+                del collection[key]
     return current
 
 
@@ -588,21 +591,12 @@ def select_vertices(context: Any, vertices: Dict[str, np.ndarray]) -> Optional[A
 
 
 def character_tree(context: Any, collection: Any) -> Optional[BVHTree]:
-    """A search tree of the character's surface as Blender shows it, in world space."""
+    """A search tree of the character's surface as the rig sees it (:func:`rig_parts`), in world space."""
     points, polygons, offset = [], [], 0
-    depsgraph = context.evaluated_depsgraph_get()
-    for obj in parts(collection):
-        evaluated = obj.evaluated_get(depsgraph)
-        mesh = evaluated.to_mesh()
-        try:
-            m = np.array(evaluated.matrix_world, dtype=np.float64)
-            world = local_positions(mesh) @ m[:3, :3].T + m[:3, 3]
-            tris = mesh_triangles(mesh)
-        finally:
-            evaluated.to_mesh_clear()
-        points.append(world)
-        polygons.append(tris + offset)
-        offset += len(world)
+    for part in rig_parts(context, collection):
+        points.append(part.positions)
+        polygons.append(part.triangles + offset)
+        offset += len(part.positions)
     if not points or offset == 0:
         return None
     return BVHTree.FromPolygons(np.concatenate(points).tolist(), np.concatenate(polygons).tolist())
@@ -631,13 +625,12 @@ def ray_hits(tree: BVHTree, origin: Any, direction: Any, limit: int = 12) -> Lis
 
 def rig_parts(context: Any, collection: Any) -> List[ped.Part]:
     """The character's meshes as a rig request carries them: as the character stands (a rigged character in its own
-    pose, never in the rest pose)."""
+    pose, never in the rest pose or a test pose that is shown); the pose shown is put back afterwards."""
     rig = armature(collection)
     restore = None
-    if rig is not None and rig.data.pose_position != "POSE":
-        restore = rig.data.pose_position
-        rig.data.pose_position = "POSE"
-        context.view_layer.update()
+    if rig is not None:
+        restore = (rig.data.pose_position, {bone.name: bone.matrix_basis.copy() for bone in rig.pose.bones})
+        set_pose(context, rig, "yours")
     try:
         result = []
         for obj in parts(collection):
@@ -648,7 +641,10 @@ def rig_parts(context: Any, collection: Any) -> List[ped.Part]:
         return result
     finally:
         if restore is not None:
-            rig.data.pose_position = restore
+            position, bases = restore
+            for name, basis in bases.items():
+                rig.pose.bones[name].matrix_basis = basis
+            rig.data.pose_position = position
             context.view_layer.update()
 
 
@@ -777,8 +773,7 @@ def _keep_previous(context: Any, collection: Any, current: Any) -> None:
         stale = obj.get(PREVIOUS_MESH)
         copy = obj.data.copy()
         copy.name = f"DCT Previous {obj.name}"
-        obj[PREVIOUS_MESH] = copy
-        obj[PREVIOUS_GROUPS] = json.dumps([group.name for group in obj.vertex_groups])
+        obj[PREVIOUS_MESH] = copy  # the mesh keeps its vertex groups (their names live on the mesh)
         if isinstance(stale, bpy.types.Mesh) and stale.users == 0:
             bpy.data.meshes.remove(stale)
     del current[ARMATURE]
@@ -841,7 +836,7 @@ def apply_rig(context: Any, collection: Any, rig_result: Any, sent: Dict[str, An
         for bone, entries in ped.vertex_groups(rig_result.bone_indices, rig_result.weights, names, start, count).items():
             group = obj.vertex_groups.get(bone) or obj.vertex_groups.new(name=bone)
             for weight, vertices in entries:
-                group.add(vertices.tolist(), weight, "REPLACE")
+                group.add(vertices.tolist(), weight, "ADD")  # a bone named twice for a vertex adds up
         _attach(obj, rig, preserve)
     set_pose(context, rig, "yours")
     info = {"template": rig_result.template, "job": rig_result.job, "ragdoll": rig_result.ragdoll,
@@ -878,23 +873,19 @@ def restore_previous(context: Any, collection: Any) -> None:
         mesh = obj.get(PREVIOUS_MESH)
         if not isinstance(mesh, bpy.types.Mesh):
             raise fail("ped.why.no-previous")
-        swaps.append((obj, mesh, json.loads(obj.get(PREVIOUS_GROUPS, "[]") or "[]")))
-    for obj, mesh, groups in swaps:
+        swaps.append((obj, mesh))
+    for obj, mesh in swaps:
+        # The vertex groups' names live on the mesh: swapping the meshes swaps the weights with them.
         keep = obj.data
-        keep_groups = [group.name for group in obj.vertex_groups]
         for modifier in list(obj.modifiers):
             if modifier.type == "ARMATURE":
                 obj.modifiers.remove(modifier)
         obj.parent = None
-        obj.vertex_groups.clear()
-        for name in groups:
-            obj.vertex_groups.new(name=name)
         restored = mesh.copy()
         restored.name = keep.name
         obj.data = restored
         stale = obj.get(PREVIOUS_MESH)
         obj[PREVIOUS_MESH] = keep
-        obj[PREVIOUS_GROUPS] = json.dumps(keep_groups)
         if isinstance(stale, bpy.types.Mesh) and stale.users == 0:
             bpy.data.meshes.remove(stale)
     ident = character_id(collection)
@@ -927,8 +918,12 @@ def restore_previous(context: Any, collection: Any) -> None:
 def remove_rig(context: Any, collection: Any) -> None:
     """Takes the rig off: each part gets its mesh from before the first rig back, the armatures go."""
     _object_mode(context)
+    rig = armature(collection)
+    bones = {bone.name for bone in rig.data.bones} if rig is not None else set()
     for obj in parts(collection):
         original = obj.get(ORIGINAL)
+        if not isinstance(original, bpy.types.Mesh):
+            _clear_groups(obj, bones)  # no original to go back to: at least the rig's weights go
         for modifier in list(obj.modifiers):
             if modifier.type == "ARMATURE" and modifier.object is not None and (
                     modifier.object.get(ARMATURE) or modifier.object.get(PREVIOUS_OF)):
@@ -949,7 +944,6 @@ def remove_rig(context: Any, collection: Any) -> None:
                 del obj[key]
             if isinstance(stored, bpy.types.Mesh) and stored.users == 0:
                 bpy.data.meshes.remove(stored)
-        obj.vertex_groups.clear()
     for rig in (armature(collection), previous_armature(collection)):
         if rig is not None:
             data = rig.data
@@ -988,29 +982,36 @@ def weight_data(obj: Any, bones: Sequence[str]) -> Dict[str, Any]:
     return {"counts": counts, "totals": totals, "bad": bad, "groups": names}
 
 
-def run_checks(context: Any, collection: Any) -> List[ped.Finding]:
+def run_checks(context: Any, collection: Any, progress: Any = None) -> List[ped.Finding]:
     """The local checks of the rigged character: weights (every vertex weighted, at most four bones, nothing on bones
-    that never move the mesh, no stray groups), the armature against the rig, the meshes against the rig, and how
-    the test poses stretch it."""
+    that never move the mesh, no stray groups), the armature against the rig (a bone moved, turned, added or gone),
+    the meshes against the rig, and how the test poses stretch it. ``progress(fraction)`` hears how far it is."""
     rig = armature(collection)
     if rig is None:
         raise fail("ped.why.not-rigged")
+    step = progress or (lambda fraction: None)
     info = rig_info(collection)
     names, rests, parents = rest_matrices(rig)
-    findings = ped.weight_findings({obj.name: weight_data(obj, names) for obj in parts(collection)}, names)
+    objs = parts(collection)
+    weights = {}
+    for number, obj in enumerate(objs):
+        weights[obj.name] = weight_data(obj, names)
+        step(0.5 * (number + 1) / max(1, len(objs)))
+    findings = ped.weight_findings(weights, names)
     world = np.array(rig.matrix_world, dtype=np.float64)
     actual = {bone.name: world @ np.array(bone.matrix_local) for bone in rig.data.bones}
-    changed = ped.armature_changes(dict(zip(names, rests)), actual)  # a moved armature moves every bone
+    expected = {name: rest for name, rest, bone in zip(names, rests, rig.data.bones) if bone.get(BONE_REST) is not None}
+    changed = ped.armature_changes(expected, actual)  # a moved armature moves every bone
     if changed:
         findings.append(ped.Finding("armature-changed", len(changed), changed))
     if info.get("topology") and current_topology(collection) != info["topology"]:
         findings.append(ped.Finding("mesh-changed", 1))
-    objs = parts(collection)
     rest_positions = {obj.name: world_positions(obj) for obj in objs}
     edges = {obj.name: mesh_edges(obj.data) for obj in objs}
     current = rig.data.pose_position
     try:
-        for pose in ped.TEST_POSES:
+        for number, pose in enumerate(ped.TEST_POSES):
+            step(0.5 + 0.5 * number / len(ped.TEST_POSES))
             set_pose(context, rig, pose)
             stretched = {}
             for obj in objs:

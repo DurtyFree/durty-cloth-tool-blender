@@ -386,20 +386,44 @@ def test_vertex_groups_carry_the_weights_by_bone_name():
     assert rest["Two"].tolist() == [[3, 4, 5], [6, 7, 8]]
 
 
-def test_test_poses_bend_the_limbs_the_right_way():
+def t_posed(rest, names, parents):
+    """The skeleton's rest pose with the arms held out straight to the sides (a T-pose)."""
+    index = {name: i for i, name in enumerate(names)}
+    turns = {}
+    for side, sign in (("L", 1.0), ("R", -1.0)):
+        turns[index[f"SKEL_{side}_UpperArm"]] = (index[f"SKEL_{side}_Forearm"], (sign, 0.0, 0.0))
+        turns[index[f"SKEL_{side}_Forearm"]] = (index[f"SKEL_{side}_Hand"], (sign, 0.0, 0.0))
+    return ped.posed_world(rest, parents, turns)
+
+
+@pytest.mark.parametrize("arms", ["a-pose", "t-pose"])
+def test_test_poses_bend_the_limbs_the_right_way(arms):
+    """The poses aim the limbs, so they look the same whatever pose the template's rest pose holds the arms in."""
     bones = skeleton()
     names = [b.name for b in bones]
     rest = [ped.blender_matrix(b.world) for b in bones]
     parents = [b.parent for b in bones]
-    hand = names.index("SKEL_L_Hand")
+    if arms == "t-pose":
+        rest = t_posed(rest, names, parents)
+        assert rest[names.index("SKEL_L_Hand")][2, 3] == pytest.approx(rest[names.index("SKEL_L_UpperArm")][2, 3])
+    position = {name: (lambda world, i=i: world[i][:3, 3]) for i, name in enumerate(names)}
     up = ped.test_pose("arms_up", names, rest, parents)
-    assert up[hand][2, 3] > rest[hand][2, 3] + 0.3
-    assert up[names.index("SKEL_L_UpperArm")][:3, 3] == pytest.approx(rest[names.index("SKEL_L_UpperArm")][:3, 3])
-    squat = ped.test_pose("squat", names, rest, parents)
-    knee = names.index("SKEL_L_Calf")
-    assert squat[knee][1, 3] < rest[knee][1, 3] - 0.2  # the knee comes forward
+    shoulder = position["SKEL_L_UpperArm"](rest)
+    assert position["SKEL_L_Hand"](up)[2] > shoulder[2] + 0.4 and position["SKEL_R_Hand"](up)[2] > shoulder[2] + 0.4
+    assert position["SKEL_L_UpperArm"](up) == pytest.approx(shoulder)
     forward_ = ped.test_pose("arms_forward", names, rest, parents)
-    assert forward_[hand][1, 3] < rest[hand][1, 3] - 0.2
+    for side in "LR":
+        hand, root = position[f"SKEL_{side}_Hand"](forward_), position[f"SKEL_{side}_UpperArm"](rest)
+        assert hand[1] < root[1] - 0.4 and abs(hand[2] - root[2]) < 0.15  # in front, at shoulder height
+    squat = ped.test_pose("squat", names, rest, parents)
+    assert position["SKEL_L_Calf"](squat)[1] < position["SKEL_L_Calf"](rest)[1] - 0.2  # the knees come forward
+    assert position["SKEL_R_Calf"](squat)[1] < position["SKEL_R_Calf"](rest)[1] - 0.2
+    assert position["SKEL_Neck_1"](squat)[1] < position["SKEL_Neck_1"](rest)[1] - 0.05  # the body leans forward
+    walk = ped.test_pose("walk", names, rest, parents)
+    assert position["SKEL_L_Foot"](walk)[1] < position["SKEL_R_Foot"](walk)[1] - 0.3  # the left foot steps out
+    assert position["SKEL_R_Hand"](walk)[1] < position["SKEL_L_Hand"](walk)[1]  # the opposite arm swings forward
+    twist = ped.test_pose("twist", names, rest, parents)
+    assert position["SKEL_L_UpperArm"](twist)[1] != pytest.approx(position["SKEL_L_UpperArm"](rest)[1], abs=0.02)
     for pose in ped.TEST_POSES:
         world = ped.test_pose(pose, names, rest, parents)
         for m in world:  # rigid: rotations stay rotations
@@ -419,12 +443,15 @@ def test_strain_finds_stretched_and_squashed_edges():
 
 
 def test_weight_findings():
-    data = {"Body": {"counts": np.array([1, 0, 5, 2]), "totals": np.array([1.0, 0.0, 1.0, 1.0]),
+    # The fourth body vertex is weighted only on a bone that never deforms: Durty Cloth Tool moves that weight up the
+    # chain, so it is no unweighted vertex.
+    data = {"Body": {"counts": np.array([1, 0, 5, 0]), "totals": np.array([1.0, 0.0, 1.0, 0.0]),
                      "bad": np.array([False, False, False, True]), "groups": ["SKEL_Head", "Unknown", "DCT Tears"]},
             "Hair": {"counts": np.array([1, 1]), "totals": np.array([1.0, 0.0]), "bad": np.zeros(2, dtype=bool),
                      "groups": ["SKEL_Head"]}}
     found = {f.code: f for f in ped.weight_findings(data, ["SKEL_Head", "SKEL_ROOT"])}
     assert found["unweighted"].count == 2 and found["unweighted"].vertices["Hair"].tolist() == [1]
+    assert found["unweighted"].vertices["Body"].tolist() == [1]
     assert found["too-many"].vertices == {"Body": pytest.approx(np.array([2]))}
     assert found["non-deforming"].count == 1
     assert found["unknown-groups"].names == ("Unknown",)
@@ -446,6 +473,8 @@ def test_the_armature_must_keep_the_rigs_bones_within_tolerance():
     turned[:3, :3] = ped._rotation((0, 0, 1), math.radians(0.02))
     assert ped.armature_changes({"A": rest}, {"A": turned}) == ("A",)
     assert ped.armature_changes({"A": rest, "B": rest}, {"A": rest}) == ("B",)
+    # A bone the rig does not have would be a joint Durty Cloth Tool refuses.
+    assert ped.armature_changes({"A": rest}, {"A": rest, "Extra": rest}) == ("Extra",)
 
 
 def test_the_report_in_lines():

@@ -151,6 +151,21 @@ def test_a_rig_reports_its_progress_and_arrives_whole(tmp_path, dct, api):
     assert bases[0][:3, 3] != pytest.approx((0.0, 0.0, 0.0))  # the pose moves the character where it stands
 
 
+def test_a_rig_job_is_named_only_on_its_own_connection(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    peds = ctrl.peds
+    character, data = character_input()
+    peds.start_rig("a_m_y_tester_01", character.joints, data, {}, rights=True, character="c1")
+    drive(ctrl, lambda: peds.rig is not None)
+    assert peds.rig_job("j1", "c1") == "j1"
+    assert peds.rig_job("j1", "c2") is None and peds.rig_job(None, "c1") is None
+    # A new connection starts its job names again: the old job could name another character's rig there.
+    dct.drop_all()
+    drive(ctrl, lambda: not ctrl.ready)
+    drive(ctrl, lambda: ctrl.ready, timeout=30)
+    assert peds.rig_job("j1", "c1") is None
+
+
 def test_cancel_stops_the_rig(tmp_path, dct, api):
     dct.ped_rig_seconds = 6.0
     ctrl = connected(tmp_path, dct, api)

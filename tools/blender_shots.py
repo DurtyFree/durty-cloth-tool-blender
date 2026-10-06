@@ -103,7 +103,7 @@ def launch(argv=None) -> int:
             print(output[-4000:])
             print("error: Blender did not finish in time and was ended")
             return 1
-        lines = [line for line in output.splitlines() if line.startswith(("SHOT ", "SKIP ", "ERROR "))]
+        lines = [line for line in output.splitlines() if line.startswith(("SHOT ", "SKIP ", "ERROR ", "CHECK "))]
         print("\n".join(lines))
         failed = any(line.startswith("ERROR ") for line in lines) or process.returncode != 0
         if failed:
@@ -564,13 +564,29 @@ class Shots:
         yield from self.wait(lambda: True, 5, "the markers")
         self.shot("ped-markers", whole=True)
 
+        # Started from its button in the sidebar, as a user starts it: the clicks still land in the 3D view.
         window, area, region = self.view()
-        main = next(r for r in area.regions if r.type == "WINDOW")
-        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=main):
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
             bpy.ops.dct_link.ped_guide("INVOKE_DEFAULT")
         guide = ui_ped.RUNTIME.guide
+        if guide is None:
+            raise RuntimeError("the click guide did not start from the sidebar")
+        yield from self.wait(lambda: True, 3, "the front view")
+        from bpy_extras import view3d_utils
+        import types
+
+        main = max((r for r in area.regions if r.type == "WINDOW"), key=lambda r: r.width * r.height)
+        markers = ph.read_markers(scene.dct_ped.character)
+        spot = view3d_utils.location_3d_to_region_2d(main, main.data, markers["chest"])
+        event = types.SimpleNamespace(mouse_x=main.x + int(spot.x), mouse_y=main.y + int(spot.y))
+        ray = ui_ped.DCTLINK_OT_ped_guide._ray(ui_ped.DCTLINK_OT_ped_guide, types.SimpleNamespace(area=area), event)
+        if ray is None or guide.point(*ray) is None:
+            raise RuntimeError("a click on the character in the 3D view did not reach it")
+        outside = types.SimpleNamespace(mouse_x=region.x + 5, mouse_y=region.y + 5)
+        if ui_ped.DCTLINK_OT_ped_guide._ray(ui_ped.DCTLINK_OT_ped_guide, types.SimpleNamespace(area=area), outside):
+            raise RuntimeError("a click on the sidebar was taken as one in the 3D view")
+        print("CHECK the click guide started from the sidebar reaches the character in the 3D view")
         if guide is not None:
-            markers = ph.read_markers(scene.dct_ped.character)
             for name in ("headTop", "chin", "shoulderL"):
                 guide.points[name] = markers[name]
             guide.preview = markers["shoulderR"]

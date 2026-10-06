@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import math
 import shutil
+import time
 import traceback
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -49,6 +50,10 @@ class _Runtime:
         self.last_markers: Dict[str, Dict[str, Tuple[float, float, float]]] = {}
         self.writing = False
         self.guide: Optional[Any] = None
+        #: When the facts were last read (they are read at most once a second, never during a transform), and the
+        #: flow of the panel being drawn (computed once per draw).
+        self.facts_at = 0.0
+        self.flow: Optional[ped.Flow] = None
 
 
 RUNTIME = _Runtime()
@@ -84,16 +89,32 @@ def peds() -> Optional[ped_link.PedLink]:
     return getattr(ctrl, "peds", None) if ctrl is not None else None
 
 
+#: The facts of a character that keeps changing (a part being dragged) are read again at most this often (seconds).
+FACTS_INTERVAL = 1.0
+
+
+def _redraw_later() -> None:
+    host.redraw()
+    return None
+
+
 def facts(context: Any, collection: Optional[Any]) -> ped.Facts:
-    """The character's facts, read again only when its objects changed."""
+    """The character's facts, read again when its objects changed: right away after a pause, at most once a second
+    while they keep changing, and never during a transform (the panel shows the last facts and catches up after)."""
     if collection is None:
         return ped.Facts()
     key = ph.facts_key(collection)
     cached = RUNTIME.facts.get(ident(collection))
     if cached is not None and cached[0] == key:
         return cached[1]
+    now = time.monotonic()
+    if cached is not None and (now - RUNTIME.facts_at < FACTS_INTERVAL or host.modal_operator_running()):
+        if not bpy.app.timers.is_registered(_redraw_later):
+            bpy.app.timers.register(_redraw_later, first_interval=FACTS_INTERVAL)
+        return cached[1]
     found = ph.facts(context, collection)
     RUNTIME.facts[ident(collection)] = (key, found)
+    RUNTIME.facts_at = time.monotonic()
     return found
 
 
@@ -115,6 +136,8 @@ def waiting_rig(collection: Optional[Any]) -> Optional[Any]:
 
 
 def flow(context: Any) -> ped.Flow:
+    if RUNTIME.flow is not None:
+        return RUNTIME.flow  # the panel being drawn computed it already
     collection = character(context)
     ctrl = controller()
     link = peds()
@@ -310,6 +333,15 @@ def _unrigged_reason(context: Any) -> Optional[Msg]:
     return reason
 
 
+def _placed_reason(context: Any) -> Optional[Msg]:
+    """Why the character cannot be scaled, turned or moved now: a part still has a transform of its own (applied
+    first, every part moves exactly once)."""
+    reason = _unrigged_reason(context)
+    if reason is None and facts(context, character(context)).transformed:
+        return msg("ped.why.transforms-first")
+    return reason
+
+
 def _confirm(op: Operator, context: Any, event: Any, key: str, **fields: Any) -> set:
     """Asks before a change to the character's size, direction or data."""
     try:
@@ -453,7 +485,7 @@ class DCTLINK_OT_ped_scale(_CharacterOp):
 
     @classmethod
     def poll(cls, context):
-        return _refuse(cls, _unrigged_reason(context))
+        return _refuse(cls, _placed_reason(context))
 
     def invoke(self, context, event):
         return _confirm(self, context, event, "ped.confirm.scale", factor=f"{self.factor:g}")
@@ -481,7 +513,7 @@ class DCTLINK_OT_ped_turn(_CharacterOp):
 
     @classmethod
     def poll(cls, context):
-        return _refuse(cls, _unrigged_reason(context))
+        return _refuse(cls, _placed_reason(context))
 
     def invoke(self, context, event):
         return _confirm(self, context, event, "ped.confirm.turn")
@@ -501,7 +533,7 @@ class DCTLINK_OT_ped_to_origin(_CharacterOp):
 
     @classmethod
     def poll(cls, context):
-        return _refuse(cls, _unrigged_reason(context))
+        return _refuse(cls, _placed_reason(context))
 
     def execute(self, context):
         def action():
@@ -708,8 +740,12 @@ class DCTLINK_OT_ped_guide(_Op):
             reason = msg("ped.why.guide-running")
         return _refuse(cls, reason)
 
+    @staticmethod
+    def _windows(area: Any) -> List[Any]:
+        return [region for region in area.regions if region.type == "WINDOW"] if area is not None else []
+
     def invoke(self, context, event):
-        if context.area is None or context.area.type != "VIEW_3D":
+        if context.area is None or context.area.type != "VIEW_3D" or not self._windows(context.area):
             self.report({"ERROR"}, t("ped.why.view3d"))
             return {"CANCELLED"}
         collection = character(context)
@@ -719,9 +755,11 @@ class DCTLINK_OT_ped_guide(_Op):
             return {"CANCELLED"}
         positions, _ = character_mesh(context)
         RUNTIME.guide = Guide(tree, positions)
+        main = max(self._windows(context.area), key=lambda region: region.width * region.height)
         try:
-            bpy.ops.view3d.view_axis(type="FRONT")
-        except RuntimeError:
+            with context.temp_override(area=context.area, region=main):
+                bpy.ops.view3d.view_axis(type="FRONT")
+        except (RuntimeError, TypeError):
             pass  # the view stays as it is
         _guide_handlers(True)
         context.window_manager.modal_handler_add(self)
@@ -736,14 +774,23 @@ class DCTLINK_OT_ped_guide(_Op):
             pass
 
     def _ray(self, context: Any, event: Any) -> Optional[Tuple[Any, Any]]:
+        """The ray under the mouse through the 3D view's region it is over (the guide may have been started from the
+        sidebar, whose own region has no view); ``None`` outside the 3D view."""
         from bpy_extras import view3d_utils
 
-        region, view = context.region, context.region_data
-        if region is None or view is None:
-            return None
-        coord = (event.mouse_region_x, event.mouse_region_y)
-        return (view3d_utils.region_2d_to_origin_3d(region, view, coord),
-                view3d_utils.region_2d_to_vector_3d(region, view, coord))
+        def holds(region: Any) -> bool:
+            return (region.width > 1 and region.height > 1 and region.x <= event.mouse_x < region.x + region.width
+                    and region.y <= event.mouse_y < region.y + region.height)
+
+        area = context.area
+        if area is None or any(region.type != "WINDOW" and holds(region) for region in area.regions):
+            return None  # the sidebar, a header or the toolbar (drawn over the view with Region Overlap)
+        for region in self._windows(area):
+            if holds(region) and region.data is not None:
+                coord = (event.mouse_x - region.x, event.mouse_y - region.y)
+                return (view3d_utils.region_2d_to_origin_3d(region, region.data, coord),
+                        view3d_utils.region_2d_to_vector_3d(region, region.data, coord))
+        return None
 
     def _end(self, context: Any, finished: bool) -> set:
         guide_state = RUNTIME.guide
@@ -781,15 +828,19 @@ class DCTLINK_OT_ped_guide(_Op):
             context.area.tag_redraw()
         if event.type in _NAVIGATION:
             return {"PASS_THROUGH"}
+        ray = self._ray(context, event) if event.type in ("MOUSEMOVE", "LEFTMOUSE", "RIGHTMOUSE") else None
+        if event.type in ("MOUSEMOVE", "LEFTMOUSE", "RIGHTMOUSE") and ray is None:
+            return {"PASS_THROUGH"}  # over the sidebar or a header: those keep working
         if event.type == "MOUSEMOVE":
-            ray = self._ray(context, event)
-            guide_state.preview = guide_state.point(*ray) if ray is not None else None
+            guide_state.preview = guide_state.point(*ray)
             return {"RUNNING_MODAL"}
         if event.value != "PRESS":
             return {"RUNNING_MODAL"}
         if event.type == "ESC":
             if guide_state.points:
-                write_markers(context, guide_state.points)  # what was placed stays
+                write_markers(context, guide_state.points)  # what was placed stays, as an undo step
+                self._end(context, False)
+                return {"FINISHED"}
             return self._end(context, False)
         if event.type in ("RIGHTMOUSE", "BACK_SPACE"):
             if guide_state.points:
@@ -797,8 +848,7 @@ class DCTLINK_OT_ped_guide(_Op):
             guide_state.missed = False
             return {"RUNNING_MODAL"}
         if event.type == "LEFTMOUSE":
-            ray = self._ray(context, event)
-            point = guide_state.point(*ray) if ray is not None else None
+            point = guide_state.point(*ray)
             if point is None:
                 guide_state.missed = True
                 return {"RUNNING_MODAL"}
@@ -924,6 +974,7 @@ class DCTLINK_OT_ped_rig(_Op):
     bl_idname = "dct_link.ped_rig"
     bl_label = EN["ped.op.rig"]
     bl_description = EN["ped.op.rig.desc"]
+    bl_options = {"REGISTER", "UNDO"}  # the rights confirmation is kept with the character
 
     agree: BoolProperty(name=EN["ped.rights.check"], default=False, options={"SKIP_SAVE"}, translation_context=CONTEXT)
 
@@ -1140,7 +1191,12 @@ class DCTLINK_OT_ped_run_checks(_CharacterOp):
     def execute(self, context):
         def action():
             collection = character(context)
-            findings = ph.run_checks(context, collection)
+            manager = context.window_manager
+            manager.progress_begin(0, 100)
+            try:
+                findings = ph.run_checks(context, collection, lambda f: manager.progress_update(int(100 * f)))
+            finally:
+                manager.progress_end()
             RUNTIME.findings[ident(collection)] = findings
             refused = [f for f in findings if f.code in ped.REFUSED_CODES]
             collection[ph.CHECKED] = 0 if refused else 1
@@ -1170,7 +1226,7 @@ class DCTLINK_OT_ped_show_finding(_Op):
         finding = findings[self.index]
         if finding.pose:
             ph.set_pose(context, ph.armature(character(context)), finding.pose)
-        ph.select_vertices(context, finding.vertices)
+        ph.select_vertices(context, finding.vertices or {})
         host.redraw()
         return {"FINISHED"}
 
@@ -1221,10 +1277,15 @@ class DCTLINK_OT_ped_send(_Op):
             info = ph.rig_info(collection)
             template = info.get("template") or settings_.template
             folder = ph.work_folder(ctrl.data_dir)
-            glb = ph.export_glb(context, collection, folder)
+            context.window_manager.progress_begin(0, 1)  # the export can take a while: the cursor says so
+            try:
+                glb = ph.export_glb(context, collection, folder)
+            finally:
+                context.window_manager.progress_end()
             roles = [(obj.name, ph.role_of(obj)) for obj in ph.parts(collection)]
             parts = [(name, role) for name, role in roles if role != "body"]
-            rig_job = info.get("job") if info.get("template", "").lower() == template.lower() else None
+            rig_job = (peds().rig_job(info.get("job"), ident(collection))
+                       if info.get("template", "").lower() == template.lower() else None)
             ragdoll = None if settings_.ragdoll == "template" else settings_.ragdoll
             peds().start_add(template, settings_.ped_name.strip(), settings_.model_name, glb, rights=True, rig=rig_job,
                              ragdoll=ragdoll, parts=parts, character=ident(collection))
@@ -1288,7 +1349,7 @@ def _fix_button(layout: Any, idname: str, values: Dict[str, Any]) -> None:
 
 
 def _check_fields(row: ped.Check) -> Dict[str, Any]:
-    fields = dict(row.fields)
+    fields = dict(row.fields or {})
     for name in ("unit", "direction"):
         if name in fields and isinstance(fields[name], str) and fields[name] in EN:
             fields[name] = msg(fields[name])
@@ -1525,8 +1586,7 @@ def draw_send(layout: Any, context: Any) -> None:
         wrapped(layout, context, t(problem[0], **problem[1]), "ERROR")
     for name, code in ph.texture_problems(ph.parts(collection)):
         refused = code in ("too-large", "not-multiple-of-four")
-        wrapped(layout, context, t("ped.texture", name=name, problem=msg(f"add.finding.picture.{code}")),
-                "CANCEL" if refused else "ERROR", alert=refused)
+        wrapped(layout, context, t(f"ped.texture.{code}", name=name), "CANCEL" if refused else "ERROR", alert=refused)
     body = options_section(layout, "send")
     if body is not None:
         labelled(body, settings_, "ragdoll", "ped.prop.ragdoll")
@@ -1597,6 +1657,15 @@ def stage_status(context: Any, stage: str) -> Tuple[str, bool]:
 
 
 def draw_main(layout: Any, context: Any) -> None:
+    RUNTIME.flow = None
+    RUNTIME.flow = flow(context)
+    try:
+        _draw_main(layout, context)
+    finally:
+        RUNTIME.flow = None
+
+
+def _draw_main(layout: Any, context: Any) -> None:
     key = ped.next_step(flow(context))
     collection = character(context)
     created = sent_project(collection)
@@ -1872,6 +1941,13 @@ def follow_limbs(scene: Any) -> bool:
 
 
 @persistent
+def _on_undo_redo(*_args) -> None:
+    """Undo and redo replace the markers: what was last seen of them no longer tells what the user moved."""
+    RUNTIME.last_markers.clear()
+    RUNTIME.facts.clear()
+
+
+@persistent
 def _on_depsgraph_update(scene, depsgraph) -> None:
     try:
         if RUNTIME.writing or getattr(getattr(scene, "dct_link", None), "workspace", "CLOTHING") != "PED":
@@ -1946,6 +2022,8 @@ def register() -> None:
     bpy.types.Object.dct_ped_role = EnumProperty(name=EN["ped.prop.role"], items=ROLE_ITEMS, default="auto",
                                                  description=EN["ped.prop.role.desc"], translation_context=CONTEXT)
     bpy.app.handlers.depsgraph_update_post.append(_on_depsgraph_update)
+    bpy.app.handlers.undo_post.append(_on_undo_redo)
+    bpy.app.handlers.redo_post.append(_on_undo_redo)
     _register_drawing()
 
 
@@ -1953,6 +2031,11 @@ def unregister() -> None:
     _unregister_drawing()
     if _on_depsgraph_update in bpy.app.handlers.depsgraph_update_post:
         bpy.app.handlers.depsgraph_update_post.remove(_on_depsgraph_update)
+    for handlers in (bpy.app.handlers.undo_post, bpy.app.handlers.redo_post):
+        if _on_undo_redo in handlers:
+            handlers.remove(_on_undo_redo)
+    if bpy.app.timers.is_registered(_redraw_later):
+        bpy.app.timers.unregister(_redraw_later)
     RUNTIME.guide = None
     del bpy.types.Object.dct_ped_role
     del bpy.types.Scene.dct_ped
@@ -1965,6 +2048,7 @@ def on_created(created: Dict[str, str]) -> None:
     for collection in bpy.data.collections:
         if collection.get(ph.CHARACTER) == created.get("character"):
             collection[ph.SENT] = json.dumps({k: created.get(k, "") for k in ("name", "model", "template")})
+    host.push_undo(strings.english(msg("ped.op.send")))  # so Ctrl+Z never takes the note of the project back
     host.redraw()
 
 

@@ -554,7 +554,14 @@ TEXT = {
         "En el juego, las balas, las caídas y el ragdoll usan las formas de este cuerpo. Elige uno grande para un "
         "personaje mucho más grande."
     ),
-    "ped.texture": "Imagen {name}: {problem}",
+    "ped.texture.too-large": "La imagen {name} mide más de 4096 píxeles por un lado. Durty Cloth Tool la rechaza.",
+    "ped.texture.not-multiple-of-four": (
+        "El ancho o el alto de la imagen {name} no es divisible entre cuatro. Durty Cloth Tool la rechaza."
+    ),
+    "ped.texture.non-power-of-two": (
+        "El tamaño de la imagen {name} no es una potencia de dos (como 1024 o 2048). Funciona, pero esos "
+        "tamaños se ven mejor."
+    ),
     "ped.op.send": "Crear ped personalizado",
     "ped.op.send.desc": (
         "Exportar el personaje con rig en la pose de reposo del juego y enviarlo a Durty Cloth Tool, que crea un nuevo "
@@ -617,6 +624,7 @@ TEXT = {
         "Los nombres que empiezan por {prefix} pertenecen a los peds propios del juego. Elige otro, como {suggestion}."
     ),
     "ped.why.name": "Da un nombre al ped.",
+    "ped.why.transforms-first": "Aplica primero las transformaciones.",
     "ped.why.refused-checks": (
         "Ejecutar comprobaciones encontró problemas que Durty Cloth Tool rechazaría. Corrígelos primero."
     ),

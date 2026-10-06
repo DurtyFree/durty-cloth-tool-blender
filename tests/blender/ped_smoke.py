@@ -75,6 +75,13 @@ def build_character(collection):
     return character, objects, rig
 
 
+def rig_shows_pose(rig, bone):
+    """Whether a pose other than the character's own is shown on ``bone``."""
+    stored = rig.data.bones[bone].get("dct_pose")
+    posed = np.array(rig.pose.bones[bone].matrix)
+    return stored is not None and not np.allclose(posed, np.asarray(list(stored)).reshape(4, 4), atol=1e-4)
+
+
 def select_only(objects):
     for obj in bpy.context.view_layer.objects:
         obj.select_set(obj in objects)
@@ -153,6 +160,7 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
           and abs(ui_ped.facts(bpy.context, collection).facing or 0.0) < 5.0, rows)
     check("It Faces the Front runs", "FINISHED" in bpy.ops.dct_link.ped_confirm_facing())
     check("the checks pass", ped.checks_pass(ui_ped.character_checks(bpy.context, collection)))
+    objects[0].vertex_groups.new(name="DCT_user_group")  # a group of the user's own, which no rig takes away
 
     # Markers.
     check("From Old Rig runs", "FINISHED" in bpy.ops.dct_link.ped_from_rig())
@@ -294,13 +302,30 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
           and previous.hide_get())
     check("Previous Rig runs", "FINISHED" in bpy.ops.dct_link.ped_previous_rig())
     check("the previous rig is back", ph.armature(collection) == previous)
+
+    def fully_weighted():
+        return all(0.99 < sum(g.weight for g in v.groups) < 1.01 for obj in ph.parts(collection)
+                   for v in obj.data.vertices)
+
+    check("the previous rig keeps its weights", fully_weighted())
+    check("Previous Rig (back again) runs", "FINISHED" in bpy.ops.dct_link.ped_previous_rig())
+    check("swapping back keeps the weights too", fully_weighted() and ph.armature(collection) != previous)
+    check("Previous Rig (once more) runs", "FINISHED" in bpy.ops.dct_link.ped_previous_rig())
     bpy.context.view_layer.update()
     after = {obj.name: ph.evaluated_positions(bpy.context, obj) for obj in ph.parts(collection)}
     check("the character still looks as before", max(float(np.abs(after[n] - before[n]).max()) for n in before) < 1e-3)
+    # The rig is read as the character stands, whatever pose is shown.
+    standing = ui_ped.character_mesh(bpy.context)[0]
+    check("Pose (Squat) runs", "FINISHED" in bpy.ops.dct_link.ped_pose(pose="squat"))
+    check("the character is read in its own pose while a test pose shows",
+          np.allclose(ui_ped.character_mesh(bpy.context)[0], standing, atol=1e-5))
+    check("reading it leaves the test pose showing", rig_shows_pose(ph.armature(collection), "SKEL_L_Thigh"))
+    bpy.ops.dct_link.ped_pose(pose="yours")
     check("Remove Rig runs", "FINISHED" in bpy.ops.dct_link.ped_remove_rig())
-    check("removing the rig gives back the character from before the first rig",
+    check("removing the rig gives back the character from before the first rig, with its own groups",
           ph.armature(collection) is None and ph.previous_armature(collection) is None
-          and np.allclose(ph.world_positions(body), before[body.name], atol=1e-5) and not body.vertex_groups)
+          and np.allclose(ph.world_positions(body), before[body.name], atol=1e-5)
+          and [g.name for g in body.vertex_groups] == ["DCT_user_group"], [g.name for g in body.vertex_groups])
     check("Rig (after removing) runs", "FINISHED" in bpy.ops.dct_link.ped_rig())
     pump(addon, lambda: ctrl.peds.rig is not None, what="the third rig")
     check("Apply Rig (third) runs", "FINISHED" in bpy.ops.dct_link.ped_apply_rig())

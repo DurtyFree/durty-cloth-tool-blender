@@ -802,7 +802,7 @@ class Check(NamedTuple):
     code: str
     level: str
     key: str
-    fields: Dict[str, Any] = {}
+    fields: Optional[Dict[str, Any]] = None
     fixes: Tuple[Tuple[str, Dict[str, Any]], ...] = ()
 
 
@@ -1156,34 +1156,66 @@ def vertex_groups(bone_indices: bytes, weights: bytes, bone_names: Sequence[str]
 # Poses
 # --------------------------------------------------------------------------------------------------
 
-#: The test poses: bone name to turns about the armature's axes through the bone's joint (X to the character's left,
-#: Y to its back, Z up), applied from the game's rest pose down the chain. Generic bends by bone name, not game
+#: The test poses, applied from the game's rest pose down the chain, in the armature's axes (X to the character's
+#: left, Y to its back, Z up): ``("aim", bone, child, direction)`` turns a bone the shortest way so that its child's
+#: joint lies in ``direction`` (so the pose does not depend on how the template's rest pose holds the limb), and
+#: ``("turn", bone, axis, degrees)`` turns a bone about an axis through its joint. Generic bends by bone name, not game
 #: animations.
-TEST_POSES: Dict[str, Tuple[Tuple[str, str, float], ...]] = {
-    "arms_up": (("SKEL_L_UpperArm", "Y", -80.0), ("SKEL_R_UpperArm", "Y", 80.0)),
-    "arms_forward": (("SKEL_L_UpperArm", "X", -75.0), ("SKEL_R_UpperArm", "X", -75.0),
-                     ("SKEL_L_Forearm", "X", -30.0), ("SKEL_R_Forearm", "X", -30.0)),
-    "squat": (("SKEL_L_Thigh", "X", -95.0), ("SKEL_R_Thigh", "X", -95.0), ("SKEL_L_Calf", "X", 120.0),
-              ("SKEL_R_Calf", "X", 120.0), ("SKEL_Spine1", "X", -20.0)),
-    "walk": (("SKEL_L_Thigh", "X", -30.0), ("SKEL_R_Thigh", "X", 20.0), ("SKEL_L_Calf", "X", 15.0),
-             ("SKEL_R_Calf", "X", 45.0), ("SKEL_L_UpperArm", "X", 20.0), ("SKEL_R_UpperArm", "X", -20.0)),
-    "twist": (("SKEL_Spine1", "Z", 15.0), ("SKEL_Spine2", "Z", 15.0), ("SKEL_Spine3", "Z", 15.0),
-              ("SKEL_Neck_1", "Z", 10.0)),
+_L, _R = "SKEL_L_", "SKEL_R_"
+TEST_POSES: Dict[str, Tuple[Tuple[Any, ...], ...]] = {
+    "arms_up": (("aim", _L + "UpperArm", _L + "Forearm", (0.35, 0.0, 1.0)),
+                ("aim", _L + "Forearm", _L + "Hand", (0.35, 0.0, 1.0)),
+                ("aim", _R + "UpperArm", _R + "Forearm", (-0.35, 0.0, 1.0)),
+                ("aim", _R + "Forearm", _R + "Hand", (-0.35, 0.0, 1.0))),
+    "arms_forward": (("aim", _L + "UpperArm", _L + "Forearm", (0.25, -1.0, -0.1)),
+                     ("aim", _L + "Forearm", _L + "Hand", (0.15, -1.0, 0.0)),
+                     ("aim", _R + "UpperArm", _R + "Forearm", (-0.25, -1.0, -0.1)),
+                     ("aim", _R + "Forearm", _R + "Hand", (-0.15, -1.0, 0.0))),
+    "squat": (("turn", "SKEL_Spine1", "X", 20.0),
+              ("aim", _L + "Thigh", _L + "Calf", (0.2, -1.0, -0.25)),
+              ("aim", _L + "Calf", _L + "Foot", (0.05, 0.4, -1.0)),
+              ("aim", _R + "Thigh", _R + "Calf", (-0.2, -1.0, -0.25)),
+              ("aim", _R + "Calf", _R + "Foot", (-0.05, 0.4, -1.0))),
+    "walk": (("aim", _L + "Thigh", _L + "Calf", (0.03, -0.55, -1.0)),
+             ("aim", _L + "Calf", _L + "Foot", (0.03, -0.2, -1.0)),
+             ("aim", _R + "Thigh", _R + "Calf", (-0.03, 0.35, -1.0)),
+             ("aim", _R + "Calf", _R + "Foot", (-0.03, 0.75, -1.0)),
+             ("aim", _L + "UpperArm", _L + "Forearm", (0.25, 0.35, -1.0)),
+             ("aim", _R + "UpperArm", _R + "Forearm", (-0.25, -0.35, -1.0))),
+    "twist": (("turn", "SKEL_Spine1", "Z", 15.0), ("turn", "SKEL_Spine2", "Z", 15.0),
+              ("turn", "SKEL_Spine3", "Z", 15.0), ("turn", "SKEL_Neck_1", "Z", 10.0)),
 }
 POSES = ("yours", "rest") + tuple(TEST_POSES)
 _AXES = {"X": (1.0, 0.0, 0.0), "Y": (0.0, 1.0, 0.0), "Z": (0.0, 0.0, 1.0)}
 
 
-def posed_world(rest: Sequence[np.ndarray], parents: Sequence[int], turns: Mapping[int, np.ndarray]) -> List[np.ndarray]:
-    """The bones' armature-space matrices after turning some of them (bone index to a 3x3 rotation about the
-    armature's axes through the bone's joint); children follow their parents. Bones must come after their parents,
-    as in a ped skeleton."""
+def shortest_turn(start: Any, end: Any) -> np.ndarray:
+    """The rotation that turns the direction ``start`` onto ``end`` the shortest way."""
+    a, b = _unit(_vec(start)), _unit(_vec(end))
+    axis = np.cross(a, b)
+    sin, cos = float(np.linalg.norm(axis)), float(np.dot(a, b))
+    if sin < 1e-9:
+        if cos > 0:
+            return np.eye(3)
+        other = np.array([1.0, 0.0, 0.0]) if abs(a[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+        return _rotation(np.cross(a, other), math.pi)
+    return _rotation(axis / sin, math.atan2(sin, cos))
+
+
+def posed_world(rest: Sequence[np.ndarray], parents: Sequence[int], turns: Mapping[int, Any]) -> List[np.ndarray]:
+    """The bones' armature-space matrices after turning some of them; children follow their parents. A turn is a 3x3
+    rotation about the armature's axes through the bone's joint, or ``(child index, direction)``: the shortest turn
+    that puts the child's joint in that direction. Bones must come after their parents, as in a ped skeleton."""
     result: List[np.ndarray] = []
     for index, parent in enumerate(parents):
         if parent >= index:
             raise ValueError("a bone comes before its parent")
         world = rest[index].copy() if parent < 0 else result[parent] @ (_inverse(rest[parent]) @ rest[index])
         turn = turns.get(index)
+        if isinstance(turn, tuple):
+            child, direction = turn
+            offset = world[:3, :3] @ (_inverse(rest[index]) @ rest[child])[:3, 3]
+            turn = shortest_turn(offset, direction) if float(np.linalg.norm(offset)) > 1e-6 else None
         if turn is not None:
             world[:3, :3] = turn @ world[:3, :3]
         result.append(world)
@@ -1193,10 +1225,16 @@ def posed_world(rest: Sequence[np.ndarray], parents: Sequence[int], turns: Mappi
 def test_pose(name: str, names: Sequence[str], rest: Sequence[np.ndarray], parents: Sequence[int]) -> List[np.ndarray]:
     """The armature-space matrices of a test pose (bones the skeleton lacks are left out)."""
     index = {bone: i for i, bone in enumerate(names)}
-    turns = {}
-    for bone, axis, degrees in TEST_POSES[name]:
-        if bone in index:
-            turns[index[bone]] = _rotation(_AXES[axis], math.radians(degrees))
+    turns: Dict[int, Any] = {}
+    for entry in TEST_POSES[name]:
+        if entry[0] == "aim":
+            _, bone, child, direction = entry
+            if bone in index and child in index:
+                turns[index[bone]] = (index[child], tuple(direction))
+        else:
+            _, bone, axis, degrees = entry
+            if bone in index:
+                turns[index[bone]] = _rotation(_AXES[axis], math.radians(degrees))
     return posed_world(rest, parents, turns)
 
 
@@ -1237,7 +1275,7 @@ class Finding(NamedTuple):
     code: str
     count: int
     names: Tuple[str, ...] = ()
-    vertices: Dict[str, np.ndarray] = {}
+    vertices: Optional[Dict[str, np.ndarray]] = None
     pose: str = ""
 
 
@@ -1252,7 +1290,7 @@ def weight_findings(objects: Mapping[str, Mapping[str, Any]], bones: Sequence[st
         counts = np.asarray(data["counts"])
         totals = np.asarray(data["totals"], dtype=np.float64)
         flagged = np.asarray(data["bad"], dtype=bool)
-        empty = np.nonzero((counts == 0) | (totals <= 1e-6))[0]
+        empty = np.nonzero(((counts == 0) | (totals <= 1e-6)) & ~flagged)[0]  # flagged: DCT moves it up the chain
         if len(empty):
             unweighted[name] = empty
         many = np.nonzero(counts > 4)[0]
@@ -1275,8 +1313,9 @@ def weight_findings(objects: Mapping[str, Mapping[str, Any]], bones: Sequence[st
 def armature_changes(expected: Mapping[str, Any], actual: Mapping[str, Any], *, distance: float = 0.0001,
                      degrees: float = 0.01) -> Tuple[str, ...]:
     """The bones whose rest matrix (Blender's 4x4, armature space) moved more than ``distance`` metres or turned more
-    than ``degrees`` from the rig's, and the rig's bones that are gone."""
-    changed = []
+    than ``degrees`` from the rig's, the rig's bones that are gone, and bones the rig does not have (each would be a
+    joint Durty Cloth Tool refuses)."""
+    changed = [name for name in actual if name not in expected]
     for name, matrix in expected.items():
         found = actual.get(name)
         if found is None:
