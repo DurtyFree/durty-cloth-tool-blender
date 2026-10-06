@@ -243,7 +243,10 @@ TEXT = {
     "settings.code-copied": "代码已复制。",
     "channel.release": "Release",
     "channel.experimental": "Experimental",
-    "info.find": "Creator Link 只与这台电脑上的 Durty Cloth Tool 通信。除了你的登录，不会向互联网发送任何内容。",
+    "info.find": (
+        "Creator Link 只与这台电脑上的 Durty Cloth Tool 通信。在互联网上，插件只与 gta.clothing 通信：你的登录、Blender 的更新检查、freemode "
+        "身体，以及在你同意之后，你在那里适配的服装。设置 > 隐私 列出了会发送哪些内容。"
+    ),
     "info.sign-in": (
         "登录让 Durty Cloth Tool 知道此插件属于你的账号。插件永远看不到你的 Discord 密码。Durty Cloth Tool 会在 {apps} 中列出此应用，你可以在那里断开它。"
     ),
@@ -268,7 +271,7 @@ TEXT = {
     ),
     "info.privacy": (
         "留在这台电脑上：你的图像、模型和实时预览的像素。它们只发送给 Durty Cloth Tool。发送到 gta.clothing：你的登录（附带这台电脑的名称，除非你关闭）、每次连接的确认、你的退出登录、Blender "
-        "的更新检查，以及在你同意之后，你在那里适配的服装的形状。"
+        "的更新检查，以及在你同意之后，你在那里适配的服装（它的形状、标记和适配选项）。"
     ),
     "op.connect": "连接",
     "op.connect.desc": "连接到这台电脑上的 Durty Cloth Tool",

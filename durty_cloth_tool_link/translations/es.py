@@ -313,8 +313,9 @@ TEXT = {
     "channel.release": "Release",
     "channel.experimental": "Experimental",
     "info.find": (
-        "Creator Link solo habla con Durty Cloth Tool en este equipo. No se envía nada por internet salvo tu inicio "
-        "de sesión."
+        "Creator Link solo habla con Durty Cloth Tool en este equipo. Por internet, el complemento solo habla con "
+        "gta.clothing: tu inicio de sesión, las comprobaciones de actualizaciones de Blender, el cuerpo freemode y, "
+        "una vez que aceptes, las prendas que ajustes allí. Ajustes > Privacidad indica qué se envía."
     ),
     "info.sign-in": (
         "Iniciar sesión muestra a Durty Cloth Tool que este complemento pertenece a tu cuenta. El complemento nunca ve "
@@ -360,7 +361,7 @@ TEXT = {
         "Se queda en este equipo: tus imágenes, modelos y los píxeles de la vista previa en directo. Solo van a Durty "
         "Cloth Tool. Va a gta.clothing: tu inicio de sesión (con el nombre de este equipo salvo que lo desactives), "
         "una confirmación por conexión, tu cierre de sesión, las comprobaciones de actualizaciones de Blender y, una "
-        "vez que aceptes, la forma de una prenda que ajustes allí."
+        "vez que aceptes, una prenda que ajustes allí (su forma, sus marcadores y las opciones de ajuste)."
     ),
     "op.connect": "Conectar",
     "op.connect.desc": "Conectar con Durty Cloth Tool en este equipo",

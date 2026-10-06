@@ -315,6 +315,7 @@ TEXT = {
     "garment.why.no-garment": "Importe uma roupa ou escolha uma em Configuração primeiro.",
     "garment.why.not-shown": "A roupa não está na view layer atual.",
     "garment.why.sculpting": "Aceite ou cancele a sessão de escultura primeiro.",
+    "garment.why.step-running": "{step} está em andamento. Espere terminar ou aperte Esc para parar.",
     "garment.why.object-mode": "Mude para o Object Mode primeiro.",
     "garment.why.shape-keys": "A roupa tem shape keys. Aplique-as ou remova-as primeiro.",
     "garment.why.empty": "A roupa não tem geometria.",
@@ -903,7 +904,8 @@ TEXT = {
         "ajustes de hoje"
     ),
     "garment.op.service-cancel.desc": (
-        "Para o ajuste. Um ajuste que o gta.clothing ainda não começou não conta para hoje"
+        "Para o ajuste. Um ajuste que o gta.clothing ainda não começou não conta para hoje; um que já começou conta "
+        "mesmo assim"
     ),
     "garment.info.service": (
         "Ajustar ao corpo envia a roupa, do jeito que ela fica depois de Alinhar ao corpo, para o gta.clothing. Ela "
@@ -945,13 +947,17 @@ TEXT = {
     "fit.stage.weighting": "Finalizando os pesos",
     "fit.stage.running": "Ajustando",
     "fit.stage.cancelling": "Cancelando",
+    "fit.stage.cancelling-counted": "Cancelando. O ajuste já começou, então conta mesmo assim",
     "fit.consent.title": "Enviar para ajuste",
     "fit.consent.what": (
-        "Ajustar ao corpo e Transferir pesos enviam a forma da roupa para o gta.clothing: as posições dos vértices e "
-        "os triângulos, os marcadores, e o gênero, o slot e a categoria. Sem texturas, materiais, nomes ou arquivos."
+        "Ajustar ao corpo e Transferir pesos enviam a roupa para o gta.clothing: a forma (posições dos vértices e "
+        "triângulos), quais vértices estão em DCT Pinned, mascarados ou em DCT Lining, os marcadores, as opções de "
+        "ajuste, e o gênero, o slot e a categoria. Sem texturas, materiais, nomes ou arquivos."
     ),
     "fit.consent.kept": (
-        "O gta.clothing a ajusta e a devolve. Nada é guardado: o resultado é apagado em no máximo dez minutos."
+        "O gta.clothing a ajusta e a devolve. A roupa não é guardada: o resultado é apagado em no máximo dez minutos. "
+        "O gta.clothing registra um resumo de cada ajuste sem a forma da roupa: números como vértices e triângulos, o "
+        "resultado e quanto tempo levou."
     ),
     "fit.consent.revoke": (
         "Você concorda uma vez. Para retirar, desligue Enviar roupas para o ajuste em Configurações > Privacidade."
@@ -963,15 +969,15 @@ TEXT = {
         "o add-on pergunta de novo antes de enviar qualquer coisa"
     ),
     "settings.fit-consent-subtext": (
-        "Só a forma da roupa vai para o gta.clothing, quando você escolhe Ajustar ao corpo ou Transferir pesos, e nada "
-        "fica guardado lá."
+        "A forma, os marcadores e as opções de ajuste da roupa só vão para o gta.clothing quando você escolhe Ajustar "
+        "ao corpo ou Transferir pesos. A roupa não fica guardada lá; só um resumo sem a forma é registrado."
     ),
     "fit.why.running": "Um ajuste está em andamento. Aguarde ou cancele.",
     "fit.why.hosted-body": (
         "O ajuste precisa do corpo freemode do gta.clothing: Adicionar corpo freemode em Configuração."
     ),
     "fit.why.sign-in": "Entre primeiro com o gta.clothing (Conectar).",
-    "fit.why.no-fits": "Não restam ajustes hoje. Haverá mais {wait}.",
+    "fit.why.no-fits": "Não é possível iniciar mais ajustes hoje. Haverá mais {wait}.",
     "fit.error.update": "O gta.clothing não conseguiu ler o que o add-on enviou. Atualize o add-on e tente de novo.",
     "fit.error.plugin-update": (
         "Atualize o add-on para ajustar roupas: Edit > Preferences > Get Extensions > Check for Updates."
@@ -995,7 +1001,7 @@ TEXT = {
         "exemplo com um modificador Decimate."
     ),
     "fit.error.mesh-invalid": "O gta.clothing não conseguiu ajustar esta roupa:",
-    "fit.error.quota": "Você usou todos os ajustes de hoje. Haverá mais {wait}.",
+    "fit.error.quota": "Não é possível iniciar mais ajustes hoje. Haverá mais {wait}.",
     "fit.error.busy": "O gta.clothing ficou ocupado por alguns minutos. Tente de novo mais tarde.",
     "fit.error.rate-limited": "Pedidos demais ao gta.clothing em pouco tempo. Aguarde um minuto e tente de novo.",
     "fit.error.server": "Algo deu errado no gta.clothing durante o ajuste. Tente de novo.",
@@ -1007,6 +1013,10 @@ TEXT = {
         "A conexão caiu depois que a roupa foi enviada. Ajustes restantes hoje mostra se o ajuste contou. Tente de "
         "novo."
     ),
+    "fit.error.upload-timeout": (
+        "Enviar a roupa demorou demais, então o gta.clothing parou de esperar. Tente de novo com uma conexão mais "
+        "rápida ou mais estável, ou reduza o detalhe da roupa para haver menos a enviar."
+    ),
     "fit.error.cancelled": "O ajuste foi cancelado.",
     "fit.error.other": "O gta.clothing recusou o ajuste ({code}).",
     "fit.wait.minutes": "em cerca de {count} minutos",
@@ -1014,6 +1024,7 @@ TEXT = {
     "fit.wait.later": "amanhã",
     "fit.refunded": "Este ajuste não conta para hoje.",
     "fit.counted": "Este ajuste conta para hoje.",
+    "fit.cancelled-counted": "O ajuste já tinha começado no gta.clothing, então ele conta para hoje.",
     "fit.input.add-on": "O add-on enviou algo que o gta.clothing não aceita. Atualize o add-on.",
     "fit.input.slot": "Só roupas usadas no corpo podem ser ajustadas.",
     "fit.input.options": "Uma opção de ajuste está fora da faixa. Confira as opções de Ajustar ao corpo.",
@@ -1030,6 +1041,17 @@ TEXT = {
     "fit.input.seam-dense": (
         "Muitas arestas soltas se juntam em um ponto da roupa. Remova as partes soltas ali (Select Loose no Edit "
         "Mode), ou coloque Folga de costura em 0 nas opções de Ajustar ao corpo."
+    ),
+    "fit.input.seam-crowded": (
+        "{count} arestas abertas se juntam em um ponto da roupa, e o gta.clothing aceita no máximo {limit} ali: "
+        "geralmente peças soltas pequenas como botões, ou pespontos sobre o tecido. Elas estão selecionadas: aperte "
+        "Tab para vê-las, depois remova-as ou junte-as (Merge by Distance). Ou coloque Folga de costura em 0 nas "
+        "opções de Ajustar ao corpo."
+    ),
+    "fit.input.seam-crowded-prepare": (
+        "{count} arestas abertas se juntam em um ponto da roupa, e o gta.clothing aceita no máximo {limit} ali: "
+        "geralmente onde várias peças se encontram e as costuras ainda não foram unidas. Preparar roupa em Pronto para "
+        "o jogo as une: execute e ajuste de novo. O ponto está selecionado: aperte Tab para vê-lo."
     ),
     "fit.input.marker-far": (
         "Um marcador está longe da articulação do corpo. Confira os marcadores, alinhe a roupa de novo e ajuste."
@@ -1093,9 +1115,10 @@ TEXT = {
         "novo e escolha a unidade, ou confira a categoria."
     ),
     "garment.done.prepare-open": (
-        "Preparada, mas {count} vértices de costura ficaram abertos ({welded} unidos): as peças não chegam a se "
-        "encontrar ali. Aumente Distância de solda (mm) nas opções de Preparar roupa e prepare de novo, ou una-os à "
-        "mão."
+        "Preparada, mas {count} vértices de costura não encontraram par na peça vizinha ({welded} unidos): as peças "
+        "não chegam a se encontrar ali. Eles estão selecionados: aperte Tab para vê-los. Ajustar ao corpo ainda dá os "
+        "mesmos pesos aos dois lados de uma costura; se aparecer um vão no jogo, costure essas costuras no seu "
+        "programa de roupas e exporte de novo, ou una-os à mão."
     ),
     "garment.done.combine-missing": (
         "Combinada, mas {count} texturas não foram encontradas e foram assadas sem os seus pixels: {names}. Coloque os "
@@ -1106,6 +1129,8 @@ TEXT = {
     "garment.stage.seams": "Procurando as costuras",
     "garment.stage.weld": "Unindo as costuras",
     "garment.stage.clean": "Limpando e triangulando",
+    "garment.stage.pack-cut": "Preparando o layout UV",
+    "garment.stage.pack-scale": "Igualando as ilhas UV",
     "garment.stage.pack": "Empacotando o layout UV",
     "garment.stage.bake-colour": "Assando a cor",
     "garment.stage.bake-alpha": "Assando a transparência",

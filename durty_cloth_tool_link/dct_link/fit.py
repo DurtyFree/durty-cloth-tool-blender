@@ -114,6 +114,9 @@ OPTIONS: Dict[str, Optional[Tuple[float, float]]] = {
     "matchProportions": None,
 }
 MIN_SEAM_WELD_MM = 0.05
+#: With the seam weld on, at most this many open-edge vertices may lie in one cube as wide as the weld
+#: (``seam_too_dense`` otherwise).
+MAX_SEAM_DENSITY = 128
 STAGES = ("validating", "welding", "posing", "transferring", "unposing", "pushingOut", "weighting")
 OUTCOMES = ("fitted", "needsReview", "notOnBody")
 STATES = ("queued", "running", "failed", "cancelled")
@@ -135,7 +138,7 @@ INPUT_CODES = (
     "too_many_triangles", "coordinate_not_finite", "coordinate_out_of_range", "triangle_index_out_of_range",
     "triangle_degenerate", "triangle_duplicate", "seam_too_dense", "flags_invalid", "too_many_markers",
     "marker_unknown", "marker_invalid", "marker_out_of_range", "marker_far", "marker_missing", "marker_side",
-    "marker_inconsistent", "body_gender_mismatch",
+    "marker_inconsistent", "body_gender_mismatch", "upload_timeout",
 )
 #: The stable codes of a result's warnings.
 WARNING_CODES = ("inside_body", "low_coverage", "marker_offset", "proportion_clamped", "shape_strained",

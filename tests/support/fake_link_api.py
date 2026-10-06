@@ -10,8 +10,10 @@ the account's plan (free 10, Advanced 30, Ultimate 100), one job at a time witho
 the DCTM mesh read with the service's rules, the body version, cancelling (a job that has not started gives its use
 back) and the binary result. Nothing is fitted: a job moves one stage per status request (queued, validating,
 transferring, weighting), then answers its result: the positions as sent (moved by ``position_offset``) with every
-vertex weighted 255 to one bone chosen by where it is. A request whose ``category`` is ``mock-invalid``,
-``mock-timeout``, ``mock-error`` or ``mock-not-on-body`` ends that way instead.
+vertex weighted 255 to one bone chosen by where it is. A request whose ``category`` is ``mock-invalid`` (a marker
+the fitting refuses), ``mock-dense`` (loose geometry it refuses, ``seam_too_dense``), ``mock-timeout``, ``mock-error``
+(a fit that failed after it began: its use stays), ``mock-not-started`` (one that could not start: its use comes back)
+or ``mock-not-on-body`` ends that way instead.
 
 MIT licensed, like dct_link. Standard library only, so the Blender smoke can use it too.
 """
@@ -312,8 +314,8 @@ REFERENCE = {
     "legs": {"pelvis": (3.1, 12.6, 24.8, 1540), "thighL": (4.0, 15.2, 27.7, 980), "thighR": (4.0, 15.2, 27.7, 975)},
     "shoes": {"footL": (1.2, 4.9, 9.8, 610), "footR": (1.2, 4.9, 9.8, 612)},
 }
-OUTCOMES = {"mock-not-on-body": "notOnBody", "mock-invalid": "invalid", "mock-timeout": "timeout",
-            "mock-error": "error"}
+OUTCOMES = {"mock-not-on-body": "notOnBody", "mock-invalid": "invalid", "mock-dense": "dense",
+            "mock-timeout": "timeout", "mock-error": "error", "mock-not-started": "notStarted"}
 RESULT_TYPE = "application/vnd.dct.fit-result"
 
 
@@ -358,6 +360,8 @@ class FakeFitService:
         self.queued_polls = 0
         #: Answer every request on these paths with (status, failureCode).
         self.refuse: Dict[str, Tuple[int, str]] = {}
+        #: The next status requests are answered with these failures, one each: (status, failureCode, Retry-After).
+        self.status_failures: List[Tuple[int, str, Optional[int]]] = []
 
     # ---- helpers ------------------------------------------------------------------------------------------
 
@@ -423,6 +427,9 @@ class FakeFitService:
             if job is None:
                 return self._fail(404, "not_found")
             if path == "/link/api/fit/status":
+                if self.status_failures:
+                    status, code, retry = self.status_failures.pop(0)
+                    return self._fail(status, code, retry=retry)
                 return self._status(job)
             if path == "/link/api/fit/cancel":
                 self.cancels.append(job_id)
@@ -624,13 +631,17 @@ class FakeFitService:
             else:
                 job["finished"] = True
                 outcome = job["outcome"]
-                if outcome == "invalid":
-                    job.update(state="failed", failureCode="mesh_invalid", retryable=False,
-                               errors=[_issue("marker_far", "markers")])
+                if outcome in ("invalid", "dense"):
+                    # The fitting refuses its input before any work: the use comes back.
+                    issue = _issue("seam_too_dense", "mesh") if outcome == "dense" else _issue("marker_far", "markers")
+                    job.update(state="failed", failureCode="mesh_invalid", retryable=False, errors=[issue])
                     self._refund(job)
-                elif outcome == "error":
+                elif outcome == "notStarted":
                     job.update(state="failed", failureCode="server_error", retryable=True)
                     self._refund(job)
+                elif outcome == "error":
+                    # The fit failed after it began: the use stays.
+                    job.update(state="failed", failureCode="server_error", retryable=False)
                 elif outcome == "timeout":
                     job.update(state="failed", failureCode="fit_timeout", retryable=False)
                 else:

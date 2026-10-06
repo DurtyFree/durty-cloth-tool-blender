@@ -314,8 +314,9 @@ EN: Dict[str, str] = {
     "channel.experimental": "Experimental",
     # ---- info popups --------------------------------------------------------------------------------------
     "info.find": (
-        "Creator Link only talks to Durty Cloth Tool on this computer. Nothing is sent over the internet except your "
-        "sign-in."
+        "Creator Link talks to Durty Cloth Tool only on this computer. Over the internet the add-on talks only to "
+        "gta.clothing: your sign-in, Blender's update checks, the freemode body and, once you agreed, the garments you "
+        "fit there. Settings > Privacy lists what is sent."
     ),
     "info.sign-in": (
         "Signing in shows Durty Cloth Tool that this add-on belongs to your account. The add-on never sees your "
@@ -358,8 +359,8 @@ EN: Dict[str, str] = {
     "info.privacy": (
         "Stays on this computer: your images, models and the pixels of the live preview. They go only to Durty Cloth "
         "Tool. Goes to gta.clothing: your sign-in (with this computer's name unless you turn that off), a confirmation "
-        "for each connection, your sign-out, Blender's update checks and, once you agreed, the shape of a garment you "
-        "fit there."
+        "for each connection, your sign-out, Blender's update checks and, once you agreed, a garment you fit there "
+        "(its shape, markers and fitting options)."
     ),
     # ---- operators ----------------------------------------------------------------------------------------
     "op.connect": "Connect",
@@ -827,6 +828,7 @@ EN: Dict[str, str] = {
     "garment.why.no-garment": "Import a garment or choose one under Setup first.",
     "garment.why.not-shown": "The garment is not in the current view layer.",
     "garment.why.sculpting": "Accept or cancel the sculpt session first.",
+    "garment.why.step-running": "{step} is running. Wait for it, or press Esc to stop it.",
     "garment.why.object-mode": "Switch to Object Mode first.",
     "garment.why.shape-keys": "The garment has shape keys. Apply or remove them first.",
     "garment.why.empty": "The garment has no geometry.",
@@ -1346,7 +1348,8 @@ EN: Dict[str, str] = {
         "today's fits"
     ),
     "garment.op.service-cancel.desc": (
-        "Stop the fit. A fit gta.clothing has not started yet does not count against today's fits"
+        "Stop the fit. A fit gta.clothing has not started yet does not count against today's fits; one that has "
+        "started still counts"
     ),
     "garment.info.service": (
         "Fit to Body sends the garment as it sits after Align to Body to gta.clothing. It comes back in the game's "
@@ -1387,14 +1390,17 @@ EN: Dict[str, str] = {
     "fit.stage.weighting": "Finishing the weights",
     "fit.stage.running": "Fitting",
     "fit.stage.cancelling": "Cancelling",
+    "fit.stage.cancelling-counted": "Cancelling. The fit has started, so it still counts",
     "fit.consent.title": "Upload for Fitting",
     "fit.consent.what": (
-        "Fit to Body and Transfer Weights send the garment's shape to gta.clothing: its vertex positions and "
-        "triangles, its markers, and the gender, slot and category. No textures, materials, names or files."
+        "Fit to Body and Transfer Weights send the garment to gta.clothing: its shape (vertex positions and "
+        "triangles), which vertices are in DCT Pinned, masked or in DCT Lining, its markers, the fitting options, and "
+        "the gender, slot and category. No textures, materials, names or files."
     ),
     "fit.consent.kept": (
-        "gta.clothing fits it and sends it back. Nothing is kept: the result is deleted after ten minutes at the "
-        "latest."
+        "gta.clothing fits it and sends it back. The garment is not kept: the result is deleted after ten minutes at "
+        "the latest. gta.clothing logs a summary of each fit without the garment's shape: counts such as vertices and "
+        "triangles, the outcome and how long it took."
     ),
     "fit.consent.revoke": "You agree once. To withdraw, turn off Upload Garments for Fitting under Settings > Privacy.",
     "fit.consent.confirm": "Upload and Fit",
@@ -1404,13 +1410,13 @@ EN: Dict[str, str] = {
         "add-on then asks again before it sends anything"
     ),
     "settings.fit-consent-subtext": (
-        "Only the garment's shape goes to gta.clothing, when you choose Fit to Body or Transfer Weights, and nothing "
-        "is kept there."
+        "The garment's shape, markers and fitting options go to gta.clothing only when you choose Fit to Body or "
+        "Transfer Weights. The garment is not kept there; only a summary without its shape is logged."
     ),
     "fit.why.running": "A fit is running. Wait for it or cancel it.",
     "fit.why.hosted-body": "Fitting needs the freemode body from gta.clothing: Add Freemode Body under Setup.",
     "fit.why.sign-in": "Sign in with gta.clothing first (Get Connected).",
-    "fit.why.no-fits": "No fits left today. More are available {wait}.",
+    "fit.why.no-fits": "No more fits can be started today. More are available {wait}.",
     "fit.error.update": "gta.clothing could not read what the add-on sent. Update the add-on and try again.",
     "fit.error.plugin-update": (
         "Update the add-on to fit garments: Edit > Preferences > Get Extensions > Check for Updates."
@@ -1432,7 +1438,7 @@ EN: Dict[str, str] = {
         "with a Decimate modifier."
     ),
     "fit.error.mesh-invalid": "gta.clothing could not fit this garment:",
-    "fit.error.quota": "You have used all of today's fits. More are available {wait}.",
+    "fit.error.quota": "No more fits can be started today. More are available {wait}.",
     "fit.error.busy": "gta.clothing stayed busy for a few minutes. Try again later.",
     "fit.error.rate-limited": "Too many requests to gta.clothing in a short time. Wait a minute and try again.",
     "fit.error.server": "Something went wrong on gta.clothing while fitting. Try again.",
@@ -1441,6 +1447,10 @@ EN: Dict[str, str] = {
     "fit.error.network-uploaded": (
         "The connection broke after the garment was sent. Fits left today shows whether the fit counted. Try again."
     ),
+    "fit.error.upload-timeout": (
+        "Sending the garment took too long, so gta.clothing stopped waiting for it. Try again on a faster or steadier "
+        "connection, or reduce the garment's detail so there is less to send."
+    ),
     "fit.error.cancelled": "The fit was cancelled.",
     "fit.error.other": "gta.clothing refused the fit ({code}).",
     "fit.wait.minutes": "in about {count} minutes",
@@ -1448,6 +1458,7 @@ EN: Dict[str, str] = {
     "fit.wait.later": "tomorrow",
     "fit.refunded": "This fit does not count against today's fits.",
     "fit.counted": "This fit counts against today's fits.",
+    "fit.cancelled-counted": "The fit had already started on gta.clothing, so it counts against today's fits.",
     "fit.input.add-on": "The add-on sent something gta.clothing does not accept. Update the add-on.",
     "fit.input.slot": "Only clothing worn on the body can be fitted.",
     "fit.input.options": "A fitting option is out of its range. Check the options of Fit to Body.",
@@ -1464,6 +1475,16 @@ EN: Dict[str, str] = {
     "fit.input.seam-dense": (
         "Many loose edges crowd one spot of the garment. Remove loose parts there (Select Loose in Edit Mode), or set "
         "Seam Gap to 0 in the options of Fit to Body."
+    ),
+    "fit.input.seam-crowded": (
+        "{count} open edges crowd one spot of the garment, and gta.clothing takes at most {limit} there: usually small "
+        "loose parts such as buttons, or stitching lying on the cloth. They are selected: press Tab to see them, then "
+        "remove them or merge them (Merge by Distance). Or set Seam Gap to 0 in the options of Fit to Body."
+    ),
+    "fit.input.seam-crowded-prepare": (
+        "{count} open edges crowd one spot of the garment, and gta.clothing takes at most {limit} there: usually where "
+        "several panels meet and their seams are not joined yet. Prepare Garment under Game Ready joins them: run it, "
+        "then fit again. The spot is selected: press Tab to see it."
     ),
     "fit.input.marker-far": (
         "A marker sits far from the body's joint. Check the markers, align the garment again and fit."
@@ -1517,8 +1538,10 @@ EN: Dict[str, str] = {
         "it again and choose the Unit, or check the category."
     ),
     "garment.done.prepare-open": (
-        "Prepared, but {count} seam vertices stayed open ({welded} joined): the panels do not quite meet there. Raise "
-        "Weld Distance (mm) in the options of Prepare Garment and prepare again, or join them by hand."
+        "Prepared, but {count} seam vertices found no partner on the panel next to them ({welded} joined): the panels "
+        "do not quite meet there. They are selected: press Tab to see them. Fit to Body still gives both sides of a "
+        "seam the same weights; if a gap shows in the game, sew those seams in your clothing app and export again, or "
+        "join them by hand."
     ),
     "garment.done.combine-missing": (
         "Combined, but {count} textures could not be found and were baked without their pixels: {names}. Put the image "
@@ -1529,6 +1552,8 @@ EN: Dict[str, str] = {
     "garment.stage.seams": "Finding the seams",
     "garment.stage.weld": "Joining the seams",
     "garment.stage.clean": "Cleaning up and triangulating",
+    "garment.stage.pack-cut": "Getting the UV layout ready",
+    "garment.stage.pack-scale": "Evening out the UV islands",
     "garment.stage.pack": "Packing the UV layout",
     "garment.stage.bake-colour": "Baking the colour",
     "garment.stage.bake-alpha": "Baking the transparency",

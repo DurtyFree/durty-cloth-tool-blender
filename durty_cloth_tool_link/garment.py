@@ -1569,64 +1569,97 @@ def face_vertex_pairs(loop_vertex: Any, face_start: Any, face_total: Any) -> np.
     return np.concatenate(pairs) if pairs else np.zeros((0, 2), dtype=np.int64)
 
 
-def seam_candidates(positions: Any, distance: float, candidates: Optional[Any] = None, *,
-                    chains: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None,
-                    face_pairs: Optional[Any] = None, normals: Optional[Any] = None,
-                    components: Optional[Any] = None, cross_components_only: bool = False,
-                    fabrics: Optional[Any] = None, apart: Iterable[Tuple[Any, Any]] = (),
-                    groups: Optional[Any] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Pairs of vertices that may be two sides of one seam: closer than ``distance``, never two vertices of one face,
-    never neighbours along the same open edge, never across a pair of ``fabrics`` named in ``apart`` (a lining and its
-    shell), and with ``groups`` only within one group. Surfaces facing apart are a fold or a slab, never a seam, within
-    one part of the garment (``components``) and in a thick export (``cross_components_only``); two separate panels
-    may face apart at their seam, because exports often flip some panels' normals, so the rule does not part them.
-    ``(first, second, distance)``."""
+class PairRules:
+    """What keeps two vertices from being two sides of one seam, as a test on any pairs of vertices (see
+    :func:`seam_candidates`): sharing a face, lying next to each other on one open edge (``chains``), surfaces facing
+    apart within one part (``normals``, ``components``; a thick export keeps the rule across parts and joins only
+    across them), a lining and its shell (``fabrics`` and the pairs named in ``apart``), and different ``groups``.
+    The weld applies them to every two vertices that would become one, not only to the closest pair, so joining two
+    groups never joins neighbours along one panel's own edge."""
+
+    def __init__(self, count: int, distance: float, *, chains: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None,
+                 face_pairs: Optional[Any] = None, normals: Optional[Any] = None, components: Optional[Any] = None,
+                 cross_components_only: bool = False, fabrics: Optional[Any] = None,
+                 apart: Iterable[Tuple[Any, Any]] = (), groups: Optional[Any] = None) -> None:
+        self.count = count
+        self.gap = max(CHAIN_GAP_FACTOR * distance, 0.01)
+        self.chains = chains
+        self.face_keys: Optional[np.ndarray] = None
+        if face_pairs is not None:
+            shared = np.asarray(face_pairs, dtype=np.int64).reshape(-1, 2)
+            self.face_keys = np.unique(_pair_keys(shared[:, 0], shared[:, 1], count))
+        self.normals = as_points(normals) if normals is not None else None
+        self.components = np.asarray(components) if components is not None else None
+        self.cross_components_only = cross_components_only
+        self.fabrics = np.asarray(fabrics) if fabrics is not None else None
+        self.apart = list(apart)
+        self.groups = np.asarray(groups) if groups is not None else None
+
+    def allowed(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
+        """Which pairs ``(a[i], b[i])`` may be two sides of one seam (distance aside)."""
+        a = np.asarray(a, dtype=np.int64)
+        b = np.asarray(b, dtype=np.int64)
+        keep = np.ones(len(a), dtype=bool)
+        if not len(a):
+            return keep
+        if self.face_keys is not None and len(self.face_keys):
+            keys = _pair_keys(a, b, self.count)
+            at = np.minimum(np.searchsorted(self.face_keys, keys), len(self.face_keys) - 1)
+            keep &= self.face_keys[at] != keys
+        if self.chains is not None:
+            chain, arc, lengths = self.chains
+            same = (chain[a] >= 0) & (chain[a] == chain[b])
+            along = np.abs(arc[a] - arc[b])
+            loop = lengths[np.maximum(chain[a], 0)] if len(lengths) else np.zeros(len(a))
+            along = np.where(same & (loop > 0), np.minimum(along, np.abs(loop) - along), along)
+            keep &= ~(same & (along < self.gap))
+        comp = self.components
+        if self.normals is not None:
+            n = self.normals
+            facing = np.einsum("ij,ij->i", n[a], n[b]) > math.cos(math.radians(FACING_LIMIT))
+            if comp is not None and not self.cross_components_only:
+                facing |= comp[a] != comp[b]  # two panels: their normals may be flipped against each other
+            keep &= facing
+        if self.cross_components_only and comp is not None:
+            keep &= comp[a] != comp[b]
+        if self.fabrics is not None:
+            labels = self.fabrics
+            for first, second in self.apart:
+                keep &= ~(((labels[a] == first) & (labels[b] == second))
+                          | ((labels[a] == second) & (labels[b] == first)))
+        if self.groups is not None:
+            keep &= self.groups[a] == self.groups[b]
+        return keep
+
+
+def seam_candidates(positions: Any, distance: float, candidates: Optional[Any] = None, **rules: Any
+                    ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Pairs of vertices that may be two sides of one seam: closer than ``distance`` and allowed by :class:`PairRules`
+    (``rules`` are its keyword arguments): never two vertices of one face, never neighbours along the same open edge,
+    never across a pair of ``fabrics`` named in ``apart`` (a lining and its shell), and with ``groups`` only within one
+    group. Surfaces facing apart are a fold or a slab, never a seam, within one part of the garment (``components``)
+    and in a thick export (``cross_components_only``); two separate panels may face apart at their seam, because
+    exports often flip some panels' normals, so the rule does not part them. ``(first, second, distance)``."""
     points = as_points(positions)
-    count = len(points)
-    indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else np.arange(count)
+    indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else None
     a, b, d = close_pairs(points, distance, indices)
-    keep = np.ones(len(a), dtype=bool)
-    if face_pairs is not None and len(a):
-        shared = np.asarray(face_pairs, dtype=np.int64).reshape(-1, 2)
-        keep &= ~np.isin(_pair_keys(a, b, count), _pair_keys(shared[:, 0], shared[:, 1], count))
-    if chains is not None and len(a):
-        chain, arc, lengths = chains
-        same = (chain[a] >= 0) & (chain[a] == chain[b])
-        along = np.abs(arc[a] - arc[b])
-        loop = lengths[np.maximum(chain[a], 0)] if len(lengths) else np.zeros(len(a))
-        along = np.where(same & (loop > 0), np.minimum(along, np.abs(loop) - along), along)
-        keep &= ~(same & (along < max(CHAIN_GAP_FACTOR * distance, 0.01)))
-    if normals is not None and len(a):
-        n = as_points(normals)
-        facing = np.einsum("ij,ij->i", n[a], n[b]) > math.cos(math.radians(FACING_LIMIT))
-        if components is not None and not cross_components_only:
-            comp = np.asarray(components)
-            facing |= comp[a] != comp[b]  # two panels: their normals may be flipped against each other
-        keep &= facing
-    if cross_components_only and components is not None:
-        comp = np.asarray(components)
-        keep &= comp[a] != comp[b]
-    if fabrics is not None:
-        labels = np.asarray(fabrics)
-        for first, second in apart:
-            keep &= ~(((labels[a] == first) & (labels[b] == second)) | ((labels[a] == second) & (labels[b] == first)))
-    if groups is not None:
-        labels = np.asarray(groups)
-        keep &= labels[a] == labels[b]
+    keep = PairRules(len(points), distance, **rules).allowed(a, b)
     return a[keep], b[keep], d[keep]
 
 
 #: A weld group (the vertices that become one) holds at most this many: where several panels meet in one corner.
 MAX_WELD_GROUP = 8
 #: Rounds of joining each group to its mutual nearest neighbour group.
-WELD_ROUNDS = 8
-#: Group pairs whose combined width is measured at once (bounds the memory of a round).
+WELD_ROUNDS = 12
+#: Group pairs measured at once (bounds the memory of a round).
 WELD_BLOCK = 20000
 
 
-def _group_width(points: np.ndarray, root: np.ndarray, first: np.ndarray, second: np.ndarray) -> np.ndarray:
-    """The largest distance between a vertex of group ``first[i]`` and one of group ``second[i]`` (groups named by
-    their root, each of at most :data:`MAX_WELD_GROUP` vertices)."""
+def _joinable(points: np.ndarray, root: np.ndarray, first: np.ndarray, second: np.ndarray, distance: float,
+              rules: PairRules) -> np.ndarray:
+    """Whether group ``first[i]`` may join group ``second[i]`` (groups named by their root, each of at most
+    :data:`MAX_WELD_GROUP` vertices): the joined group is no wider than ``distance``, and every vertex of the one may
+    become one with every vertex of the other (:class:`PairRules`)."""
     roots = np.unique(np.concatenate([first, second]))
     involved = np.nonzero(np.isin(root, roots))[0]
     order = involved[np.argsort(root[involved], kind="stable")]
@@ -1637,32 +1670,39 @@ def _group_width(points: np.ndarray, root: np.ndarray, first: np.ndarray, second
     table = np.full((len(roots), MAX_WELD_GROUP), -1, dtype=np.int64)
     slot = np.searchsorted(roots, sorted_roots)
     table[slot, np.minimum(rank, MAX_WELD_GROUP - 1)] = order
-    widths = np.zeros(len(first))
+    ok = np.zeros(len(first), dtype=bool)
     for begin in range(0, len(first), WELD_BLOCK):
         left = table[np.searchsorted(roots, first[begin:begin + WELD_BLOCK])]
         right = table[np.searchsorted(roots, second[begin:begin + WELD_BLOCK])]
-        pa = points[np.maximum(left, 0)][:, :, None, :]
-        pb = points[np.maximum(right, 0)][:, None, :, :]
-        squared = ((pa - pb) ** 2).sum(axis=3)
         valid = (left >= 0)[:, :, None] & (right >= 0)[:, None, :]
-        widths[begin:begin + WELD_BLOCK] = np.sqrt(np.where(valid, squared, 0.0).max(axis=(1, 2)))
-    return widths
+        la = np.broadcast_to(np.maximum(left, 0)[:, :, None], valid.shape)
+        rb = np.broadcast_to(np.maximum(right, 0)[:, None, :], valid.shape)
+        squared = ((points[la] - points[rb]) ** 2).sum(axis=3)
+        narrow = np.sqrt(np.where(valid, squared, 0.0).max(axis=(1, 2))) <= distance + 1e-9
+        allowed = rules.allowed(la.reshape(-1), rb.reshape(-1)).reshape(valid.shape)
+        ok[begin:begin + WELD_BLOCK] = narrow & (allowed | ~valid).all(axis=(1, 2))
+    return ok
 
 
-def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = None,
-                 groups: Optional[Any] = None, progress: Optional[Any] = None,
-                 **rules: Any) -> Tuple[np.ndarray, np.ndarray]:
+def weld_steps(positions: Any, distance: float, candidates: Optional[Any] = None, groups: Optional[Any] = None,
+               **rules: Any) -> Any:
     """Which vertex each vertex merges into (itself when it stays) and where the merged vertices go (the mean of
-    their group). Pairs come from :func:`seam_candidates` (``rules`` are its keyword arguments). Each round joins every
-    group to the group nearest to it when that one's nearest is it too, and only when the joined group is no wider
-    than ``distance``, so a dense hem cannot collapse into a point; a corner where several panels meet grows over the
-    rounds. Everything runs on whole arrays: a shirt with half a million candidate pairs takes seconds. ``progress``
-    is called after each round."""
+    their group), as a generator that yields after each round and returns ``(target, merged)``. Pairs come from
+    :func:`seam_candidates` (``rules`` are the keyword arguments of :class:`PairRules`). Each round joins every group
+    to the group nearest to it when that one's nearest is it too, only when the joined group is no wider than
+    ``distance`` (so a dense hem cannot collapse into a point) and only when the rules allow every two of its vertices
+    to become one (so two neighbours along one panel's edge never do, whichever panel's vertex brought them together);
+    a corner where several panels meet grows over the rounds. Everything runs on whole arrays: a shirt with half a
+    million candidate pairs takes seconds."""
     points = as_points(positions)
     count = len(points)
     target = np.arange(count)
     merged = points.copy()
-    a, b, d = seam_candidates(points, distance, candidates, groups=groups, **rules)
+    pair_rules = PairRules(count, distance, groups=groups, **rules)
+    indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else None
+    a, b, d = close_pairs(points, distance, indices)
+    keep = pair_rules.allowed(a, b)
+    a, b, d = a[keep], b[keep], d[keep]
     if not len(a):
         return target, merged
     root = np.arange(count)
@@ -1673,7 +1713,7 @@ def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = No
         ra, rb, dd = ra[apart], rb[apart], d[apart]
         if not len(ra):
             break
-        # Each group's nearest other group (by its closest vertex pair).
+        # Each group's nearest other group (by its closest vertex pair) that it may still join.
         first = np.concatenate([ra, rb])
         second = np.concatenate([rb, ra])
         gap = np.concatenate([dd, dd])
@@ -1686,20 +1726,28 @@ def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = No
         mine = first[lead]
         mutual = mine[(best[best[mine]] == mine) & (mine < best[mine])]
         partner = best[mutual]
-        fits = size[mutual] + size[partner] <= MAX_WELD_GROUP
-        mutual, partner = mutual[fits], partner[fits]
+        refused = False
         if len(mutual):
-            narrow = _group_width(points, root, mutual, partner) <= distance + 1e-9
-            mutual, partner = mutual[narrow], partner[narrow]
-        if not len(mutual):
+            joinable = size[mutual] + size[partner] <= MAX_WELD_GROUP
+            joinable[joinable] = _joinable(points, root, mutual[joinable], partner[joinable], distance, pair_rules)
+            if not joinable.all():
+                # Two groups that may not join never will: drop the candidate pairs between them, so each can look
+                # for its next nearest group in the next round.
+                refused_keys = np.unique(_pair_keys(mutual[~joinable], partner[~joinable], count))
+                keys = _pair_keys(root[a], root[b], count)
+                drop = np.isin(keys, refused_keys)
+                a, b, d = a[~drop], b[~drop], d[~drop]
+                refused = True
+            mutual, partner = mutual[joinable], partner[joinable]
+        if not len(mutual) and not refused:
             break
-        remap = np.arange(count)
-        remap[partner] = mutual
-        root = remap[root]
-        size[mutual] += size[partner]
-        size[partner] = 0
-        if progress is not None:
-            progress()
+        if len(mutual):
+            remap = np.arange(count)
+            remap[partner] = mutual
+            root = remap[root]
+            size[mutual] += size[partner]
+            size[partner] = 0
+        yield
     joined = np.nonzero(np.bincount(root, minlength=count) > 1)[0]
     if not len(joined):
         return target, merged
@@ -1714,15 +1762,80 @@ def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = No
     return target, merged
 
 
-def open_seam_count(positions: Any, distance: float, boundary: Any, parts: Any, target: Any) -> int:
-    """How many vertices on the open edges of one part still lie within ``distance`` of the open edge of another part
-    after the weld, without being joined to it: seams that stay open."""
+def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = None,
+                 groups: Optional[Any] = None, progress: Optional[Any] = None,
+                 **rules: Any) -> Tuple[np.ndarray, np.ndarray]:
+    """:func:`weld_steps` run to its end; ``progress`` is called after each round."""
+    steps = weld_steps(positions, distance, candidates, groups, **rules)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+        if progress is not None:
+            progress()
+
+
+def joined_across(target: Any, parts: Any) -> np.ndarray:
+    """Whether each vertex was joined to a vertex of another part (its weld group spans two parts or more)."""
+    target = np.asarray(target, dtype=np.int64)
+    parts = np.asarray(parts, dtype=np.int64)
+    pairs = np.unique(np.column_stack([target, parts]), axis=0)
+    spans = np.bincount(pairs[:, 0], minlength=len(target))
+    return spans[target] > 1
+
+
+#: An unjoined seam vertex closer than this share of the weld distance to the other panel's open edge lies on that
+#: edge (a seam whose sides have different numbers of vertices): the seam is closed there.
+ON_EDGE_SHARE = 0.125
+
+
+def _segment_distance(points: np.ndarray, start: np.ndarray, end: np.ndarray) -> np.ndarray:
+    span = end - start
+    length = np.einsum("ij,ij->i", span, span)
+    t = np.clip(np.einsum("ij,ij->i", points - start, span) / np.maximum(length, 1e-18), 0.0, 1.0)
+    return np.linalg.norm(points - (start + t[:, None] * span), axis=1)
+
+
+def open_seams(positions: Any, distance: float, boundary: Any, parts: Any, target: Any,
+               edges: Optional[Any] = None, **rules: Any) -> np.ndarray:
+    """The vertices on open edges that have a seam partner on another part (within ``distance`` and allowed by
+    :class:`PairRules`, ``rules`` its keyword arguments) yet were joined to no vertex of another part: where a seam
+    stayed open. A vertex joined across at least once is sewn, even when more vertices lie close to it. With the open
+    ``edges``, a vertex that lies on the other part's open edge (where one side of a seam has more vertices than the
+    other) is sewn too: only a real gap counts."""
     points = as_points(positions)
-    a, b, _d = close_pairs(points, distance, np.nonzero(np.asarray(boundary, dtype=bool))[0])
     parts = np.asarray(parts)
-    target = np.asarray(target)
-    open_pairs = (parts[a] != parts[b]) & (target[a] != target[b])
-    return int(len(np.unique(np.concatenate([a[open_pairs], b[open_pairs]]))))
+    rules.setdefault("components", parts)
+    a, b, _d = seam_candidates(points, distance, boundary, **rules)
+    across = parts[a] != parts[b]
+    a, b = a[across], b[across]
+    near = np.unique(np.concatenate([a, b]))
+    unjoined = near[~joined_across(target, parts)[near]]
+    if edges is None or not len(unjoined):
+        return unjoined
+    # The open edges at each vertex (two along a panel's edge).
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    ends = np.concatenate([edges, edges[:, ::-1]])
+    ends = ends[np.argsort(ends[:, 0], kind="stable")]
+    first = np.searchsorted(ends[:, 0], np.arange(len(points)))
+    last = np.searchsorted(ends[:, 0], np.arange(len(points)), "right")
+    vertex = np.concatenate([a, b])
+    partner = np.concatenate([b, a])
+    keep = np.isin(vertex, unjoined)
+    vertex, partner = vertex[keep], partner[keep]
+    gap = np.full(len(points), np.inf)
+    for slot in range(2):
+        has = first[partner] + slot < last[partner]
+        v, u = vertex[has], partner[has]
+        other = ends[first[u] + slot, 1]
+        np.minimum.at(gap, v, _segment_distance(points[v], points[u], points[other]))
+    return unjoined[gap[unjoined] >= ON_EDGE_SHARE * distance]
+
+
+def open_seam_count(positions: Any, distance: float, boundary: Any, parts: Any, target: Any, **rules: Any) -> int:
+    """How many seam vertices stayed open after the weld (:func:`open_seams`)."""
+    return int(len(open_seams(positions, distance, boundary, parts, target, **rules)))
 
 
 def lining_pairs(positions: Any, normals: Any, groups: Any, *, weld: float = 0.002, near: float = 0.03,
@@ -1752,16 +1865,28 @@ def lining_pairs(positions: Any, normals: Any, groups: Any, *, weld: float = 0.0
         owners.append(np.full(len(own), group))
     query = np.concatenate(queries)
     owner = np.concatenate(owners)
-    q, t, d = grid_pairs(points[query], points, near)
-    other = (groups[t] != owner[q]) & (d > weld)
-    q, t, d = q[other], t[other], d[other]
-    if not len(q):
+    # Each group's sample is searched among the other groups' vertices only, and only each sampled vertex's nearest
+    # one beyond the weld is kept (sorting every pair took seconds on a detailed garment).
+    found_q, found_t, found_d = [], [], []
+    offset = 0
+    for group, own in zip(names, queries):
+        others = np.nonzero(groups != group)[0]
+        gq, gt, gd = grid_pairs(points[own], points[others], near)
+        apart = gd > weld
+        gq, gt, gd = gq[apart], gt[apart], gd[apart]
+        if len(gq):
+            best = np.full(len(own), np.inf)
+            np.minimum.at(best, gq, gd)
+            nearest = np.nonzero(gd == best[gq])[0]
+            _, first = np.unique(gq[nearest], return_index=True)  # one per sampled vertex (the first of a tie)
+            pick = nearest[first]
+            found_q.append(gq[pick] + offset)
+            found_t.append(others[gt[pick]])
+            found_d.append(gd[pick])
+        offset += len(own)
+    if not found_q:
         return found
-    order = np.lexsort((d, q))
-    q, t, d = q[order], t[order], d[order]
-    first = np.ones(len(q), dtype=bool)
-    first[1:] = q[1:] != q[:-1]
-    q, t, d = q[first], t[first], d[first]
+    q, t, d = np.concatenate(found_q), np.concatenate(found_t), np.concatenate(found_d)
     i = query[q]
     direction = (points[t] - points[i]) / d[:, None]
     layered = (np.abs(np.einsum("ij,ij->i", direction, normals[i])) > 0.7) & (
@@ -2120,6 +2245,63 @@ TOP_SIZE_RANGE = (0.3, 1.8)
 UNITS = {"m": 1.0, "cm": 0.01, "mm": 0.001, "dm": 0.1, "in": 0.0254}
 #: The units Automatic picks without saying so (the usual units of garment files).
 USUAL_UNITS = ("m", "cm", "mm")
+
+
+class ImportedMesh(NamedTuple):
+    """One mesh of an imported file, as :func:`avatar_meshes` judges it (sizes in metres)."""
+
+    name: str
+    materials: Tuple[str, ...]
+    height: float
+    largest: float
+    #: Closed all round (no open edge), as an avatar's body is and a garment never is.
+    closed: bool
+    #: The armature that deforms it ("" when none).
+    rig: str = ""
+
+
+#: Words in the names of an avatar's meshes and materials (Marvelous Designer's and CLO's avatars: the body with its
+#: face, arms and legs, the eyes, lashes and teeth).
+AVATAR_WORDS = frozenset({
+    "avatar", "skin", "body", "face", "head", "eye", "eyes", "eyeball", "eyelash", "eyelashes", "eyebrow",
+    "eyebrows", "tooth", "teeth", "tongue", "mouth", "arm", "arms", "leg", "legs", "hand", "hands", "foot", "feet",
+    "nail", "nails", "hair",
+})
+#: An avatar's small parts (eyes, lashes, teeth) are no larger than this (metres).
+AVATAR_PART_SIZE = 0.25
+#: A figure at least this tall (metres) without an open edge is an avatar.
+AVATAR_HEIGHT = 1.3
+
+
+def _avatar_worded(text: str) -> bool:
+    return any(word in AVATAR_WORDS for word in re.findall(r"[a-z]+", text.lower()))
+
+
+def avatar_meshes(meshes: Sequence[ImportedMesh]) -> List[int]:
+    """Which meshes of one import are the avatar a clothing app exported with the garment: one named as an avatar or
+    wearing only skin, a closed figure as tall as a person, and a rigged avatar: the tallest mesh, deformed by an
+    armature and named (or dressed) like a body, with the small parts and the body parts that armature also deforms
+    (eyes, lashes, teeth). A garment the same armature deforms (exported with skin weights) stays."""
+    found = set()
+    for index, mesh in enumerate(meshes):
+        materials = [m.lower() for m in mesh.materials]
+        if "avatar" in mesh.name.lower() or (materials and all("avatar" in m or "skin" in m for m in materials)):
+            found.add(index)
+        elif mesh.closed and mesh.height > AVATAR_HEIGHT:
+            found.add(index)
+    if meshes:
+        tallest = max(range(len(meshes)), key=lambda i: meshes[i].height)
+        figure = meshes[tallest]
+        worded = sum(1 for m in figure.materials if _avatar_worded(m))
+        if figure.rig and (_avatar_worded(figure.name) or (figure.materials and 2 * worded >= len(figure.materials))):
+            found.add(tallest)
+            for index, mesh in enumerate(meshes):
+                if mesh.rig != figure.rig or index == tallest:
+                    continue
+                dressed = bool(mesh.materials) and all(_avatar_worded(m) for m in mesh.materials)
+                if mesh.largest < AVATAR_PART_SIZE or dressed or (_avatar_worded(mesh.name) and not mesh.materials):
+                    found.add(index)
+    return sorted(found)
 
 
 def import_scale(size: float, category: str = "tshirt", unit: str = "auto") -> float:

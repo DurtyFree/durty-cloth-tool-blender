@@ -19,6 +19,7 @@ import math
 import pathlib
 import sys
 import tempfile
+import types
 
 import bmesh
 import bpy
@@ -276,7 +277,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     prefs = state.preferences()
     prefs.fit_upload_consent = False
     check("without consent Fit to Body uploads nothing",
-          refused(bpy.ops.dct_link.fit_service_fit, "send the garment's shape") and not api.fit.uploads)
+          refused(bpy.ops.dct_link.fit_service_fit, "send the garment to gta.clothing") and not api.fit.uploads)
     prefs.fit_upload_consent = True
     api.fit.position_offset = (0.0, 0.0, 0.004)
     api.fit.body_version = body.get(gh.BODY_VERSION)  # the fake fits to the hosted body the smoke added
@@ -304,6 +305,50 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     for group in [g for g in tee.vertex_groups if g.name.startswith("SKEL_")]:
         tee.vertex_groups.remove(group)  # the later steps start from an unweighted garment
     del tee["dct_fitted"]
+
+    # A fit's end that cannot go onto the garment: the panel says why and the garment stays as it is.
+    fit_ended = ui_garment.fit_ended
+    garment_fit = sys.modules[package + ".garment_fit"]
+    key = (scene.name, tee.session_uid)
+    digest = gh.fit_digest(tee)
+    shape = positions(tee)
+
+    def ended(**fields):
+        run = types.SimpleNamespace(key=key, operation="fit", state="done", lines=[],
+                                    result=types.SimpleNamespace(outcome="fitted"),
+                                    upload=types.SimpleNamespace(digest=digest))
+        for name, value in fields.items():
+            setattr(run, name, value)
+        return run
+
+    def said():
+        return [line.key for _, line in ui_garment.RUNTIME.fit_lines]
+
+    failed = ended(state="failed", lines=garment_fit.failure_lines("server_error", refunded=False))
+    check("a failed fit shows its lines", fit_ended(failed) and said() == ["fit.error.server", "fit.counted"], said())
+    check("a fit for a scene that is gone is not applied",
+          fit_ended(ended(key=("No such scene", tee.session_uid))) and said() == ["fit.changed"], said())
+    check("a fit for another garment is not applied",
+          fit_ended(ended(key=(scene.name, body.session_uid))) and said() == ["fit.changed"], said())
+    check("a fit that did not find the body changes nothing",
+          fit_ended(ended(result=types.SimpleNamespace(outcome="notOnBody"))) and said() == ["fit.done.not-on-body"]
+          and np.allclose(positions(tee), shape), said())
+    check("a fit of a shape that changed since the upload is not applied",
+          fit_ended(ended(upload=types.SimpleNamespace(digest="0" * 64))) and said() == ["fit.changed"]
+          and np.allclose(positions(tee), shape), said())
+    layer = bpy.context.view_layer
+    layer.objects.active = tee
+    bpy.ops.object.mode_set(mode="EDIT")
+    check("a fit waits while the garment is in Edit Mode", fit_ended(ended()) is False)
+    bpy.ops.object.mode_set(mode="OBJECT")
+    ui_garment.RUNTIME.fit_lines = []
+    check("the refusals left the garment as it was", np.allclose(positions(tee), shape) and not tee.get("dct_fitted"))
+
+    # While Prepare Garment or Combine Materials runs from the panel, the other garment tools wait for it.
+    ui_garment.RUNTIME.stepping = "garment.op.prepare"
+    check("the garment tools wait while Prepare Garment runs",
+          refused(bpy.ops.dct_link.fit_push_out, "is running") and refused(bpy.ops.dct_link.fit_align, "is running"))
+    ui_garment.RUNTIME.stepping = None
 
     # The fit check and the problem colours; the neck of the synthetic tee sits inside the head.
     check("Run Fit Check runs", "FINISHED" in bpy.ops.dct_link.fit_check())

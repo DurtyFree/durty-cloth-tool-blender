@@ -31,7 +31,7 @@ from . import garment, garment_add, garment_body, garment_fit, host, link, state
 from . import settings as addon_settings
 from . import garment_dct as gdct
 from . import garment_host as gh
-from .dct_link import auth, protocol
+from .dct_link import auth, fit, protocol
 from .strings import CONTEXT, EN, Msg, UserError, msg, t
 from .ui import GAP, GAP_SMALL, guide, heading, info_button, operator, primary, reason_text, subtext, wrapped
 
@@ -68,6 +68,9 @@ class _Runtime:
         self.fit_lines: List[Tuple[str, Msg]] = []
         self.fit_operation: Optional[str] = None
         self.fit_of: Optional[int] = None
+        #: The step running from the panel stage by stage (Prepare Garment, Combine Materials), by its title: the other
+        #: garment tools wait for it.
+        self.stepping: Optional[str] = None
         self.redraw: Callable[[], None] = lambda: None
 
 
@@ -292,6 +295,8 @@ class DCTLINK_PG_garment(PropertyGroup):
 
 
 def _refuse(cls: Any, reason: Optional[Msg]) -> bool:
+    if RUNTIME.stepping is not None:
+        reason = msg("garment.why.step-running", step=msg(RUNTIME.stepping))  # it changes the garment meanwhile
     return ui._refuse(cls, reason)
 
 
@@ -440,6 +445,9 @@ class _SteppedOp(_MeshOp):
     total)`` that returns the step's result) and :meth:`finished` (the result's message)."""
 
     title = "garment.op.prepare"
+    _steps: Any = None
+    _timer: Any = None
+    _garment: Any = None
 
     def steps(self, context: Any) -> Any:
         raise NotImplementedError
@@ -458,9 +466,16 @@ class _SteppedOp(_MeshOp):
         self._timer = context.window_manager.event_timer_add(0.05, window=context.window)
         context.window_manager.progress_begin(0, 100)
         context.window_manager.modal_handler_add(self)
+        RUNTIME.stepping = self.title
+        host.redraw()
         return {"RUNNING_MODAL"}
 
+    def cancel(self, context):
+        """Blender ends the step (another file opened, the window closed): the garment goes back as before."""
+        self._fail(context, msg("garment.done.step-cancelled", step=msg(self.title)), "INFO")
+
     def _end(self, context: Any) -> None:
+        RUNTIME.stepping = None
         if self._timer is not None:
             context.window_manager.event_timer_remove(self._timer)
             self._timer = None
@@ -472,7 +487,10 @@ class _SteppedOp(_MeshOp):
         host.redraw()
 
     def _fail(self, context: Any, failure: Msg, level: str = "ERROR") -> set:
+        if self._steps is None:
+            return {"CANCELLED"}  # ended already
         self._steps.close()  # restores what the step changed around the garment (bake settings, materials)
+        self._steps = None
         obj = self._garment
         try:
             if obj.mode != "OBJECT":
@@ -493,6 +511,7 @@ class _SteppedOp(_MeshOp):
         try:
             stage, done, total = next(self._steps)
         except StopIteration as stop:
+            self._steps = None
             self._end(context)
             message = self.finished(context, stop.value)
             level = "INFO"
@@ -1477,6 +1496,9 @@ def _service_reason(context: Any, operation: str) -> Optional[Msg]:
         return msg("fit.why.sign-in")
     if ctrl.fitting.busy:
         return msg("fit.why.running")
+    refused = ctrl.fitting.no_fits_left()
+    if refused is not None:
+        return msg("fit.why.no-fits", wait=garment_fit.wait_text(refused))
     allowance = ctrl.fitting.allowance
     if allowance is not None and allowance.remaining_today <= 0:
         return msg("fit.why.no-fits", wait=garment_fit.wait_text(_until_midnight_utc()))
@@ -1499,6 +1521,12 @@ def start_service(context: Any, operation: str) -> Any:
     upload = garment_fit.prepare_upload(positions, triangles, pinned, lining)
     options = garment_fit.fit_options(settings_.fit_clearance, settings_.fit_push, settings_.fit_max_push,
                                       settings_.fit_seam_gap, settings_.fit_proportions)
+    crowded, where = garment_fit.densest_seam_cell(upload.positions, upload.triangles, options["seamWeldMm"])
+    if crowded > fit.MAX_SEAM_DENSITY:
+        gh.select_vertices(obj, where)
+        # Before Prepare Garment, the crowd is usually panels whose seams are not joined yet.
+        key = "fit.input.seam-crowded" if gh.flag(obj, "dct_prepared") else "fit.input.seam-crowded-prepare"
+        raise UserError(msg(key, count=crowded, limit=fit.MAX_SEAM_DENSITY))
     markers = gh.read_markers(context.scene) if garment.markers_for(settings_.category) else {}
     request = garment_fit.build_request(operation, body_gender(context, body), settings_.slot, settings_.category,
                                         _hosted_version(body), markers, options)
@@ -1586,7 +1614,7 @@ class _ServiceOp(_Op):
 
     def invoke(self, context, event):
         prefs = state.preferences()
-        if prefs is None or prefs.fit_upload_consent:
+        if prefs is not None and prefs.fit_upload_consent:
             return self.execute(context)
         self.agreed = True  # confirming the dialog is the consent
         try:
@@ -1601,11 +1629,12 @@ class _ServiceOp(_Op):
 
     def execute(self, context):
         prefs = state.preferences()
-        if prefs is not None and not prefs.fit_upload_consent:
+        if prefs is None or not prefs.fit_upload_consent:
             if not self.agreed:
                 self.report({"ERROR"}, t("fit.consent.what"))  # a script that never showed the question
                 return {"CANCELLED"}
-            prefs.fit_upload_consent = True
+            if prefs is not None:
+                prefs.fit_upload_consent = True  # without the preferences, the question comes again next time
         try:
             start_service(context, self.operation)
         except EXPECTED as exc:
@@ -2977,6 +3006,7 @@ def on_load_pre() -> None:
         RUNTIME.add_job.cancel()
         RUNTIME.add_job = None
     RUNTIME.marker_notes.clear()
+    RUNTIME.stepping = None  # Blender ends a running step with the old file
     RUNTIME.add_problems, RUNTIME.add_warnings, RUNTIME.add_of = [], [], None
     RUNTIME.fit_lines, RUNTIME.fit_operation, RUNTIME.fit_of = [], None, None
     if state.controller is not None:

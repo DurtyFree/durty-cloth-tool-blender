@@ -178,7 +178,9 @@ def test_a_busy_service_is_asked_again_and_cancel_gives_an_unstarted_fit_back(tm
 
 @pytest.mark.parametrize("category, keys", [
     ("mock-invalid", ["fit.error.mesh-invalid", "fit.input.marker-far", "fit.refunded"]),
-    ("mock-error", ["fit.error.server", "fit.refunded"]),
+    ("mock-dense", ["fit.error.mesh-invalid", "fit.input.seam-dense", "fit.refunded"]),
+    ("mock-error", ["fit.error.server", "fit.counted"]),
+    ("mock-not-started", ["fit.error.server", "fit.refunded"]),
     ("mock-timeout", ["fit.error.timeout", "fit.counted"]),
     ("mock-not-on-body", None),
 ])
@@ -206,7 +208,7 @@ def test_refusals_before_the_upload_are_worded_for_a_beginner(tmp_path, api):
     until(ctrl, lambda: bool(ended.runs))
     level, line = run.lines[0]
     assert level == "ERROR" and line.key == "fit.error.quota"
-    assert re.fullmatch(r"You have used all of today's fits\. More are available in about \d+ (hours|minutes)\.",
+    assert re.fullmatch(r"No more fits can be started today\. More are available in about \d+ (hours|minutes)\.",
                         strings.english(line))
     api.fit.used = 0
     stale = garment_fit.build_request("fit", "male", "jbib", "tshirt", "2026.01.01", mesh.joints,
@@ -351,3 +353,170 @@ def test_the_network_permission_says_what_the_worker_lists_and_names_fitting():
     if listing is None:
         pytest.skip("no website checkout beside this repository (or DCT_WEBSITE_CHECKOUT)")
     assert listing == expected
+
+
+# ---- polling through passing failures --------------------------------------------------------------------------------
+
+
+def test_a_busy_or_failing_status_answer_is_waited_out_and_the_fit_still_comes_back(tmp_path, api, monkeypatch):
+    """A 503, a 500 and a 429 while the job runs are passing troubles of gta.clothing: the run keeps polling (after
+    the wait the service asked for) instead of failing a fit that is still counted."""
+    monkeypatch.setattr(garment_fit.FitRun, "POLL_RETRY_LIMIT", 0.05)  # the waits, shortened for the test
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    api.fit.status_failures = [(503, "fit_unavailable", 2), (500, "server_error", None), (429, "rate_limited", 3)]
+    upload, mesh = garment_upload()
+    run = ctrl.fitting.start("fit", request(mesh=mesh), upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    assert run.state == "done" and run.result is not None and not api.fit.status_failures
+    assert api.fit.cancels == []
+
+
+def settle(run) -> None:
+    """Waits until the run's request in flight has its answer (without reading it)."""
+    if run._task is not None:
+        assert run._task._done.wait(5)
+
+
+def test_a_retry_hint_sets_the_next_poll():
+    """Retry-After decides when the next status request goes out (up to the run's limit), and a run that gives up on
+    a job gta.clothing still has cancels it there."""
+    calls = []
+
+    class Client:
+        def begin_submit(self, request, mesh):
+            return fit.FitTask(lambda cancel, progress: fit.FitSubmitted("A" * 22, "queued", 5))
+
+        def begin_status(self, job_id, vertices):
+            calls.append("status")
+            return fit.FitTask(lambda cancel, progress: (_ for _ in ()).throw(
+                fit.FitError("server_error", status=503, retryable=True, retry_after=7.0)))
+
+        def begin_cancel(self, job_id):
+            calls.append(("cancel", job_id))
+            return fit.FitTask(lambda cancel, progress: None)
+
+    upload, _ = garment_upload()
+    now = [100.0]
+    run = garment_fit.FitRun(Client(), "fit", {}, upload, ("Scene", 1), clock=lambda: now[0])
+    settle(run)
+    run.tick()
+    assert run.state == "queued"
+    for failure in range(garment_fit.FitRun.MAX_POLL_FAILURES):
+        now[0] = run._next_poll
+        run.tick()  # the status request goes out
+        settle(run)
+        run.tick()  # its failure is read
+        assert not run.ended and run._next_poll == pytest.approx(now[0] + 7.0)
+    now[0] = run._next_poll
+    run.tick()
+    settle(run)
+    run.tick()
+    assert run.state == "failed" and [line.key for _, line in run.lines] == ["fit.error.server"]
+    assert calls[-1] == ("cancel", "A" * 22) and calls.count("status") == garment_fit.FitRun.MAX_POLL_FAILURES + 1
+
+
+def test_only_failures_that_may_pass_are_polled_through():
+    assert garment_fit.FitRun.passing(fit.FitError("network", retryable=True))
+    assert garment_fit.FitRun.passing(fit.FitError("rate_limited", status=429))
+    assert garment_fit.FitRun.passing(fit.FitError("server_error", status=502))
+    assert not garment_fit.FitRun.passing(fit.FitError("not_found", status=404))
+    assert not garment_fit.FitRun.passing(fit.FitError("session_invalid", status=401))
+
+
+def test_gta_clothing_busy_is_waited_for_as_long_as_it_asks(monkeypatch):
+    """fit_busy's hint is honoured up to two minutes, not cut to half a minute; a wait that would end after the run's
+    limit ends the run at once."""
+    upload, _ = garment_upload()
+
+    class Client:
+        def begin_submit(self, request, mesh):
+            return fit.FitTask(lambda cancel, progress: (_ for _ in ()).throw(
+                fit.FitError("fit_busy", status=429, retryable=True, retry_after=90.0)))
+
+    now = [0.0]
+    run = garment_fit.FitRun(Client(), "fit", {}, upload, ("Scene", 1), clock=lambda: now[0])
+    settle(run)
+    run.tick()
+    assert run.state == "waiting" and run._retry_at == pytest.approx(90.0)
+    now[0] = 90.0
+    run.tick()
+    settle(run)
+    run.tick()
+    assert run.state == "waiting" and run._retry_at == pytest.approx(180.0)
+    now[0] = 180.0
+    run.tick()
+    settle(run)
+    run.tick()
+    assert run.state == "waiting"
+    now[0] = 270.0
+    run.tick()
+    settle(run)
+    run.tick()  # 270 + 90 is past the five minutes the run waits at most
+    assert run.state == "failed" and [line.key for _, line in run.lines] == ["fit.error.busy"]
+
+
+def test_cancelling_a_running_fit_says_it_still_counts(tmp_path, api):
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    upload, mesh = garment_upload()
+    run = ctrl.fitting.start("fit", request(mesh=mesh), upload, ("Scene", 7))
+    until(ctrl, lambda: run.state == "running")
+    assert ctrl.fitting.cancel() and run.status_text().key == "fit.stage.cancelling-counted"
+    until(ctrl, lambda: bool(ended.runs))
+    assert run.state == "cancelled"
+    assert [line.key for _, line in run.lines] == ["fit.error.cancelled", "fit.cancelled-counted"]
+    assert api.fit.used == 1
+
+
+def test_a_refusal_for_today_holds_although_fits_seem_left(tmp_path, api):
+    """gta.clothing can refuse a fit for today while the account still shows fits left: the add-on believes the
+    refusal until its wait is over, and the text does not claim the account's fits are used."""
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    api.fit.refuse["/link/api/fit/jobs"] = (429, "quota_exceeded")
+    upload, mesh = garment_upload()
+    run = ctrl.fitting.start("fit", request(mesh=mesh), upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    assert [line.key for _, line in run.lines] == ["fit.error.quota"]
+    assert "used all" not in EN["fit.error.quota"]
+    left = ctrl.fitting.no_fits_left()
+    assert left is not None and 0 < left <= 5
+
+
+def test_an_upload_that_arrived_too_slowly_is_blamed_on_the_connection():
+    issues = [fit.FitIssue("upload_timeout", "mesh")]
+    lines = garment_fit.failure_lines("invalid_request", issues)
+    assert [line.key for _, line in lines] == ["fit.error.upload-timeout"]
+    assert "Update" not in EN["fit.error.upload-timeout"]
+
+
+# ---- the seam density gta.clothing accepts -------------------------------------------------------------------------
+
+
+def _loose_buttons(count: int, at=(0.9, 0.9, 0.9), size=0.0003):
+    """``count`` tiny loose triangles crowded into one spot (as buttons and stitching come out of a clothing app)."""
+    rng = np.random.default_rng(5)
+    positions = np.asarray(at) + rng.uniform(0, size, (3 * count, 3))
+    triangles = np.arange(3 * count).reshape(-1, 3)
+    return positions, triangles
+
+
+def test_the_densest_spot_of_open_edges_is_counted_as_gta_clothing_counts_it():
+    upload, mesh = garment_upload()
+    plain, _ = garment_fit.densest_seam_cell(upload.positions, upload.triangles, 1.5)
+    assert 0 < plain <= fit.MAX_SEAM_DENSITY
+    buttons, button_tris = _loose_buttons(50)
+    positions = np.concatenate([upload.positions, buttons])
+    triangles = np.concatenate([upload.triangles, button_tris + len(upload.positions)])
+    crowded, where = garment_fit.densest_seam_cell(positions, triangles, 1.5)
+    assert crowded == 150 > fit.MAX_SEAM_DENSITY
+    assert set(where.tolist()) == set(range(len(upload.positions), len(positions)))
+    # The seam weld off counts nothing; a closed surface has no open edge.
+    assert garment_fit.densest_seam_cell(positions, triangles, 0)[0] == 0
+    tetra = np.array([[0, 0, 0], [0.001, 0, 0], [0, 0.001, 0], [0, 0, 0.001]], dtype=float)
+    closed = np.array([[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]])
+    assert garment_fit.densest_seam_cell(tetra, closed, 1.5)[0] == 0

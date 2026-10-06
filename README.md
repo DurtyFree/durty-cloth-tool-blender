@@ -176,24 +176,28 @@ button for that step is the large one. Settings you rarely change sit in closed 
 
 1. **Setup:** choose gender, slot, category and the pose the garment was made in, then **Import Garment** and
    **Add Freemode Body**. The import converts centimetres, millimetres and inches to metres (and the FBX files of
-   Marvelous Designer and CLO that arrive ten times too large), says when the size does not look like a garment's,
-   and turns a garment that lies down or faces backwards.
+   Marvelous Designer and CLO that arrive ten times too large), leaves out the avatar exported with the garment
+   (also a rigged one), says when the size does not look like a garment's, and turns a garment that lies down or
+   faces backwards.
 2. **Fit:** **Auto Markers**, then check the markers and move any that are off (lines in the 3D view join them and
    turn orange when something looks wrong). Then **Align to Body**: it moves and turns the garment so the markers
    sit on the body's joints, and turns its arms (or legs) onto the body's, so a T-pose becomes the game's pose
-   without opening a seam. It keeps the garment's size unless you turn off **Keep Size** in its options. Then **Fit to Body** (under **Fit on gta.clothing**): gta.clothing puts the garment
-   exactly in the game's pose, gives it the freemode body's weights and moves it out of the body where it was
-   inside. A progress bar shows how far it is, **Cancel** stops it, and the panel shows your **Fits left today**.
-   You can skip it and fit the garment by hand under **Fix**.
+   without opening a seam. It keeps the garment's size unless you turn off **Keep Size** in its options. Then
+   **Fit to Body** (under **Fit on gta.clothing**): gta.clothing puts the garment exactly in the game's pose, gives
+   it the freemode body's weights and moves it out of the body where it was inside. A progress bar shows how far it
+   is, **Cancel** stops it (a fit that has already started still counts), and the panel shows your **Fits left
+   today**. A spot where too many loose edges crowd (seams not joined yet, buttons, stitching) is found and selected
+   before anything is sent. You can skip it and fit the garment by hand under **Fix**.
 3. **Fix:** **Run Fit Check** (its **Usual** column shows how far game clothing of the same kind sits from each
    region), **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or sculpt by hand.
    These tools wait for **Align to Body**, because they measure against the body, and again when a marker was
    moved after it.
-4. **Game Ready:** **Prepare Garment** (which says when seams stay open) and **Combine Materials** (which keeps
-   transparency, bakes normal, specular and emission maps and says when a texture file is missing); both show their
-   progress in the status bar, and **Esc** stops them and puts the garment back. Then the weights: **Transfer Weights** gets the freemode body's weights from
-   gta.clothing for the garment as it is now (for example after sculpting), or weight it yourself. Then **Generate
-   LODs** and **Validate**.
+4. **Game Ready:** **Prepare Garment** (which joins the seams without pulling any panel's own edge together, and
+   selects the spots where a seam stayed open) and **Combine Materials** (which keeps transparency, bakes normal,
+   specular and emission maps and says when a texture file is missing); both show their progress in the status bar,
+   the other garment tools wait for them, and **Esc** stops them and puts the garment back. Then the weights:
+   **Transfer Weights** gets the freemode body's weights from gta.clothing for the garment as it is now (for example
+   after sculpting), or weight it yourself. Then **Generate LODs** and **Validate**.
 
 Every step that changes the garment can be undone with **Ctrl+Z**, and the garment keeps backups of its shape for
 **Back One Step** and **Restore Pre-fit**; a fit from gta.clothing is one such step.
@@ -250,14 +254,17 @@ The [Blender documentation](https://docs.gta.clothing/creator-link/blender) expl
 - 🖥️ **Talks to Durty Cloth Tool on your computer.** Your images, models and garments go only to Durty Cloth Tool on
   the same computer. Durty Cloth Tool sends back what you ask for: the cloths you open in Blender and, for an add,
   the freemode skeleton built from your own game files. The one exception is **Fit to Body** and **Transfer
-  Weights**: once you agreed, they send the garment's shape to gta.clothing to fit it.
+  Weights**: once you agreed, they send the garment's shape, its markers and the fitting options to gta.clothing to
+  fit it. The garment is not kept there; gta.clothing logs only a summary of each fit (counts such as vertices and
+  triangles, the outcome and how long it took).
 - 👤 **Signs in with gta.clothing.** You sign in once with your gta.clothing account. Durty Cloth Tool accepts
   Blender when both are signed in with the same account, and lists it under **Options > Connected apps**, where you
   can disconnect it. The add-on never sees your Discord password.
 - 🌐 **What reaches gta.clothing:** your sign-in (with your computer's name, unless you turn that off under
   **Settings > Privacy**), a confirmation each time Blender connects to Durty Cloth Tool, your sign-out, the
-  download of the freemode body (once per body version), Blender's update checks and, once you agreed, the shape of
-  a garment you fit there, with the questions for your fits left today and for the usual ranges of game clothing.
+  download of the freemode body (once per body version), Blender's update checks and, once you agreed, a garment you
+  fit there (its shape, markers and fitting options), with the questions for your fits left today and for the usual
+  ranges of game clothing.
 - 🙅 **No tracking.** The add-on collects no usage data. **Copy Diagnostics** copies versions and status codes for
   support, without file paths, names or sign-in data.
 - 🔐 **Your sign-in stays protected.** It is kept in the add-on's user folder, encrypted for your Windows user

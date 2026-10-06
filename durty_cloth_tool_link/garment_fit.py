@@ -157,6 +157,28 @@ def prepare_upload(positions: Any, triangles: Any, pinned: Optional[np.ndarray] 
     return Upload(points, kept, flags if flags.any() else None, int((~keep).sum()), digest)
 
 
+def densest_seam_cell(positions: Any, triangles: Any, seam_weld_mm: float) -> Tuple[int, np.ndarray]:
+    """The spot where the most open-edge vertices crowd (the vertices on an edge only one triangle uses), counted in
+    cubes as wide as the seam weld, as gta.clothing counts them before it fits: how many lie in the fullest cube and
+    which. Nothing is counted while the seam weld is off."""
+    tris = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    if seam_weld_mm <= 0 or not len(tris):
+        return 0, np.zeros(0, dtype=np.int64)
+    points = np.asarray(positions, dtype=np.float32).reshape(-1, 3)
+    edges = np.sort(np.concatenate([tris[:, [0, 1]], tris[:, [1, 2]], tris[:, [2, 0]]]), axis=1)
+    keys = edges[:, 0] * (len(points) + 1) + edges[:, 1]
+    unique, first, uses = np.unique(keys, return_index=True, return_counts=True)
+    single = edges[first[uses == 1]]
+    boundary = np.unique(single.reshape(-1))
+    if not len(boundary):
+        return 0, np.zeros(0, dtype=np.int64)
+    size = np.float32(seam_weld_mm / 1000.0)
+    cells = np.floor(points[boundary] / size).astype(np.int64)
+    _, inverse, counts = np.unique(cells, axis=0, return_inverse=True, return_counts=True)
+    fullest = int(np.argmax(counts))
+    return int(counts[fullest]), boundary[inverse.reshape(-1) == fullest]
+
+
 def fit_options(clearance: float, push_out: bool, max_push: float, seam_weld: float,
                 match_proportions: bool) -> Dict[str, Any]:
     """The options of Fit to Body, each kept within the service's range."""
@@ -278,6 +300,7 @@ INPUT_TEXTS = {
     "marker_side": "fit.input.marker-side",
     "marker_inconsistent": "fit.input.marker-length",
     "body_gender_mismatch": "fit.input.gender",
+    "upload_timeout": "fit.error.upload-timeout",
 }
 WARNING_TEXTS = {code: f"fit.warning.{code.replace('_', '-')}" for code in fit.WARNING_CODES}
 #: What the panel says a run is doing, by stage.
@@ -294,15 +317,20 @@ def wait_text(seconds: Optional[float]) -> Msg:
 
 
 def failure_lines(code: str, issues: Sequence[fit.FitIssue] = (), *, retry_after: Optional[float] = None,
-                  refunded: Optional[bool] = None, uploaded: bool = False) -> List[Tuple[str, Msg]]:
+                  refunded: Optional[bool] = None, uploaded: bool = False,
+                  started: bool = False) -> List[Tuple[str, Msg]]:
     """What the panel says about a run that ended without a result: the failure, each problem the service named (once
-    per text), and whether the fit counts against today's fits."""
+    per text), and whether the fit counts against today's fits. ``started``: a cancelled fit had begun on gta.clothing,
+    so it counts even when the service's answer did not say."""
     key = FAILURE_TEXTS.get(code)
     level = "INFO" if code == "cancelled" else "ERROR"
     if code == "quota_exceeded":
         lines = [(level, msg(key, wait=wait_text(retry_after)))]
     elif code == "network" and uploaded:
         lines = [(level, msg("fit.error.network-uploaded"))]
+    elif any(issue.code == "upload_timeout" for issue in issues):
+        lines = [(level, msg("fit.error.upload-timeout"))]  # a slow connection, not an add-on gta.clothing cannot read
+        issues = [issue for issue in issues if issue.code != "upload_timeout"]
     elif key is not None:
         lines = [(level, msg(key))]
     else:
@@ -317,7 +345,9 @@ def failure_lines(code: str, issues: Sequence[fit.FitIssue] = (), *, retry_after
             lines.append(("ERROR", msg(text, code=issue.code) if text == "fit.input.other" else msg(text)))
     if refunded is True:
         lines.append(("INFO", msg("fit.refunded")))
-    elif refunded is False and code != "cancelled":
+    elif code == "cancelled" and (refunded is False or (refunded is None and started)):
+        lines.append(("INFO", msg("fit.cancelled-counted")))
+    elif refunded is False:
         lines.append(("INFO", msg("fit.counted")))
     return lines
 
@@ -358,11 +388,14 @@ class FitRun:
     :attr:`lines` say why not."""
 
     POLL_SECONDS = 1.0
-    #: How long the run keeps trying while gta.clothing answers busy, and the wait between tries.
-    BUSY_LIMIT_SECONDS = 180.0
-    BUSY_WAIT = (2.0, 30.0)
-    #: Polls in a row that may fail on the network before the run gives up.
+    #: How long the run keeps trying while gta.clothing is busy, and the wait between tries (the service's hint, kept
+    #: within these bounds).
+    BUSY_LIMIT_SECONDS = 300.0
+    BUSY_WAIT = (2.0, 120.0)
+    #: Polls in a row that may fail (the network, gta.clothing answering busy or with a server error) before the run
+    #: gives up, and the longest wait between two of them.
     MAX_POLL_FAILURES = 5
+    POLL_RETRY_LIMIT = 120.0
 
     def __init__(self, client: fit.FitClient, operation: str, request: Dict[str, Any], upload: Upload, key: Any,
                  clock: Callable[[], float] = time.monotonic) -> None:
@@ -387,6 +420,10 @@ class FitRun:
         #: Set by the service once the add-on has dealt with the end of the run.
         self.handled = False
         self.cancel_requested = False
+        #: The run had reached ``running`` when Cancel was chosen: the fit had begun and counts.
+        self.cancelled_running = False
+        #: The cancel sent when the run gave up on a job gta.clothing still has (nobody waits for its answer).
+        self.abandoned: Optional[fit.FitTask] = None
         self._started = clock()
         self._busy_since: Optional[float] = None
         self._retry_at = 0.0
@@ -411,7 +448,7 @@ class FitRun:
     def status_text(self) -> Msg:
         """What the run is doing, for the panel."""
         if self.cancel_requested and not self.ended:
-            return msg("fit.stage.cancelling")
+            return msg("fit.stage.cancelling-counted" if self.cancelled_running else "fit.stage.cancelling")
         if self.state == "uploading":
             share = int(100 * self._task.sent / self._task.total) if self._task and self._task.total else 0
             return msg("fit.stage.uploading", percent=share)
@@ -429,6 +466,7 @@ class FitRun:
         if self.ended or self.cancel_requested:
             return
         self.cancel_requested = True
+        self.cancelled_running = self.state == "running"
         if self.state == "uploading" and self._task is not None:
             self._task.cancel()  # the upload task ends; a job that came about anyway is cancelled when it does
         elif self.state == "waiting":
@@ -447,9 +485,10 @@ class FitRun:
         if state == "done":
             return
         code = code or (error.code if error is not None else "server_error")
+        uploaded = bool(error is not None and (error.uploaded or self.job_id is not None))
         self.lines = failure_lines(code, issues or (error.errors if error is not None else ()),
                                    retry_after=error.retry_after if error is not None else None,
-                                   refunded=self.refunded, uploaded=bool(error is not None and error.uploaded))
+                                   refunded=self.refunded, uploaded=uploaded, started=self.cancelled_running)
 
     def tick(self, now: Optional[float] = None) -> bool:
         """Advances the run; True when something the panel shows changed."""
@@ -520,10 +559,14 @@ class FitRun:
         try:
             answer = task.result()
         except fit.FitError as exc:
-            if exc.code == "network" and self._poll_failures < self.MAX_POLL_FAILURES:
+            if self.passing(exc) and self._poll_failures < self.MAX_POLL_FAILURES:
                 self._poll_failures += 1
-                self._next_poll = now + self.POLL_SECONDS * (1 + self._poll_failures)
+                wait = max(self.POLL_SECONDS * (1 + self._poll_failures), exc.retry_after or 0.0)
+                self._next_poll = now + min(self.POLL_RETRY_LIMIT, wait)
                 return False
+            if self.passing(exc):
+                # The job may still run on gta.clothing: cancel it there (one that has not started is not counted).
+                self.abandoned = self.client.begin_cancel(self.job_id)
             self._end("failed", error=exc)
             return True
         self._poll_failures = 0
@@ -545,14 +588,21 @@ class FitRun:
             self.state = answer.state
         return True
 
+    @staticmethod
+    def passing(error: fit.FitError) -> bool:
+        """A status request failed in a way that may pass: the network, gta.clothing busy or rate limiting
+        (``429``), or a server error (``5xx``)."""
+        return error.code == "network" or error.status == 429 or error.status >= 500
+
     def _busy(self, now: float, error: fit.FitError) -> None:
         if self._busy_since is None:
             self._busy_since = now
-        if now - self._busy_since > self.BUSY_LIMIT_SECONDS:
-            self._end("failed", error=error)
-            return
         low, high = self.BUSY_WAIT
-        self._retry_at = now + min(high, max(low, error.retry_after if error.retry_after is not None else 5.0))
+        wait = min(high, max(low, error.retry_after if error.retry_after is not None else 5.0))
+        if now + wait - self._busy_since > self.BUSY_LIMIT_SECONDS:
+            self._end("failed", error=error)  # the next try would come too late: say so now
+            return
+        self._retry_at = now + wait
         self.state = "waiting"
         self._task = None
 
@@ -590,6 +640,9 @@ class FitService:
         self._reference_failed: Dict[Tuple[str, str, str], float] = {}
         #: Runs cancelled when another file was opened, still being cancelled on gta.clothing.
         self._abandoned: List[FitRun] = []
+        #: When gta.clothing last refused a fit for today (``quota_exceeded``): no fit starts before this (clock time),
+        #: whatever the fits left today say.
+        self.no_fits_until: Optional[float] = None
 
     @property
     def busy(self) -> bool:
@@ -607,6 +660,16 @@ class FitService:
             return False
         run.cancel()
         return True
+
+    def no_fits_left(self) -> Optional[float]:
+        """Seconds until fits can start again when gta.clothing has none left today (the fits left today at zero, or
+        a refusal for today), else ``None``."""
+        now = self.clock()
+        if self.no_fits_until is not None:
+            if now < self.no_fits_until:
+                return self.no_fits_until - now
+            self.no_fits_until = None
+        return None
 
     def want_allowance(self) -> None:
         """The panel shows the fits left today: ask for them when they are older than :attr:`ALLOWANCE_SECONDS`."""
@@ -661,6 +724,8 @@ class FitService:
             if run.ended and (self.on_ended is None or self.on_ended(run)):
                 run.handled = True
                 self._allowance_at = None  # a refund or a used fit: look again
+                if run.error is not None and run.error.code == "quota_exceeded":
+                    self.no_fits_until = now + (run.error.retry_after if run.error.retry_after else 3600.0)
                 changed = True
         changed |= self._tick_allowance(now)
         for key, task in list(self._reference_tasks.items()):

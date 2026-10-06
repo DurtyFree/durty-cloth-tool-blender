@@ -81,6 +81,77 @@ def test_half_a_million_candidate_pairs_weld_in_seconds():
         assert float(np.sqrt((diff ** 2).sum(axis=2)).max()) <= 0.001 + 1e-9
 
 
+def _dense_seam(count: int = 49, step: float = 0.0008, gap: float = 0.0003, shift: float = 0.0004):
+    """The open edges of two panels sewn together, their vertices closer along the edge than the weld distance and
+    the second panel's set off by half a step (a dense seam out of a clothing app): positions, panel of each vertex,
+    the chains of their open edges and the edges along them."""
+    first = _strip(0.0, 0.0, count, step)
+    second = _strip(gap, 0.0, count, step) + [shift, 0.0, 0.0]
+    positions = np.concatenate([first, second])
+    parts = np.repeat([0, 1], count)
+    along = np.array([[i, i + 1] for i in range(count - 1)])
+    edges = np.concatenate([along, along + count])
+    chains = garment.boundary_chains(edges, len(positions), positions)
+    return positions, parts, chains, edges
+
+
+def _collapsed(target: np.ndarray, edges: np.ndarray) -> int:
+    return int((target[edges[:, 0]] == target[edges[:, 1]]).sum())
+
+
+def test_the_weld_never_joins_neighbours_along_one_panels_own_edge():
+    """Joining two groups across the seam brought two neighbours of one panel's edge together (29 of the 96 edges
+    along this seam collapsed): every two vertices that become one must be allowed to, not only the closest pair."""
+    positions, parts, chains, edges = _dense_seam()
+    target, merged = garment.weld_targets(positions, 0.0015, chains=chains, components=parts)
+    assert _collapsed(target, edges) == 0
+    for group in np.unique(target):
+        members = np.nonzero(target == group)[0]
+        assert len(members) <= 2 and len(np.unique(parts[members])) == len(members)  # one vertex of each panel
+    # Nearly every vertex found a partner on the other panel (the half-step offset leaves a few without one), and
+    # only those count as open.
+    joined = garment.joined_across(target, parts)
+    assert joined.sum() >= 0.9 * len(positions)
+    assert garment.open_seam_count(positions, 0.0015, np.ones(len(positions), bool), parts, target,
+                                   chains=chains) == int((~joined).sum())
+
+
+def test_a_seam_vertex_joined_across_once_is_not_counted_open():
+    """The old count called a vertex open unless it was joined to every close vertex of the other panel: this fully
+    sewn seam, where each vertex has two or three such neighbours, counted 58 of its 60 vertices open."""
+    positions, parts, chains, _edges = _dense_seam(count=30, step=0.001, gap=0.0002, shift=0.0)
+    target, _ = garment.weld_targets(positions, 0.0015, chains=chains, components=parts)
+    assert garment.joined_across(target, parts).all()
+    boundary = np.ones(len(positions), bool)
+    assert garment.open_seam_count(positions, 0.0015, boundary, parts, target, chains=chains) == 0
+    # Without a weld, every vertex that has a partner is open.
+    assert garment.open_seam_count(positions, 0.0015, boundary, parts, np.arange(len(positions)),
+                                   chains=chains) == 60
+    # A lining and its shell are never a seam: lying close, they are not open either.
+    fabrics = parts.copy()
+    assert garment.open_seam_count(positions, 0.0015, boundary, parts, np.arange(len(positions)), chains=chains,
+                                   fabrics=fabrics, apart=[(0, 1)]) == 0
+
+
+def test_a_seam_vertex_lying_on_the_other_panels_edge_is_not_counted_open():
+    """One side of a seam often has twice the vertices of the other: the extra ones cannot be joined (each partner
+    is taken) but lie on the other panel's edge, so the seam is closed there. Only a vertex off that edge is a gap."""
+    coarse = _strip(0.0, 0.0, 20, 0.001)
+    fine = _strip(0.00005, 0.0, 39, 0.0005)
+    fine[17] += [0.0, 0.00025, 0.0]  # one vertex of the fine side stands 0.3 mm off the seam: a real gap
+    positions = np.concatenate([coarse, fine])
+    parts = np.repeat([0, 1], [20, 39])
+    edges = np.concatenate([[[i, i + 1] for i in range(19)], [[20 + i, 21 + i] for i in range(38)]])
+    chains = garment.boundary_chains(edges, len(positions), positions)
+    target, _ = garment.weld_targets(positions, 0.0006, chains=chains, components=parts)
+    assert _collapsed(target, edges) == 0
+    boundary = np.ones(len(positions), bool)
+    unjoined = garment.open_seams(positions, 0.0006, boundary, parts, target, chains=chains)
+    assert len(unjoined) >= 18  # the fine side's extra vertices have no partner of their own
+    gaps = garment.open_seams(positions, 0.0006, boundary, parts, target, edges=edges, chains=chains)
+    assert gaps.tolist() == [20 + 17]
+
+
 # ---- markers ----------------------------------------------------------------------------------------------------------
 
 
@@ -106,6 +177,31 @@ def test_the_unit_follows_the_size_a_garment_can_have(size, category, unit):
     assert garment.import_unit(size, category) == unit
     assert garment.import_scale(size, category) == (garment.UNITS[unit] if unit else 1.0)
     assert garment.import_unit(size, category, "cm") == "cm"  # a unit the user chose is kept
+
+
+def test_the_rigged_avatar_of_a_marvelous_designer_fbx_is_left_out():
+    """Marvelous Designer exports its avatar rigged: a body with open edges (so not closed) and eyes, lashes and teeth
+    on the same armature, beside the garment."""
+    mesh = garment.ImportedMesh
+    parts = [
+        mesh("Armature body", ("face", "body2", "arm", "leg"), 1.88, 1.88, False, "Armature"),
+        mesh("eye_L.001", ("eye",), 0.03, 0.03, True, "Armature"),
+        mesh("eyelash_R.001", ("eyelash.001",), 0.02, 0.03, False, "Armature"),
+        mesh("tooth.001", ("toothSG1",), 0.08, 0.08, False, "Armature"),
+        mesh("Men's Shirt FBX", ("Cotton_Twill_FRONT_289623", "Material15575"), 0.77, 1.16, False, ""),
+    ]
+    assert garment.avatar_meshes(parts) == [0, 1, 2, 3]
+    # A garment exported with skin weights on the avatar's armature stays.
+    skinned = parts[:4] + [parts[4]._replace(rig="Armature")]
+    assert garment.avatar_meshes(skinned) == [0, 1, 2, 3]
+    # Without an avatar, nothing is left out: a rigged garment, a coat taller than the shirt, fabric named Body.
+    coat = mesh("Long Coat", ("Wool_FRONT",), 1.4, 1.4, False, "Armature")
+    lining = mesh("Lining", ("Body_FRONT",), 1.2, 1.2, False, "Armature")
+    assert garment.avatar_meshes([coat, lining]) == []
+    # The older rules still hold: named avatar, only skin, a closed figure as tall as a person.
+    assert garment.avatar_meshes([mesh("Avatar", (), 1.7, 1.7, False), parts[4]]) == [0]
+    assert garment.avatar_meshes([mesh("Mesh", ("Skin_Mat",), 1.7, 1.7, False), parts[4]]) == [0]
+    assert garment.avatar_meshes([mesh("Figure", ("Mat",), 1.7, 1.7, True), parts[4]]) == [0]
 
 
 def _hooded_top() -> np.ndarray:

@@ -303,8 +303,9 @@ TEXT = {
     "channel.release": "Release",
     "channel.experimental": "Experimental",
     "info.find": (
-        "O Creator Link só conversa com o Durty Cloth Tool neste computador. Nada vai para a internet além do seu "
-        "login."
+        "O Creator Link só conversa com o Durty Cloth Tool neste computador. Pela internet, o add-on só conversa com o "
+        "gta.clothing: o seu login, as verificações de atualização do Blender, o corpo freemode e, depois que você "
+        "concordar, as roupas que você ajustar lá. Configurações > Privacidade mostra o que é enviado."
     ),
     "info.sign-in": (
         "O login mostra ao Durty Cloth Tool que este add-on pertence à sua conta. O add-on nunca vê a sua senha do "
@@ -349,7 +350,7 @@ TEXT = {
         "Fica neste computador: suas imagens, modelos e os pixels da pré-visualização ao vivo. Eles vão só para o "
         "Durty Cloth Tool. Vai para o gta.clothing: o seu login (com o nome deste computador, a menos que você "
         "desligue isso), uma confirmação por conexão, a sua saída, as verificações de atualização do Blender e, depois "
-        "que você concordar, a forma de uma roupa que você ajustar lá."
+        "que você concordar, uma roupa que você ajustar lá (a forma, os marcadores e as opções de ajuste)."
     ),
     "op.connect": "Conectar",
     "op.connect.desc": "Conectar ao Durty Cloth Tool neste computador",

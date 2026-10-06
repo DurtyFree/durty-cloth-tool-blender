@@ -661,20 +661,31 @@ def import_body(context: Any, path: pathlib.Path, gender: str, version: Optional
 
 #: How far below the ped's origin its soles are (metres): the freemode body stands with its soles at z -1.
 GROUND_DEPTH = 1.0
-#: Material names that are the avatar's, not the garment's.
-AVATAR_WORDS = ("avatar", "skin")
 
 
-def _looks_like_avatar(obj: Any, factor: float) -> bool:
-    """A mesh Marvelous Designer exported with the garment: named like an avatar, wearing skin, or a closed figure
-    as tall as a person."""
-    name = obj.name.lower()
-    materials = [slot.material.name.lower() for slot in obj.material_slots if slot.material is not None]
-    if "avatar" in name or (materials and all(any(word in m for word in AVATAR_WORDS) for m in materials)):
-        return True
+def _rig_of(obj: Any) -> str:
+    """The armature that deforms a mesh ("" when none)."""
+    if obj.parent is not None and obj.parent.type == "ARMATURE":
+        return obj.parent.name
+    for modifier in obj.modifiers:
+        if modifier.type == "ARMATURE" and modifier.object is not None:
+            return modifier.object.name
+    return ""
+
+
+def _imported_mesh(obj: Any, factor: float) -> garment.ImportedMesh:
     corners = np.array([obj.matrix_world @ Vector(c) for c in obj.bound_box]) * factor
-    tall = float(corners[:, 2].max() - corners[:, 2].min()) > 1.3
-    return tall and not boundary_vertices(obj.data).any()
+    extent = corners.max(axis=0) - corners.min(axis=0)
+    materials = tuple(slot.material.name for slot in obj.material_slots if slot.material is not None)
+    return garment.ImportedMesh(obj.name, materials, float(extent[2]), float(extent.max()),
+                                not boundary_vertices(obj.data).any(), _rig_of(obj))
+
+
+def _avatars(meshes: Sequence[Any], factor: float) -> List[Any]:
+    """The meshes of an import that are the avatar exported with the garment (:func:`garment.avatar_meshes`)."""
+    if len(meshes) < 2:
+        return []
+    return [meshes[i] for i in garment.avatar_meshes([_imported_mesh(obj, factor) for obj in meshes])]
 
 
 def _turn_matrix(turn: Optional[Tuple[str, float]]) -> Matrix:
@@ -698,7 +709,7 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
     size = float((corners.max(axis=0) - corners.min(axis=0)).max())
     unit_name = garment.import_unit(size, category, unit)
     factor = garment.UNITS[unit_name or "m"]
-    avatars = [obj for obj in meshes if _looks_like_avatar(obj, factor)] if len(meshes) > 1 else []
+    avatars = _avatars(meshes, factor)
     if avatars and len(avatars) < len(meshes):
         meshes = [obj for obj in meshes if obj not in avatars]
         corners = np.concatenate([np.array([obj.matrix_world @ Vector(c) for c in obj.bound_box]) for obj in meshes])
@@ -707,7 +718,11 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
         factor = garment.UNITS[unit_name or "m"]
     else:
         avatars = []
-    rigged = [obj for obj in new if obj.type == "ARMATURE"]
+    # The avatar's armature goes with it; a garment exported with skin weights keeps its own.
+    kept_rigs = {_rig_of(obj) for obj in meshes}
+    rigs = [obj for obj in new if obj.type == "ARMATURE"]
+    avatars += [obj for obj in rigs if avatars and obj.name not in kept_rigs]
+    rigged = [obj for obj in rigs if obj not in avatars]
     scale = Matrix.Scale(factor, 4)
     turns: List[Tuple[str, float]] = []
     if orient:
@@ -1546,9 +1561,9 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     """Welds the panel seams within ``weld`` metres (never a lining onto its shell, never a hem onto itself), removes
     loose and degenerate geometry, triangulates, shades smooth and adds the ped vertex colours. A thick export (panels
     closed into slabs, without open edges) is welded across panels and the walls between them are removed. A
-    generator: it yields ``(stage text key, done, total)`` before each stage, so a modal operator can show the progress
-    and stop between stages; nothing changes on the garment before the last stage. Returns what it did, with ``open``,
-    the seam vertices that stayed open."""
+    generator: it yields ``(stage text key, done, total)`` before each stage and after each round of the weld, so a
+    modal operator can show the progress and stop between them; nothing changes on the garment before the last stage.
+    Returns what it did, with ``open``, the seam vertices that stayed open (they are left selected, for Edit Mode)."""
     yield "garment.stage.seams", 0, 3
     mesh = obj.data
     positions = world_positions(obj)
@@ -1566,11 +1581,20 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
         apart = garment.lining_pairs(positions, normals, material, areas=vertex_areas(positions, mesh_triangles(mesh))) \
             if len(set(material.tolist())) > 1 else []
         fabrics, lining = material, bool(apart)
+    yield "garment.stage.seams", 0, 3  # looking for a lining takes a moment on a detailed garment
     rules = seam_rules(obj, positions, normals)
+    rules.update(fabrics=fabrics, apart=apart, components=parts)
     yield "garment.stage.weld", 1, 3
-    target, merged = garment.weld_targets(positions, weld, None if thick else boundary, fabrics=fabrics, apart=apart,
-                                          components=parts, cross_components_only=thick, **rules)
-    open_seams = 0 if thick else garment.open_seam_count(positions, weld, boundary, parts, target)
+    steps = garment.weld_steps(positions, weld, None if thick else boundary, cross_components_only=thick, **rules)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            target, merged = stop.value
+            break
+        yield "garment.stage.weld", 1, 3
+    open_vertices = np.zeros(0, dtype=np.int64) if thick else garment.open_seams(
+        positions, weld, boundary, parts, target, edges=open_edges(mesh), **rules)
     yield "garment.stage.clean", 2, 3
     hide_problems(obj)
     applied = apply_transform(obj)  # world positions stay; the weld below works in the object's own frame
@@ -1582,6 +1606,15 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bm.verts.ensure_lookup_table()
+    if len(open_vertices):
+        # The seams that stayed open are left selected (the selection lives through the weld and the clean-up below).
+        for face in bm.faces:
+            face.select = False
+        for edge in bm.edges:
+            edge.select = False
+        opened = set(int(i) for i in open_vertices)
+        for vertex in bm.verts:
+            vertex.select = vertex.index in opened
     inverse = obj.matrix_world.inverted()
     targetmap = {}
     for index in np.nonzero(target != np.arange(count))[0]:
@@ -1628,7 +1661,7 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     set_flag(obj, "dct_prepared")
     clear_flags(obj, *STALE)
     return {"welded": welded, "removed": removed, "triangles": triangles, "lining": lining,
-            "colours": colours_written, "applied": applied, "thick": thick, "walls": walls, "open": open_seams,
+            "colours": colours_written, "applied": applied, "thick": thick, "walls": walls, "open": len(open_vertices),
             "boundary": int(boundary.sum())}
 
 
@@ -1826,9 +1859,9 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
         if slot.material is not None and slot.material not in materials:
             materials.append(slot.material)
     maps = _maps_present(materials)
-    total = 3 + sum(1 for key in ("alpha", "specular", "normal", "emission") if maps.get(key))
+    total = 5 + sum(1 for key in ("alpha", "specular", "normal", "emission") if maps.get(key))
     missing = missing_textures(materials)
-    yield "garment.stage.pack", 0, total
+    yield "garment.stage.pack-cut", 0, total
     if not mesh.uv_layers:
         raise fail("garment.why.no-uv")
     if any(slot.material is None for slot in obj.material_slots) or not obj.material_slots:
@@ -1866,6 +1899,8 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
     mesh.uv_layers[SOURCE_UV].active_render = True
 
     layer = context.view_layer
+    # Evening out the islands and placing them are two stages (each one Blender call), so Esc is honoured between them.
+    yield "garment.stage.pack-scale", 1, total
     deselect_all(layer, keep=obj)
     obj.select_set(True)
     layer.objects.active = obj
@@ -1875,6 +1910,17 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
             bpy.ops.mesh.select_all(action="SELECT")
             bpy.ops.uv.select_all(action="SELECT")
             bpy.ops.uv.average_islands_scale()
+        finally:
+            bpy.ops.object.mode_set(mode="OBJECT")
+    yield "garment.stage.pack", 2, total
+    deselect_all(layer, keep=obj)
+    obj.select_set(True)
+    layer.objects.active = obj
+    with context.temp_override(**_override(obj)):
+        bpy.ops.object.mode_set(mode="EDIT")
+        try:
+            bpy.ops.mesh.select_all(action="SELECT")
+            bpy.ops.uv.select_all(action="SELECT")
             bpy.ops.uv.pack_islands(rotate=True, scale=True, margin_method="FRACTION", margin=PACK_MARGIN / size,
                                     shape_method="CONCAVE")
         finally:
@@ -1921,7 +1967,7 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
         bake.margin_type = "EXTEND"
         bake.use_clear = True
         bake.target = "IMAGE_TEXTURES"
-        done = 1
+        done = 3
         yield "garment.stage.bake-colour", done, total
         results["diffuse"] = _bake_into(context, obj, materials, f"{obj.name}_bake", bake_size, "DIFFUSE")
         for key, kind, names in (("alpha", "EMIT", ("Alpha",)), ("specular", "EMIT", ("Specular IOR Level", "Specular"))):
@@ -2218,6 +2264,17 @@ def fit_arrays(obj: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray
     leave where they are (Pinned, the sculpt mask) and those of a lining."""
     return (world_positions(obj), mesh_triangles(obj.data), locked_vertices(obj),
             group_weights(obj, LINING_GROUP) > 0.5)
+
+
+def select_vertices(obj: Any, indices: Any) -> None:
+    """Selects exactly these vertices of a mesh (for Edit Mode to show them), nothing else."""
+    mesh = obj.data
+    chosen = np.zeros(len(mesh.vertices), dtype=bool)
+    chosen[np.asarray(indices, dtype=np.int64)] = True
+    mesh.vertices.foreach_set("select", chosen)
+    mesh.edges.foreach_set("select", np.zeros(len(mesh.edges), dtype=bool))
+    mesh.polygons.foreach_set("select", np.zeros(len(mesh.polygons), dtype=bool))
+    mesh.update()
 
 
 def fit_digest(obj: Any) -> str:
