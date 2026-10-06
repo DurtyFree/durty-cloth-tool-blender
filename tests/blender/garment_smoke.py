@@ -959,8 +959,8 @@ def drawable_facts(xml):
 
 
 def drawn(facts):
-    """Where the game and Durty Cloth Tool's preview draw the High level at rest: as stored when it is skinned (each
-    vertex follows its bones from their rest pose), at the root bone otherwise."""
+    """Where Durty Cloth Tool's preview draws the High level at rest: as stored when it is skinned (each vertex follows
+    its bones from their rest pose), at the root bone otherwise."""
     _, skins, weighted, points = facts
     return points if skins and all(skins) and weighted else points @ HALF_TURN.T
 
@@ -987,7 +987,7 @@ def round_trip_from_dct(package, addon, state, ctrl, dct, check, pump, draw_ever
     Durty Cloth Tool sends a cloth stored without a skeleton (with the ped's skeleton lent, whose root stands half a
     turn about Z), is opened, pushed back and added to the project. The cloth must still face the front everywhere it
     arrives: skinned, without the lent skeleton, the logo in front. The same model sent without the skeleton shows
-    why it is lent: Sollumz drops the weights, and the push comes back rigid and turned around."""
+    why it is lent: Sollumz drops the weights, and the push comes back rigid and turned around (recorded)."""
     gdct = sys.modules[package + ".garment_dct"]
     host = sys.modules[package + ".host"]
     ui_garment = sys.modules[package + ".ui_garment"]
@@ -1063,9 +1063,9 @@ def round_trip_from_dct(package, addon, state, ctrl, dct, check, pump, draw_ever
 
     # Sent without the skeleton (as before): Sollumz drops the weights and the push comes back turned around.
     bare = xml.replace(xml[xml.index(b"<Skeleton>"):xml.index(b"</Skeleton>") + len(b"</Skeleton>")], b"")
+    # (Recorded, not checked: it is Sollumz's behaviour, which a later Sollumz may change.)
     bare_root, rigid = open_and_push([(files[0][0], bare), files[1]], False)
-    check("without the lent skeleton the push is rigid and faces backwards (why Durty Cloth Tool lends it)",
-          rigid[0] == 0 and not any(rigid[1]) and not faces_front(drawn(rigid)), rigid[:3])
+    rigid_turned = not any(rigid[1]) and not faces_front(drawn(rigid))
     scene.dct_link.auto_push = False
     ctrl.model.discard()
     pump(addon, lambda: ctrl.model.lease is None, what="the turned shirt's discard")
@@ -1107,7 +1107,7 @@ def round_trip_from_dct(package, addon, state, ctrl, dct, check, pump, draw_ever
     ctrl.skeletons.forget()
     return {"check": "edit model round trip (real Sollumz)", "ok": True,
             "detail": f"opened {len(lent[3])} vertices with the lent skeleton; pushed skinned {pushed[1]}, "
-                      f"without it rigid {rigid[1]}; added skinned {added[1]}"}
+                      f"without it skinned {rigid[1]} (turned around: {rigid_turned}); added skinned {added[1]}"}
 
 
 def png_size(data):
@@ -1311,7 +1311,8 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     check("the push names the added cloth", dct.pushes[-1][0].get("binding") == ADDED_BINDING, dct.pushes[-1][0])
     pushed = next(bytes(data) for name, data in dct.pushes[-1][1].items() if name.endswith(".ydd.xml"))
     check("the push leaves the skeleton out, as the add did", b"<Skeleton" not in pushed
-          and (real or STUB["calls"][-1]["exclude_skeleton"] is True))
+          and (real or (STUB["calls"][-1]["exclude_skeleton"] is True
+                        and STUB["calls"][-1]["mesh_domain"] == "FACE_CORNER")))
     check("the template was kept for every add", dct.templates_sent.count("female") == 1, dct.templates_sent)
     return {"check": "add to Durty Cloth Tool (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True,
             "detail": f"{len(model)} bytes of XML, files {names}"}

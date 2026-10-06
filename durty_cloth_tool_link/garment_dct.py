@@ -46,8 +46,9 @@ WORK_PREFIX = "add-"
 STALE_SECONDS = 600.0
 PED_SHADER = "ped.sps"
 #: The Sollumz settings every add uses, whatever the user chose: the ped's own skeleton (Exclude Skeleton), one
-#: vertex per face corner (UV seams stay seams), no parent transform baked in.
-EXPORT_OVERRIDES: Dict[str, Any] = {"exclude_skeleton": True, "mesh_domain": "FACE_CORNER", "apply_transforms": False}
+#: vertex per face corner (UV seams stay seams), no parent transform baked in. Push Model on the added cloth uses them
+#: too (the skeleton the garment sits on is marked as lent).
+EXPORT_OVERRIDES: Dict[str, Any] = host.LENT_SKELETON_EXPORT
 #: The skeleton template carries its own skeleton: never an external one from the user's import settings.
 IMPORT_OVERRIDES: Dict[str, Any] = {"dwd_import_external_skeleton": "NO"}
 DRAWABLE_MODEL = "sollumz_drawable_model"

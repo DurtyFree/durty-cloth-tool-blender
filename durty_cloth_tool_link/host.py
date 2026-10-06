@@ -267,8 +267,12 @@ CLOTH_NAME = "dct_cloth_name"
 #: On a Drawable Dictionary opened from Durty Cloth Tool: the skeleton in it was lent by Durty Cloth Tool (the ped's
 #: own, because the cloth is stored without one), so every push leaves it out again.
 LENT_SKELETON = "dct_lent_skeleton"
-#: Sollumz's settings for a model whose skeleton is lent: exported without it, as the cloth is stored.
-LENT_SKELETON_EXPORT: Dict[str, Any] = {"exclude_skeleton": True}
+#: Sollumz's settings for a model whose skeleton is lent, whatever the user chose: exported as the cloth is stored
+#: and as Add to Project exports it, without that skeleton, one vertex per face corner (UV seams stay seams), no
+#: parent transform baked in.
+LENT_SKELETON_EXPORT: Dict[str, Any] = {
+    "exclude_skeleton": True, "mesh_domain": "FACE_CORNER", "apply_transforms": False,
+}
 #: And for importing it: its own skeleton, never an external one from the user's import settings.
 LENT_SKELETON_IMPORT: Dict[str, Any] = {"dwd_import_external_skeleton": "NO"}
 

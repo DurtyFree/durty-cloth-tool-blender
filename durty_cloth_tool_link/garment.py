@@ -303,8 +303,6 @@ def next_step(state: FlowState) -> str:
             return "garment.next.validate-problems"
         if state.findings != "warnings":
             return "garment.next.validate"
-    if state.added:
-        return "garment.next.done"
     if state.adding:
         return "garment.next.adding"
     if not state.connected:
