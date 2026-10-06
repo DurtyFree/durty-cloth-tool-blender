@@ -520,9 +520,9 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
     check("the opened model's files exist while it is on the ped", folder.is_dir())
     log = draw_everything(package, state, "opened model")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
-    check("the opened model says where it came from and which cloth it is linked to",
-          "Opened from Durty Cloth Tool: smoke_open" in labels and "Linked to jbib_003_u" in labels
-          and ("operator", "dct_link.unlink_model") in log, labels)
+    check("the opened model says where it came from and which cloth it is linked to, by the cloth's name",
+          "Opened from Durty Cloth Tool: jbib_003_u A" in labels and "Linked to jbib_003_u" in labels
+          and "Model: jbib_003_u A" in labels and ("operator", "dct_link.unlink_model") in log, labels)
 
     # Undo and redo keep the link (the add-on records an undo step after linking).
     root_name = root.name
@@ -567,6 +567,36 @@ def open_from_dct(args, addon, state, package, ctrl, dct, scene, rng):
           images and all(image.packed_file is not None for image in images)
           and (not args.sollumz or tuple(images[0].size) == (4, 4)),
           [(image.name, tuple(image.size), image.packed_file is not None) for image in images])
+
+    if not args.sollumz:
+        # A model DCT lent the ped's skeleton (the cloth is stored without one), named after the project's data file:
+        # it opens on that skeleton, every push leaves it out, and the panel calls it by the cloth's name.
+        from tests.support import synthetic
+
+        other = {"clothId": "0d9e8f7a-6b5c-4d3e-8f1a-2b3c4d5e6f70", "textureId": "1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b"}
+        data_file = "6a1f0c2e-9d3b-4e57-8a64-2b7c9e0d1f35"
+        pushes = len(dct.pushes)
+        request_id = dct.open_model([(f"{data_file}.ydd.xml", synthetic.skeleton_template_xml())], binding=other,
+                                    name="Smoke Lent Shirt", lent_skeleton=True)
+        pump(addon, lambda: dct.host_result(request_id) is not None and len(dct.pushes) > pushes
+             and ctrl.model.lease is not None and not ctrl.model.pushing, timeout=60, what="the lent model's push")
+        lent_root = state.watcher.root()
+        check("a model with a lent skeleton opens on it and is pushed with Exclude Skeleton",
+              lent_root is not None and lent_root.get(host.LENT_SKELETON) == 1
+              and any(child.type == "ARMATURE" for child in lent_root.children)
+              and STUB["calls"][-1]["exclude_skeleton"] is True
+              and not any(b"<Skeleton" in bytes(data) for data in dct.pushes[-1][1].values()), STUB["calls"][-1])
+        log = draw_everything(package, state, "model with a lent skeleton")
+        labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+        check("a model named after the data file is called by the cloth's name",
+              "Model: Smoke Lent Shirt" in labels and "Linked to Smoke Lent Shirt" in labels and data_file not in labels,
+              labels)
+        scene.dct_link.auto_push = False
+        bpy.ops.object.select_all(action="DESELECT")
+        lent_root.select_set(True)
+        bpy.context.view_layer.objects.active = lent_root
+        bpy.ops.dct_link.model_discard()
+        pump(addon, lambda: ctrl.model.lease is None, what="the lent model's discard")
 
     if args.sollumz:
         # Open the same model twice with a changed diffuse: the second import shows the new pixels, never the

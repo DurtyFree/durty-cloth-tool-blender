@@ -1029,12 +1029,15 @@ class FakeDct:
         return request_id
 
     def open_model(self, files: List[Any], *, binding: Optional[Dict[str, str]] = None, name: str = "jbib_003_u",
-                   request_id: Optional[str] = None) -> str:
+                   request_id: Optional[str] = None, lent_skeleton: bool = False) -> str:
         """Edit in connected app for a model: ``host.openModel`` with ``files`` as ``(name, bytes)``, the
-        ``*.ydd.xml`` first. Returns the request id."""
+        ``*.ydd.xml`` first; ``lent_skeleton`` says the model carries the ped's skeleton, lent because the cloth is
+        stored without one. Returns the request id."""
         request_id = request_id or "om" + secrets.token_hex(3)
         header = {"type": "host.openModel", "id": request_id, "binding": binding or BINDING, "name": name,
                   "format": "ydd-xml", "files": [{"name": n, "length": len(data)} for n, data in files]}
+        if lent_skeleton:
+            header["lentSkeleton"] = True
         self.connections_ready[-1].send_binary(header, b"".join(bytes(data) for _, data in files))
         return request_id
 

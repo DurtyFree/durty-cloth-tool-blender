@@ -747,7 +747,8 @@ class ModelPush:
     def push(self, export: Callable[[str], Any], root_name: Optional[str] = None, *, automatic: bool = False,
              binding: Optional[Dict[str, str]] = None) -> Request:
         """Exports with ``export(folder)`` into a temporary folder, collects the files and pushes them. ``export``
-        may return an object whose ``warnings`` says the exporter logged warnings.
+        may return an object whose ``warnings`` says the exporter logged warnings. ``root_name`` is what the panel
+        calls the model (the file name when there is none).
 
         ``binding`` is the cloth a model opened from Durty Cloth Tool belongs to. The first push names it; later
         pushes use the lease DCT returned. When the model shown now belongs to another cloth, DCT is asked to take
@@ -780,7 +781,8 @@ class ModelPush:
                 self.note = Notice("WARNING", msg("model.warnings"))
         if not automatic:
             self.paused = False
-        self.status = Notice("INFO", msg("model.sending", name=collected.model.name, count=len(collected.textures)))
+        self.status = Notice("INFO", msg("model.sending", name=root_name or collected.model.name,
+                                         count=len(collected.textures)))
         if binding is not None and self.lease is not None and not same_binding(self.lease_binding, binding):
             # The model on the ped belongs to another cloth: DCT ends it first, then this one is pushed bound.
             request = session.discard_model()
@@ -1292,11 +1294,30 @@ class DocumentHost(Protocol):
 
     def model_problem(self) -> Optional[Msg]: ...  # why models cannot be opened now (Sollumz), or None
 
-    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> "ImportedModel": ...
+    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str],
+                     opened: "OpenedModel") -> "ImportedModel": ...
+
+
+class OpenedModel(NamedTuple):
+    """What Durty Cloth Tool said about a model it sent (``host.openModel``) besides its files."""
+
+    #: The cloth's name as Durty Cloth Tool shows it (its model file is named after the project's data file).
+    name: str
+    #: Durty Cloth Tool added the skeleton of the ped the cloth is drawn on, because the cloth is stored without one:
+    #: the model opens rigged, keeps its bone weights, and every push leaves that skeleton out again.
+    lent_skeleton: bool = False
+
+
+def opened_model(header: Dict[str, Any], fallback: str) -> OpenedModel:
+    """What a ``host.openModel`` header says about the model: its display name (``fallback`` when it has none) and
+    whether the skeleton in it is lent (``lentSkeleton``, an optional property only ``true`` turns on)."""
+    name = header.get("name")
+    name = name.strip() if isinstance(name, str) else ""
+    return OpenedModel(name or fallback, header.get("lentSkeleton") is True)
 
 
 class ImportedModel(NamedTuple):
-    """A model imported into Blender: the Drawable Dictionary's name and how to push it (bound to its cloth)."""
+    """A model imported into Blender: the name the panel shows for it and how to push it (bound to its cloth)."""
 
     name: str
     push: Callable[[], Any]
@@ -1310,8 +1331,12 @@ class _ModelImport(NamedTuple):
     directory: pathlib.Path  # the folder named after the model inside it, which Sollumz imports from
     model_file: str
     binding: Dict[str, str]
-    name: str
+    opened: OpenedModel
     poll_number: int
+
+    @property
+    def name(self) -> str:
+        return self.opened.name
 
 
 #: The add-on's temporary folders (the files of models opened from DCT, the exports of an add or a custom ped): one per
@@ -1754,6 +1779,13 @@ class LinkController:
             return FocusInfo("", None, None, None, None, (), dict(linked), linked=True)
         return self.focus_info()
 
+    def model_label(self, binding: Optional[Dict[str, str]], stored_name: Optional[str], fallback: str) -> str:
+        """What the panel calls a Drawable Dictionary: the cloth it is linked to ("Top 002 Tshirt A"), else the
+        cloth's name Durty Cloth Tool gave it when the model was opened or added, else the dictionary's own name. A
+        model opened from Durty Cloth Tool is named after the project's data file, which no user knows it by."""
+        label = self.cloth_label(binding) if binding else None
+        return label or stored_name or fallback
+
     def cloth_label(self, binding: Optional[Dict[str, str]] = None) -> Optional[str]:
         """A cloth and its variation, as in "jbib_003_u B": the one ``binding`` names, or the focused one."""
         if binding:
@@ -2129,7 +2161,9 @@ class LinkController:
         timer step, after DCT heard ``ok``. ``dependency-missing`` without a usable Sollumz, ``busy`` while a model
         is pushed, saved or imported, ``open-failed`` when the files cannot be written."""
         model_file = next((name for name, _ in request.files if name.lower().endswith(bundle.MODEL_SUFFIX)), "")
-        name = model_file.split(".", 1)[0] or request.name
+        stem = model_file.split(".", 1)[0]  # the folder Sollumz reads from; DCT names the file after its data file
+        opened = opened_model(request.header, stem)
+        name = opened.name  # what the user calls the cloth, in every message
         if self.documents is None:
             request.refuse("not-supported")
             return
@@ -2145,7 +2179,7 @@ class LinkController:
             self.touch()
             return
         try:
-            folder, directory = self._write_model_files(name, model_file, request.files)
+            folder, directory = self._write_model_files(stem, model_file, request.files)
         except (OSError, ValueError) as exc:
             request.refuse("open-failed")
             self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=name, detail=_detail(exc)))
@@ -2157,7 +2191,7 @@ class LinkController:
             self.touch()
             return
         # The files are in place and the import runs in the next step, after DCT heard the answer.
-        self._model_import = _ModelImport(request, folder, directory, model_file, dict(request.binding), name,
+        self._model_import = _ModelImport(request, folder, directory, model_file, dict(request.binding), opened,
                                           self._polls)
         self.model.open_notice = Notice("INFO", msg("open.model-importing", name=name))
         self.touch()
@@ -2205,7 +2239,7 @@ class LinkController:
         self._model_import = None
         try:
             assert self.documents is not None
-            imported = self.documents.import_model(job.directory, job.model_file, job.binding)
+            imported = self.documents.import_model(job.directory, job.model_file, job.binding, job.opened)
         except Exception as exc:  # noqa: BLE001 - DCT already heard ok; the panel says what went wrong
             self._remove_model_folder(job.folder)
             self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=job.name, detail=_detail(exc)))

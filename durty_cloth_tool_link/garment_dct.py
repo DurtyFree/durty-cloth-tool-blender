@@ -188,6 +188,7 @@ def import_skeleton(context: Any, template: Any, bones: Sequence[str], gender: s
     armature.name = f"{base}_skel"  # never the dictionary's name (Blender would rename one of them)
     root[SKELETON_TAG] = gender
     armature[SKELETON_TAG] = gender
+    root[host.LENT_SKELETON] = 1  # the ped's own: Push Model after the add leaves it out, as the add did
     _move_to([root, armature], _collection_of(garment_obj, context))
     return Skeleton(root, armature, gender)
 
@@ -626,7 +627,7 @@ def picture(image: Any) -> Tuple[int, int, bytes]:
 def store_added(root: Any, obj: Any, binding: Dict[str, str], name: str) -> None:
     """Links the Drawable Dictionary to the cloth Durty Cloth Tool added (as a model opened from it is linked), so Push
     Model and Save Model to Cloth go to that cloth, and marks the garment as added."""
-    host.store_binding(root, binding)
+    host.store_binding(root, binding, name=name)
     for other in host.others_linked_alike(root):
         host.clear_binding(other)
     obj[ADDED] = name

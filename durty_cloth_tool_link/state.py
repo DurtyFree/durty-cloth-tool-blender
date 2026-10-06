@@ -63,17 +63,32 @@ def scene_auto_push(scene: Optional[Any] = None) -> bool:
     return bool(settings is not None and settings.auto_push)
 
 
+def model_label(root: Optional[Any]) -> Optional[str]:
+    """What the panel calls a Drawable Dictionary (:meth:`link.LinkController.model_label`), or ``None``."""
+    if root is None:
+        return None
+    try:
+        fallback = root.name
+    except ReferenceError:
+        return None  # removed by an undo step or a file load
+    stored = host.stored_cloth_name(root)
+    if controller is None:
+        return stored or fallback
+    return controller.model_label(host.stored_binding(root), stored, fallback)
+
+
 def push_model(root: Any, automatic: bool = False) -> None:
     """Exports ``root`` with Sollumz and pushes it, bound to the cloth it is linked to (a model opened from Durty
-    Cloth Tool). Raises ``ValueError`` with a message for the user."""
+    Cloth Tool), without the skeleton Durty Cloth Tool lent it. Raises ``ValueError`` with a message for the user."""
     ctrl = get()
     others = host.others_linked_alike(root)
     if others:  # a copy (Duplicate copies the link): the user decides which one stays linked
         raise UserError(msg("model.linked-twice", name=others[0].name))
+    overrides = host.push_settings(root)
     watcher.exporting = True
     try:
-        ctrl.model.push(lambda folder: host.export_with_sollumz(root, folder), root.name, automatic=automatic,
-                        binding=host.stored_binding(root))
+        ctrl.model.push(lambda folder: host.export_with_sollumz(root, folder, overrides), model_label(root),
+                        automatic=automatic, binding=host.stored_binding(root))
         watcher.watch(root)
     finally:
         watcher.exporting = False
@@ -120,9 +135,13 @@ class BlenderDocuments:
     def model_problem(self) -> Optional[Any]:
         return host.model_open_problem()
 
-    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> link.ImportedModel:
-        root, warnings = host.import_with_sollumz(folder, model_file)
-        host.store_binding(root, binding)
+    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str],
+                     opened: link.OpenedModel) -> link.ImportedModel:
+        root, warnings = host.import_with_sollumz(folder, model_file,
+                                                  host.LENT_SKELETON_IMPORT if opened.lent_skeleton else None)
+        host.store_binding(root, binding, name=opened.name)
+        if opened.lent_skeleton:
+            root[host.LENT_SKELETON] = 1  # kept in the .blend file: every later push leaves the skeleton out
         for earlier in host.others_linked_alike(root):
             host.clear_binding(earlier)  # the model opened now is the one linked to the cloth
         window = host.window_for(root)
@@ -131,7 +150,7 @@ class BlenderDocuments:
             scene.dct_link.auto_push = True  # each change is sent again, as for a model pushed by hand
             scene.dct_link.workspace = "CLOTHING"  # the DCT tab shows it in Linked Cloth
         host.push_undo("Open Model from Durty Cloth Tool")
-        return link.ImportedModel(root.name, lambda: push_model(root), warnings)
+        return link.ImportedModel(model_label(root) or opened.name, lambda: push_model(root), warnings)
 
 
 def auto_push() -> None:

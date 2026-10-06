@@ -745,10 +745,12 @@ class FakeDocuments:
             self.meanwhile()
         return self.problem
 
-    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str]) -> link.ImportedModel:
+    def import_model(self, folder: pathlib.Path, model_file: str, binding: Dict[str, str],
+                     opened: link.OpenedModel) -> link.ImportedModel:
         files = {p.relative_to(folder).as_posix(): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
-        self.imports.append({"folder": folder, "model": model_file, "binding": binding, "files": files})
-        name = model_file.split(".", 1)[0]
+        self.imports.append({"folder": folder, "model": model_file, "binding": binding, "files": files,
+                             "opened": opened})
+        name = opened.name
         return link.ImportedModel(name, lambda: self.ctrl.model.push(Export(), name, binding=binding), self.warnings)
 
 
@@ -960,6 +962,37 @@ def test_a_model_opened_from_dct_is_imported_and_pushed_bound(tmp_path, dct, api
     ctrl.model.discard()
     drive(ctrl, lambda: ctrl.model.lease is None)
     assert not folder.parent.exists()  # the temporary files go with the model
+
+
+def test_a_model_named_after_dcts_data_file_is_shown_by_the_cloths_name(tmp_path, dct, api, stores):
+    """DCT names the model file after the project's data file (a GUID) and sends the cloth's name beside it: every
+    message names the cloth, and the files still go where Sollumz reads them. The skeleton DCT lent is reported to
+    the Blender side, which leaves it out of every push."""
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    data_file = "6a1f0c2e-9d3b-4e57-8a64-2b7c9e0d1f35"
+    request_id = dct.open_model(model_files(data_file), binding=OTHER, name="Top 002 Tshirt", lent_skeleton=True)
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert dct.host_result(request_id)["ok"] is True
+    (imported,) = documents.imports
+    assert imported["opened"] == link.OpenedModel("Top 002 Tshirt", lent_skeleton=True)
+    assert imported["model"] == f"{data_file}.ydd.xml" and imported["folder"].name == data_file
+    assert ctrl.model.open_notice.message == strings.msg("open.opened", name="Top 002 Tshirt")
+    assert data_file not in ctrl.model.status.text and data_file not in (ctrl.model.root_name or "")
+    # Without lentSkeleton (or with anything but true) the model brought no skeleton of DCT's.
+    dct.open_model(model_files(), binding=BINDING)
+    drive(ctrl, lambda: len(documents.imports) == 2)
+    assert documents.imports[1]["opened"] == link.OpenedModel("jbib_003_u", lent_skeleton=False)
+    assert link.opened_model({"name": " ", "lentSkeleton": "true"}, "stem") == link.OpenedModel("stem", False)
+
+
+def test_a_model_is_called_by_its_cloth_then_by_the_name_dct_gave_it(tmp_path, dct, api, stores):
+    ctrl, _ = documents_controller(tmp_path, dct, api, stores)
+    # The focused cloth is known: its name and variation, as the Linked Cloth panel shows them.
+    assert ctrl.model_label(BINDING, "Top 002 Tshirt", "6a1f0c2e") == "jbib_003_u A"
+    # A cloth never seen in the selection: the name DCT sent with the model, else the dictionary's own name.
+    assert ctrl.model_label(OTHER, "Top 002 Tshirt", "6a1f0c2e") == "Top 002 Tshirt"
+    assert ctrl.model_label(OTHER, None, "smoke_ydd") == "smoke_ydd"
+    assert ctrl.model_label(None, None, "smoke_ydd") == "smoke_ydd"
 
 
 def test_a_model_for_another_cloth_replaces_the_one_on_the_ped(tmp_path, dct, api, stores):

@@ -8,7 +8,8 @@ map), levels of detail, validate, backups, adding the coat to the project open i
 128-bone skeleton template, the checks, the export, the add, an add that fails after the garment changed, Cancel and
 the free limit), a one-material garment whose levels of detail keep their UVs, the garment types (an open jacket, a
 skirt's bridged weights, a dress split at its waist, a mask aligned from an avatar, a thick export's walls, a hat added
-as a prop), and that nothing else in the scene changes.
+as a prop), with the real Sollumz a skinned shirt opened from Durty Cloth Tool on its lent skeleton that is pushed and
+added back still facing the front, and that nothing else in the scene changes.
 
 Called by ``smoke_in_blender.py`` while the add-on is signed in to the fake gta.clothing. Only for use inside
 Blender.
@@ -593,6 +594,8 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
         results.append(add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real,
                                         draw_everything))
     results.append(types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, real))
+    if dct is not None and real:
+        results.append(round_trip_from_dct(package, addon, state, ctrl, dct, check, pump, draw_everything, folder))
 
     # Nothing else in the scene changed.
     check("the user's other objects are untouched", np.abs(positions(users_cube) - users_shape).max() == 0
@@ -920,6 +923,191 @@ def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real
 
 
 ADDED_BINDING_SHIRT = {"clothId": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d", "textureId": "8b9c0d1e-2f3a-4b4c-9d5e-6f7a8b9c0d1e"}
+OPENED_BINDING = {"clothId": "2b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e", "textureId": "3c4d5e6f-7a8b-4c9d-8e0f-2a3b4c5d6e7f"}
+ADDED_BINDING_TURNED = {"clothId": "4d5e6f7a-8b9c-4d0e-9f1a-3b4c5d6e7f8a", "textureId": "5e6f7a8b-9c0d-4e1f-8a2b-4c5d6e7f8a9b"}
+#: DCT names a model it sends after the project's data file.
+DATA_FILE = "6a1f0c2e-9d3b-4e57-8a64-2b7c9e0d1f35"
+#: A half turn about Z, as the root bone of a ped skeleton can stand at rest (made up here, nothing of the game): a
+#: rigid ped model is drawn at its root bone, so without its weights a cloth would face backwards.
+HALF_TURN = np.diag([-1.0, -1.0, 1.0])
+
+
+def turned_template(gender="male"):
+    """The synthetic skeleton template with its root bone turned half a turn about Z at rest."""
+    text = synthetic.skeleton_template_xml(gender).decode("utf-8")
+    still = '<Rotation x="0" y="0" z="0" w="1" />'
+    assert text.count(still) > 1
+    return text.replace(still, '<Rotation x="0" y="0" z="1" w="0" />', 1).encode("utf-8")
+
+
+def drawable_facts(xml):
+    """What a drawable dictionary's XML says about its first drawable: the bones of its own skeleton, the skin flag of
+    every model of its High level, whether that geometry carries bone weights, and its positions."""
+    from xml.etree import ElementTree
+
+    item = ElementTree.fromstring(bytes(xml)).find("Item")
+    bones = len(item.findall("Skeleton/Bones/Item"))
+    skins, weighted, points = [], True, []
+    for model in item.findall("DrawableModelsHigh/Item"):
+        skins.append(int(model.find("HasSkin").get("value")))
+        for buffer in model.findall("Geometries/Item/VertexBuffer"):
+            layout = [element.tag for element in buffer.find("Layout")]
+            weighted = weighted and {"BlendWeights", "BlendIndices"} <= set(layout) and layout[0] == "Position"
+            data = buffer.find("Data") if buffer.find("Data") is not None else buffer.find("Data1")
+            points += [[float(v) for v in line.split()[:3]] for line in data.text.strip().splitlines()]
+    return bones, skins, weighted and bool(skins), np.array(points)
+
+
+def drawn(facts):
+    """Where the game and Durty Cloth Tool's preview draw the High level at rest: as stored when it is skinned (each
+    vertex follows its bones from their rest pose), at the root bone otherwise."""
+    _, skins, weighted, points = facts
+    return points if skins and all(skins) and weighted else points @ HALF_TURN.T
+
+
+def faces_front(points):
+    """The chest logo (the patch in front of the shirt, on the wearer's left: -Y, +X) is still there."""
+    logo = points[points[:, 1] < -0.115]
+    return len(logo) > 0 and float(logo[:, 0].min()) > 0.0
+
+
+def dds_file(width, height, rgb):
+    """An uncompressed 32-bit DDS file filled with one colour (what CodeWalker writes for small textures)."""
+    import struct
+
+    header = struct.pack("<4s7I44x", b"DDS ", 124, 0x100F, height, width, width * 4, 0, 0)
+    pixel_format = struct.pack("<8I", 32, 0x41, 0, 32, 0x00FF0000, 0x0000FF00, 0x000000FF, 0xFF000000)
+    caps = struct.pack("<5I", 0x1000, 0, 0, 0, 0)
+    red, green, blue = rgb
+    return header + pixel_format + caps + bytes((blue, green, red, 255)) * (width * height)
+
+
+def round_trip_from_dct(package, addon, state, ctrl, dct, check, pump, draw_everything, folder):
+    """Edit model in Blender with the real Sollumz, end to end: a skinned shirt with a chest logo on its left, sent as
+    Durty Cloth Tool sends a cloth stored without a skeleton (with the ped's skeleton lent, whose root stands half a
+    turn about Z), is opened, pushed back and added to the project. The cloth must still face the front everywhere it
+    arrives: skinned, without the lent skeleton, the logo in front. The same model sent without the skeleton shows
+    why it is lent: Sollumz drops the weights, and the push comes back rigid and turned around."""
+    gdct = sys.modules[package + ".garment_dct"]
+    host = sys.modules[package + ".host"]
+    ui_garment = sys.modules[package + ".ui_garment"]
+    garment = sys.modules[package + ".garment"]
+    scene = bpy.context.scene
+    props = scene.dct_garment
+
+    # The cloth as Durty Cloth Tool stores it, made with the real Sollumz on the turned skeleton.
+    work = folder / "turn"
+    work.mkdir()
+    template = turned_template()
+    (work / "skeleton.ydd.xml").write_bytes(template)
+    skeleton_root, _ = host.import_with_sollumz(work, "skeleton.ydd.xml", gdct.IMPORT_OVERRIDES)
+    armature = next(child for child in skeleton_root.children if child.type == "ARMATURE")
+    box = [(x, y, z) for x in (-0.2, 0.2) for y in (-0.1, 0.1) for z in (0.05, 0.55)]
+    logo = [(0.05, -0.13, 0.40), (0.12, -0.13, 0.40), (0.12, -0.13, 0.47), (0.05, -0.13, 0.47)]
+    faces = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 2, 6, 4), (1, 5, 7, 3), (0, 4, 5, 1), (2, 3, 7, 6), (8, 9, 10, 11)]
+    mesh = bpy.data.meshes.new("smoke_turn_shirt")
+    mesh.from_pydata(box + logo, [], faces)
+    mesh.uv_layers.new(name="UVMap")
+    shirt = bpy.data.objects.new("smoke_turn_shirt", mesh)
+    scene.collection.objects.link(shirt)
+    for name, weight in (("SKEL_Spine3", 0.7), ("SKEL_Spine2", 0.3)):
+        shirt.vertex_groups.new(name=name).add(list(range(len(mesh.vertices))), weight, "REPLACE")
+    shirt.data.materials.append(textured_material("smoke_turn", (0.1, 0.1, 0.1)))
+    gdct.attach(bpy.context, shirt, gdct.Skeleton(skeleton_root, armature, "male"))
+    gdct.setup_material(bpy.context, shirt, gdct.garment_images(shirt))
+    stored = work / "stored"
+    stored.mkdir()
+    host.export_with_sollumz(skeleton_root, str(stored))  # with its skeleton: what Durty Cloth Tool sends
+    xml = next(stored.glob("*.ydd.xml")).read_bytes()
+    lent = drawable_facts(xml)
+    check("the cloth to open carries the lent skeleton and its weights, the logo in front",
+          lent[0] == len(synthetic.SKELETON_BONES) and all(lent[1]) and lent[2] and faces_front(drawn(lent)), lent[:3])
+    import re
+
+    # The diffuse comes beside the model under the name its sampler gives, as Durty Cloth Tool sends it (Sollumz names
+    # no texture for an image that is not a file, so the sampler is given one first).
+    xml = xml.replace(b'<Item name="DiffuseSampler" type="Texture" />',
+                      b'<Item name="DiffuseSampler" type="Texture"><Name>smoke_turn_diff</Name></Item>')
+    found = re.search(rb'<Item name="DiffuseSampler" type="Texture">\s*<Name>([^<]+)</Name>', xml)
+    check("the cloth to open names its diffuse", found is not None)
+    diffuse = found.group(1).decode("utf-8")
+    gh_remove = sys.modules[package + ".garment_host"]._remove_objects
+    gh_remove([shirt, armature, skeleton_root])
+    files = [(f"{DATA_FILE}.ydd.xml", xml), (f"{diffuse}.dds", dds_file(16, 16, (30, 30, 30)))]
+
+    def open_and_push(sent, lent_skeleton):
+        pushes = len(dct.pushes)
+        objects_before = {obj.session_uid for obj in bpy.data.objects}
+        request_id = dct.open_model(sent, binding=OPENED_BINDING, name="Smoke Turn Shirt", lent_skeleton=lent_skeleton)
+        pump(addon, lambda: dct.host_result(request_id) is not None, what="the answer to the turned shirt")
+        pump(addon, lambda: len(dct.pushes) > pushes and ctrl.model.lease is not None and not ctrl.model.pushing,
+             timeout=60, what="the push of the opened shirt")
+        roots = [obj for obj in bpy.data.objects if obj.session_uid not in objects_before and obj.parent is None
+                 and getattr(obj, "sollum_type", "") == "sollumz_drawable_dictionary"]
+        pushed = dict(dct.pushes[-1][1])
+        return roots[0], drawable_facts(next(data for name, data in pushed.items() if name.endswith(".ydd.xml")))
+
+    # Opened with the lent skeleton: rigged in Blender, pushed back skinned and without it, facing the front.
+    root, pushed = open_and_push(files, True)
+    check("the opened shirt is rigged on the lent skeleton and remembers it is lent",
+          any(child.type == "ARMATURE" for child in root.children) and root.get(host.LENT_SKELETON) == 1)
+    check("the push leaves the lent skeleton out and keeps the weights", pushed[0] == 0 and pushed[1]
+          and all(pushed[1]) and pushed[2], pushed[:3])
+    check("the pushed shirt still faces the front, where it was", faces_front(drawn(pushed))
+          and np.allclose(np.unique(pushed[3].round(4), axis=0), np.unique(lent[3].round(4), axis=0)))
+    scene.dct_link.workspace = "CLOTHING"  # the Model panel (opening a model shows it there too)
+    log = draw_everything(package, state, "opened turned shirt")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the Model line names the cloth, never the data file",
+          "Model: Smoke Turn Shirt" in labels and DATA_FILE not in labels, labels[-400:])
+
+    # Sent without the skeleton (as before): Sollumz drops the weights and the push comes back turned around.
+    bare = xml.replace(xml[xml.index(b"<Skeleton>"):xml.index(b"</Skeleton>") + len(b"</Skeleton>")], b"")
+    bare_root, rigid = open_and_push([(files[0][0], bare), files[1]], False)
+    check("without the lent skeleton the push is rigid and faces backwards (why Durty Cloth Tool lends it)",
+          rigid[0] == 0 and not any(rigid[1]) and not faces_front(drawn(rigid)), rigid[:3])
+    scene.dct_link.auto_push = False
+    ctrl.model.discard()
+    pump(addon, lambda: ctrl.model.lease is None, what="the turned shirt's discard")
+    sys.modules[package + ".garment_host"]._remove_objects([bare_root, *bare_root.children_recursive])
+
+    # Added to the project as a garment made from the opened model: skinned, without a skeleton, facing the front.
+    # It skips the body, the markers and the fit: a model from Durty Cloth Tool already sits on the ped.
+    scene.dct_link.workspace = "GARMENT"
+    body = props.body
+    props.body = None
+    model = next(obj for obj in root.children_recursive if obj.type == "MESH")
+    for obj in bpy.context.view_layer.objects:
+        obj.select_set(obj == model)
+    bpy.context.view_layer.objects.active = model
+    check("Use Selected Garment runs on the opened shirt", "FINISHED" in bpy.ops.dct_link.fit_use_garment())
+    dct.skeleton_files = {gender: [(synthetic.skeleton_template_file(gender), turned_template(gender))]
+                          for gender in ("male", "female")}
+    ctrl.skeletons.forget()
+    props.category = "tshirt"  # the slots offered follow the type (the hat before left only the head's)
+    props.slot, props.gender, props.item_name = "jbib", "male", "Smoke Turn Shirt"
+    props.variations.clear()
+    adds = len(dct.item_adds)
+    dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING_TURNED), "findings": []}
+    problems, _ = ui_garment.add_checks(bpy.context, synthetic.skeleton_names())
+    check("the shirt made from the opened model passes the add's checks as it is", not problems,
+          [(p.key, p.fields) for p in problems])
+    check("the shirt made from the opened model is added", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
+         what="the turned shirt's add")
+    pump(addon, lambda: len(dct.item_adds) > adds and not ctrl.item_add.adding, timeout=30,
+         what="the turned shirt's answer")
+    added = drawable_facts(bytes(dct.item_adds[-1][1][0][1]))
+    check("the added shirt is skinned, without a skeleton, and faces the front", added[0] == 0 and added[1]
+          and all(added[1]) and added[2] and faces_front(drawn(added)), added[:3])
+    flow = ui_garment.flow_state(bpy.context)
+    check("after the add the next step says the garment is done, not to add the body",
+          flow.added and not flow.body and garment.next_step(flow) == "garment.next.done", flow)
+    props.body = body
+    ctrl.skeletons.forget()
+    return {"check": "edit model round trip (real Sollumz)", "ok": True,
+            "detail": f"opened {len(lent[3])} vertices with the lent skeleton; pushed skinned {pushed[1]}, "
+                      f"without it rigid {rigid[1]}; added skinned {added[1]}"}
 
 
 def png_size(data):
@@ -1121,6 +1309,9 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     check("Push Model runs on the added cloth", "FINISHED" in bpy.ops.dct_link.model_push())
     pump(addon, lambda: len(dct.pushes) > pushes and not ctrl.model.pushing, timeout=30, what="the push")
     check("the push names the added cloth", dct.pushes[-1][0].get("binding") == ADDED_BINDING, dct.pushes[-1][0])
+    pushed = next(bytes(data) for name, data in dct.pushes[-1][1].items() if name.endswith(".ydd.xml"))
+    check("the push leaves the skeleton out, as the add did", b"<Skeleton" not in pushed
+          and (real or STUB["calls"][-1]["exclude_skeleton"] is True))
     check("the template was kept for every add", dct.templates_sent.count("female") == 1, dct.templates_sent)
     return {"check": "add to Durty Cloth Tool (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True,
             "detail": f"{len(model)} bytes of XML, files {names}"}

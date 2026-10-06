@@ -261,6 +261,16 @@ MAP = "dct_map"
 #: On an image opened from Durty Cloth Tool: the SHA-256 of the pixels it was filled with (RGBA8, rows top to
 #: bottom). The image is reused for the same map only while its pixels still are exactly those.
 PIXELS = "dct_pixels"
+#: On a Drawable Dictionary opened from (or added to) Durty Cloth Tool: the cloth's name there, which the panel shows
+#: until the cloth itself is known (the model's own name is that of the project's data file).
+CLOTH_NAME = "dct_cloth_name"
+#: On a Drawable Dictionary opened from Durty Cloth Tool: the skeleton in it was lent by Durty Cloth Tool (the ped's
+#: own, because the cloth is stored without one), so every push leaves it out again.
+LENT_SKELETON = "dct_lent_skeleton"
+#: Sollumz's settings for a model whose skeleton is lent: exported without it, as the cloth is stored.
+LENT_SKELETON_EXPORT: Dict[str, Any] = {"exclude_skeleton": True}
+#: And for importing it: its own skeleton, never an external one from the user's import settings.
+LENT_SKELETON_IMPORT: Dict[str, Any] = {"dwd_import_external_skeleton": "NO"}
 
 
 def stored_binding(data: Optional[Any]) -> Optional[Dict[str, str]]:
@@ -282,17 +292,40 @@ def stored_map(image: Optional[Any]) -> Optional[str]:
     return value if value in protocol.LIVE_TARGETS else None
 
 
-def store_binding(data: Any, binding: Dict[str, str], target: Optional[str] = None) -> None:
+def store_binding(data: Any, binding: Dict[str, str], target: Optional[str] = None, name: Optional[str] = None) -> None:
+    """Links an image or a Drawable Dictionary to its cloth; ``name`` is the cloth's name in Durty Cloth Tool."""
     data[CLOTH_ID] = binding["clothId"]
     data[TEXTURE_ID] = binding["textureId"]
     if target is not None:
         data[MAP] = target
+    if name:
+        data[CLOTH_NAME] = name
+    elif CLOTH_NAME in data:
+        del data[CLOTH_NAME]
 
 
 def clear_binding(data: Any) -> None:
-    for key in (CLOTH_ID, TEXTURE_ID, MAP, PIXELS):
+    for key in (CLOTH_ID, TEXTURE_ID, MAP, PIXELS, CLOTH_NAME):
         if key in data:
             del data[key]
+
+
+def stored_cloth_name(data: Optional[Any]) -> Optional[str]:
+    """The cloth's name Durty Cloth Tool gave a linked Drawable Dictionary, or ``None``."""
+    try:
+        value = data.get(CLOTH_NAME) if data is not None else None
+    except (AttributeError, ReferenceError):
+        return None
+    return value if isinstance(value, str) and value else None
+
+
+def push_settings(root: Any) -> Optional[Dict[str, Any]]:
+    """The Sollumz export settings a push of ``root`` needs on top of the user's: a model whose skeleton Durty Cloth
+    Tool lent goes back without it."""
+    try:
+        return dict(LENT_SKELETON_EXPORT) if root.get(LENT_SKELETON) else None
+    except (AttributeError, ReferenceError):
+        return None
 
 
 def push_undo(message: str) -> None:

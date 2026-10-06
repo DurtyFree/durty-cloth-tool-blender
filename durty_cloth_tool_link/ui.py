@@ -746,8 +746,10 @@ def draw_model(layout: Any, context: Any) -> None:
 
     layout.separator(factor=GAP)
     if model.lease is not None:
-        if model.root_name:
-            wrapped(layout, context, t("model.name", name=model.root_name), "OUTLINER_OB_EMPTY")
+        # The cloth's name, read now (the cloth may have become known, or renamed, since the push).
+        name = state.model_label(state.watcher.root()) or model.root_name
+        if name:
+            wrapped(layout, context, t("model.name", name=name), "OUTLINER_OB_EMPTY")
         draw_notice(layout, context, model.status)
         if model.findings:
             wrapped(layout, context, t("model.findings", count=len(model.findings)), "INFO")
@@ -784,7 +786,7 @@ def draw_model_link(layout: Any, context: Any) -> None:
     if binding is None:
         return
     layout.separator(factor=GAP_SMALL)
-    name = state.get().cloth_label(binding) or t("linked.unknown")
+    name = state.get().cloth_label(binding) or host.stored_cloth_name(root) or t("linked.unknown")
     row = layout.row()
     wrapped(row.column(), context, t("model.linked", name=name), "LINKED", reserve=2 * 24)
     row.operator("dct_link.unlink_model", text="", icon="UNLINKED")

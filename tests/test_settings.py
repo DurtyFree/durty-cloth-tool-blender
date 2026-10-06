@@ -42,7 +42,8 @@ GENERATED_DOCUMENTS = frozenset({"notes.md"})
 #: Words joined by slashes that are not paths (and element paths in the XML Sollumz reads and writes).
 NOT_PATHS = frozenset({"HTTP/1", "HTTP/1.1", "I/O", "application/json", "hello/challenge/auth", "GLB/glTF",
                        "fit/jobs", "fit/status", "fit/cancel", "fit/reference",
-                       "folder/model_file", "Skeleton/Bones", "Skeleton/Bones/Item"})
+                       "folder/model_file", "Skeleton/Bones", "Skeleton/Bones/Item", "DrawableModelsHigh/Item",
+                       "Geometries/Item/VertexBuffer"})
 #: Paths that exist somewhere else on purpose: the sculpt brush in Blender's bundled assets, and the files the tests
 #: write into temporary folders or refuse because they would leave their folder.
 OUTSIDE_PATHS = frozenset({
