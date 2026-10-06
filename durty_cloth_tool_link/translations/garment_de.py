@@ -49,7 +49,7 @@ TEXT = {
     "garment.category.shorts": "Kurze Hose",
     "garment.category.shorts.desc": "Hosen, die an oder über den Knien enden",
     "garment.category.shoes": "Schuhe",
-    "garment.category.shoes.desc": "Schuhe, Stiefel und Sandalen",
+    "garment.category.shoes.desc": "Schuhe und Stiefel",
     "garment.pose.a_pose": "A-Pose",
     "garment.pose.a_pose.desc": "Die Arme zeigen schräg nach unten, so wie das Ped im Spiel steht",
     "garment.pose.t_pose": "T-Pose",
@@ -76,10 +76,10 @@ TEXT = {
     "garment.prop.gender.desc": "Für welches Freemode-Ped das Kleidungsstück ist",
     "garment.prop.slot": "Slot",
     "garment.prop.slot.desc": "Der Kleidungsslot, in den das Kleidungsstück in Durty Cloth Tool kommt",
-    "garment.prop.category": "Kategorie",
+    "garment.prop.category": "Kleidungsart",
     "garment.prop.category.desc": (
-        "Welche Art Kleidungsstück es ist: Das legt fest, wohin die Marker kommen und welche Bereiche die Werkzeuge "
-        "anbieten"
+        "Was für ein Kleidungsstück es ist: Es legt den Slot fest, wie die Marker gefunden werden, welche Bereiche die "
+        "Werkzeuge anbieten und was geprüft wird"
     ),
     "garment.prop.pose": "Ausgangspose",
     "garment.prop.pose.desc": "Die Pose des Avatars, auf dem das Kleidungsstück erstellt wurde",
@@ -184,8 +184,9 @@ TEXT = {
     ),
     "garment.op.auto-markers": "Auto-Marker",
     "garment.op.auto-markers.desc": (
-        "Die Gelenkmarker anhand der Form des Kleidungsstücks setzen (Hals, Brust, Becken, Schultern, Ellbogen, "
-        "Handgelenke und Hüften; bei Hosen Hüften, Knie und Knöchel). Verschiebe alle, die danebenliegen"
+        "Die Gelenkmarker setzen: auf die Gelenke des unter Einrichtung gewählten Avatars, anhand der Form des "
+        "Kleidungsstücks (Oberteile und Hosen) oder zum Start auf die Gelenke des Körpers. Verschiebe alle, die "
+        "danebenliegen"
     ),
     "garment.op.mirror": "Links nach rechts spiegeln",
     "garment.op.mirror.desc": "Die Marker der linken Seite des Peds auf seine rechte Seite kopieren",
@@ -337,7 +338,7 @@ TEXT = {
     "garment.why.shape-keys": "Das Kleidungsstück hat Formschlüssel. Wende sie zuerst an oder entferne sie.",
     "garment.why.empty": "Das Kleidungsstück hat keine Geometrie.",
     "garment.why.no-body": "Füge zuerst unter Einrichtung den Freemode-Körper hinzu.",
-    "garment.why.no-markers": "Schuhe brauchen keine Marker.",
+    "garment.why.no-markers": "Diese Kleidungsart braucht keine Marker.",
     "garment.why.downloading": "Der Körper wird heruntergeladen.",
     "garment.why.sign-in": "Melde dich zuerst mit gta.clothing an (Verbinden) oder nutze eine Körperdatei.",
     "garment.why.select-mesh": "Wähle zuerst ein Mesh-Objekt aus.",
@@ -447,9 +448,11 @@ TEXT = {
     ),
     "garment.info.markers": (
         "Die Marker stehen für die Gelenke des Peds: Hals, Brust, Becken, Schultern, Ellbogen, Handgelenke und Hüften "
-        "(bei Hosen Hüften, Knie und Knöchel). Auto-Marker setzt sie anhand der Form des Kleidungsstücks, und Linien "
-        "in der 3D-Ansicht verbinden sie: Orange Linien heißen, dass etwas nicht stimmt. Verschiebe alle Marker, die "
-        "danebenliegen; Links nach rechts spiegeln kopiert die linke Seite auf die rechte."
+        "(bei Hosen Hüften, Knie und Knöchel, bei einer Maske der Kopf). Auto-Marker setzt sie auf die Gelenke des "
+        "unter Einrichtung gewählten Avatars, liest sie sonst aus der Form des Kleidungsstücks (Oberteile und Hosen) "
+        "oder setzt sie zum Start auf die Gelenke des Körpers. Linien in der 3D-Ansicht verbinden sie: Orange Linien "
+        "heißen, dass etwas nicht stimmt. Verschiebe alle Marker, die danebenliegen; Links nach rechts spiegeln "
+        "kopiert die linke Seite auf die rechte."
     ),
     "garment.info.tpose": (
         "Dreht die Arme eines Kleidungsstücks aus der T-Pose auf den Armwinkel (oder auf die Arme des Körpers, wenn "
@@ -1238,4 +1241,217 @@ TEXT = {
     "garment.stage.bake-normal": "Normal-Map wird gebacken",
     "garment.stage.bake-emission": "Emission-Map wird gebacken",
     "garment.stage.material": "Gemeinsames Material wird erstellt",
+    "garment.slot.berd": "Maske (berd)",
+    "garment.slot.berd.desc": "Masken und Gesichtsbedeckungen",
+    "garment.slot.hand": "Tasche (hand)",
+    "garment.slot.hand.desc": "Taschen, Rucksäcke und Fallschirme",
+    "garment.slot.task": "Weste (task)",
+    "garment.slot.task.desc": "Westen und Schutzwesten",
+    "garment.slot.p_head": "Kopf-Prop (p_head)",
+    "garment.slot.p_head.desc": "Ein Prop am Kopf: Hüte, Caps und Helme",
+    "garment.slot.p_eyes": "Augen-Prop (p_eyes)",
+    "garment.slot.p_eyes.desc": "Ein Prop an den Augen: Brillen",
+    "garment.slot.p_ears": "Ohren-Prop (p_ears)",
+    "garment.slot.p_ears.desc": "Ein Prop an den Ohren: Ohrringe und Headsets",
+    "garment.slot.p_lwrist": "Prop am linken Handgelenk (p_lwrist)",
+    "garment.slot.p_lwrist.desc": "Ein Prop am linken Handgelenk: Uhren und Armbänder",
+    "garment.slot.p_rwrist": "Prop am rechten Handgelenk (p_rwrist)",
+    "garment.slot.p_rwrist.desc": "Ein Prop am rechten Handgelenk: Uhren und Armbänder",
+    "garment.category.hoodie": "Hoodie",
+    "garment.category.hoodie.desc": "Ein Oberteil mit langen Ärmeln und Kapuze",
+    "garment.category.open_jacket": "Offene Jacke",
+    "garment.category.open_jacket.desc": "Eine offen getragene Jacke: Ihre beiden Vorderteile werden nie verbunden",
+    "garment.category.long_coat": "Langer Mantel",
+    "garment.category.long_coat.desc": "Ein Mantel bis zu den Knien oder tiefer, dessen Schöße beiden Beinen folgen",
+    "garment.category.dress": "Kleid",
+    "garment.category.dress.desc": (
+        "Oberteil und Rock in einem: ein Kleidungsstück im Oberteil-Slot oder geteilt in Oberteil und Beine"
+    ),
+    "garment.category.skirt": "Rock",
+    "garment.category.skirt.desc": "Ein Rock im Beine-Slot, der beiden Beinen folgt",
+    "garment.category.sandals": "Sandalen",
+    "garment.category.sandals.desc": "Offene Schuhe, die die Füße frei lassen",
+    "garment.category.mask": "Maske",
+    "garment.category.mask.desc": "Eine Maske oder Gesichtsbedeckung",
+    "garment.category.armour": "Weste oder Schutzweste",
+    "garment.category.armour.desc": "Eine Weste über dem Oberteil, etwa eine Schutzweste",
+    "garment.category.bag": "Tasche oder Fallschirm",
+    "garment.category.bag.desc": "Ein Rucksack, eine Tasche oder ein Fallschirm auf dem Rücken",
+    "garment.category.hat": "Hut",
+    "garment.category.hat.desc": "Ein Hut, eine Cap oder ein Helm: ein Prop am Kopf",
+    "garment.category.glasses": "Brille",
+    "garment.category.glasses.desc": "Eine Brille oder Sonnenbrille: ein Prop an den Augen",
+    "garment.category.ears": "Ohrschmuck",
+    "garment.category.ears.desc": "Ohrringe oder ein Headset: ein Prop an den Ohren",
+    "garment.category.watch": "Uhr",
+    "garment.category.watch.desc": "Eine Uhr: ein Prop am Handgelenk",
+    "garment.category.bracelet": "Armband",
+    "garment.category.bracelet.desc": "Ein Armband: ein Prop am Handgelenk",
+    "garment.region.head": "Kopf",
+    "garment.info.type": (
+        "Die Kleidungsart legt fest, in welchen Slot das Kleidungsstück kommt, wie seine Marker gefunden werden, "
+        "welche Bereiche die Werkzeuge anbieten und was geprüft wird. Props (Hüte, Brillen, Ohrschmuck, Uhren und "
+        "Armbänder) werden an ihren Ankerpunkt gesetzt statt an den Körper angepasst."
+    ),
+    "garment.hint.hood": (
+        "Auto-Marker findet den Hals unter der Kapuze, und An den Körper anlegen lässt die Kapuze in Ruhe."
+    ),
+    "garment.hint.open-front": (
+        "Kleidungsstück vorbereiten verbindet die beiden Vorderteile nie, wie nah sie sich auch kommen (Offene "
+        "Vorderseite unter Optionen)."
+    ),
+    "garment.hint.coat": (
+        "Die Schöße hängen frei: An den Körper anlegen lässt sie in Ruhe, und nach jeder Anpassung werden ihre "
+        "Oberschenkel-Gewichte über die Beine hinweg verbunden, damit sich der Mantel zwischen ihnen nicht teilt."
+    ),
+    "garment.hint.dress": (
+        "Ein Teil: Das Kleid kommt als ein Kleidungsstück in den Oberteil-Slot, die Gewichte des Rocks über die Beine "
+        "hinweg verbunden; Spieler tragen dazu nackte Beine im Beine-Slot. Zwei Teile: Unter Anpassen teilt An der "
+        "Taille teilen es in ein Oberteil und einen Rock für den Beine-Slot, die nacheinander hinzugefügt werden, "
+        "damit sich jedes mit anderer Kleidung tragen lässt."
+    ),
+    "garment.hint.bare-legs": (
+        "Der Beine-Slot ersetzt die Beine des Peds, also müssen die nackten Beine unter dem Saum Teil des "
+        "Kleidungsstücks sein. Das Add-on fügt das Kleidungsstück hinzu; die nackten Beine kommen aus den eigenen "
+        "Werkzeugen von Durty Cloth Tool (deren eigene Pläne gelten). Haut sichtbar ist an."
+    ),
+    "garment.hint.bare-feet": (
+        "Der Schuhe-Slot ersetzt die Füße des Peds, also müssen die nackten Füße Teil des Kleidungsstücks sein. Das "
+        "Add-on fügt die Sandalen hinzu; die nackten Füße kommen aus den eigenen Werkzeugen von Durty Cloth Tool "
+        "(deren eigene Pläne gelten). Haut sichtbar ist an."
+    ),
+    "garment.hint.avatar": (
+        "Seine Marker lassen sich nicht aus seiner Form lesen: Wähle den Avatar, auf dem es drapiert wurde, oder "
+        "Auto-Marker setzt sie zum Start auf die Gelenke des Körpers, damit du sie verschiebst."
+    ),
+    "garment.hint.prop": (
+        "Ein Prop hängt an einem Knochen und behält seine Form: Es wird nicht an den Körper angepasst und braucht "
+        "keine Gewichte. An Ankerpunkt setzen unter Anpassen bringt es an seinen Platz; verschiebe es von dort aus von "
+        "Hand."
+    ),
+    "garment.prop.open-front": "Offene Vorderseite",
+    "garment.prop.open-front.desc": (
+        "Das Kleidungsstück wird offen getragen: Kleidungsstück vorbereiten verbindet seine beiden Vorderteile nie"
+    ),
+    "garment.prop.avatar": "Avatar",
+    "garment.prop.avatar.desc": (
+        "Der Avatar, auf dem das Kleidungsstück drapiert wurde, wenn er bekannt ist: Seine Gelenke werden zu den "
+        "Markern"
+    ),
+    "garment.avatar.detect": "Unbekannt",
+    "garment.avatar.detect.desc": "Auto-Marker liest die Marker aus der Form des Kleidungsstücks",
+    "garment.avatar.file": "Mit dem Kleidungsstück importiert",
+    "garment.avatar.file.desc": (
+        "Der geriggte Avatar, der mit dem Kleidungsstück exportiert wurde: Der Import hat behalten, wo seine Gelenke "
+        "waren"
+    ),
+    "garment.avatar.manne": "Manne (männlich, A-Pose)",
+    "garment.avatar.manne.desc": (
+        "MaleTemplate_Manne_01, die männliche Vorlage von Marvelous Designer und CLO, in ihrer A-Pose"
+    ),
+    "garment.info.avatar": (
+        "Ist der Avatar bekannt, auf dem das Kleidungsstück drapiert wurde, setzt Auto-Marker die Marker auf seine "
+        "Gelenke, genau und in der Pose, in der drapiert wurde. Kleidungsstück importieren behält sie aus einer FBX, "
+        "die mit dem geriggten Avatar exportiert wurde; sonst wähle den Standard-Avatar, auf dem du drapiert hast. "
+        "Eine Pose, die du in Marvelous Designer geändert hast, ist nicht bekannt: Prüfe dann die Marker."
+    ),
+    "garment.marker-note.avatar": "Auf die Gelenke des Avatars gesetzt, auf dem das Kleidungsstück drapiert wurde.",
+    "garment.marker-note.from-body": (
+        "Auf die Gelenke des Körpers gesetzt: Verschiebe jeden auf die passende Stelle des Kleidungsstücks."
+    ),
+    "garment.why.no-avatar-file": (
+        "Dieser Avatar ist für das Kleidungsstück nicht bekannt: Es wurde nicht mit seinem geriggten Avatar "
+        "importiert. Wähle einen anderen Avatar oder Unbekannt."
+    ),
+    "garment.why.avatar-markers": (
+        "Dem Avatar fehlt ein Marker, den diese Kleidungsart braucht. Wähle Unbekannt oder setze ihn von Hand."
+    ),
+    "garment.done.import-rig": (
+        "{name} importiert ({count} Vertices) und die Gelenke des mitexportierten Avatars für die Marker behalten."
+    ),
+    "garment.heading.snap": "Ankerpunkt",
+    "garment.op.snap": "An Ankerpunkt setzen",
+    "garment.op.snap.desc": (
+        "Das Prop an seinen Ankerpunkt am Körper setzen: einen Hut auf den Kopf, eine Brille vor die Augen, Ohrschmuck "
+        "an die Ohren, eine Uhr oder ein Armband ums Handgelenk"
+    ),
+    "garment.info.snap": (
+        "Ein Prop hängt im Spiel an einem Knochen: am Kopf für Hüte, Brillen und Ohrschmuck, am Unterarm beim "
+        "Handgelenk für Uhren und Armbänder. An Ankerpunkt setzen bringt es dorthin, wo es am Freemode-Körper "
+        "üblicherweise sitzt; verschiebe, drehe oder skaliere es von dort aus von Hand. Beim Hinzufügen behält es "
+        "seine Lage zu seinem Ankerpunkt."
+    ),
+    "garment.snap.subtext": (
+        "Ankerpunkt: {anchor}. Verschiebe das Prop nach dem Setzen von Hand und mach dann unter Spielfertig weiter."
+    ),
+    "garment.done.snap": "Das Prop an seinen Ankerpunkt gesetzt ({anchor}): {distance} cm, um {turn}° gedreht.",
+    "garment.next.snap": (
+        "Weiter: An Ankerpunkt setzen unter Anpassen, dann das Prop von Hand an seinen Platz schieben."
+    ),
+    "garment.why.not-prop": "Nur Props werden an einen Ankerpunkt gesetzt.",
+    "garment.why.prop-fix": "Props behalten ihre Form: Setze sie mit An Ankerpunkt setzen und von Hand.",
+    "fit.why.prop": (
+        "Props werden nicht an den Körper angepasst und brauchen keine Gewichte: Sie bewegen sich mit ihrem Ankerpunkt."
+    ),
+    "garment.marker-error.no-head": "Der Körper hat keinen Kopf, an den das Prop gesetzt werden kann.",
+    "garment.marker-error.no-arm": "Der Körper hat keinen Arm, an den das Prop gesetzt werden kann.",
+    "garment.finding.anchor-far": (
+        "Die Mitte des Props liegt {distance} cm von seinem Ankerpunkt entfernt: Setze es an oder schiebe es näher "
+        "heran."
+    ),
+    "add.info.anchor": (
+        "Beim Hinzufügen hängt das Prop an seinem Ankerknochen, platziert nach dem Freemode-Skelett von Durty Cloth "
+        "Tool (aus deinen Spieldateien), und behält seine Lage dazu. Es braucht keine Gewichte."
+    ),
+    "add.anchor.ready": "Hängt an seinem Ankerpunkt ({anchor}) in {name}.",
+    "add.anchor.missing": "Ankerpunkt: {anchor}. Zum Durty Cloth Tool Projekt hinzufügen hängt das Prop daran.",
+    "add.why.no-anchor": (
+        "Das Skelett von Durty Cloth Tool hat keinen Knochen {bone}, an den das Prop gehängt werden kann."
+    ),
+    "add.prop.missing": (
+        "Das Prop hängt noch nicht an seinem Ankerpunkt. Zum Durty Cloth Tool Projekt hinzufügen erledigt das."
+    ),
+    "add.why.prop-skeleton": "Props kommen nicht aufs Skelett: Sie hängen an ihrem Ankerpunkt.",
+    "garment.heading.split": "Zwei Teile",
+    "garment.op.split": "An der Taille teilen",
+    "garment.op.split.desc": (
+        "Das Kleid an der Taille in ein Oberteil und einen Rock schneiden: Der Rock wird ein eigenes Kleidungsstück "
+        "für den Beine-Slot"
+    ),
+    "garment.info.split": (
+        "Ein Kleid kommt als ein Kleidungsstück in den Oberteil-Slot ins Spiel oder als Oberteil und Rock. An der "
+        "Taille teilen schneidet es dort, wo es über dem Becken am schmalsten ist: Das Kleid behält das Oberteil, und "
+        "ein neues Kleidungsstück, nach ihm benannt, bekommt den Rock, eingerichtet für den Beine-Slot. Teile nach An "
+        "Körper anpassen, damit beide Teile die Anpassung und ihre Gewichte behalten, und wähle dann jedes Teil unter "
+        "Einrichtung, um es fertigzustellen und hinzuzufügen."
+    ),
+    "garment.done.split": (
+        "{name} an der Taille geteilt: {skirt} ist der Rock für den Beine-Slot. Wähle ihn unter Einrichtung."
+    ),
+    "garment.why.not-dress": "Nur ein Kleid wird an der Taille geteilt.",
+    "garment.why.split-nothing": "Auf einer Seite der Taille liegt nichts: Prüfe die Marker.",
+    "garment.op.bridge": "Oberschenkel-Gewichte verbinden",
+    "garment.op.bridge.desc": (
+        "Die Gewichte des Rocks oder der Mantelschöße über die Mitte hinweg auf beide Oberschenkel verteilen, damit "
+        "sich der Stoff zwischen den Beinen nicht teilt"
+    ),
+    "garment.done.bridge": "Die Oberschenkel-Gewichte von {count} Vertices über die Beine hinweg verbunden.",
+    "garment.why.no-bridge": "Nur Röcke, Kleider und lange Mäntel werden über die Beine hinweg verbunden.",
+    "garment.why.no-leg-weights": (
+        "Das Kleidungsstück hat noch keine Oberschenkel-Gewichte zum Verbinden. Passe es an den Körper an oder "
+        "übertrage zuerst die Gewichte."
+    ),
+    "garment.done.combine-walls": (
+        "{count} Materialien zu einer Textur mit {size} Pixeln zusammengefasst, {density} Pixel pro Zentimeter auf dem "
+        "Kleidungsstück (das Layout nutzt {used} %). {walls} Flächen hatten keinen Platz in der UV-Map (etwa die "
+        "Seitenwände eines dicken Exports): Sie bekommen die Farbe der Schnittteilkante daneben."
+    ),
+    "garment.done.combine-sparse": (
+        "Das zusammengefasste Layout nutzt nur {used} % der Textur, das Kleidungsstück sähe also unscharf aus. Seine "
+        "UV-Map hat Inseln ohne Platz oder weit abseits: Prüfe sie oder wickle das Kleidungsstück neu ab und fasse "
+        "dann erneut zusammen."
+    ),
+    "garment.why.uv-degenerate": (
+        "Die UV-Map des Kleidungsstücks hat nirgends eine Fläche. Wickle das Kleidungsstück zuerst ab."
+    ),
 }

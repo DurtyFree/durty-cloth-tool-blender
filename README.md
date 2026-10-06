@@ -41,7 +41,11 @@ freemode cloth and add it to your Durty Cloth Tool project.
 - 🪡 **Garment Fitting (Experimental).** Import a garment, add the freemode body, place joint markers, align the
   garment to the body (a T-pose becomes the game's pose on the way), and let gta.clothing fit it to the body with the
   body's weights. Push it out of the body, snug or relax regions, see problem areas in colour, compare the fit with
-  game clothing, sculpt with the body as a guide and check seams for tears.
+  game clothing, sculpt with the body as a guide and check seams for tears. A garment type sets up each kind of
+  clothing: tops, hoodies, open jackets, long coats, dresses, trousers, shorts, skirts, shoes, sandals, masks, bags
+  and parachutes, vests and body armour, and hats, glasses, ear pieces, watches and bracelets as props snapped to
+  their anchor. A garment exported with the rigged Marvelous Designer or CLO avatar brings that avatar's joints as its
+  markers.
   **Game Ready** joins seams, sets the ped vertex colours, combines all materials into one texture with its
   transparency and maps, generates levels of detail and validates the result.
 - ➕ **Add to Durty Cloth Tool Project (Experimental).** Put a game-ready garment on the freemode skeleton, export it
@@ -174,27 +178,36 @@ Images can be up to 4096 by 4096 pixels. To start from the cloth's own texture, 
 Open **Garment Fitting (Experimental)** in the DCT tab. Its first line always tells you the next step, and the
 button for that step is the large one. Settings you rarely change sit in closed **Options** sections.
 
-1. **Setup:** choose gender, slot, category and the pose the garment was made in, then **Import Garment** and
-   **Add Freemode Body**. The import converts centimetres, millimetres and inches to metres (and the FBX files of
-   Marvelous Designer and CLO that arrive ten times too large), leaves out the avatar exported with the garment
-   (also a rigged one), says when the size does not look like a garment's, and turns a garment that lies down or
-   faces backwards.
+1. **Setup:** choose gender and **Garment Type** (a line below it says what the type sets up, and the slot sits under
+   **Options** when the type may go into more than one), the **Avatar** the garment was draped on when you know it,
+   and the pose it was made in, then **Import Garment** and **Add Freemode Body**. The import converts centimetres,
+   millimetres and inches to metres (and the FBX files of Marvelous Designer and CLO that arrive ten times too
+   large), leaves out the avatar exported with the garment (also a rigged one), says when the size does not look like
+   a garment's, and turns a garment that lies down or faces backwards.
 2. **Fit:** **Auto Markers**, then check the markers and move any that are off (lines in the 3D view join them and
-   turn orange when something looks wrong). Then **Align to Body**: it moves and turns the garment so the markers
-   sit on the body's joints, and turns its arms (or legs) onto the body's, so a T-pose becomes the game's pose
-   without opening a seam. It keeps the garment's size unless you turn off **Keep Size** in its options. Then
-   **Fit to Body** (under **Fit on gta.clothing**): gta.clothing puts the garment exactly in the game's pose, gives
-   it the freemode body's weights and moves it out of the body where it was inside. A progress bar shows how far it
-   is, **Cancel** stops it (a fit that has already started still counts), and the panel shows your **Fits left
-   today**. A spot where too many loose edges crowd (seams not joined yet, buttons, stitching) is found and selected
-   before anything is sent. You can skip it and fit the garment by hand under **Fix**.
+   turn orange when something looks wrong). With a known avatar (an FBX exported with the rigged avatar, or a stock
+   avatar such as Manne) the markers sit exactly on its joints; masks and bags without one start on the body's
+   joints. Then **Align to Body**: it moves and turns the garment so the markers sit on the body's joints, and turns
+   its arms (or legs) onto the body's, so a T-pose becomes the game's pose without opening a seam. It keeps the
+   garment's size unless you turn off **Keep Size** in its options. Then **Fit to Body** (under **Fit on
+   gta.clothing**): gta.clothing puts the garment exactly in the game's pose, gives it the freemode body's weights
+   and moves it out of the body where it was inside. A progress bar shows how far it is, **Cancel** stops it (a fit
+   that has already started still counts), and the panel shows your **Fits left today**. A spot where too many loose
+   edges crowd (seams not joined yet, buttons, stitching) is found and selected before anything is sent. You can skip
+   it and fit the garment by hand under **Fix**. Skirts, dresses and long coats get their thigh weights bridged
+   across the legs after each fit, so they do not split between them. A dress can go in as one cloth in the Top slot,
+   or **Split at Waist** cuts it into a top and a skirt for the Legs slot. Props are not fitted: **Snap to Anchor**
+   puts a hat on the head, glasses in front of the eyes, ear pieces at the ears or a watch around the wrist, and you
+   move it by hand from there.
 3. **Fix:** **Run Fit Check** (its **Usual** column shows how far game clothing of the same kind sits from each
    region), **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or sculpt by hand.
    These tools wait for **Align to Body**, because they measure against the body, and again when a marker was
    moved after it.
-4. **Game Ready:** **Prepare Garment** (which joins the seams without pulling any panel's own edge together, and
-   selects the spots where a seam stayed open) and **Combine Materials** (which keeps transparency, bakes normal,
-   specular and emission maps and says when a texture file is missing); both show their progress in the status bar,
+4. **Game Ready:** **Prepare Garment** (which joins the seams without pulling any panel's own edge together, never
+   joins the two fronts of an open jacket, and selects the spots where a seam stayed open) and **Combine Materials**
+   (which keeps transparency, bakes normal, specular and emission maps, says when a texture file is missing, gives the
+   side walls of a thick export the colour of the panel edge next to them, and warns when the layout would use little
+   of the texture); both show their progress in the status bar,
    the other garment tools wait for them, and **Esc** stops them and puts the garment back. Then the weights:
    **Transfer Weights** gets the freemode body's weights from gta.clothing for the garment as it is now (for example
    after sculpting), or weight it yourself. Then **Generate LODs** and **Validate**.
@@ -218,7 +231,8 @@ The last part of **Game Ready** adds the garment as a new cloth to the project o
   GTA V set up in it: the freemode skeleton comes from your own game files.
 - Sollumz.
 - One material with a colour texture (**Combine Materials** makes one).
-- Weights for the freemode skeleton: vertex groups named after its bones, such as `SKEL_Spine3`. **Fit to Body**
+- Weights for the freemode skeleton: vertex groups named after its bones, such as `SKEL_Spine3` (a prop needs none:
+  it hangs from its anchor bone, placed from Durty Cloth Tool's skeleton). **Fit to Body**
   and **Transfer Weights** give the garment the freemode body's weights, or weight it yourself, for example with
   Blender's weight painting. **Use Durty Cloth Tool Skeleton** gives you the bones to weight to; levels of detail
   made before the weights get them when the garment is added.
@@ -226,7 +240,9 @@ The last part of **Game Ready** adds the garment as a new cloth to the project o
 Then:
 
 1. Fill in **Cloth Name** (empty uses the garment's name) and turn on **Shows Skin** when the cloth shows some of the
-   ped's skin. Slot and gender are the ones chosen under **Setup**.
+   ped's skin (shorts, skirts and sandals turn it on: the Legs and Shoes slots replace the ped's legs and feet, so the
+   bare skin has to be part of the cloth, which Durty Cloth Tool's own tools provide). Slot and gender are the ones
+   chosen under **Setup**.
 2. Optionally use **Add Colour Variation** for more colour variations from other images in the same layout, up to
    26, each with its own name. Each side of a picture must divide by four and be at most 4096 pixels; powers of two
    up to 2048 pixels work best.

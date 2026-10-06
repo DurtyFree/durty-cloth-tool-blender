@@ -27,7 +27,7 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Menu, Operator, Panel, PropertyGroup
 
-from . import garment, garment_add, garment_body, garment_fit, host, link, state, strings, ui
+from . import garment, garment_add, garment_avatars, garment_body, garment_fit, host, link, state, strings, ui
 from . import settings as addon_settings
 from . import garment_dct as gdct
 from . import garment_host as gh
@@ -146,16 +146,22 @@ def _items(prefix: str, ids) -> tuple:
 
 
 GENDER_ITEMS = tuple((g, EN[f"gender.{g}"], EN[f"garment.gender.{g}.desc"]) for g in garment.GENDERS)
-SLOT_ITEMS = _items("garment.slot", garment.SLOTS)
+#: Every slot with its number (Blender keeps the chosen one by it); a type offers only its own slots.
+SLOT_ITEMS = {slot: (slot, EN[f"garment.slot.{slot}"], EN[f"garment.slot.{slot}.desc"], garment.SLOTS.index(slot))
+              for slot in garment.SLOTS}
 POSE_ITEMS = _items("garment.pose", garment.SOURCE_POSES)
+#: The avatars a garment may have been made on: unknown (Auto Markers reads the garment), the one imported with it,
+#: and the stock avatars measured so far.
+AVATAR_IDS = ("detect", "file", *garment_avatars.AVATARS)
+AVATAR_ITEMS = tuple((name, EN[f"garment.avatar.{name}"], EN[f"garment.avatar.{name}.desc"], index)
+                     for index, name in enumerate(AVATAR_IDS))
 REGION_ITEMS = tuple((r, EN[f"garment.region.{r}"], EN["garment.region.desc"]) for r in garment.REGIONS)
 UNIT_ITEMS = tuple((u, EN[f"garment.unit.{u}"], EN["garment.unit.desc"]) for u in ("auto", *garment.UNITS))
-#: The categories of each slot (Blender keeps a dynamic enum's strings only while they are referenced).
-CATEGORY_ITEMS = {
-    slot: [(c, EN[f"garment.category.{c}"], EN[f"garment.category.{c}.desc"], garment.CATEGORIES.index(c))
-           for c in garment.categories_for(slot)]
-    for slot in garment.SLOTS
-}
+#: The garment types in the picker's groups (Blender keeps a dynamic enum's strings only while they are referenced).
+CATEGORY_ITEMS = [None if c is None else (c, EN[f"garment.category.{c}"], EN[f"garment.category.{c}.desc"],
+                                          garment.CATEGORIES.index(c)) for c in garment.CATEGORY_MENU]
+#: The slots each type offers.
+TYPE_SLOT_ITEMS = {c: [SLOT_ITEMS[slot] for slot in garment.slots_for(c)] for c in garment.CATEGORIES}
 SIZE_ITEMS = (("2048", "2048", EN["garment.size.desc"]), ("4096", "4096", EN["garment.size.desc"]))
 #: The ped shader's vertex colours most clothing uses (as Sollumz's clothing tutorial gives them): Color 1 #FF8000,
 #: full ambient light and a medium reflection; Color 2 black with no alpha, no vertex wind and no sweat. Both can be
@@ -165,13 +171,48 @@ DEFAULT_COLOUR_2 = (0.0, 0.0, 0.0, 0.0)
 
 
 def _category_items(self: Any, context: Any) -> list:
-    return CATEGORY_ITEMS.get(self.slot, CATEGORY_ITEMS["jbib"])
+    return CATEGORY_ITEMS
+
+
+def _slot_items(self: Any, context: Any) -> list:
+    return TYPE_SLOT_ITEMS.get(self.category, TYPE_SLOT_ITEMS["tshirt"])
+
+
+def _keep_on_garment(settings_: Any) -> None:
+    """Each garment keeps its own type, slot and avatar, so they come back when it is chosen again."""
+    obj = settings_.garment
+    try:
+        if obj is not None and obj.type == "MESH":
+            obj[gh.TYPE_TAG] = settings_.category
+            obj[gh.SLOT_TAG] = settings_.slot
+            obj[AVATAR_TAG] = settings_.avatar
+    except (ReferenceError, AttributeError, TypeError):
+        pass  # the garment is gone, or this property is set while Blender reads a file
+
+
+def _category_changed(self: Any, context: Any) -> None:
+    """Another type: its usual slot (unless the slot chosen fits it too), its skin and front."""
+    kind = garment.garment_type(self.category)
+    if self.slot not in kind.slots:
+        self.slot = kind.slots[0]
+    self.skin = kind.skin
+    self.open_front = kind.open_front
+    _keep_on_garment(self)
 
 
 def _slot_changed(self: Any, context: Any) -> None:
-    allowed = garment.categories_for(self.slot)
-    if allowed and self.category not in allowed:
-        self.category = allowed[0]
+    _keep_on_garment(self)
+
+
+def _avatar_changed(self: Any, context: Any) -> None:
+    stock = garment_avatars.avatar(self.avatar)
+    if stock is not None:
+        self.source_pose = stock.pose
+    _keep_on_garment(self)
+
+
+#: On the garment: the avatar chosen for it.
+AVATAR_TAG = "dct_avatar"
 
 
 def _marker_size_changed(self: Any, context: Any) -> None:
@@ -192,6 +233,17 @@ def _garment_changed(self: Any, context: Any) -> None:
     self.item_name = obj.name[: protocol.MAX_TEXT_LENGTH] if obj is not None else ""
     self.first_title = ""
     self.variations.clear()
+    if obj is not None:
+        category, slot, avatar = obj.get(gh.TYPE_TAG), obj.get(gh.SLOT_TAG), obj.get(AVATAR_TAG)
+        if category in garment.CATEGORIES:
+            self.category = category  # its slot, skin and front follow
+            if slot in garment.slots_for(category):
+                self.slot = slot
+        if avatar in AVATAR_IDS:
+            self.avatar = avatar
+        elif obj.get(gh.AVATAR_MARKERS):
+            self.avatar = "file"
+        _keep_on_garment(self)
     RUNTIME.add_problems, RUNTIME.add_warnings, RUNTIME.add_of = [], [], None
     layer = getattr(context, "view_layer", None)
     if layer is not None:
@@ -220,11 +272,15 @@ class DCTLINK_PG_garment(PropertyGroup):
                           description=EN["garment.prop.body.desc"], translation_context=CONTEXT)
     gender: EnumProperty(name=EN["garment.prop.gender"], items=GENDER_ITEMS, default="male",
                          description=EN["garment.prop.gender.desc"], translation_context=CONTEXT)
-    slot: EnumProperty(name=EN["garment.prop.slot"], items=SLOT_ITEMS, default="jbib", update=_slot_changed,
-                       description=EN["garment.prop.slot.desc"], translation_context=CONTEXT)
+    slot: EnumProperty(name=EN["garment.prop.slot"], items=_slot_items, default=garment.SLOTS.index("jbib"),
+                       update=_slot_changed, description=EN["garment.prop.slot.desc"], translation_context=CONTEXT)
     category: EnumProperty(name=EN["garment.prop.category"], items=_category_items,
-                           default=garment.CATEGORIES.index("tshirt"),
+                           default=garment.CATEGORIES.index("tshirt"), update=_category_changed,
                            description=EN["garment.prop.category.desc"], translation_context=CONTEXT)
+    avatar: EnumProperty(name=EN["garment.prop.avatar"], items=AVATAR_ITEMS, default="detect", update=_avatar_changed,
+                         description=EN["garment.prop.avatar.desc"], translation_context=CONTEXT)
+    open_front: BoolProperty(name=EN["garment.prop.open-front"], default=False,
+                             description=EN["garment.prop.open-front.desc"], translation_context=CONTEXT)
     source_pose: EnumProperty(name=EN["garment.prop.pose"], items=POSE_ITEMS, default="a_pose",
                               description=EN["garment.prop.pose.desc"], translation_context=CONTEXT)
     marker_size: FloatProperty(name=EN["garment.prop.marker-size"], default=0.03, min=0.005, max=0.2,
@@ -310,17 +366,27 @@ def _body_reason(context: Any) -> Optional[Msg]:
     return gh.body_problem(context, props(context).body)
 
 
+def _is_prop(context: Any) -> bool:
+    return garment.is_prop(props(context).category)
+
+
 def _aligned(context: Any) -> bool:
-    """The garment sits on the body: aligned (and no marker moved since), or a category without markers. Prepare
-    Garment does not count: a garment prepared without Align to Body was never put on the body."""
+    """The garment sits on the body: aligned (and no marker moved since), a type without markers, or a prop snapped
+    to its anchor. Prepare Garment does not count: a garment prepared without Align to Body was never put on the
+    body."""
     obj = current_garment(context)
-    return not garment.markers_for(props(context).category) or gh.aligned(obj, context.scene)
+    category = props(context).category
+    if garment.is_prop(category):
+        return gh.aligned(obj, context.scene)
+    return not garment.markers_for(category) or gh.aligned(obj, context.scene)
 
 
 def _fit_reason(context: Any, *, sculpting_ok: bool = False) -> Optional[Msg]:
     """A step that measures against the body: the garment, the body, and the garment aligned to the body (edits on a
-    garment still on its maker's avatar would squash it towards a body it does not sit on)."""
+    garment still on its maker's avatar would squash it towards a body it does not sit on). Props keep their shape."""
     reason = _garment_reason(context, sculpting_ok=sculpting_ok) or _body_reason(context)
+    if reason is None and _is_prop(context):
+        reason = msg("garment.why.prop-fix")
     if reason is None and not _aligned(context):
         reason = msg("garment.why.align-first")
     return reason
@@ -328,8 +394,11 @@ def _fit_reason(context: Any, *, sculpting_ok: bool = False) -> Optional[Msg]:
 
 def _markers_reason(context: Any) -> Optional[Msg]:
     reason = _garment_reason(context)
-    if reason is None and not garment.markers_for(props(context).category):
+    settings_ = props(context)
+    if reason is None and not garment.markers_for(settings_.category):
         reason = msg("garment.why.no-markers")
+    if reason is None and settings_.avatar == "detect" and not garment.detects_markers(settings_.category):
+        reason = _body_reason(context)  # the markers start on the body's joints
     return reason
 
 
@@ -624,7 +693,7 @@ class DCTLINK_OT_fit_import_garment(_MeshOp):
             if self.unit == "auto" and info["unit"] not in garment.USUAL_UNITS:
                 return "WARNING", msg("garment.done.import-unit", name=obj.name, count=count,
                                       unit=msg(f"garment.unit.{info['unit']}"))
-            key = "garment.done.import-avatar" if info["avatar"] else (
+            key = "garment.done.import-rig" if info["rig"] else "garment.done.import-avatar" if info["avatar"] else (
                 "garment.done.import-turned" if info["turned"] else "garment.done.import")
             return msg(key, name=obj.name, count=count)
 
@@ -819,15 +888,39 @@ class DCTLINK_OT_fit_auto_markers(_MeshOp):
         def place() -> Msg:
             settings_ = props(context)
             obj = current_garment(context)
-            positions = gh.world_positions(obj)
-            result = garment.place_markers(positions, settings_.category, settings_.source_pose,
-                                           gh.mesh_edges(obj.data))
-            gh.write_markers(context.scene, result.markers, settings_.marker_size, obj)
-            RUNTIME.marker_notes[obj.session_uid] = result.notes
+            names = garment.markers_for(settings_.category)
+            markers, notes, source = place_markers(context, obj, names)
+            gh.drop_markers(context.scene, obj, names)
+            gh.write_markers(context.scene, markers, settings_.marker_size, obj)
+            obj[gh.MARKER_SOURCE] = source
+            RUNTIME.marker_notes[obj.session_uid] = notes
             gh.clear_flags(obj, "dct_aligned", *gh.STALE)
-            return msg("garment.done.markers", count=len(result.markers))
+            return msg("garment.done.markers", count=len(markers))
 
         return self.run(context, place, backup=False)
+
+
+def place_markers(context: Any, obj: Any, names: Tuple[str, ...]) -> Tuple[Dict[str, Any], Tuple[str, ...], str]:
+    """The markers of the garment, their notes and where they came from: the avatar it was made on when one is chosen
+    (exactly, in the pose it was draped in), else read from its shape (tops and legs), else the body's own joints as a
+    starting point to move them from."""
+    settings_ = props(context)
+    if settings_.avatar != "detect":
+        avatar = gh.avatar_markers(obj, settings_.avatar)
+        if avatar is None:
+            raise UserError(msg("garment.why.no-avatar-file"))
+        markers = {name: avatar[name] for name in names if name in avatar}
+        if len(markers) < len(names):
+            raise UserError(msg("garment.why.avatar-markers"))
+        return markers, ("avatar",), "avatar"
+    if garment.detects_markers(settings_.category):
+        result = garment.place_markers(gh.world_positions(obj), settings_.category, settings_.source_pose,
+                                       gh.mesh_edges(obj.data))
+        return result.markers, result.notes, "shape"
+    found, _source = joints(context)
+    if not found:
+        raise UserError(msg("garment.why.no-body"))
+    return garment.body_markers(found, names), ("from-body",), "body"
 
 
 class DCTLINK_OT_fit_mirror_markers(_MeshOp):
@@ -957,8 +1050,11 @@ def align_now(context: Any) -> Msg:
     if not found:
         raise UserError(msg("garment.why.no-body"))
     obj = current_garment(context)
+    # Markers of the avatar sit on its joints, not on the garment's surface: their size is measured against the
+    # body's joints, not against the body's own surface markers.
+    from_joints = obj.get(gh.MARKER_SOURCE) in ("avatar", "body")
     result = gh.align(context, obj, gh.read_markers(context.scene), found, props(context).category,
-                      keep_size=props(context).keep_size, body=valid_body(context))
+                      keep_size=props(context).keep_size, body=None if from_joints else valid_body(context))
     _after_change(context)
     return msg("garment.done.align", **result)
 
@@ -994,6 +1090,145 @@ class DCTLINK_OT_fit_align(_MeshOp):
                     host.redraw()
                     return {"FINISHED"}
         return self.run(context, lambda: align_now(context))
+
+
+def _snap_reason(context: Any) -> Optional[Msg]:
+    reason = _garment_reason(context) or _body_reason(context)
+    if reason is None and not _is_prop(context):
+        reason = msg("garment.why.not-prop")
+    if reason is None and RUNTIME.job is not None:
+        reason = msg("add.why.fetching")
+    return reason
+
+
+def anchor_side(context: Any) -> str:
+    return "l" if props(context).slot == "p_lwrist" else "r"
+
+
+class DCTLINK_OT_fit_snap_anchor(_MeshOp):
+    bl_idname = "dct_link.fit_snap_anchor"
+    bl_label = EN["garment.op.snap"]
+    bl_description = EN["garment.op.snap.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _snap_reason(context))
+
+    def execute(self, context):
+        def snap() -> Msg:
+            settings_ = props(context)
+            found, _source = joints(context)
+            if not found:
+                raise UserError(msg("garment.why.no-body"))
+            kind = garment.garment_type(settings_.category).snap
+            result = gh.snap_to_anchor(current_garment(context), valid_body(context), found, kind,
+                                       anchor_side(context))
+            _after_change(context)
+            return msg("garment.done.snap", anchor=msg(f"garment.slot.{settings_.slot}"), **result)
+
+        return self.run(context, snap)
+
+
+def _pelvis(context: Any) -> Optional[Tuple[float, float, float]]:
+    """The garment's pelvis: its marker, else the body's pelvis joint."""
+    markers = gh.read_markers(context.scene)
+    if "pelvis" in markers:
+        return markers["pelvis"]
+    found, _source = joints(context)
+    if found and "SKEL_Pelvis" in found:
+        return tuple(found["SKEL_Pelvis"])
+    return None
+
+
+def _split_reason(context: Any) -> Optional[Msg]:
+    reason = _garment_reason(context)
+    if reason is None and props(context).category != "dress":
+        reason = msg("garment.why.not-dress")
+    if reason is None and _pelvis(context) is None:
+        reason = msg("garment.why.markers")
+    return reason
+
+
+class DCTLINK_OT_fit_split_waist(_MeshOp):
+    bl_idname = "dct_link.fit_split_waist"
+    bl_label = EN["garment.op.split"]
+    bl_description = EN["garment.op.split.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _split_reason(context))
+
+    def execute(self, context):
+        def split() -> Msg:
+            obj = current_garment(context)
+            level = garment.waist_level(gh.world_positions(obj), _pelvis(context))
+            skirt = gh.split_at_waist(context, obj, level, f"{obj.name} Skirt")
+            skirt[gh.TYPE_TAG], skirt[gh.SLOT_TAG] = "skirt", "lowr"
+            found, _source = joints(context)
+            if gh.flag(obj, "dct_aligned") and found:
+                # The skirt sits where the dress sat: on the body, its markers on the body's own joints.
+                markers = garment.body_markers(found, garment.LOWER_MARKERS)
+                gh.write_markers(context.scene, markers, props(context).marker_size, skirt)
+                skirt[gh.MARKER_SOURCE] = "body"
+                skirt[gh.ALIGNED_MARKERS] = garment.markers_json(gh.read_markers(context.scene, skirt))
+                for name in ("dct_aligned", "dct_fitted"):
+                    if gh.flag(obj, name):
+                        gh.set_flag(skirt, name)
+            gh.show_markers_of(context.scene, context.view_layer, obj)
+            _after_change(context)
+            return msg("garment.done.split", name=obj.name, skirt=skirt.name)
+
+        return self.run(context, split)
+
+
+def bridge_geometry(context: Any) -> Optional[Tuple[float, float, float]]:
+    """Where the legs part: the centre (X), the thigh joints' height and half the distance between them, from the
+    body's joints or else the hip markers."""
+    found, _source = joints(context)
+    full = garment.complete_joints(found) if found else {}
+    if "SKEL_L_Thigh" in full and "SKEL_R_Thigh" in full:
+        left, right = full["SKEL_L_Thigh"], full["SKEL_R_Thigh"]
+    else:
+        markers = gh.read_markers(context.scene)
+        if "hip_l" not in markers or "hip_r" not in markers:
+            return None
+        left, right = np.asarray(markers["hip_l"]), np.asarray(markers["hip_r"])
+    return (float(left[0] + right[0]) / 2, float(left[2] + right[2]) / 2, float(abs(left[0] - right[0])) / 2)
+
+
+def _bridge_reason(context: Any) -> Optional[Msg]:
+    reason = _garment_reason(context)
+    if reason is None and not garment.garment_type(props(context).category).bridge:
+        reason = msg("garment.why.no-bridge")
+    if reason is None and not gh.weighted(current_garment(context)):
+        reason = msg("garment.why.no-leg-weights")
+    if reason is None and bridge_geometry(context) is None:
+        reason = msg("garment.why.no-body")
+    return reason
+
+
+def bridge_now(context: Any, obj: Any) -> int:
+    geometry = bridge_geometry(context)
+    return gh.bridge_weights(obj, *geometry) if geometry is not None else 0
+
+
+class DCTLINK_OT_fit_bridge(_MeshOp):
+    bl_idname = "dct_link.fit_bridge"
+    bl_label = EN["garment.op.bridge"]
+    bl_description = EN["garment.op.bridge.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _bridge_reason(context))
+
+    def execute(self, context):
+        def bridge() -> Msg:
+            changed = bridge_now(context, current_garment(context))
+            if not changed:
+                raise UserError(msg("garment.why.no-leg-weights"))
+            return msg("garment.done.bridge", count=changed)
+
+        return self.run(context, bridge)
 
 
 def _tpose_reason(context: Any) -> Optional[Msg]:
@@ -1375,6 +1610,15 @@ class DCTLINK_OT_fit_check_tears(_MeshOp):
 OPEN_SEAMS_WARN = (10, 0.02)
 
 
+def front_centre(context: Any) -> Tuple[float, float]:
+    """The centre of an open front: X between the markers' sides (else the garment's middle), Y the garment's middle
+    from front to back."""
+    positions = gh.world_positions(current_garment(context))
+    markers = gh.read_markers(context.scene)
+    cx = garment.centre_x(markers) if markers else float(np.median(positions[:, 0]))
+    return cx, float((positions[:, 1].min() + positions[:, 1].max()) / 2)
+
+
 class DCTLINK_OT_fit_prepare(_SteppedOp):
     bl_idname = "dct_link.fit_prepare"
     bl_label = EN["garment.op.prepare"]
@@ -1388,7 +1632,8 @@ class DCTLINK_OT_fit_prepare(_SteppedOp):
     def steps(self, context):
         settings_ = props(context)
         return gh.prepare_steps(context, current_garment(context), settings_.weld / 1000.0,
-                                (tuple(settings_.colour_1), tuple(settings_.colour_2)), settings_.overwrite_colours)
+                                (tuple(settings_.colour_1), tuple(settings_.colour_2)), settings_.overwrite_colours,
+                                open_front=front_centre(context) if settings_.open_front else None)
 
     def finished(self, context, result):
         least, share = OPEN_SEAMS_WARN
@@ -1422,6 +1667,11 @@ class DCTLINK_OT_fit_combine(_SteppedOp):
         if result["missing"]:
             return "WARNING", msg("garment.done.combine-missing", count=len(result["missing"]),
                                   names=", ".join(result["missing"][:4]))
+        if result["sparse"]:
+            return "WARNING", msg("garment.done.combine-sparse", used=result["used"])
+        if result["walls"]:
+            return msg("garment.done.combine-walls", count=result["materials"], size=result["size"],
+                       used=result["used"], density=result["density"], walls=result["walls"])
         return msg("garment.done.combine", count=result["materials"], size=result["size"], used=result["used"],
                    cut=result["cut"], density=result["density"])
 
@@ -1441,12 +1691,32 @@ class DCTLINK_OT_fit_lods(_MeshOp):
     def execute(self, context):
         def lods() -> Msg:
             settings_ = props(context)
+            body = None if _is_prop(context) else valid_body(context)  # a prop keeps its shape on every level
             result = gh.generate_lods(context, current_garment(context),
                                       {"medium": settings_.lod_medium, "low": settings_.lod_low},
-                                      valid_body(context), settings_.push_gap / 1000.0)
+                                      body, settings_.push_gap / 1000.0)
             return msg("garment.done.lods", high=result["high"], medium=result["medium"], low=result["low"])
 
         return self.run(context, lods, backup=False)
+
+
+def anchor_point(context: Any) -> Optional[Tuple[float, float, float]]:
+    """Where a prop's anchor is on the body: the head's joint, or the wrist of its side (``None`` without a body)."""
+    slot = props(context).slot
+    found, _source = joints(context)
+    if not found or slot not in garment.PROP_SLOTS:
+        return None
+    full = garment.complete_joints(found)
+    name = "SKEL_Head" if slot in ("p_head", "p_eyes", "p_ears") else f"SKEL_{anchor_side(context).upper()}_Hand"
+    point = full.get(name)
+    return tuple(float(v) for v in point) if point is not None else None
+
+
+def stats(context: Any, obj: Any) -> Dict[str, Any]:
+    """What Validate measures on the garment (a prop by its anchor instead of the body)."""
+    if _is_prop(context):
+        return gh.validate_stats(obj, valid_body(context), prop=True, anchor=anchor_point(context))
+    return gh.validate_stats(obj, valid_body(context))
 
 
 class DCTLINK_OT_fit_validate(_MeshOp):
@@ -1461,7 +1731,7 @@ class DCTLINK_OT_fit_validate(_MeshOp):
     def execute(self, context):
         def validate() -> Msg:
             obj = current_garment(context)
-            findings = garment.validate(gh.validate_stats(obj, valid_body(context)))
+            findings = garment.validate(stats(context, obj))
             obj[gh.FINDINGS] = garment.findings_to_json(findings)
             gh.set_flag(obj, "dct_validated", garment.is_clean(findings))
             if garment.is_clean(findings):
@@ -1484,6 +1754,8 @@ def _hosted_version(body: Optional[Any]) -> Optional[str]:
 
 def _service_reason(context: Any, operation: str) -> Optional[Msg]:
     """Why Fit to Body (``fit``) or Transfer Weights (``weights``) cannot run now."""
+    if _is_prop(context):
+        return msg("fit.why.prop")
     reason = _fit_reason(context)
     if reason is not None:
         return reason
@@ -1576,6 +1848,9 @@ def fit_ended(run: Any) -> bool:
             except Exception:
                 gh.roll_back(obj)
                 raise
+            bridged = 0
+            if garment.garment_type(scene.dct_garment.category).bridge:
+                bridged = bridge_now(bpy.context, obj)  # a skirt or coat tails do not split between the legs
             if run.operation == "fit":
                 gh.set_flag(obj, "dct_fitted")
                 _after_change(bpy.context)
@@ -1597,6 +1872,8 @@ def fit_ended(run: Any) -> bool:
     lines += warnings
     if unweighted:
         lines.append(("WARNING", msg("fit.done.unweighted", count=unweighted)))
+    if bridged:
+        lines.append(("INFO", msg("garment.done.bridge", count=bridged)))
     RUNTIME.fit_lines = lines
     host.redraw()
     return True
@@ -1711,6 +1988,8 @@ def _add_busy() -> Optional[Msg]:
 
 def _skeleton_reason(context: Any) -> Optional[Msg]:
     reason = _garment_reason(context)
+    if reason is None and _is_prop(context):
+        reason = msg("add.why.prop-skeleton")
     if reason is None and not state.get().ready:
         reason = msg("add.why.connect")
     return reason or host.model_open_problem() or _add_busy()
@@ -1741,7 +2020,7 @@ def add_checks(context: Any, bones: Optional[List[str]] = None) -> Tuple[List[Ms
     reason = _garment_reason(context)
     if reason is not None or obj is None:
         return [reason or msg("garment.why.no-garment")], []
-    findings = garment.validate(gh.validate_stats(obj, valid_body(context)))
+    findings = garment.validate(stats(context, obj))
     obj[gh.FINDINGS] = garment.findings_to_json(findings)
     gh.set_flag(obj, "dct_validated", garment.is_clean(findings))
     for finding in findings:
@@ -1786,6 +2065,8 @@ def add_checks(context: Any, bones: Optional[List[str]] = None) -> Tuple[List[Ms
         if check.blocking is not None:
             problems.append(check.blocking)
         warnings.extend(check.warnings)
+    if _is_prop(context):
+        return problems, warnings  # a prop moves with its anchor: it has no weights to check
     groups = [group.name for group in obj.vertex_groups if group.name not in gh.TOOL_GROUPS]
     if bones is not None:
         problems.extend(garment_add.group_problems(garment_add.group_report(groups, bones)))
@@ -1819,6 +2100,14 @@ def ensure_skeleton(context: Any, obj: Any, gender: str) -> gdct.Skeleton:
     if problem is not None:
         raise UserError(problem)
     return skeleton
+
+
+def ensure_anchor(context: Any, obj: Any, gender: str, slot: str) -> gdct.Skeleton:
+    """The prop hanging from its anchor bone, placed from Durty Cloth Tool's skeleton template of ``gender``."""
+    template = state.get().skeletons.get(gender)
+    if template is None:
+        raise UserError(msg("add.why.no-template"))
+    return gdct.attach_prop(context, obj, gdct.anchor_matrix(template, slot), slot)
 
 
 def use_skeleton(context: Any) -> Msg:
@@ -1891,13 +2180,19 @@ class AddJob:
             return 0.0
         if self.stage == "skeleton":
             self._changing()
-            self.skeleton = ensure_skeleton(context, obj, self.gender)
+            if self.slot in garment.PROP_SLOTS:
+                self.skeleton = ensure_anchor(context, obj, self.gender, self.slot)
+            else:
+                self.skeleton = ensure_skeleton(context, obj, self.gender)
             self.stage = "prepare"
             return 0.0
         if self.stage == "prepare":
             self._changing()
             self.images = gdct.prepare_garment(context, obj, self.skeleton)
-            problem = gdct.skeleton_problem(obj, self.gender, ctrl.skeletons.bones(self.gender))
+            if self.slot in garment.PROP_SLOTS:
+                problem = gdct.prop_problem(obj, self.slot)
+            else:
+                problem = gdct.skeleton_problem(obj, self.gender, ctrl.skeletons.bones(self.gender))
             if problem is not None:  # checked again right before the export
                 raise UserError(problem)
             self.stage = "export"
@@ -1963,7 +2258,8 @@ class AddJob:
             host.push_undo(t("add.op.add"))
             host.redraw()
 
-        ctrl.item_add.start(self.slot, self.gender, bool(settings_.skin), name, chosen, files, on_added=added)
+        skin = bool(settings_.skin) and self.slot not in garment.PROP_SLOTS  # a prop never shows skin
+        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files, on_added=added)
         if self.changed:
             host.push_undo(t("add.op.add"))
         self.result = {"sent": msg("add.sent", name=name, count=len(chosen))}
@@ -2246,6 +2542,7 @@ def flow_state(context: Any) -> garment.FlowState:
     obj = current_garment(context)
     report = garment.FitReport.from_json(gh.stored_text(obj, gh.FIT_REPORT))
     ctrl = state.controller
+    prop = garment.is_prop(settings_.category)
     skeleton = gdct.skeleton_of(obj)
     expected = garment.markers_for(settings_.category)
     placed = gh.marker_objects(context.scene) if obj is not None else {}
@@ -2272,6 +2569,7 @@ def flow_state(context: Any) -> garment.FlowState:
         skeleton=skeleton is not None and skeleton.gender == settings_.gender,
         adding=RUNTIME.job is not None or RUNTIME.add_job is not None or (ctrl is not None and ctrl.item_add.adding),
         added=bool(obj is not None and gh.stored_text(obj, gdct.ADDED)),
+        prop=prop,
     )
 
 
@@ -2314,14 +2612,28 @@ def draw_main(layout: Any, context: Any) -> None:
 
 def draw_setup(layout: Any, context: Any) -> None:
     settings_ = props(context)
+    kind = garment.garment_type(settings_.category)
     row = layout.row(align=True)
     row.prop(settings_, "gender", expand=True)
-    labelled(layout, context, settings_, "slot", "garment.prop.slot")
-    labelled(layout, context, settings_, "category", "garment.prop.category")
-    layout.separator(factor=GAP_SMALL)
-    heading(layout, context, "garment.prop.pose", info="garment.info.pose")
-    row = layout.row(align=True)
-    row.prop(settings_, "source_pose", expand=True)
+    labelled(layout, context, settings_, "category", "garment.prop.category", info="garment.info.type")
+    subtext(layout, context, f"garment.category.{settings_.category}.desc")
+    if kind.hint:
+        wrapped(layout, context, t(kind.hint), "INFO")
+    if garment.markers_for(settings_.category):
+        layout.separator(factor=GAP_SMALL)
+        labelled(layout, context, settings_, "avatar", "garment.prop.avatar", info="garment.info.avatar")
+    if kind.family in ("upper", "lower") and settings_.avatar == "detect":
+        layout.separator(factor=GAP_SMALL)
+        heading(layout, context, "garment.prop.pose", info="garment.info.pose")
+        row = layout.row(align=True)
+        row.prop(settings_, "source_pose", expand=True)
+    if len(kind.slots) > 1 or kind.family == "upper":
+        body = options(layout, context, "type")
+        if body is not None:
+            if len(kind.slots) > 1:
+                labelled(body, context, settings_, "slot", "garment.prop.slot")
+            if kind.family == "upper":
+                ui.checkbox(body, context, settings_, "open_front", "garment.prop.open-front")
 
     layout.separator(factor=GAP)
     heading(layout, context, "garment.prop.garment", "MOD_CLOTH", info="garment.info.garment")
@@ -2350,9 +2662,23 @@ def draw_setup(layout: Any, context: Any) -> None:
     subtext(layout, context, "garment.body.subtext")
 
 
+def draw_anchor(layout: Any, context: Any) -> None:
+    """A prop's placement: Snap to Anchor, then moved by hand."""
+    obj = current_garment(context)
+    heading(layout, context, "garment.heading.snap", "PIVOT_CURSOR", info="garment.info.snap")
+    step(layout, context, DCTLINK_OT_fit_snap_anchor.bl_idname, "garment.op.snap", "PIVOT_CURSOR")
+    if obj is not None:
+        reason_text(layout, context, _snap_reason(context))
+    subtext(layout, context, "garment.snap.subtext", anchor=t(f"garment.slot.{props(context).slot}"))
+
+
 def draw_fit(layout: Any, context: Any) -> None:
     settings_ = props(context)
     obj = current_garment(context)
+    if _is_prop(context):
+        draw_anchor(layout, context)
+        draw_backups(layout, context)
+        return
     heading(layout, context, "garment.heading.markers", "EMPTY_DATA", info="garment.info.markers")
     expected = garment.markers_for(settings_.category)
     if not expected:
@@ -2368,7 +2694,8 @@ def draw_fit(layout: Any, context: Any) -> None:
         if placed == len(expected):
             for problem in garment.marker_problems(markers, settings_.category):
                 wrapped(layout, context, t(f"garment.marker-problem.{problem}"), "ERROR")
-        operator(layout, DCTLINK_OT_fit_mirror_markers.bl_idname, "garment.op.mirror", "MOD_MIRROR")
+        if expected != garment.HEAD_MARKERS:
+            operator(layout, DCTLINK_OT_fit_mirror_markers.bl_idname, "garment.op.mirror", "MOD_MIRROR")
         body = options(layout, context, "markers")
         if body is not None:
             body.prop(settings_, "marker_size", text=t("garment.prop.marker-size"), translate=False)
@@ -2397,7 +2724,17 @@ def draw_fit(layout: Any, context: Any) -> None:
 
     layout.separator(factor=GAP)
     draw_service(layout, context, "fit")
+    if settings_.category == "dress":
+        layout.separator(factor=GAP)
+        heading(layout, context, "garment.heading.split", "MOD_EDGESPLIT", info="garment.info.split")
+        operator(layout, DCTLINK_OT_fit_split_waist.bl_idname, "garment.op.split", "MOD_EDGESPLIT")
+        if obj is not None:
+            reason_text(layout, context, _split_reason(context))
+    draw_backups(layout, context)
 
+
+def draw_backups(layout: Any, context: Any) -> None:
+    obj = current_garment(context)
     layout.separator(factor=GAP)
     heading(layout, context, "garment.heading.backups", "FILE_BACKUP", info="garment.info.backups")
     count = len(gh.backups(obj)) if obj is not None else 0
@@ -2415,6 +2752,9 @@ def draw_fix(layout: Any, context: Any) -> None:
     obj = current_garment(context)
     if gh.sculpting(obj) or gh.session_broken(obj):
         draw_sculpt(layout, context)
+        return
+    if _is_prop(context):
+        wrapped(layout, context, t("garment.why.prop-fix"), "INFO")
         return
     reason = _fit_reason(context) if obj is not None else None
     if reason is not None and reason.key == "garment.why.align-first":
@@ -2600,10 +2940,14 @@ def draw_ready(layout: Any, context: Any) -> None:
         ui.checkbox(body, context, settings_, "cut_strips", "garment.prop.cut")
 
     layout.separator(factor=GAP)
-    draw_skeleton(layout, context)
-
-    layout.separator(factor=GAP)
-    draw_service(layout, context, "weights")
+    if _is_prop(context):
+        draw_anchor_status(layout, context)
+    else:
+        draw_skeleton(layout, context)
+        layout.separator(factor=GAP)
+        draw_service(layout, context, "weights")
+        if garment.garment_type(settings_.category).bridge:
+            operator(layout, DCTLINK_OT_fit_bridge.bl_idname, "garment.op.bridge", "MOD_VERTEX_WEIGHT")
 
     layout.separator(factor=GAP)
     heading(layout, context, "garment.heading.lods", "MOD_DECIM", info="garment.info.lods")
@@ -2696,6 +3040,19 @@ def _skeleton_line(layout: Any, context: Any, obj: Any) -> None:
         wrapped(layout, context, strings.text(problem or msg("add.skeleton.missing")), "INFO")
 
 
+def draw_anchor_status(layout: Any, context: Any) -> None:
+    """Where a prop goes into the game from: its anchor (the add hangs it there)."""
+    obj = current_garment(context)
+    slot = props(context).slot
+    heading(layout, context, "garment.heading.snap", "PIVOT_CURSOR", info="add.info.anchor")
+    rig = gdct.prop_rig_of(obj)
+    if rig is not None and rig.gender == slot:
+        wrapped(layout, context, t("add.anchor.ready", name=rig.root.name, anchor=t(f"garment.slot.{slot}")),
+                "CHECKMARK")
+    else:
+        wrapped(layout, context, t("add.anchor.missing", anchor=t(f"garment.slot.{slot}")), "INFO")
+
+
 def draw_skeleton(layout: Any, context: Any) -> None:
     """The freemode skeleton the garment is weighted to: before the levels of detail, which take the weights over."""
     obj = current_garment(context)
@@ -2726,7 +3083,8 @@ def draw_add(layout: Any, context: Any) -> None:
         column.prop(settings_, "item_name", text="")
     subtext(layout, context, "add.target", slot=t(f"garment.slot.{settings_.slot}"),
             gender=t(f"gender.{settings_.gender}"))
-    ui.checkbox(layout, context, settings_, "skin", "add.prop.skin")
+    if not _is_prop(context):  # a prop never shows skin
+        ui.checkbox(layout, context, settings_, "skin", "add.prop.skin")
 
     layout.separator(factor=GAP_SMALL)
     heading(layout, context, "add.heading.variations", "IMAGE_DATA", info="add.info.variations")
@@ -2937,6 +3295,9 @@ CLASSES = (
     DCTLINK_OT_fit_load_preset,
     DCTLINK_MT_fit_presets,
     DCTLINK_OT_fit_align,
+    DCTLINK_OT_fit_snap_anchor,
+    DCTLINK_OT_fit_split_waist,
+    DCTLINK_OT_fit_bridge,
     DCTLINK_OT_fit_tpose_to_apose,
     DCTLINK_OT_fit_restore,
     DCTLINK_OT_fit_back_step,

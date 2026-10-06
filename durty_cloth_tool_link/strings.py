@@ -594,7 +594,7 @@ EN: Dict[str, str] = {
     "garment.category.shorts": "Shorts",
     "garment.category.shorts.desc": "Trousers that end at or above the knees",
     "garment.category.shoes": "Shoes",
-    "garment.category.shoes.desc": "Shoes, boots and sandals",
+    "garment.category.shoes.desc": "Shoes and boots",
     "garment.pose.a_pose": "A-pose",
     "garment.pose.a_pose.desc": "The arms point down at an angle, as the ped stands in the game",
     "garment.pose.t_pose": "T-pose",
@@ -622,8 +622,11 @@ EN: Dict[str, str] = {
     "garment.prop.gender.desc": "Which freemode ped the garment is for",
     "garment.prop.slot": "Slot",
     "garment.prop.slot.desc": "The clothing slot the garment goes into in Durty Cloth Tool",
-    "garment.prop.category": "Category",
-    "garment.prop.category.desc": "What kind of garment it is: it sets where the markers go and which regions the tools offer",
+    "garment.prop.category": "Garment Type",
+    "garment.prop.category.desc": (
+        "What kind of garment it is: it sets the slot, how the markers are found, the regions the tools offer and what "
+        "is checked"
+    ),
     "garment.prop.pose": "Source Pose",
     "garment.prop.pose.desc": "The pose of the avatar the garment was made on",
     "garment.prop.marker-size": "Marker Size",
@@ -714,8 +717,8 @@ EN: Dict[str, str] = {
     "garment.op.body-file.desc": "Add a body from a GLB, glTF, FBX or OBJ file instead, in metres and in the game's pose",
     "garment.op.auto-markers": "Auto Markers",
     "garment.op.auto-markers.desc": (
-        "Place the joint markers from the garment's shape (neck, chest, pelvis, shoulders, elbows, wrists and hips; "
-        "for trousers the hips, knees and ankles). Move any marker that is off"
+        "Place the joint markers: on the joints of the avatar chosen under Setup, read from the garment's shape (tops "
+        "and trousers), or on the body's joints to start from. Move any marker that is off"
     ),
     "garment.op.mirror": "Mirror L to R",
     "garment.op.mirror.desc": "Copy the markers of the ped's left side to its right side",
@@ -833,7 +836,7 @@ EN: Dict[str, str] = {
     "garment.why.shape-keys": "The garment has shape keys. Apply or remove them first.",
     "garment.why.empty": "The garment has no geometry.",
     "garment.why.no-body": "Add the freemode body under Setup first.",
-    "garment.why.no-markers": "Shoes need no markers.",
+    "garment.why.no-markers": "This garment type needs no markers.",
     "garment.why.downloading": "The body is being downloaded.",
     "garment.why.sign-in": "Sign in with gta.clothing first (Get Connected), or use a body file.",
     "garment.why.select-mesh": "Select a mesh object first.",
@@ -928,9 +931,10 @@ EN: Dict[str, str] = {
     ),
     "garment.info.markers": (
         "The markers stand for the ped's joints: neck, chest, pelvis, shoulders, elbows, wrists and hips (for trousers "
-        "the hips, knees and ankles). Auto Markers places them from the garment's shape, and lines in the 3D view join "
-        "them: orange lines mean something looks wrong. Move any marker that is off; Mirror L to R copies the left "
-        "side to the right."
+        "the hips, knees and ankles, for a mask the head). Auto Markers puts them on the joints of the avatar chosen "
+        "under Setup, else reads them from the garment's shape (tops and trousers) or starts them on the body's "
+        "joints. Lines in the 3D view join them: orange lines mean something looks wrong. Move any marker that is off; "
+        "Mirror L to R copies the left side to the right."
     ),
     "garment.info.tpose": (
         "Turns the arms of a garment made in T-pose to the arm angle (or onto the body's arms when its joints are "
@@ -997,6 +1001,177 @@ EN: Dict[str, str] = {
         "Next: Use Durty Cloth Tool Skeleton under Game Ready, or Add to Durty Cloth Tool Project, which does it too."
     ),
     "garment.next.add": "Next: Add to Durty Cloth Tool Project under Game Ready.",
+    "garment.slot.berd": "Mask (berd)",
+    "garment.slot.berd.desc": "Masks and face coverings",
+    "garment.slot.hand": "Bag (hand)",
+    "garment.slot.hand.desc": "Bags, backpacks and parachutes",
+    "garment.slot.task": "Armour (task)",
+    "garment.slot.task.desc": "Vests and body armour",
+    "garment.slot.p_head": "Head Prop (p_head)",
+    "garment.slot.p_head.desc": "A prop on the head: hats, caps and helmets",
+    "garment.slot.p_eyes": "Eyes Prop (p_eyes)",
+    "garment.slot.p_eyes.desc": "A prop on the eyes: glasses",
+    "garment.slot.p_ears": "Ears Prop (p_ears)",
+    "garment.slot.p_ears.desc": "A prop on the ears: earrings and earpieces",
+    "garment.slot.p_lwrist": "Left Wrist Prop (p_lwrist)",
+    "garment.slot.p_lwrist.desc": "A prop on the left wrist: watches and bracelets",
+    "garment.slot.p_rwrist": "Right Wrist Prop (p_rwrist)",
+    "garment.slot.p_rwrist.desc": "A prop on the right wrist: watches and bracelets",
+    "garment.category.hoodie": "Hoodie",
+    "garment.category.hoodie.desc": "A top with long sleeves and a hood",
+    "garment.category.open_jacket": "Open Jacket",
+    "garment.category.open_jacket.desc": "A jacket worn open: its two fronts are never joined",
+    "garment.category.long_coat": "Long Coat",
+    "garment.category.long_coat.desc": "A coat that reaches to the knees or below, its tails following both legs",
+    "garment.category.dress": "Dress",
+    "garment.category.dress.desc": "A top and a skirt in one: one cloth in the Top slot, or split into Top and Legs",
+    "garment.category.skirt": "Skirt",
+    "garment.category.skirt.desc": "A skirt in the Legs slot that follows both legs",
+    "garment.category.sandals": "Sandals",
+    "garment.category.sandals.desc": "Open shoes that leave the feet bare",
+    "garment.category.mask": "Mask",
+    "garment.category.mask.desc": "A mask or face covering",
+    "garment.category.armour": "Vest or Body Armour",
+    "garment.category.armour.desc": "A vest worn over the top, such as body armour",
+    "garment.category.bag": "Bag or Parachute",
+    "garment.category.bag.desc": "A backpack, bag or parachute worn on the back",
+    "garment.category.hat": "Hat",
+    "garment.category.hat.desc": "A hat, cap or helmet: a prop on the head",
+    "garment.category.glasses": "Glasses",
+    "garment.category.glasses.desc": "Glasses or sunglasses: a prop on the eyes",
+    "garment.category.ears": "Ear Piece",
+    "garment.category.ears.desc": "Earrings or an earpiece: a prop on the ears",
+    "garment.category.watch": "Watch",
+    "garment.category.watch.desc": "A watch: a prop on the wrist",
+    "garment.category.bracelet": "Bracelet",
+    "garment.category.bracelet.desc": "A bracelet: a prop on the wrist",
+    "garment.region.head": "Head",
+    "garment.info.type": (
+        "The type sets the slot the garment goes into, how its markers are found, the regions the tools offer and what "
+        "is checked. Props (hats, glasses, ear pieces, watches and bracelets) are snapped to their anchor instead of "
+        "fitted to the body."
+    ),
+    "garment.hint.hood": "Auto Markers finds the neck below the hood, and Snug to Body leaves the hood alone.",
+    "garment.hint.open-front": (
+        "Prepare Garment never joins the two fronts, however close they come (Open Front under Options)."
+    ),
+    "garment.hint.coat": (
+        "The tails hang free: Snug to Body leaves them alone, and after each fit their thigh weights are bridged "
+        "across the legs, so the coat does not split between them."
+    ),
+    "garment.hint.dress": (
+        "One piece: the dress goes into the Top slot as one cloth, the skirt's weights bridged across the legs; "
+        "players wear bare legs in the Legs slot with it. Two pieces: Split at Waist under Fit cuts it into a top and "
+        "a skirt for the Legs slot, added one after the other, so each can be worn with other clothing."
+    ),
+    "garment.hint.bare-legs": (
+        "The Legs slot replaces the ped's legs, so the bare legs below the hem must be part of the cloth. The add-on "
+        "adds the cloth; the bare legs come from Durty Cloth Tool's own tools (their own plans apply). Shows Skin is "
+        "on."
+    ),
+    "garment.hint.bare-feet": (
+        "The Shoes slot replaces the ped's feet, so the bare feet must be part of the cloth. The add-on adds the "
+        "sandals; the bare feet come from Durty Cloth Tool's own tools (their own plans apply). Shows Skin is on."
+    ),
+    "garment.hint.avatar": (
+        "Its markers cannot be read from its shape: choose the avatar it was draped on, or Auto Markers starts them on "
+        "the body's joints for you to move."
+    ),
+    "garment.hint.prop": (
+        "A prop hangs from one bone and keeps its shape: it is not fitted to the body and needs no weights. Snap to "
+        "Anchor under Fit puts it in place; move it by hand from there."
+    ),
+    "garment.prop.open-front": "Open Front",
+    "garment.prop.open-front.desc": "The garment is worn open: Prepare Garment never joins its two fronts",
+    "garment.prop.avatar": "Avatar",
+    "garment.prop.avatar.desc": "The avatar the garment was draped on, when it is known: its joints become the markers",
+    "garment.avatar.detect": "Not Known",
+    "garment.avatar.detect.desc": "Auto Markers reads the markers from the garment's shape",
+    "garment.avatar.file": "Imported with the Garment",
+    "garment.avatar.file.desc": "The rigged avatar exported with the garment: the import kept where its joints were",
+    "garment.avatar.manne": "Manne (Male, A-pose)",
+    "garment.avatar.manne.desc": (
+        "MaleTemplate_Manne_01, the male template of Marvelous Designer and CLO, standing in its A-pose"
+    ),
+    "garment.info.avatar": (
+        "When the avatar the garment was draped on is known, Auto Markers puts the markers on its joints, exactly and "
+        "in the pose the garment was draped in. Import Garment keeps them from an FBX exported with the rigged avatar; "
+        "otherwise choose the stock avatar you draped on. A pose you changed in Marvelous Designer is not known: check "
+        "the markers then."
+    ),
+    "garment.marker-note.avatar": "Placed on the joints of the avatar the garment was draped on.",
+    "garment.marker-note.from-body": "Placed on the body's joints: move each onto the matching point of the garment.",
+    "garment.why.no-avatar-file": (
+        "This avatar is not known for the garment: it was not imported with its rigged avatar. Choose another avatar, "
+        "or Not Known."
+    ),
+    "garment.why.avatar-markers": "The avatar lacks a marker this type needs. Choose Not Known, or place it by hand.",
+    "garment.done.import-rig": (
+        "Imported {name} ({count} vertices) and kept the joints of the avatar exported with it for the markers."
+    ),
+    "garment.heading.snap": "Anchor",
+    "garment.op.snap": "Snap to Anchor",
+    "garment.op.snap.desc": (
+        "Move the prop onto its anchor on the body: a hat onto the head, glasses in front of the eyes, ear pieces to "
+        "the ears, a watch or bracelet around the wrist"
+    ),
+    "garment.info.snap": (
+        "A prop hangs from one bone in the game: the head for hats, glasses and ear pieces, the forearm at the wrist "
+        "for watches and bracelets. Snap to Anchor puts it where it usually sits on the freemode body; move, turn or "
+        "scale it by hand from there. When it is added, it keeps its position relative to its anchor."
+    ),
+    "garment.snap.subtext": "Anchor: {anchor}. After snapping, move the prop by hand, then go on under Game Ready.",
+    "garment.done.snap": "Moved the prop onto its anchor ({anchor}): {distance} cm, turned {turn}°.",
+    "garment.next.snap": "Next: Snap to Anchor under Fit, then move the prop by hand where it belongs.",
+    "garment.why.not-prop": "Only props are snapped to an anchor.",
+    "garment.why.prop-fix": "Props keep their own shape: place them with Snap to Anchor and by hand.",
+    "fit.why.prop": "Props are not fitted to the body and need no weights: they move with their anchor.",
+    "garment.marker-error.no-head": "The body has no head to snap the prop to.",
+    "garment.marker-error.no-arm": "The body has no arm to snap the prop to.",
+    "garment.finding.anchor-far": "The prop's middle is {distance} cm from its anchor: snap it or move it closer.",
+    "add.info.anchor": (
+        "When the prop is added, it hangs from its anchor bone, placed from Durty Cloth Tool's freemode skeleton (made "
+        "from your game files), and keeps its position relative to it. It needs no weights."
+    ),
+    "add.anchor.ready": "Hangs from its anchor ({anchor}) in {name}.",
+    "add.anchor.missing": "Anchor: {anchor}. Add to Durty Cloth Tool Project hangs the prop from it.",
+    "add.why.no-anchor": "Durty Cloth Tool's skeleton has no {bone} bone to hang the prop from.",
+    "add.prop.missing": "The prop does not hang from its anchor yet. Add to Durty Cloth Tool Project does that.",
+    "add.why.prop-skeleton": "Props do not go onto the skeleton: they hang from their anchor.",
+    "garment.heading.split": "Two Pieces",
+    "garment.op.split": "Split at Waist",
+    "garment.op.split.desc": (
+        "Cut the dress at its waist into a top and a skirt: the skirt becomes its own garment for the Legs slot"
+    ),
+    "garment.info.split": (
+        "A dress goes into the game as one cloth in the Top slot, or as a top and a skirt. Split at Waist cuts it "
+        "where it is narrowest above the pelvis: the dress keeps the top, and a new garment named after it gets the "
+        "skirt, set up for the Legs slot. Split after Fit to Body, so both pieces keep the fit and its weights, then "
+        "choose each piece under Setup to finish and add it."
+    ),
+    "garment.done.split": "Split {name} at the waist: {skirt} is the skirt, for the Legs slot. Choose it under Setup.",
+    "garment.why.not-dress": "Only a dress is split at the waist.",
+    "garment.why.split-nothing": "Nothing lies on one side of the waist: check the markers.",
+    "garment.op.bridge": "Bridge Thigh Weights",
+    "garment.op.bridge.desc": (
+        "Share the weights of the skirt or coat tails between both thighs across the middle, so the cloth between the "
+        "legs does not split"
+    ),
+    "garment.done.bridge": "Bridged the thigh weights of {count} vertices across the legs.",
+    "garment.why.no-bridge": "Only skirts, dresses and long coats are bridged across the legs.",
+    "garment.why.no-leg-weights": (
+        "The garment has no thigh weights to bridge yet. Fit it to the body or transfer the weights first."
+    ),
+    "garment.done.combine-walls": (
+        "Combined {count} materials into one texture of {size} pixels, {density} pixels per centimetre on the garment "
+        "(the layout uses {used} %). {walls} faces had no room in the UV map (such as the side walls of a thick "
+        "export): they take the colour of the panel edge next to them."
+    ),
+    "garment.done.combine-sparse": (
+        "The combined layout uses only {used} % of the texture, so the garment would look blurry. Its UV map has "
+        "islands without room or far off: check it, or unwrap the garment again, then combine again."
+    ),
+    "garment.why.uv-degenerate": "The garment's UV map has no area anywhere. Unwrap the garment first.",
     "add.heading": "Add to Durty Cloth Tool",
     "add.heading.variations": "Colour Variations",
     "add.heading.skeleton": "Freemode Skeleton",

@@ -23,18 +23,23 @@ import numpy as np
 # --------------------------------------------------------------------------------------------------
 
 GENDERS = ("male", "female")
-#: The component slots the tools support, with Durty Cloth Tool's drawable type names.
-SLOTS = ("jbib", "accs", "lowr", "feet")
-CATEGORIES = ("vest", "tshirt", "long_sleeve", "long_jacket", "pants", "shorts", "shoes")
-SLOT_CATEGORIES: Dict[str, Tuple[str, ...]] = {
-    "jbib": ("vest", "tshirt", "long_sleeve", "long_jacket"),
-    "accs": ("vest", "tshirt", "long_sleeve"),
-    "lowr": ("pants", "shorts"),
-    "feet": ("shoes",),
-}
-#: How far the sleeves of a top reach.
-SLEEVES = {"vest": "none", "tshirt": "short", "long_sleeve": "long", "long_jacket": "long"}
-LOWER = frozenset({"pants", "shorts"})
+#: The slots the tools add to, with Durty Cloth Tool's drawable type names: the components first, then the props.
+#: Blender keeps the chosen slot by its place in this list, so new slots go at the end.
+SLOTS = ("jbib", "accs", "lowr", "feet", "berd", "hand", "task", "p_head", "p_eyes", "p_ears", "p_lwrist", "p_rwrist")
+#: The props among them: rigid pieces that hang from one bone (their anchor), never fitted to the body or weighted.
+PROP_SLOTS = frozenset(slot for slot in SLOTS if slot.startswith("p_"))
+#: The bone each prop slot hangs from in the game (its anchor): the head for hats, glasses and ear pieces, the
+#: forearm's roll bone at the wrist for watches and bracelets.
+ANCHOR_BONES = {"p_head": "SKEL_Head", "p_eyes": "SKEL_Head", "p_ears": "SKEL_Head",
+                "p_lwrist": "RB_L_ForeArmRoll", "p_rwrist": "RB_R_ForeArmRoll"}
+#: The garment types (Blender keeps the chosen type by its place in this list, so new types go at the end).
+CATEGORIES = ("vest", "tshirt", "long_sleeve", "long_jacket", "pants", "shorts", "shoes", "hoodie", "open_jacket",
+              "long_coat", "dress", "skirt", "sandals", "mask", "armour", "bag", "hat", "glasses", "ears", "watch",
+              "bracelet")
+#: The order the type picker lists them in, in groups (``None`` separates two groups).
+CATEGORY_MENU = ("tshirt", "long_sleeve", "vest", "hoodie", "open_jacket", "long_jacket", "long_coat", "dress", None,
+                 "pants", "shorts", "skirt", None, "shoes", "sandals", None, "mask", "armour", "bag", None,
+                 "hat", "glasses", "ears", "watch", "bracelet")
 SOURCE_POSES = ("a_pose", "t_pose", "custom")
 
 #: The markers of a top.
@@ -42,8 +47,12 @@ UPPER_MARKERS = ("chest", "neck", "pelvis", "shoulder_l", "elbow_l", "wrist_l", 
                  "shoulder_r", "elbow_r", "wrist_r", "hip_r")
 #: The markers of the lower categories (legs); shoes need none.
 LOWER_MARKERS = ("pelvis", "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r")
-#: Every marker name.
-MARKERS = UPPER_MARKERS + ("knee_l", "ankle_l", "knee_r", "ankle_r")
+#: The markers of a bag: the torso its straps hang on, without the arms.
+TORSO_MARKERS = ("chest", "neck", "pelvis", "shoulder_l", "shoulder_r", "hip_l", "hip_r")
+#: The marker of a mask: the head's joint (where the head turns on the neck).
+HEAD_MARKERS = ("head",)
+#: Every marker name (new ones go at the end).
+MARKERS = UPPER_MARKERS + ("knee_l", "ankle_l", "knee_r", "ankle_r", "head")
 _LEFT = ("shoulder_l", "elbow_l", "wrist_l", "hip_l", "knee_l", "ankle_l")
 MIRRORED = {name: name[:-1] + "r" for name in _LEFT}
 #: The freemode bone each marker stands for (Align to Body moves the markers onto these joints).
@@ -52,7 +61,7 @@ MARKER_JOINTS = {
     "shoulder_l": "SKEL_L_UpperArm", "elbow_l": "SKEL_L_Forearm", "wrist_l": "SKEL_L_Hand",
     "hip_l": "SKEL_L_Thigh", "knee_l": "SKEL_L_Calf", "ankle_l": "SKEL_L_Foot",
     "shoulder_r": "SKEL_R_UpperArm", "elbow_r": "SKEL_R_Forearm", "wrist_r": "SKEL_R_Hand",
-    "hip_r": "SKEL_R_Thigh", "knee_r": "SKEL_R_Calf", "ankle_r": "SKEL_R_Foot",
+    "hip_r": "SKEL_R_Thigh", "knee_r": "SKEL_R_Calf", "ankle_r": "SKEL_R_Foot", "head": "SKEL_Head",
 }
 #: The joints the add-on reads (from the hosted body, Durty Cloth Tool's skeleton or the body's shape).
 JOINTS = ("SKEL_Pelvis", "SKEL_Spine0", "SKEL_Spine1", "SKEL_Spine2", "SKEL_Spine3", "SKEL_Neck_1", "SKEL_Head",
@@ -60,9 +69,76 @@ JOINTS = ("SKEL_Pelvis", "SKEL_Spine0", "SKEL_Spine1", "SKEL_Spine2", "SKEL_Spin
           "SKEL_R_Clavicle", "SKEL_R_UpperArm", "SKEL_R_Forearm", "SKEL_R_Hand",
           "SKEL_L_Thigh", "SKEL_L_Calf", "SKEL_L_Foot", "SKEL_R_Thigh", "SKEL_R_Calf", "SKEL_R_Foot")
 
-#: Body regions, in the order the panels list them.
-REGIONS = ("shoulders", "upper_arms", "forearms", "cuffs", "chest", "back", "waist", "hips", "neck", "legs")
+#: Body regions, in the order the panels list them (new ones go at the end).
+REGIONS = ("shoulders", "upper_arms", "forearms", "cuffs", "chest", "back", "waist", "hips", "neck", "legs", "head")
 OTHER = -1
+_TOP_REGIONS = tuple(region for region in REGIONS if region not in ("legs", "head"))
+_NO_SLEEVES = tuple(r for r in _TOP_REGIONS if r not in ("upper_arms", "forearms", "cuffs"))
+_SHORT_SLEEVES = tuple(r for r in _TOP_REGIONS if r not in ("forearms", "cuffs"))
+_LONG_REGIONS = _TOP_REGIONS + ("legs",)
+_LOWER_REGIONS = ("waist", "hips", "legs")
+
+
+class GarmentType(NamedTuple):
+    """What a garment type sets up: the slots it may go into (the first is the usual one), how its markers are found
+    (``family``: ``upper``, ``lower``, ``torso``, ``head``, ``none``, or ``anchor`` for a prop), its sleeves, the
+    regions the tools offer and those Snug to Body works on, whether its front is open (never welded across the centre
+    front), whether its thigh weights are bridged across the legs (a skirt or coat tails that hang between the legs
+    must not split), whether it usually shows skin, the extra hint the panel shows (a text key), the largest dimension
+    it has (metres, for the units of an import) and how a prop is snapped to its anchor."""
+
+    slots: Tuple[str, ...]
+    family: str
+    sleeves: str = "none"
+    regions: Tuple[str, ...] = ()
+    snug: Tuple[str, ...] = ()
+    open_front: bool = False
+    bridge: bool = False
+    skin: bool = False
+    hint: str = ""
+    size: Tuple[float, float] = (0.3, 1.8)
+    snap: str = ""
+
+
+_TOPS = ("jbib", "accs")
+#: Every garment type. Nothing here is measured from the game: the slots, markers and regions are the add-on's own
+#: choices, and the sizes are generic human proportions.
+TYPES: Dict[str, GarmentType] = {
+    "tshirt": GarmentType(_TOPS, "upper", "short", _SHORT_SLEEVES, _SHORT_SLEEVES),
+    "long_sleeve": GarmentType(_TOPS, "upper", "long", _TOP_REGIONS, _TOP_REGIONS),
+    "vest": GarmentType(_TOPS, "upper", "none", _NO_SLEEVES, _NO_SLEEVES),
+    "hoodie": GarmentType(("jbib",), "upper", "long", _TOP_REGIONS, _TOP_REGIONS, hint="garment.hint.hood"),
+    "open_jacket": GarmentType(("jbib",), "upper", "long", _TOP_REGIONS, _TOP_REGIONS, open_front=True,
+                               hint="garment.hint.open-front"),
+    "long_jacket": GarmentType(("jbib",), "upper", "long", _LONG_REGIONS, _TOP_REGIONS, size=(0.4, 2.2)),
+    "long_coat": GarmentType(("jbib",), "upper", "long", _LONG_REGIONS, _TOP_REGIONS, bridge=True,
+                             hint="garment.hint.coat", size=(0.5, 2.4)),
+    "dress": GarmentType(("jbib",), "upper", "short", _LONG_REGIONS, _TOP_REGIONS, bridge=True,
+                         hint="garment.hint.dress", size=(0.4, 2.4)),
+    "pants": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=_LOWER_REGIONS, size=(0.25, 1.6)),
+    "shorts": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=_LOWER_REGIONS, skin=True,
+                          hint="garment.hint.bare-legs", size=(0.25, 1.6)),
+    "skirt": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=("waist", "hips"), bridge=True, skin=True,
+                         hint="garment.hint.bare-legs", size=(0.2, 1.6)),
+    "shoes": GarmentType(("feet",), "none", regions=("legs",), snug=("legs",), size=(0.08, 0.5)),
+    "sandals": GarmentType(("feet",), "none", regions=("legs",), snug=("legs",), skin=True,
+                           hint="garment.hint.bare-feet", size=(0.08, 0.5)),
+    "mask": GarmentType(("berd",), "head", regions=("head", "neck"), snug=("head", "neck"),
+                        hint="garment.hint.avatar", size=(0.08, 0.6)),
+    "armour": GarmentType(("task",), "upper", "none", _NO_SLEEVES, _NO_SLEEVES, size=(0.2, 1.2)),
+    "bag": GarmentType(("hand",), "torso", regions=("shoulders", "chest", "back", "waist"), snug=("shoulders",),
+                       hint="garment.hint.avatar", size=(0.15, 1.4)),
+    "hat": GarmentType(("p_head",), "anchor", hint="garment.hint.prop", size=(0.1, 0.8), snap="hat"),
+    "glasses": GarmentType(("p_eyes",), "anchor", hint="garment.hint.prop", size=(0.05, 0.4), snap="glasses"),
+    "ears": GarmentType(("p_ears",), "anchor", hint="garment.hint.prop", size=(0.02, 0.19), snap="ears"),
+    "watch": GarmentType(("p_lwrist", "p_rwrist"), "anchor", hint="garment.hint.prop", size=(0.03, 0.25),
+                         snap="wrist"),
+    "bracelet": GarmentType(("p_rwrist", "p_lwrist"), "anchor", hint="garment.hint.prop", size=(0.03, 0.25),
+                            snap="wrist"),
+}
+#: How far the sleeves of a top reach.
+SLEEVES = {name: kind.sleeves for name, kind in TYPES.items() if kind.family == "upper"}
+LOWER = frozenset(name for name, kind in TYPES.items() if kind.family == "lower")
 
 #: The arm angle below the horizontal that each source pose starts from (degrees).
 POSE_ARM_ANGLE = {"a_pose": 45.0, "t_pose": 0.0, "custom": 45.0}
@@ -83,40 +159,47 @@ THIGH = 0.45
 SHIN = 0.42
 
 
+def garment_type(category: str) -> GarmentType:
+    """The type's settings (a T-shirt's for a name the add-on does not know)."""
+    return TYPES.get(category, TYPES["tshirt"])
+
+
+def slots_for(category: str) -> Tuple[str, ...]:
+    """The slots a garment of this type may go into, the usual one first."""
+    return garment_type(category).slots
+
+
 def categories_for(slot: str) -> Tuple[str, ...]:
-    return SLOT_CATEGORIES.get(slot, ())
+    """The types that may go into a slot, in the order of :data:`CATEGORIES`."""
+    return tuple(name for name in CATEGORIES if slot in TYPES[name].slots)
+
+
+def is_prop(category: str) -> bool:
+    """Whether the type is a prop (snapped to its anchor, never fitted to the body or weighted)."""
+    return garment_type(category).family == "anchor"
 
 
 def markers_for(category: str) -> Tuple[str, ...]:
-    """The markers Auto Markers places for a category (none for shoes)."""
-    if category == "shoes":
-        return ()
-    if category in LOWER:
-        return LOWER_MARKERS
-    return UPPER_MARKERS
+    """The markers a garment of this type has (none for shoes and props)."""
+    family = garment_type(category).family
+    return {"upper": UPPER_MARKERS, "lower": LOWER_MARKERS, "torso": TORSO_MARKERS,
+            "head": HEAD_MARKERS}.get(family, ())
+
+
+def detects_markers(category: str) -> bool:
+    """Whether Auto Markers can find the markers from the garment's shape (tops and legs); the other types take them
+    from the avatar the garment was made on, or start from the body's joints."""
+    return garment_type(category).family in ("upper", "lower")
 
 
 def regions_for(category: str) -> Tuple[str, ...]:
-    """The regions a garment of this category covers, in panel order."""
-    if category == "shoes":
-        return ("legs",)
-    if category in LOWER:
-        return ("waist", "hips", "legs")
-    if category == "long_jacket":
-        return REGIONS
-    covered = tuple(region for region in REGIONS if region != "legs")
-    sleeves = SLEEVES.get(category)
-    if sleeves == "none":
-        return tuple(r for r in covered if r not in ("upper_arms", "forearms", "cuffs"))
-    if sleeves == "short":
-        return tuple(r for r in covered if r not in ("forearms", "cuffs"))
-    return covered
+    """The regions a garment of this type covers, in panel order."""
+    return garment_type(category).regions
 
 
 def snug_regions_for(category: str) -> Tuple[str, ...]:
     """The regions Snug to Body works on: never the coat tails or skirt of a top, which hang free of the legs."""
-    regions = regions_for(category)
-    return regions if category in LOWER or category == "shoes" else tuple(r for r in regions if r != "legs")
+    return garment_type(category).snug
 
 
 # --------------------------------------------------------------------------------------------------
@@ -154,6 +237,8 @@ class FlowState(NamedTuple):
     skeleton: bool = False
     adding: bool = False
     added: bool = False
+    #: A prop: snapped to its anchor (``aligned``) instead of fitted, never weighted, added without the skeleton.
+    prop: bool = False
 
 
 #: The operator each step's hint points at (the panel draws that button as the one to press next).
@@ -162,6 +247,7 @@ STEP_OPERATORS = {
     "garment.next.body": "dct_link.fit_add_body",
     "garment.next.markers": "dct_link.fit_auto_markers",
     "garment.next.align": "dct_link.fit_align",
+    "garment.next.snap": "dct_link.fit_snap_anchor",
     "garment.next.fit": "dct_link.fit_service_fit",
     "garment.next.weights": "dct_link.fit_service_weights",
     "garment.next.check": "dct_link.fit_check",
@@ -184,6 +270,8 @@ def next_step(state: FlowState) -> str:
     if not state.body:
         return "garment.next.body"
     if not state.prepared:
+        if state.prop:
+            return "garment.next.prepare" if state.aligned else "garment.next.snap"
         if state.markers < len(markers_for(state.category)):
             return "garment.next.markers"
         if markers_for(state.category) and not state.aligned:
@@ -197,7 +285,7 @@ def next_step(state: FlowState) -> str:
         return "garment.next.prepare"
     if state.materials > 1:
         return "garment.next.combine"
-    if not state.weighted:
+    if not state.weighted and not state.prop:
         if state.sollumz and state.connected and not state.skeleton:
             return "garment.next.skeleton"
         return "garment.next.weights"
@@ -218,7 +306,7 @@ def next_step(state: FlowState) -> str:
         return "garment.next.project"
     if not state.sollumz:
         return "garment.next.sollumz"
-    if not state.skeleton:
+    if not state.skeleton and not state.prop:
         return "garment.next.skeleton"
     return "garment.next.add"
 
@@ -534,7 +622,7 @@ def place_markers(positions: Any, category: str, source_pose: str = "a_pose",
                   edges: Optional[np.ndarray] = None) -> MarkerResult:
     """:func:`auto_markers` with the notes on what was guessed rather than found (``MARKER_NOTES``)."""
     points = as_points(positions)
-    if category == "shoes":
+    if not detects_markers(category):
         raise MarkerError("no-markers")
     if len(points) < 30 or not np.all(np.isfinite(points)):
         raise MarkerError("too-small")
@@ -786,7 +874,8 @@ def marker_problems(markers: Mapping[str, Any], category: str) -> List[str]:
     found = {name: _vec(value) for name, value in markers.items() if name in MARKERS}
     problems: List[str] = []
     expected = markers_for(category)
-    if not expected or any(name not in found for name in expected):
+    family = garment_type(category).family
+    if not expected or family == "head" or any(name not in found for name in expected):
         return problems
 
     def length(a: str, b: str) -> float:
@@ -808,7 +897,7 @@ def marker_problems(markers: Mapping[str, Any], category: str) -> List[str]:
         span = abs(found["shoulder_l"][0] - found["shoulder_r"][0])
         if not 0.22 <= span <= 0.6:
             problems.append("span")
-        for side in ("l", "r"):
+        for side in ("l", "r") if family == "upper" else ():
             upper, fore = length(f"shoulder_{side}", f"elbow_{side}"), length(f"elbow_{side}", f"wrist_{side}")
             bend = _vec(found[f"wrist_{side}"]) - found[f"elbow_{side}"]
             back = found[f"shoulder_{side}"] - found[f"elbow_{side}"]
@@ -830,7 +919,7 @@ def marker_problems(markers: Mapping[str, Any], category: str) -> List[str]:
 STICK_FIGURE = (("neck", "chest"), ("chest", "pelvis"), ("neck", "shoulder_l"), ("shoulder_l", "elbow_l"),
                 ("elbow_l", "wrist_l"), ("neck", "shoulder_r"), ("shoulder_r", "elbow_r"), ("elbow_r", "wrist_r"),
                 ("pelvis", "hip_l"), ("hip_l", "knee_l"), ("knee_l", "ankle_l"), ("pelvis", "hip_r"),
-                ("hip_r", "knee_r"), ("knee_r", "ankle_r"))
+                ("hip_r", "knee_r"), ("knee_r", "ankle_r"), ("neck", "head"))
 
 
 def stick_figure(markers: Mapping[str, Any]) -> List[Tuple[Vector, Vector]]:
@@ -986,8 +1075,14 @@ def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: 
 
     Markers sit on the garment's surface, joints inside the body, so the size is measured against ``reference``: the
     markers Auto Markers gives the body itself (surface against surface). Without it the joints' own span is used,
-    which reads every garment as too wide and shrinks it."""
-    kind = "lower" if category in LOWER else "upper"
+    which reads every garment as too wide and shrinks it.
+
+    A mask has one marker, the head's joint: it is moved onto the body's head joint as it is, without turning or
+    scaling it."""
+    family = garment_type(category).family
+    if family == "head":
+        return _head_plan(markers, joints)
+    kind = "lower" if family == "lower" else "upper"
     weights = ALIGN_WEIGHTS[kind]
     full = complete_joints(joints)
     names = [n for n in weights if n in markers and MARKER_JOINTS[n] in full]
@@ -1031,6 +1126,28 @@ def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: 
                 continue
             limbs.append((side, limb, _tuple(pivot), _tuple(_unit(axis)), angle))
     return AlignPlan(fit, tuple(limbs), residual)
+
+
+#: The furthest Align to Body moves a mask onto the body's head (metres): further means the marker is not on the head.
+HEAD_ALIGN_LIMIT = 0.5
+
+
+def _head_plan(markers: Mapping[str, Any], joints: Mapping[str, Any]) -> AlignPlan:
+    full = complete_joints(joints)
+    if "head" not in markers or "SKEL_Head" not in full:
+        raise MarkerError("align-markers")
+    shift = full["SKEL_Head"] - _vec(markers["head"])
+    if float(np.linalg.norm(shift)) > HEAD_ALIGN_LIMIT:
+        raise MarkerError("align-markers")
+    return AlignPlan(Similarity(1.0, np.eye(3), shift), (), 0.0)
+
+
+def body_markers(joints: Mapping[str, Any], names: Iterable[str]) -> Dict[str, Vector]:
+    """Markers on the body's own joints (``names`` of :data:`MARKER_JOINTS`): where Auto Markers starts a type it cannot
+    read from the garment's shape when the avatar the garment was made on is not known."""
+    full = complete_joints(joints)
+    return {name: _tuple(full[MARKER_JOINTS[name]]) for name in names
+            if name in MARKER_JOINTS and MARKER_JOINTS[name] in full}
 
 
 def limb_weights(points: Any, markers: Mapping[str, Any], side: str, limb: str) -> np.ndarray:
@@ -1205,6 +1322,7 @@ def body_regions(points: Any, joints: Mapping[str, Any]) -> np.ndarray:
     region[named == "upper_arm"] = REGIONS.index("upper_arms")
     region[named == "forearm"] = REGIONS.index("forearms")
     region[named == "leg"] = REGIONS.index("legs")
+    region[named == "head"] = REGIONS.index("head")
     for side in ("L", "R"):
         hand = full.get(f"SKEL_{side}_Hand")
         if hand is not None:
@@ -1573,14 +1691,16 @@ class PairRules:
     """What keeps two vertices from being two sides of one seam, as a test on any pairs of vertices (see
     :func:`seam_candidates`): sharing a face, lying next to each other on one open edge (``chains``), surfaces facing
     apart within one part (``normals``, ``components``; a thick export keeps the rule across parts and joins only
-    across them), a lining and its shell (``fabrics`` and the pairs named in ``apart``), and different ``groups``.
+    across them), a lining and its shell (``fabrics`` and the pairs named in ``apart``), different ``groups``, and the
+    two sides of an open front (``sides`` of opposite sign, see :func:`front_sides`).
     The weld applies them to every two vertices that would become one, not only to the closest pair, so joining two
     groups never joins neighbours along one panel's own edge."""
 
     def __init__(self, count: int, distance: float, *, chains: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None,
                  face_pairs: Optional[Any] = None, normals: Optional[Any] = None, components: Optional[Any] = None,
                  cross_components_only: bool = False, fabrics: Optional[Any] = None,
-                 apart: Iterable[Tuple[Any, Any]] = (), groups: Optional[Any] = None) -> None:
+                 apart: Iterable[Tuple[Any, Any]] = (), groups: Optional[Any] = None,
+                 sides: Optional[Any] = None) -> None:
         self.count = count
         self.gap = max(CHAIN_GAP_FACTOR * distance, 0.01)
         self.chains = chains
@@ -1594,6 +1714,7 @@ class PairRules:
         self.fabrics = np.asarray(fabrics) if fabrics is not None else None
         self.apart = list(apart)
         self.groups = np.asarray(groups) if groups is not None else None
+        self.sides = np.asarray(sides, dtype=np.int64) if sides is not None else None
 
     def allowed(self, a: np.ndarray, b: np.ndarray) -> np.ndarray:
         """Which pairs ``(a[i], b[i])`` may be two sides of one seam (distance aside)."""
@@ -1629,6 +1750,8 @@ class PairRules:
                           | ((labels[a] == second) & (labels[b] == first)))
         if self.groups is not None:
             keep &= self.groups[a] == self.groups[b]
+        if self.sides is not None:
+            keep &= self.sides[a] * self.sides[b] >= 0
         return keep
 
 
@@ -1985,11 +2108,16 @@ def uv_islands(loop_vertex: Any, loop_uv: Any, face_start: Any, face_total: Any,
     return island
 
 
+#: The most pieces one strip is cut into (a strip a hundred times longer than wide does not need a hundred pieces).
+MAX_STRIP_PIECES = 32
+
+
 def strip_segments(island: Any, face_uv_centre: Any, loop_uv: Any, face_total: Any,
-                   aspect: float = 4.0) -> Tuple[np.ndarray, int]:
+                   aspect: float = 4.0, usable: Optional[Any] = None) -> Tuple[np.ndarray, int]:
     """Cuts long thin UV islands (hem bands, waistbands, straps) into roughly square pieces, so the packer does
-    not shrink every island to fit their length. Returns each face's piece number (0 for uncut islands) and how
-    many islands were cut."""
+    not shrink every island to fit their length. Islands ``usable`` marks False (no room in the texture, see
+    :func:`usable_islands`) are never cut: a strip without width would otherwise fall into millions of pieces. Returns
+    each face's piece number (0 for uncut islands) and how many islands were cut."""
     island = np.asarray(island, dtype=np.int64)
     centres = np.asarray(face_uv_centre, dtype=np.float64).reshape(-1, 2)
     uv = np.asarray(loop_uv, dtype=np.float64).reshape(-1, 2)
@@ -1997,9 +2125,11 @@ def strip_segments(island: Any, face_uv_centre: Any, loop_uv: Any, face_total: A
     pieces = np.zeros(len(island), dtype=np.int64)
     cut = 0
     for value in np.unique(island):
+        if usable is not None and not usable[value]:
+            continue
         faces = island == value
         points = uv[faces[loop_face]]
-        if len(points) < 6:
+        if len(points) < 6 or not np.isfinite(points).all():
             continue
         mean = points.mean(axis=0)
         values, vectors = np.linalg.eigh(np.cov((points - mean).T))
@@ -2007,15 +2137,239 @@ def strip_segments(island: Any, face_uv_centre: Any, loop_uv: Any, face_total: A
         along = (points - mean) @ axis
         side = (points - mean) @ across
         length = float(along.max() - along.min())
-        width = max(float(side.max() - side.min()), 1e-9)
-        if length / width <= aspect:
+        width = float(side.max() - side.min())
+        if width <= 1e-6 * max(length, 1e-9) or length / width <= aspect:
             continue
-        count = int(math.ceil(length / (2 * width)))
+        count = min(MAX_STRIP_PIECES, int(math.ceil(length / (2 * width))))
         step = length / count
         position = ((centres[faces] - mean) @ axis - along.min()) / step
         pieces[faces] = np.clip(position.astype(np.int64), 0, count - 1)
         cut += 1
     return pieces, cut
+
+
+#: An island whose UV area per square metre of surface is below this share of the garment's usual one has no room in
+#: the texture: a strip mapped onto a line, as Marvelous Designer maps the side walls of a thick export.
+DEGENERATE_UV_SHARE = 1e-3
+#: A thin island (its UV area below this share of its longest UV extent squared: narrower than about a hundredth of
+#: its length) with less than this share of the usual UV area per square metre has no room either: welding a thick
+#: export's walls to its panels leaves them a hair wide, and packing would blow them up to their full length.
+THIN_UV_SHARE = 0.01
+THIN_DENSITY_SHARE = 0.1
+#: A UV point further than this many times the square root of its island's UV area from the island's middle is a
+#: stray point (a broken export): it is moved into the island before packing.
+STRAY_FACTOR = 50.0
+#: A combined layout that uses less of the texture than this share is worth a warning.
+SPARSE_LAYOUT_SHARE = 0.15
+
+
+def triangle_areas(triangle_uv: Any, triangle_positions: Any) -> Tuple[np.ndarray, np.ndarray]:
+    """Each triangle's UV area and its surface (square metres); a triangle with a broken coordinate has neither."""
+    uv = np.asarray(triangle_uv, dtype=np.float64).reshape(-1, 3, 2)
+    tri = np.asarray(triangle_positions, dtype=np.float64).reshape(-1, 3, 3)
+    a, b, c = uv[:, 0], uv[:, 1], uv[:, 2]
+    cross = np.abs((b[:, 0] - a[:, 0]) * (c[:, 1] - a[:, 1]) - (c[:, 0] - a[:, 0]) * (b[:, 1] - a[:, 1])) / 2
+    surface = np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1) / 2
+    return np.nan_to_num(cross, nan=0.0, posinf=0.0), np.nan_to_num(surface, nan=0.0, posinf=0.0)
+
+
+def island_areas(island: Any, triangle_face: Any, triangle_uv: Any, triangle_positions: Any
+                 ) -> Tuple[np.ndarray, np.ndarray]:
+    """Each UV island's area in the texture and the surface it covers on the garment (``island``: each face's island,
+    ``triangle_face``: each triangle's face)."""
+    island = np.asarray(island, dtype=np.int64)
+    count = int(island.max()) + 1 if len(island) else 0
+    uv, surface = triangle_areas(triangle_uv, triangle_positions)
+    owner = island[np.asarray(triangle_face, dtype=np.int64)]
+    return np.bincount(owner, uv, minlength=count), np.bincount(owner, surface, minlength=count)
+
+
+def usable_islands(uv_area: Any, surface: Any, finite: Optional[Any] = None,
+                   extent: Optional[Any] = None) -> np.ndarray:
+    """Which islands have room in the texture: some UV area for their surface, compared with the garment's usual UV
+    area per square metre (the median over the surface). An island mapped onto a line or a point, or with broken UVs
+    (``finite`` False), has none, nor has a thin one (``extent``: its longest UV side) with little UV area: packing
+    would blow it up to its full length and squeeze every other island. All False when no island has any UV area."""
+    uv_area = np.asarray(uv_area, dtype=np.float64)
+    surface = np.asarray(surface, dtype=np.float64)
+    good = (uv_area > 0) & (surface > 0)
+    if finite is not None:
+        good &= np.asarray(finite, dtype=bool)
+    if not good.any():
+        return good
+    ratio = uv_area[good] / surface[good]
+    order = np.argsort(ratio)
+    weights = np.cumsum(surface[good][order])
+    usual = float(ratio[order][np.searchsorted(weights, weights[-1] / 2)])
+    usable = good & (uv_area >= DEGENERATE_UV_SHARE * usual * surface)
+    if extent is not None:
+        extent = np.nan_to_num(np.asarray(extent, dtype=np.float64))
+        thin = uv_area < THIN_UV_SHARE * extent * extent
+        usable &= ~(thin & (uv_area < THIN_DENSITY_SHARE * usual * surface))
+    return usable
+
+
+#: An island whose triangles' UV areas cancel out to below this share of their sum when their winding is counted folds
+#: over itself.
+FOLDED_SHARE = 0.5
+
+
+def folded_islands(island: Any, triangle_face: Any, triangle_uv: Any) -> np.ndarray:
+    """Which islands fold over themselves in the UV map: the two sides of a thick export's panel, joined at its walls
+    by Prepare Garment, lie on one place with opposite winding, so their areas cancel when the winding counts. Blender's
+    Average Islands Scale measures that way and blows such an island up without end, so it leaves them out."""
+    island = np.asarray(island, dtype=np.int64)
+    count = int(island.max()) + 1 if len(island) else 0
+    uv = np.nan_to_num(np.asarray(triangle_uv, dtype=np.float64).reshape(-1, 3, 2))
+    a, b, c = uv[:, 0], uv[:, 1], uv[:, 2]
+    signed = ((b[:, 0] - a[:, 0]) * (c[:, 1] - a[:, 1]) - (c[:, 0] - a[:, 0]) * (b[:, 1] - a[:, 1])) / 2
+    owner = island[np.asarray(triangle_face, dtype=np.int64)]
+    net = np.abs(np.bincount(owner, signed, minlength=count))
+    total = np.bincount(owner, np.abs(signed), minlength=count)
+    return (total > 0) & (net < FOLDED_SHARE * total)
+
+
+def stray_loops(loop_uv: Any, loop_island: Any, uv_area: Any, factor: float = STRAY_FACTOR) -> np.ndarray:
+    """The UV points that lie far outside their island (further than ``factor`` times the square root of its UV area
+    from its middle, the median of its points), or are not numbers at all."""
+    uv = np.asarray(loop_uv, dtype=np.float64).reshape(-1, 2)
+    island = np.asarray(loop_island, dtype=np.int64)
+    finite = np.isfinite(uv).all(axis=1)
+    stray = ~finite
+    if not len(uv):
+        return stray
+    order = np.argsort(island, kind="stable")
+    starts = np.searchsorted(island[order], np.arange(int(island.max()) + 2))
+    reach = factor * np.sqrt(np.maximum(np.asarray(uv_area, dtype=np.float64), 0.0))
+    for value in np.unique(island):
+        members = order[starts[value]:starts[value + 1]]
+        members = members[finite[members]]
+        if len(members) < 3 or reach[value] <= 0:
+            continue
+        middle = np.median(uv[members], axis=0)
+        stray[members] |= np.linalg.norm(uv[members] - middle, axis=1) > reach[value]
+    return stray
+
+
+def stacked_islands(island: Any, loop_island: Any, loop_uv: Any, precision: float = 1e-5) -> np.ndarray:
+    """For each island, the first island with exactly the same UVs (itself when none comes before it): the two sides
+    of a panel in a thick export, which share one place in the texture and keep sharing it when packed."""
+    count = int(np.max(island)) + 1 if len(island) else 0
+    loop_island = np.asarray(loop_island, dtype=np.int64)
+    uv = np.round(np.nan_to_num(np.asarray(loop_uv, dtype=np.float64).reshape(-1, 2)) / precision).astype(np.int64)
+    rows = np.unique(np.column_stack([loop_island, uv]), axis=0)
+    first = np.full(count, -1, dtype=np.int64)
+    seen: Dict[bytes, int] = {}
+    starts = np.searchsorted(rows[:, 0], np.arange(count + 1))
+    for value in range(count):
+        key = rows[starts[value]:starts[value + 1], 1:].tobytes()
+        first[value] = seen.setdefault(key, value)
+    return first
+
+
+def copy_stacked_uvs(loop_island: Any, stacked: Any, source_uv: Any, packed_uv: Any,
+                     precision: float = 1e-5) -> np.ndarray:
+    """``packed_uv`` with each stacked island (``stacked`` names its first, :func:`stacked_islands`) given the packed
+    place of its first island: every corner where the first island had the same UV."""
+    loop_island = np.asarray(loop_island, dtype=np.int64)
+    stacked = np.asarray(stacked, dtype=np.int64)
+    packed = np.asarray(packed_uv, dtype=np.float64).reshape(-1, 2).copy()
+    owner = stacked[loop_island]
+    copies = np.nonzero(owner != loop_island)[0]
+    if not len(copies):
+        return packed
+    uv = np.round(np.nan_to_num(np.asarray(source_uv, dtype=np.float64).reshape(-1, 2)) / precision).astype(np.int64)
+    originals = np.nonzero(owner == loop_island)[0]
+    # Each row (island, u, v) compares as one value: a view of its three integers as one record, sorted as bytes.
+    record = np.dtype((np.void, 3 * 8))
+
+    def records(rows: np.ndarray) -> np.ndarray:
+        return np.ascontiguousarray(rows.astype(np.int64)).view(record).reshape(-1)
+
+    keys = records(np.column_stack([loop_island[originals], uv[originals]]))
+    order = np.argsort(keys, kind="stable")
+    flat = keys[order]
+    probe = records(np.column_stack([owner[copies], uv[copies]]))
+    found = np.minimum(np.searchsorted(flat, probe), len(flat) - 1)
+    hit = flat[found] == probe
+    packed[copies[hit]] = packed[originals[order[found[hit]]]]
+    return packed
+
+
+def nearest_points(query: Any, target: Any, start: float = 0.005) -> np.ndarray:
+    """For each ``query`` point, the index of the nearest ``target`` point (searched in growing radii)."""
+    query, target = as_points(query), as_points(target)
+    found = np.full(len(query), -1, dtype=np.int64)
+    if not len(query) or not len(target):
+        return found
+    extent = float(np.ptp(np.concatenate([query, target]), axis=0).max()) or 1.0
+    radius = start
+    left = np.arange(len(query))
+    while len(left):
+        q, t, d = grid_pairs(query[left], target, radius)
+        if len(q):
+            best = np.full(len(left), np.inf)
+            np.minimum.at(best, q, d)
+            pick = np.nonzero(d == best[q])[0]
+            _, first = np.unique(q[pick], return_index=True)
+            chosen = pick[first]
+            found[left[q[chosen]]] = t[chosen]
+        left = left[found[left] < 0]
+        if radius > 2 * extent:
+            break
+        radius *= 2
+    return found
+
+
+def borrow_uvs(loop_vertex: Any, loop_uv: Any, keep: Any, positions: Any,
+               loop_face: Optional[Any] = None) -> np.ndarray:
+    """``loop_uv`` with every loop ``keep`` marks False given the UV of a kept loop: one on the same vertex when there
+    is one, else one on the vertex nearest to it. With ``loop_face`` every corner of such a face takes the UV of its
+    first corner, so the face covers no pixels and bakes over nothing. Faces without room in the layout (the side
+    walls of a thick export) so take the colour of the panel edge next to them."""
+    loop_vertex = np.asarray(loop_vertex, dtype=np.int64)
+    uv = np.asarray(loop_uv, dtype=np.float64).reshape(-1, 2).copy()
+    keep = np.asarray(keep, dtype=bool)
+    if keep.all() or not keep.any():
+        return uv
+    points = as_points(positions)
+    kept = np.nonzero(keep)[0]
+    first = np.full(len(points), -1, dtype=np.int64)
+    first[loop_vertex[kept[::-1]]] = kept[::-1]  # each vertex's first kept loop
+    moved = np.nonzero(~keep)[0]
+    source = first[loop_vertex[moved]]
+    lonely = np.unique(loop_vertex[moved[source < 0]])
+    if len(lonely):
+        donors = np.nonzero(first >= 0)[0]
+        nearest = nearest_points(points[lonely], points[donors])
+        lookup = np.full(len(points), -1, dtype=np.int64)
+        lookup[lonely] = np.where(nearest >= 0, first[donors[np.maximum(nearest, 0)]], kept[0])
+        source = np.where(source >= 0, source, lookup[loop_vertex[moved]])
+    uv[moved] = uv[source]
+    if loop_face is not None:
+        faces = np.asarray(loop_face, dtype=np.int64)[moved]
+        _, first_corner = np.unique(faces, return_index=True)
+        corner = np.full(int(faces.max()) + 1, -1, dtype=np.int64)
+        corner[faces[first_corner]] = moved[first_corner]
+        uv[moved] = uv[corner[faces]]
+    return uv
+
+
+def fit_unit_square(loop_uv: Any, chosen: Any, margin: float = 0.002) -> np.ndarray:
+    """``loop_uv`` with the ``chosen`` loops moved and scaled together (keeping their shape) into the 0 to 1 square
+    when they reach outside it: the packer may leave a layout in another UDIM tile."""
+    uv = np.asarray(loop_uv, dtype=np.float64).reshape(-1, 2).copy()
+    chosen = np.asarray(chosen, dtype=bool)
+    if not chosen.any():
+        return uv
+    points = uv[chosen]
+    low, high = points.min(axis=0), points.max(axis=0)
+    if low.min() >= -1e-6 and high.max() <= 1.0 + 1e-6:
+        return uv
+    size = float((high - low).max()) or 1.0
+    scale = min(1.0, (1.0 - 2 * margin) / size)
+    uv[chosen] = (points - low) * scale + margin
+    return uv
 
 
 def uv_area(triangle_uv: Any) -> float:
@@ -2052,6 +2406,220 @@ def texel_density(triangle_uv: Any, triangle_positions: Any, size: int) -> float
     if surface <= 1e-12:
         return 0.0
     return round(math.sqrt(uv_area(uv) * size * size / (surface * 1e4)), 1)
+
+
+# --------------------------------------------------------------------------------------------------
+# Garment types: open fronts, bridged thigh weights, the waist, props on their anchor
+# --------------------------------------------------------------------------------------------------
+
+def front_sides(positions: Any, edges: Any, centre: Tuple[float, float]) -> np.ndarray:
+    """For an open front: +1 for a vertex in front (towards -Y of ``centre``'s Y) whose neighbours lie on the ped's
+    left of the centre plane (``centre``'s X), -1 for one whose neighbours lie on its right, 0 for every vertex at the
+    back. The two edges of an open front lie on top of each other at the centre, but each has its own panel beside it,
+    so they get opposite sides, and two sides of one open front are never joined (:class:`PairRules` ``sides``)."""
+    points = as_points(positions)
+    if not len(points):
+        return np.zeros(0, dtype=np.int64)
+    cx, cy = centre
+    beside = neighbour_mean(points[:, 0], edges, len(points)) - cx
+    side = np.where(beside > 1e-6, 1, np.where(beside < -1e-6, -1, 0))
+    return np.where(points[:, 1] < cy, side, 0).astype(np.int64)
+
+
+#: The words that name the bones of a leg in the freemode skeleton (``SKEL_L_Thigh``, ``RB_R_ThighRoll``,
+#: ``MH_L_Knee``, ``SKEL_R_Calf``, ``SKEL_L_Foot``, ``SKEL_R_Toe0``); the side is the ``_L_`` or ``_R_`` in the name.
+LEG_WORDS = ("Thigh", "Calf", "Knee", "Foot", "Toe")
+
+
+def leg_side(name: str) -> Optional[str]:
+    """``l`` or ``r`` for a bone of the left or right leg, else ``None``."""
+    if not any(word in name for word in LEG_WORDS):
+        return None
+    if "_L_" in name:
+        return "l"
+    if "_R_" in name:
+        return "r"
+    return None
+
+
+def mirrored_bone(name: str) -> str:
+    return name.replace("_L_", "_\0_").replace("_R_", "_L_").replace("_\0_", "_R_")
+
+
+def bridge_leg_weights(positions: Any, table: Any, names: Sequence[str], centre_x: float, top: float, width: float,
+                       fade: float = 0.05) -> Tuple[np.ndarray, List[str], int]:
+    """Weights of a skirt, a dress or coat tails bridged across the thighs: below ``top`` (the thigh joints; fully from
+    ``fade`` metres below it) each vertex's leg weight is shared between the left and right leg by where it is across
+    the centre (``centre_x``), from all left at ``width`` to the left of the centre to all right at ``width`` to the
+    right, so the cloth between the legs follows both and does not split. How each side's share is spread over
+    thigh, calf and so on stays as it was; pelvis and spine weights stay. ``table`` holds the weights (vertices by
+    groups, ``names`` the groups); a mirrored bone a side lacks is added. Returns the table, its group names and how
+    many vertices changed; each vertex keeps its four strongest weights."""
+    points = as_points(positions)
+    table = np.asarray(table, dtype=np.float64).reshape(len(points), -1).copy()
+    names = list(names)
+    columns = {name: index for index, name in enumerate(names)}
+    for name in list(names):
+        if leg_side(name) is not None and mirrored_bone(name) not in columns:
+            columns[mirrored_bone(name)] = len(names)
+            names.append(mirrored_bone(name))
+            table = np.concatenate([table, np.zeros((len(points), 1))], axis=1)
+    pairs = sorted({(columns[n], columns[mirrored_bone(n)]) for n in names if leg_side(n) == "l"})
+    if not pairs or not len(points):
+        return table, names, 0
+    share = _smoothstep((points[:, 0] - centre_x) / (2.0 * max(width, 1e-3)) + 0.5)  # 1: all to the left leg
+    blend = _smoothstep((top - points[:, 2]) / max(fade, 1e-3))
+    before = table.copy()
+    for left, right in pairs:
+        both = table[:, left] + table[:, right]
+        table[:, left] = (1 - blend) * table[:, left] + blend * share * both
+        table[:, right] = (1 - blend) * table[:, right] + blend * (1 - share) * both
+    changed = np.abs(table - before).max(axis=1) > 1e-4
+    if changed.any():
+        table[changed] = limit_influences(table[changed])
+    return table, names, int(changed.sum())
+
+
+def waist_level(positions: Any, pelvis: Any, below: float = 0.02, above: float = 0.3) -> float:
+    """Where a dress is narrowest between ``below`` metres under the pelvis marker and ``above`` over it (its waist):
+    the level Split at Waist cuts at. Sleeves and anything further than 0.3 m from the centre are left out."""
+    points = as_points(positions)
+    pelvis = _vec(pelvis)
+    near = points[np.abs(points[:, 0] - pelvis[0]) < 0.3]
+    best, level = np.inf, float(pelvis[2] + 0.1)
+    for z in np.arange(pelvis[2] - below, pelvis[2] + above, 0.01):
+        band = near[np.abs(near[:, 2] - z) < 0.006]
+        if len(band) < 6:
+            continue
+        width = float(np.ptp(band[:, 0])) + float(np.ptp(band[:, 1]))
+        if width < best:
+            best, level = width, float(z)
+    return level
+
+
+#: Generic adult head proportions (metres), nothing measured from the game: the eyes lie this far below the crown, the
+#: ear lobes this far below the eyes, the front of a pair of glasses this far in front of the eyes, a watch this far
+#: up the forearm from the wrist joint, and a hat's band this much narrower than the head where it sits.
+EYES_BELOW_CROWN = 0.115
+LOBES_BELOW_EYES = 0.045
+GLASSES_AHEAD = 0.012
+WATCH_ABOVE_WRIST = 0.035
+HAT_EASE = 0.06
+
+
+class Snap(NamedTuple):
+    """How Snap to Anchor moves a prop: turned by ``degrees`` about ``axis`` through ``pivot`` (the prop's own
+    reference point), then moved by ``offset``."""
+
+    offset: Vector
+    pivot: Vector
+    axis: Vector = (0.0, 0.0, 1.0)
+    degrees: float = 0.0
+
+    def apply(self, points: Any) -> np.ndarray:
+        turned = rotate_weighted(points, self.pivot, self.axis, self.degrees, np.ones(len(as_points(points))))
+        return turned + _vec(self.offset)
+
+
+def _head(body: np.ndarray, joints: Mapping[str, Any]) -> np.ndarray:
+    """The body's head: what lies above the neck joint, near the head joint."""
+    full = complete_joints(joints)
+    neck, head = full["SKEL_Neck_1"], full["SKEL_Head"]
+    near = (body[:, 2] > neck[2] + 0.03) & (np.linalg.norm(body[:, :2] - head[:2], axis=1) < 0.16)
+    found = body[near]
+    if len(found) < 20:
+        raise MarkerError("no-head")
+    return found
+
+
+def _section(points: np.ndarray, z: float, half: float = 0.005) -> Optional[Tuple[np.ndarray, float]]:
+    """The middle and half width (across X) of a horizontal slice, or ``None`` when it is (nearly) empty."""
+    band = points[np.abs(points[:, 2] - z) <= half]
+    if len(band) < 4:
+        return None
+    return (band[:, :2].min(axis=0) + band[:, :2].max(axis=0)) / 2, float(np.ptp(band[:, 0])) / 2
+
+
+def snap_to_anchor(kind: str, positions: Any, body: Any, joints: Mapping[str, Any], side: str = "l") -> Snap:
+    """How to put a prop onto its anchor on the body (``body``: the body's points, ``joints``: its joints), by the
+    prop's kind (``hat``, ``glasses``, ``ears`` or ``wrist``; ``side`` of a wrist ``l`` or ``r``). A hat sits where
+    the head is as wide as its crown, glasses in front of the eyes, ear pieces at the lobes, a watch or bracelet around
+    the wrist along the forearm. A starting point to move by hand from. Raises :class:`MarkerError` when the body has
+    no head or arm to snap to."""
+    points = as_points(positions)
+    body = as_points(body)
+    if len(points) < 3:
+        raise MarkerError("too-small")
+    low, high = points.min(axis=0), points.max(axis=0)
+    if kind == "wrist":
+        full = complete_joints(joints)
+        bone = "L" if side == "l" else "R"
+        hand, fore = full.get(f"SKEL_{bone}_Hand"), full.get(f"SKEL_{bone}_Forearm")
+        if hand is None or fore is None:
+            raise MarkerError("no-arm")
+        along = _unit(hand - fore)
+        target = hand - along * WATCH_ABOVE_WRIST
+        centre = points.mean(axis=0)
+        values, vectors = np.linalg.eigh(np.cov((points - centre).T))
+        normal = vectors[:, 0]  # a band's axis: the direction its points spread least along
+        if normal @ along < 0:
+            normal = -normal
+        axis = np.cross(normal, along)
+        degrees = math.degrees(math.atan2(float(np.linalg.norm(axis)), float(np.clip(normal @ along, -1.0, 1.0))))
+        if float(np.linalg.norm(axis)) < 1e-9:
+            axis, degrees = np.array([0.0, 0.0, 1.0]), 0.0
+        return Snap(_tuple(target - centre), _tuple(centre), _tuple(_unit(axis)), degrees)
+    head = _head(body, joints)
+    crown = float(head[:, 2].max())
+    eyes = crown - EYES_BELOW_CROWN
+    if kind == "hat":
+        height = float(high[2] - low[2])
+        widths = []
+        for z in np.arange(low[2] + 0.005, low[2] + 0.4 * height + 1e-9, 0.005):
+            found = _section(points, float(z))
+            if found is not None:
+                widths.append((found[1], float(z), found[0]))
+        if not widths:
+            raise MarkerError("too-small")
+        crown_width, level, middle = min(widths)
+        sections = []
+        for z in np.arange(crown - 0.002, crown - 0.2, -0.005):
+            found = _section(head, float(z))
+            if found is not None:
+                sections.append((float(z), found))
+        if not sections:
+            raise MarkerError("no-head")
+        fitting = [entry for entry in sections if entry[1][1] >= crown_width * (1.0 - HAT_EASE)]
+        z_target, (centre_target, _width) = fitting[0] if fitting else max(sections, key=lambda e: e[1][1])
+        offset = np.array([centre_target[0] - middle[0], centre_target[1] - middle[1], z_target - level])
+        return Snap(_tuple(offset), _tuple(np.array([middle[0], middle[1], level])))
+    found = _section(head, eyes, 0.01)
+    if found is None:
+        raise MarkerError("no-head")
+    middle, half = found
+    if kind == "glasses":
+        level = head[np.abs(head[:, 2] - eyes) < 0.01]
+        eye_line = level[np.abs(np.abs(level[:, 0] - middle[0]) - 0.033) < 0.012]
+        face = float(eye_line[:, 1].min()) if len(eye_line) else float(level[:, 1].min())
+        front = points[points[:, 1] < low[1] + 0.02]
+        reference = np.array([(low[0] + high[0]) / 2, low[1], float(front[:, 2].mean())])
+        target = np.array([middle[0], face - GLASSES_AHEAD, eyes])
+        return Snap(_tuple(target - reference), _tuple(reference))
+    lobes = eyes - LOBES_BELOW_EYES
+    found = _section(head, lobes, 0.01) or found
+    middle, half = found
+    reference = np.array([(low[0] + high[0]) / 2, (low[1] + high[1]) / 2, high[2]])
+    across = (low[0] < middle[0] - 0.02) and (high[0] > middle[0] + 0.02)
+    if across:
+        x = middle[0]
+    else:  # one ear piece: onto the ear on its side
+        x = middle[0] + (half if reference[0] >= middle[0] else -half)
+    target = np.array([x, middle[1], lobes])
+    return Snap(_tuple(target - reference), _tuple(reference))
+
+
+#: The furthest a prop's middle may lie from its anchor bone (metres) before Validate says it is not on its anchor.
+ANCHOR_LIMIT = 0.35
 
 
 # --------------------------------------------------------------------------------------------------
@@ -2109,6 +2677,8 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
             add("warning", "uv-area", area=round(100.0 * float(area), 1))
     if stats.get("weighted") is False:
         add("error", "no-weights")  # the garment would stay in its rest pose in the game: never clean
+    elif stats.get("weighted") is None:
+        pass  # a prop: it moves with its anchor and has no weights
     else:
         if stats.get("unweighted", 0) > 0:
             add("error", "unweighted", count=int(stats["unweighted"]))
@@ -2129,6 +2699,9 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
     inward = stats.get("inward_share")
     if inward is not None and inward > INWARD_LIMIT:
         add("warning", "normals-inward", share=int(round(100.0 * float(inward))))
+    anchor = stats.get("anchor")
+    if anchor is not None and anchor > ANCHOR_LIMIT:
+        add("warning", "anchor-far", distance=int(round(float(anchor) * 100)))
     if stats.get("materials", 1) > 1:
         add("info", "materials", count=int(stats["materials"]))
     return findings
@@ -2235,10 +2808,10 @@ def parse_preset(text: str) -> Tuple[Dict[str, Vector], Optional[str], Optional[
 # --------------------------------------------------------------------------------------------------
 
 
-#: The largest dimension, in metres, a garment of each kind has (with the arms of an A-pose or a T-pose). Each range
-#: spans less than a factor of 10, the step from centimetres to millimetres, so at most one of those units fits.
-SIZE_RANGES = {"shoes": (0.08, 0.5), "pants": (0.25, 1.6), "shorts": (0.25, 1.6), "long_jacket": (0.4, 2.2)}
-TOP_SIZE_RANGE = (0.3, 1.8)
+#: The largest dimension, in metres, a garment of each type has (with the arms of an A-pose or a T-pose; see
+#: :attr:`GarmentType.size`). Each range spans less than a factor of 10, the step from centimetres to millimetres, so at
+#: most one of those units fits.
+SIZE_RANGES = {name: kind.size for name, kind in TYPES.items()}
 #: The units Import Garment knows, with their factor to metres. Decimetres stand for the FBX files of Marvelous
 #: Designer and CLO that Blender reads ten times too large. Inches are tried last: a size that fits both centimetres
 #: and inches is far more often centimetres (Marvelous Designer's default).
@@ -2323,7 +2896,7 @@ def import_unit(size: float, category: str = "tshirt", unit: str = "auto") -> Op
 
 def plausible_size(size: float, category: str = "tshirt") -> bool:
     """Whether a garment of ``category`` can be ``size`` metres at its largest."""
-    low, high = SIZE_RANGES.get(category, TOP_SIZE_RANGE)
+    low, high = garment_type(category).size
     return low <= size <= high
 
 
@@ -2332,7 +2905,7 @@ def upright_turn(positions: Any, category: str) -> Optional[Tuple[str, float]]:
     front (its height along Y, from a Y-up export read as Z-up), ``("z", 180)`` for a top facing +Y (its front, where
     the neckline dips lower, at the back). ``None`` when it stands as the ped does, or nothing tells."""
     points = as_points(positions)
-    if len(points) < 30 or category == "shoes":
+    if len(points) < 30 or garment_type(category).family not in ("upper", "lower", "torso"):
         return None
     low, high = points.min(axis=0), points.max(axis=0)
     extent = high - low
@@ -2355,8 +2928,8 @@ def upright_turn(positions: Any, category: str) -> Optional[Tuple[str, float]]:
                     widths.append(float(band[:, 0].max() - band[:, 0].min()) if len(band) else 0.0)
                 top_is_high_y = widths[1] < widths[0]
         return ("x", 90.0 if top_is_high_y else -90.0)
-    if category in LOWER:
-        return None
+    if garment_type(category).family != "upper":
+        return None  # which way trousers or a bag face, their shape does not tell
     cx = float(np.median(points[:, 0]))
     cy = float((low[1] + high[1]) / 2)
     # A hood or a high collar is the top of the garment and hangs at the back: where the top band sits says which way

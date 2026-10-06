@@ -6,8 +6,9 @@ Body and the tools that wait for it, the fit check and the problem colours, push
 T-pose to A-pose without tearing a seam, the tear check, prepare, combine materials (with transparency and a normal
 map), levels of detail, validate, backups, adding the coat to the project open in the fake Durty Cloth Tool (a
 128-bone skeleton template, the checks, the export, the add, an add that fails after the garment changed, Cancel and
-the free limit), a one-material garment whose levels of detail keep their UVs, and that nothing else in the scene
-changes.
+the free limit), a one-material garment whose levels of detail keep their UVs, the garment types (an open jacket, a
+skirt's bridged weights, a dress split at its waist, a mask aligned from an avatar, a thick export's walls, a hat added
+as a prop), and that nothing else in the scene changes.
 
 Called by ``smoke_in_blender.py`` while the add-on is signed in to the fake gta.clothing. Only for use inside
 Blender.
@@ -582,11 +583,236 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
         results.append(add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, tpose,
                                   real))
         results.append(add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real))
+    results.append(types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, real))
 
     # Nothing else in the scene changed.
     check("the user's other objects are untouched", np.abs(positions(users_cube) - users_shape).max() == 0
           and users_cube.name == "users_cube")
     return results
+
+
+def choose(obj):
+    for other in bpy.context.view_layer.objects:
+        other.select_set(other == obj)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.dct_link.fit_use_garment()
+
+
+def uv_by_position(obj, scale=0.7):
+    mesh = obj.data
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    uv = bm.loops.layers.uv.new("UVMap")
+    for face in bm.faces:
+        for loop in face.loops:
+            loop[uv].uv = (loop.vert.co.x * scale + 0.5, loop.vert.co.z * scale + 0.5)
+    bm.to_mesh(mesh)
+    bm.free()
+
+
+def tube(name, levels, radius, segments=32):
+    """A tube around the Z axis: a ring of ``segments`` points at each level, ``radius(z)`` wide."""
+    builder = synthetic._Builder()
+    builder.tube(np.column_stack([np.zeros(len(levels)), np.zeros(len(levels)), levels]),
+                 np.array([(radius(z), radius(z) * 0.75) for z in levels]), np.array([1.0, 0, 0]),
+                 np.array([0, 1.0, 0]), segments=segments)
+    return mesh_object(name, builder.mesh({}))
+
+
+def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, real):
+    """The garment types: the picker and what a type sets, each garment keeping its own; an open jacket whose fronts
+    Prepare never joins; a skirt's thigh weights bridged across the legs; a dress split at its waist; a mask aligned
+    from Marvelous Designer's Manne avatar; Combine Materials on a thick export whose side walls have no room in the UV
+    map; and a hat snapped to its anchor and added as a prop."""
+    ui_garment = sys.modules[package + ".ui_garment"]
+    gh = sys.modules[package + ".garment_host"]
+    gdct = sys.modules[package + ".garment_dct"]
+    garment = sys.modules[package + ".garment"]
+    scene = bpy.context.scene
+    props = scene.dct_garment
+    props.gender = "male"
+
+    # The picker: a type sets its usual slot, its skin and its front; each garment keeps its own.
+    jacket = mesh_object("smoke_open_jacket", synthetic.top("long", 45.0))
+    choose(jacket)
+    props.category = "open_jacket"
+    check("a type sets its slot and front", props.slot == "jbib" and props.open_front and not props.skin)
+    log = draw_everything(package, state, "garment type picker")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("Setup shows the type with its description and hint",
+          ("prop", "category") in log and "worn open" in labels and "never joins the two fronts" in labels,
+          labels[labels.find("Garment Type"):][:400])
+    watch = mesh_object("smoke_watch", synthetic.pants())
+    choose(watch)
+    props.category = "watch"
+    props.slot = "p_rwrist"
+    check("a watch is a prop on a wrist, never showing skin", props.slot == "p_rwrist" and not props.skin)
+    choose(jacket)
+    check("each garment keeps its own type and slot", props.category == "open_jacket" and props.slot == "jbib")
+    choose(watch)
+    check("the watch kept its right wrist", props.category == "watch" and props.slot == "p_rwrist")
+    bpy.data.objects.remove(watch)
+    props.category = "shorts"
+    check("shorts show skin", props.skin and props.slot == "lowr")
+
+    # An open jacket: its two fronts meet at the centre front and are never joined.
+    choose(jacket)
+    props.category = "open_jacket"
+    bm = bmesh.new()
+    bm.from_mesh(jacket.data)
+    centre = [e for e in bm.edges if all(abs(v.co.x) < 1e-6 and v.co.y < 0 for v in e.verts)]
+    bmesh.ops.split_edges(bm, edges=centre)
+    bm.to_mesh(jacket.data)
+    bm.free()
+    uv_by_position(jacket)
+    front_before = int((np.abs(positions(jacket)[:, 0]) < 1e-6).sum())
+    check("Prepare Garment runs on the open jacket", "FINISHED" in bpy.ops.dct_link.fit_prepare())
+    front = positions(jacket)
+    opening = int(((np.abs(front[:, 0]) < 1e-4) & (front[:, 1] < 0)).sum())
+    check("the open jacket's two fronts stay apart", front_before > 0 and opening >= 2 * len(centre) - 4,
+          (front_before, opening, len(centre)))
+
+    # A skirt: its thigh weights are bridged across the legs, so it does not split between them.
+    skirt = tube("smoke_skirt", np.linspace(-0.55, 0.05, 16), lambda z: 0.17 + 0.25 * max(0.0, -z) ** 1.2)
+    for name in ("SKEL_Pelvis", "SKEL_L_Thigh", "SKEL_R_Thigh"):
+        skirt.vertex_groups.new(name=name)
+    for vertex in skirt.data.vertices:
+        if vertex.co.z > -0.05:
+            skirt.vertex_groups["SKEL_Pelvis"].add([vertex.index], 1.0, "REPLACE")
+        else:
+            side = "SKEL_L_Thigh" if vertex.co.x >= 0 else "SKEL_R_Thigh"
+            skirt.vertex_groups[side].add([vertex.index], 1.0, "REPLACE")
+    choose(skirt)
+    props.category = "skirt"
+    check("Bridge Thigh Weights runs", "FINISHED" in bpy.ops.dct_link.fit_bridge())
+    middle = [v for v in skirt.data.vertices if abs(v.co.x) < 1e-4 and v.co.y < 0 and v.co.z < -0.3][0]
+    weights = {skirt.vertex_groups[g.group].name: g.weight for g in middle.groups if g.weight > 1e-4}
+    check("the middle of the skirt follows both thighs", abs(weights.get("SKEL_L_Thigh", 0) - 0.5) < 0.05
+          and abs(weights.get("SKEL_R_Thigh", 0) - 0.5) < 0.05, weights)
+
+    # A dress, split at its waist into a top and a skirt for the Legs slot.
+    dress = tube("smoke_dress", np.linspace(-0.6, 0.5, 34), lambda z: 0.12 + 0.6 * (z - 0.14) ** 2)
+    choose(dress)
+    props.category = "dress"
+    check("Split at Waist runs", "FINISHED" in bpy.ops.dct_link.fit_split_waist())
+    lower = bpy.data.objects.get("smoke_dress Skirt")
+    top, bottom = positions(dress), positions(lower) if lower is not None else np.zeros((1, 3))
+    check("the dress keeps its top and a new skirt garment goes to the Legs slot",
+          lower is not None and lower.get(gh.TYPE_TAG) == "skirt" and lower.get(gh.SLOT_TAG) == "lowr"
+          and abs(top[:, 2].min() - bottom[:, 2].max()) < 0.03 and 0.0 < top[:, 2].min() < 0.3,
+          (top[:, 2].min(), bottom[:, 2].max()))
+
+    # A mask made on Marvelous Designer's Manne avatar: its head marker comes from the avatar, Align moves it.
+    avatar_head = np.array([0.0, -0.0046, 0.7309])
+    mask = tube("smoke_mask", np.linspace(-0.06, 0.08, 8), lambda z: 0.095)
+    mask.location = tuple(avatar_head)
+    bpy.context.view_layer.update()
+    gh.apply_transform(mask)
+    choose(mask)
+    props.category = "mask"
+    props.avatar = "manne"
+    check("Auto Markers places the mask's head marker from the avatar",
+          "FINISHED" in bpy.ops.dct_link.fit_auto_markers()
+          and np.allclose(gh.read_markers(scene)["head"], avatar_head, atol=1e-4), gh.read_markers(scene))
+    before = positions(mask).mean(axis=0)
+    check("Align to Body runs on the mask", "FINISHED" in bpy.ops.dct_link.fit_align())
+    head = np.asarray(ui_garment.joints(bpy.context)[0]["SKEL_Head"])
+    check("the mask moved onto the body's head joint as it is",
+          np.allclose(positions(mask).mean(axis=0) - before, head - avatar_head, atol=1e-3)
+          and gh.aligned(mask, scene), (positions(mask).mean(axis=0) - before, head - avatar_head))
+    props.avatar = "detect"
+
+    # A thick export: two sides of a panel share their UVs, and the side walls between them lie on a line.
+    thick = bpy.data.meshes.new("smoke_thick")
+    grid = [(x, 0.0, z) for z in np.linspace(-0.2, 0.3, 11) for x in np.linspace(-0.15, 0.15, 7)]
+    back = [(x, 0.004, z) for x, _, z in grid]
+    faces = [(r * 7 + c, r * 7 + c + 1, (r + 1) * 7 + c + 1, (r + 1) * 7 + c) for r in range(10) for c in range(6)]
+    wall_start = len(grid) * 2
+    wall = [(x, y, -0.2) for x in np.linspace(-0.15, 0.15, 7) for y in (0.0, 0.004)]
+    thick.from_pydata(grid + back + wall, [], faces + [tuple(i + len(grid) for i in reversed(f)) for f in faces]
+                      + [(wall_start + 2 * c, wall_start + 2 * c + 2, wall_start + 2 * c + 3, wall_start + 2 * c + 1)
+                         for c in range(6)])
+    slab = bpy.data.objects.new("smoke_thick", thick)
+    scene.collection.objects.link(slab)
+    bm = bmesh.new()
+    bm.from_mesh(thick)
+    uv = bm.loops.layers.uv.new("UVMap")
+    for face in bm.faces:
+        for loop in face.loops:
+            co = loop.vert.co
+            # The walls are mapped onto the panel's lower edge, a line without area.
+            loop[uv].uv = (co.x + 0.5, 0.3 if face.index >= 120 else co.z + 0.5)
+    bm.to_mesh(thick)
+    bm.free()
+    thick.materials.append(textured_material("smoke_thick_fabric", (0.6, 0.4, 0.2)))
+    choose(slab)
+    props.category = "tshirt"
+    check("Combine Materials runs on the thick export", "FINISHED" in bpy.ops.dct_link.fit_combine_materials())
+    notice = ui_garment.RUNTIME.notice
+    packed = gh.read_uv(thick, gh.PACKED_UV)
+    check("the walls take the panel edge's colour and the panel fills the texture",
+          notice is not None and notice.message.key == "garment.done.combine-walls"
+          and notice.message.fields["walls"] == 6 and notice.message.fields["used"] > 30
+          and packed.min() >= 0 and packed.max() <= 1, notice)
+
+    # A hat: snapped to its anchor on the body, never fitted, and added as a prop that hangs from its anchor.
+    hat = tube("smoke_hat", np.linspace(0.0, 0.12, 8), lambda z: 0.085 - 0.2 * max(0.0, z - 0.08))
+    hat.location = (0.3, 0.2, 1.5)
+    bpy.context.view_layer.update()
+    gh.apply_transform(hat)
+    uv_by_position(hat, 2.0)
+    hat.data.materials.append(textured_material("smoke_hat_felt", (0.2, 0.2, 0.2)))
+    choose(hat)
+    props.category = "hat"
+    check("a hat is a prop on the head", props.slot == "p_head" and not props.skin)
+    check("the hat waits for Snap to Anchor", ui_garment.next_operator(bpy.context) == "dct_link.fit_snap_anchor")
+    check("Snap to Anchor runs", "FINISHED" in bpy.ops.dct_link.fit_snap_anchor())
+    placed = positions(hat)
+    check("the hat sits on the head", abs(placed[:, 0].mean()) < 0.02 and abs(placed[:, 1].mean()) < 0.02
+          and 0.55 < placed[:, 2].min() < 0.8 and gh.aligned(hat, scene),
+          (placed.mean(axis=0).round(3).tolist(), round(float(placed[:, 2].min()), 3), gh.aligned(hat, scene)))
+    check("a prop is not pushed out of the body", refused(bpy.ops.dct_link.fit_push_out, "keep their own shape"))
+    check("a prop is not fitted on gta.clothing", refused(bpy.ops.dct_link.fit_service_fit, "not fitted"))
+    check("a prop goes onto no skeleton", refused(bpy.ops.dct_link.fit_use_skeleton, "anchor"))
+    check("Validate needs no weights for a prop", "FINISHED" in bpy.ops.dct_link.fit_validate()
+          and not any(f.code == "no-weights" for f in garment.findings_from_json(hat.get(gh.FINDINGS, ""))),
+          hat.get(gh.FINDINGS))
+    log = draw_everything(package, state, "garment prop")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panels show the anchor instead of markers and weights", ("operator", "dct_link.fit_snap_anchor") in log
+          and ("operator", "dct_link.fit_service_weights") not in log and "Anchor" in labels, labels[-500:])
+    detail = "no add (no Durty Cloth Tool)"
+    if dct is not None:
+        pump(addon, lambda: ctrl.ready and ctrl.project is not None, timeout=60, what="the link before the hat")
+        adds = len(dct.item_adds)
+        props.item_name = "Smoke Hat"
+        dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING_HAT), "findings": []}
+        check("the hat is added", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+        pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
+             what="the hat's add")
+        pump(addon, lambda: len(dct.item_adds) > adds and not ctrl.item_add.adding, timeout=30, what="the hat's answer")
+        header, files = dct.item_adds[-1]
+        model = bytes(files[0][1])
+        rig = gdct.prop_rig_of(hat)
+        anchor = np.array(rig.armature.matrix_world) if rig is not None else np.eye(4)
+        check("the hat goes in as a head prop without skin or skeleton, hanging from its anchor",
+              header["drawableType"] == "p_head" and header["skin"] is False and b"<Skeleton" not in model
+              and rig is not None and hat.parent == rig.armature
+              and not any(m.type == "ARMATURE" for m in hat.modifiers)
+              and np.allclose(anchor[:3, 3], synthetic.joints_of()["SKEL_Head"], atol=1e-4)
+              and hat.get(gdct.ADDED) == "Smoke Hat", (header, ui_garment.RUNTIME.notice))
+        if real:
+            import re
+
+            centre = re.search(rb'<BoundingSphereCenter x="([-\d.e]+)" y="([-\d.e]+)" z="([-\d.e]+)"', model)
+            local = np.array([float(v) for v in centre.groups()]) if centre else np.full(3, 9.0)
+            check("the real Sollumz exported the hat rigid and around its anchor",
+                  b"<BlendWeights" not in model and float(np.linalg.norm(local)) < 0.3, local.tolist())
+        detail = f"{header['drawableType']}, {len(model)} bytes of XML"
+    return {"check": "garment types (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True, "detail": detail}
+
+
+ADDED_BINDING_HAT = {"clothId": "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f", "textureId": "0d1e2f3a-4b5c-4d6e-9f7a-8b9c0d1e2f3a"}
 
 
 def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real):

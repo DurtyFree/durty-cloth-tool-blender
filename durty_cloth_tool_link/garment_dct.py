@@ -29,6 +29,10 @@ from .strings import Msg, UserError, msg
 
 #: On the Drawable Dictionary and the Drawable the skeleton template became: the gender of that template.
 SKELETON_TAG = "dct_skeleton"
+#: On the Drawable Dictionary and the Drawable (an empty at the anchor bone) a prop hangs from: its slot.
+PROP_TAG = "dct_prop"
+DICTIONARY = "sollumz_drawable_dictionary"
+DRAWABLE = "sollumz_drawable"
 #: On the garment once Durty Cloth Tool added it: the name it was added under.
 ADDED = "dct_added"
 #: On the garment: the material it had before the add gave it the ped shader (kept in the file through this reference,
@@ -188,6 +192,91 @@ def import_skeleton(context: Any, template: Any, data_dir: pathlib.Path, bones: 
     armature[SKELETON_TAG] = gender
     _move_to([root, armature], _collection_of(garment_obj, context))
     return Skeleton(root, armature, gender)
+
+
+def anchor_matrix(template: Any, slot: str) -> Matrix:
+    """Where a prop slot's anchor bone sits at rest in ped space (from the skeleton template, made from the user's own
+    game files), as a matrix. Raises :class:`UserError` when the template has no such bone."""
+    bone = garment.ANCHOR_BONES.get(slot)
+    try:
+        found = garment_add.template_matrices(template.files[0].data, [bone]) if bone else {}
+    except garment_add.TemplateError:
+        found = {}
+    if bone not in found:
+        raise fail("add.why.no-anchor", bone=bone or slot)
+    return Matrix([list(row) for row in found[bone]])
+
+
+def prop_rig_of(obj: Optional[Any]) -> Optional[Skeleton]:
+    """The anchor the prop hangs from (its Drawable Dictionary and the Drawable at the anchor bone), or ``None``. Its
+    ``gender`` is the prop's slot."""
+    try:
+        parent = obj.parent if obj is not None else None
+        if parent is None or parent.type != "EMPTY":
+            return None
+        slot = parent.get(PROP_TAG)
+        root = parent.parent
+        if slot not in garment.PROP_SLOTS or root is None or root.get(PROP_TAG) != slot:
+            return None
+        return Skeleton(root, parent, slot)
+    except ReferenceError:
+        return None
+
+
+def attach_prop(context: Any, obj: Any, matrix: Matrix, slot: str) -> Skeleton:
+    """Hangs a prop from its anchor: a Drawable Dictionary with one Drawable, empties at the anchor bone's rest place,
+    the prop parented to them where it shows (so Sollumz exports its vertices relative to the anchor, as the game
+    places a prop), without an armature or one of its modifiers, and made a Sollumz drawable model. Returns the anchor
+    (its ``gender`` is the slot)."""
+    rig = prop_rig_of(obj)
+    if rig is None or rig.gender != slot:
+        base = safe_name(obj.name)
+        root = bpy.data.objects.new(f"{base}_ydd", None)
+        drawable = bpy.data.objects.new(base, None)
+        for empty, kind in ((root, DICTIONARY), (drawable, DRAWABLE)):
+            empty.sollum_type = kind
+            empty[PROP_TAG] = slot
+            empty.empty_display_size = 0.05
+        drawable.parent = root
+        collection = _collection_of(obj, context)
+        for empty in (root, drawable):
+            collection.objects.link(empty)
+        old = rig
+        rig = Skeleton(root, drawable, slot)
+    else:
+        old = None
+    # Sollumz exports a model relative to the Drawable Dictionary at the top (and one whose own transform is the
+    # identity as it is): the dictionary, the drawable and the prop all stand at the anchor, and the prop's meshes hold
+    # its shape relative to it, so it shows where it was and the export is relative to the anchor bone.
+    rig.root.matrix_world = matrix
+    context.view_layer.update()
+    rig.armature.matrix_world = matrix
+    context.view_layer.update()
+    to_anchor = matrix.inverted() @ obj.matrix_world
+    if to_anchor != Matrix.Identity(4):
+        for mesh in [obj.data, *lod_meshes(obj)]:
+            mesh.transform(to_anchor)
+            mesh.update()
+    obj.parent = rig.armature
+    obj.parent_type = "OBJECT"
+    obj.matrix_parent_inverse = Matrix.Identity(4)
+    obj.matrix_world = matrix
+    for modifier in [m for m in obj.modifiers if m.type == "ARMATURE"]:
+        obj.modifiers.remove(modifier)
+    convert_to_model(context, obj)
+    if old is not None:
+        _remove_skeleton_if_empty(old)
+    return rig
+
+
+def prop_problem(obj: Optional[Any], slot: str) -> Optional[Msg]:
+    """Why the prop cannot go into the game from its anchor, or ``None``."""
+    rig = prop_rig_of(obj)
+    if rig is None or rig.gender != slot:
+        return msg("add.prop.missing")
+    if any(m.type == "ARMATURE" for m in obj.modifiers):
+        return msg("add.prop.missing")
+    return None
 
 
 def _remove_skeleton_if_empty(skeleton: Skeleton) -> None:
@@ -548,13 +637,18 @@ def store_added(root: Any, obj: Any, binding: Dict[str, str], name: str) -> None
 __all__ = [
     "ADDED",
     "Export",
+    "PROP_TAG",
     "SKELETON_TAG",
     "Skeleton",
+    "anchor_matrix",
     "attach",
+    "attach_prop",
     "export_garment",
     "garment_images",
     "import_skeleton",
     "picture",
+    "prop_problem",
+    "prop_rig_of",
     "encode_picture",
     "match_uv_names",
     "prepare_garment",

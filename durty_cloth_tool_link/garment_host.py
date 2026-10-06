@@ -23,7 +23,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from . import garment, garment_add, garment_fit
+from . import garment, garment_add, garment_avatars, garment_fit
 from .strings import UserError, msg
 
 #: Custom properties the add-on keeps on the garment (and the .blend file keeps with it).
@@ -40,6 +40,14 @@ FIT_REPORT = "dct_fit_report"
 FINDINGS = "dct_findings"
 #: What the latest changes leave stale: the fit check, the local checks and the levels of detail.
 STALE = ("dct_checked", FIT_REPORT, "dct_validated", FINDINGS, "dct_lods")
+#: On the garment: its type and slot (each garment keeps its own), the markers of the avatar it was imported with
+#: (JSON, :func:`garment_avatars.markers_json`), whether the import moved it to the ped's ground, and where its
+#: markers came from (``shape``, ``avatar`` or ``body``).
+TYPE_TAG = "dct_type"
+SLOT_TAG = "dct_slot"
+AVATAR_MARKERS = "dct_avatar_markers"
+GROUNDED = "dct_grounded"
+MARKER_SOURCE = "dct_marker_source"
 #: The body the add-on added: its gender, the hosted version it came from, and its joints (JSON, see
 #: :func:`garment.parse_joints`) with where they came from.
 BODY_TAG = "dct_body"
@@ -688,6 +696,20 @@ def _avatars(meshes: Sequence[Any], factor: float) -> List[Any]:
     return [meshes[i] for i in garment.avatar_meshes([_imported_mesh(obj, factor) for obj in meshes])]
 
 
+def _avatar_joints(rigs: Sequence[Any], move: Matrix) -> Optional[Dict[str, Any]]:
+    """The markers of a Marvelous Designer or CLO avatar exported with its rig: its bones as they stand (posed, as the
+    garment was draped on them), moved as the import moves the garment."""
+    for rig in rigs:
+        try:
+            bones = {pose.name: tuple(move @ (rig.matrix_world @ pose.head)) for pose in rig.pose.bones}
+        except (AttributeError, ReferenceError):
+            continue
+        markers = garment_avatars.avatar_markers(bones)
+        if markers is not None:
+            return markers
+    return None
+
+
 def _turn_matrix(turn: Optional[Tuple[str, float]]) -> Matrix:
     if turn is None:
         return Matrix.Identity(4)
@@ -738,6 +760,7 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
     for step in turns:
         turn = _turn_matrix(step) @ turn
     move = Matrix.Translation((0.0, 0.0, -GROUND_DEPTH if ground else 0.0)) @ turn @ scale
+    avatar_markers = _avatar_joints([obj for obj in avatars if obj.type == "ARMATURE"], move)
     if rigged:
         # A rigged import stays as it is, only scaled, turned and moved as a whole.
         for obj in new:
@@ -754,13 +777,32 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
         target.objects.link(chosen)
     chosen[GARMENT_TAG] = 1
     ensure_garment_id(chosen)
+    chosen[GROUNDED] = 1 if ground else 0
+    if avatar_markers is not None:
+        chosen[AVATAR_MARKERS] = garment_avatars.markers_json(avatar_markers)
+    elif AVATAR_MARKERS in chosen:
+        del chosen[AVATAR_MARKERS]
     layer = context.view_layer
     deselect_all(layer)
     if layer.objects.get(chosen.name) is not None:
         chosen.select_set(True)
         layer.objects.active = chosen
     return chosen, {"factor": factor, "turned": [step[0] for step in turns], "avatar": bool(avatars),
-                    "unit": unit_name or "m", "plausible": unit_name is not None, "size": round(size * factor, 2)}
+                    "unit": unit_name or "m", "plausible": unit_name is not None, "size": round(size * factor, 2),
+                    "rig": avatar_markers is not None}
+
+
+def avatar_markers(obj: Optional[Any], name: str) -> Optional[Dict[str, Any]]:
+    """The markers of the avatar the garment was made on: ``file`` (read from the rig imported with it) or a stock
+    avatar of :data:`garment_avatars.AVATARS`, moved up to the avatar's own ground when the import left the garment
+    there. ``None`` when that avatar is not known."""
+    if name == "file":
+        return garment_avatars.parse_markers(stored_text(obj, AVATAR_MARKERS))
+    stock = garment_avatars.avatar(name)
+    if stock is None:
+        return None
+    lift = 0.0 if obj is None or obj.get(GROUNDED, 1) else GROUND_DEPTH
+    return {marker: (x, y, z + lift) for marker, (x, y, z) in stock.markers.items()}
 
 
 def _collection_of(obj: Any, context: Any) -> Any:
@@ -841,6 +883,15 @@ def show_markers_of(scene: Any, layer: Any, obj: Optional[Any]) -> None:
                 continue
 
 
+def drop_markers(scene: Any, obj: Any, keep: Iterable[str]) -> int:
+    """Removes the garment's markers that are not in ``keep`` (another type's); returns how many."""
+    keep = set(keep)
+    gone = [marker for name, marker in marker_objects(scene, obj).items() if name not in keep]
+    for marker in gone:
+        bpy.data.objects.remove(marker)
+    return len(gone)
+
+
 def resize_markers(scene: Any, size: float) -> None:
     for marker in marker_objects(scene).values():
         marker.empty_display_size = size
@@ -854,8 +905,11 @@ def resize_markers(scene: Any, size: float) -> None:
 def regions(scene: Any, obj: Any, category: str, positions: np.ndarray, edges: np.ndarray) -> np.ndarray:
     """The region of each garment vertex from the markers alone (placed now when there are none): for when there is
     no body to measure against."""
-    if category == "shoes":
+    family = garment.garment_type(category).family
+    if family == "none":
         return np.full(len(positions), garment.REGIONS.index("legs"))
+    if family == "head":
+        return np.full(len(positions), garment.REGIONS.index("head"))
     markers = read_markers(scene, obj)
     if "pelvis" not in markers:
         markers = garment.auto_markers(positions, category if category != "shoes" else "pants",
@@ -870,7 +924,7 @@ def measure(scene: Any, obj: Any, body: Any, joints: Optional[Dict[str, Any]] = 
     edges = mesh_edges(obj.data)
     signed, nearest, normals, faces = clearance(body_tree(body), positions, faces=True)
     region = None
-    if joints and scene.dct_garment.category != "shoes":
+    if joints and garment.garment_type(scene.dct_garment.category).family != "none":
         labels = body_triangle_regions(body, joints)
         region = np.where(faces >= 0, labels[np.clip(faces, 0, max(len(labels) - 1, 0))], garment.OTHER) \
             if len(labels) else None
@@ -1552,13 +1606,16 @@ def run_steps(steps: Any) -> Any:
             return stop.value
 
 
-def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool) -> Dict[str, Any]:
+def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool,
+            open_front: Optional[Tuple[float, float]] = None) -> Dict[str, Any]:
     """:func:`prepare_steps` at once."""
-    return run_steps(prepare_steps(context, obj, weld, colours, overwrite))
+    return run_steps(prepare_steps(context, obj, weld, colours, overwrite, open_front))
 
 
-def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool) -> Any:
-    """Welds the panel seams within ``weld`` metres (never a lining onto its shell, never a hem onto itself), removes
+def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool,
+                  open_front: Optional[Tuple[float, float]] = None) -> Any:
+    """Welds the panel seams within ``weld`` metres (never a lining onto its shell, never a hem onto itself, never
+    the two sides of an open front: ``open_front`` is the garment's centre, X and Y), removes
     loose and degenerate geometry, triangulates, shades smooth and adds the ped vertex colours. A thick export (panels
     closed into slabs, without open edges) is welded across panels and the walls between them are removed. A
     generator: it yields ``(stage text key, done, total)`` before each stage and after each round of the weld, so a
@@ -1584,6 +1641,8 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     yield "garment.stage.seams", 0, 3  # looking for a lining takes a moment on a detailed garment
     rules = seam_rules(obj, positions, normals)
     rules.update(fabrics=fabrics, apart=apart, components=parts)
+    if open_front is not None:
+        rules["sides"] = garment.front_sides(positions, edges, open_front)
     yield "garment.stage.weld", 1, 3
     steps = garment.weld_steps(positions, weld, None if thick else boundary, cross_components_only=thick, **rules)
     while True:
@@ -1881,50 +1940,78 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
         raise fail("garment.why.uv-full")
     mesh.uv_layers.new(name=PACKED_UV)
     packed = mesh.uv_layers[PACKED_UV]  # fetched again by name after adding it
-    layout = source_uv.copy()
+    loop_vertex, start, face_total = loop_arrays(mesh)
+    loop_face = np.repeat(np.arange(len(start)), face_total)
+    layout_plan = uv_layout(mesh, obj, source_uv, loop_vertex, start, face_total)
+    layout = np.nan_to_num(source_uv.astype(np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+    stray = layout_plan["stray"]
+    if stray.any():  # a stray point goes to the middle of its face's other points, so its island keeps its size
+        sums = np.zeros((len(start), 2))
+        counts = np.zeros(len(start))
+        np.add.at(sums, loop_face[~stray], layout[~stray])
+        np.add.at(counts, loop_face[~stray], 1.0)
+        middle = sums / np.maximum(counts, 1.0)[:, None]
+        layout[stray] = middle[loop_face[stray]]
     cut = 0
     if cut_strips:
-        loop_vertex, start, total = loop_arrays(mesh)
-        islands = garment.uv_islands(loop_vertex, source_uv, start, total)
-        loop_face = np.repeat(np.arange(len(start)), total)
         centres = np.zeros((len(start), 2))
-        np.add.at(centres, loop_face, source_uv)
-        centres /= total[:, None]
-        pieces, cut = garment.strip_segments(islands, centres, source_uv, total)
-        layout[:, 0] += (pieces[loop_face] * 1e-3).astype(np.float32)  # tears the pieces apart for the packer
-    packed.data.foreach_set("uv", layout.reshape(-1))
+        np.add.at(centres, loop_face, layout)
+        centres /= face_total[:, None]
+        pieces, cut = garment.strip_segments(layout_plan["islands"], centres, layout, face_total,
+                                             usable=layout_plan["usable"])
+        layout[:, 0] += pieces[loop_face] * 1e-3  # tears the pieces apart for the packer
+        if cut:
+            # A piece of a welded thick export can hold only its side walls: it is judged again, as its own island.
+            layout_plan = uv_layout(mesh, obj, layout, loop_vertex, start, face_total)
+    usable_loop = layout_plan["usable"][layout_plan["islands"][loop_face]]
+    # The two sides of a panel of a thick export share one place in the texture: only the first is packed.
+    stacked = layout_plan["stacked"]
+    packed_face = layout_plan["usable"][layout_plan["islands"]] & (stacked[layout_plan["islands"]]
+                                                                  == layout_plan["islands"])
+    packed.data.foreach_set("uv", layout.astype(np.float32).reshape(-1))
     mesh.uv_layers.active = mesh.uv_layers[PACKED_UV]
     # While baking, every texture reads the original layout (also through the render UV map and nodes that named
     # it); the packed layout becomes the render UV map afterwards.
     mesh.uv_layers[SOURCE_UV].active_render = True
 
     layer = context.view_layer
+    usable_face = layout_plan["usable"][layout_plan["islands"]]
     # Evening out the islands and placing them are two stages (each one Blender call), so Esc is honoured between them.
+    # Only the islands with room in the texture take part: one mapped onto a line would be blown up to its full length.
     yield "garment.stage.pack-scale", 1, total
     deselect_all(layer, keep=obj)
     obj.select_set(True)
     layer.objects.active = obj
-    with context.temp_override(**_override(obj)):
-        bpy.ops.object.mode_set(mode="EDIT")
-        try:
-            bpy.ops.mesh.select_all(action="SELECT")
-            bpy.ops.uv.select_all(action="SELECT")
-            bpy.ops.uv.average_islands_scale()
-        finally:
-            bpy.ops.object.mode_set(mode="OBJECT")
+    averaged_face = packed_face & ~layout_plan["folded"][layout_plan["islands"]]
+    if averaged_face.any():  # an island folded over itself would be blown up without end: it keeps its size
+        with context.temp_override(**_override(obj)):
+            _only_faces(obj, averaged_face)
+            bpy.ops.object.mode_set(mode="EDIT")
+            try:
+                bpy.ops.uv.select_all(action="SELECT")
+                bpy.ops.uv.average_islands_scale()
+            finally:
+                bpy.ops.object.mode_set(mode="OBJECT")
     yield "garment.stage.pack", 2, total
     deselect_all(layer, keep=obj)
     obj.select_set(True)
     layer.objects.active = obj
     with context.temp_override(**_override(obj)):
+        _only_faces(obj, packed_face)
         bpy.ops.object.mode_set(mode="EDIT")
         try:
-            bpy.ops.mesh.select_all(action="SELECT")
             bpy.ops.uv.select_all(action="SELECT")
             bpy.ops.uv.pack_islands(rotate=True, scale=True, margin_method="FRACTION", margin=PACK_MARGIN / size,
                                     shape_method="CONCAVE")
         finally:
             bpy.ops.object.mode_set(mode="OBJECT")
+    # The faces without room take the colour of the panel edge next to them, and the layout stays in the square.
+    packed_uv = read_uv(mesh, PACKED_UV).astype(np.float64)
+    packed_uv = garment.fit_unit_square(packed_uv, packed_face[loop_face])
+    packed_uv = garment.copy_stacked_uvs(layout_plan["islands"][loop_face], stacked, layout, packed_uv)
+    packed_uv = garment.borrow_uvs(loop_vertex, packed_uv, usable_loop, world_positions(obj), loop_face)
+    mesh.uv_layers[PACKED_UV].data.foreach_set("uv", packed_uv.astype(np.float32).reshape(-1))
+    _only_faces(obj, None)
     factor = 2 if size in SUPERSAMPLED else 1
     bake_size = size * factor
     added: List[Tuple[Any, Any]] = []
@@ -2029,12 +2116,72 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
     mesh.update()
     triangles_uv = _triangle_uv(mesh, PACKED_UV)
     triangles = world_positions(obj)[mesh_triangles(mesh)]
+    triangle_face = np.empty(len(mesh.loop_triangles), dtype=np.int64)
+    mesh.loop_triangles.foreach_get("polygon_index", triangle_face)
+    # Each place in the texture once: a stacked side is not packed, an island folded over itself counts half.
+    chosen = packed_face[triangle_face]
+    halves = np.where(layout_plan["folded"][layout_plan["islands"][triangle_face]], 0.5, 1.0)
+    areas, _surface = garment.triangle_areas(triangles_uv, np.zeros((len(triangles_uv), 3, 3)))
+    used = float((areas * halves)[chosen].sum())
     clear_flags(obj, "dct_validated", "dct_lods", FINDINGS)  # levels of detail made before keep the old materials
     return {"materials": len(materials), "size": size, "cut": cut,
-            "used": round(100.0 * min(1.0, garment.uv_area(triangles_uv)), 1),
+            "used": round(100.0 * min(1.0, used), 1), "sparse": used < garment.SPARSE_LAYOUT_SHARE,
+            "walls": int((~usable_face).sum()), "stray": int(stray.sum()),
+            "stacked": int((usable_face & ~packed_face).sum()),
             "density": garment.texel_density(triangles_uv, triangles, size), "image": images["diffuse"].name,
             "maps": sorted(key for key in images if key != "diffuse") + (["alpha"] if "alpha" in results else []),
             "missing": missing}
+
+
+def _only_faces(obj: Any, chosen: Optional[np.ndarray]) -> None:
+    """Shows and selects exactly the ``chosen`` faces (with their edges and vertices), in Object Mode, and hides the
+    others, so the UV tools see nothing else (they also measure faces that are not selected); ``None`` shows and
+    selects every face again."""
+    mesh = obj.data
+    chosen = np.ones(len(mesh.polygons), dtype=bool) if chosen is None else np.asarray(chosen, dtype=bool)
+    loop_vertex, start, total = loop_arrays(mesh)
+    vertices = np.zeros(len(mesh.vertices), dtype=bool)
+    vertices[loop_vertex[np.repeat(chosen, total)]] = True
+    edges = mesh_edges(mesh)
+    shown_edges = vertices[edges[:, 0]] & vertices[edges[:, 1]]
+    for collection, shown in ((mesh.vertices, vertices), (mesh.edges, shown_edges), (mesh.polygons, chosen)):
+        collection.foreach_set("hide", ~shown)
+        collection.foreach_set("select", shown)
+    mesh.update()
+
+
+def uv_layout(mesh: Any, obj: Any, uv: np.ndarray, loop_vertex: np.ndarray, start: np.ndarray,
+              total: np.ndarray) -> Dict[str, np.ndarray]:
+    """The UV islands of the garment's layout (each face's), which have room in the texture
+    (:func:`garment.usable_islands`) and the stray points (:func:`garment.stray_loops`). Raises :class:`UserError`
+    when no island has any room: the layout has to be unwrapped again first."""
+    islands = garment.uv_islands(loop_vertex, np.nan_to_num(uv), start, total)
+    mesh.calc_loop_triangles()
+    loops = np.empty(len(mesh.loop_triangles) * 3, dtype=np.int64)
+    mesh.loop_triangles.foreach_get("loops", loops)
+    faces = np.empty(len(mesh.loop_triangles), dtype=np.int64)
+    mesh.loop_triangles.foreach_get("polygon_index", faces)
+    loops = loops.reshape(-1, 3)
+    positions = world_positions(obj)
+    uv = uv.astype(np.float64)
+    finite_loop = np.isfinite(uv).all(axis=1)
+    loop_face = np.repeat(np.arange(len(start)), total)
+    count = int(islands.max()) + 1 if len(islands) else 0
+    finite = np.bincount(islands[loop_face], ~finite_loop, minlength=count) == 0
+    uv_area, surface = garment.island_areas(islands, faces, np.nan_to_num(uv)[loops], positions[loop_vertex[loops]])
+    loop_island = islands[loop_face]
+    low = np.full((count, 2), np.inf)
+    high = np.full((count, 2), -np.inf)
+    np.minimum.at(low, loop_island, np.nan_to_num(uv))
+    np.maximum.at(high, loop_island, np.nan_to_num(uv))
+    usable = garment.usable_islands(uv_area, surface, finite, extent=(high - low).max(axis=1))
+    if not usable.any():
+        raise fail("garment.why.uv-degenerate")
+    stray = garment.stray_loops(uv, islands[loop_face], uv_area) & usable[islands[loop_face]]
+    stacked = garment.stacked_islands(islands, islands[loop_face], uv)
+    stacked = np.where(usable[stacked] == usable, stacked, np.arange(len(stacked)))
+    folded = garment.folded_islands(islands, faces, np.nan_to_num(uv)[loops])
+    return {"islands": islands, "usable": usable, "stray": stray, "stacked": stacked, "folded": folded}
 
 
 def _combined_material(name: str, images: Dict[str, Any], alpha: bool) -> Any:
@@ -2306,8 +2453,101 @@ def weighted(obj: Optional[Any]) -> bool:
         return False
 
 
-def validate_stats(obj: Any, body: Optional[Any]) -> Dict[str, Any]:
-    """What :func:`garment.validate` checks, measured on the garment (and its Sollumz levels of detail)."""
+def weight_table(obj: Any) -> Tuple[List[str], np.ndarray]:
+    """The garment's bone weights as a table (vertices by bone groups) with the groups' names."""
+    groups = [g for g in obj.vertex_groups if g.index in set(_bone_groups(obj))]
+    column = {g.index: i for i, g in enumerate(groups)}
+    table = np.zeros((len(obj.data.vertices), len(groups)))
+    for vertex in obj.data.vertices:
+        for element in vertex.groups:
+            i = column.get(element.group)
+            if i is not None:
+                table[vertex.index, i] = element.weight
+    return [g.name for g in groups], table
+
+
+def write_weight_table(obj: Any, names: Sequence[str], table: np.ndarray) -> None:
+    """Writes a weight table back into the garment's bone groups (adding the groups it names that are missing)."""
+    every = list(range(len(obj.data.vertices)))
+    for index, name in enumerate(names):
+        group = obj.vertex_groups.get(name) or obj.vertex_groups.new(name=name)
+        group.remove(every)
+        column = np.round(table[:, index], 5)
+        rows = np.nonzero(column > 1e-6)[0]
+        order = np.argsort(column[rows], kind="stable")
+        rows, values = rows[order], column[rows][order]
+        starts = np.concatenate(([0], np.nonzero(np.diff(values))[0] + 1, [len(values)]))
+        for start, end in zip(starts[:-1], starts[1:]):  # one call per weight, not per vertex
+            if end > start:
+                group.add(rows[start:end].tolist(), float(values[start]), "REPLACE")
+    obj.data.update()
+
+
+def bridge_weights(obj: Any, centre_x: float, top: float, width: float) -> int:
+    """Bridges the garment's thigh weights across the legs below ``top`` (:func:`garment.bridge_leg_weights`).
+    Returns how many vertices changed."""
+    names, table = weight_table(obj)
+    if not any(garment.leg_side(name) for name in names):
+        return 0
+    table, names, changed = garment.bridge_leg_weights(world_positions(obj), table, names, centre_x, top, width)
+    if changed:
+        write_weight_table(obj, names, table)
+        clear_flags(obj, "dct_lods", "dct_validated", FINDINGS)  # the levels of detail took the old weights
+    return changed
+
+
+def split_at_waist(context: Any, obj: Any, level: float, name: str) -> Any:
+    """Cuts the garment at the height ``level`` (world Z) into two: the garment keeps what lies above (the top of a
+    dress) and a new garment, ``name``, gets what lies below (its skirt), each with its UVs, weights and materials.
+    Returns the new garment, in the garment's collection, with its own id and no backups or markers."""
+    lower = obj.copy()
+    lower.data = obj.data.copy()
+    lower.name = name
+    lower.data.name = name
+    for key in [key for key in lower.keys() if key.startswith("dct_")]:
+        del lower[key]
+    for collection in obj.users_collection:
+        collection.objects.link(lower)
+    inverse = obj.matrix_world.inverted()
+    plane = inverse @ Vector((0.0, 0.0, level))
+    normal = (obj.matrix_world.to_3x3().transposed() @ Vector((0.0, 0.0, 1.0))).normalized()
+    for target, keep_above in ((obj, True), (lower, False)):
+        bm = bmesh.new()
+        bm.from_mesh(target.data)
+        geometry = bm.verts[:] + bm.edges[:] + bm.faces[:]
+        bmesh.ops.bisect_plane(bm, geom=geometry, dist=1e-6, plane_co=plane, plane_no=normal,
+                               clear_inner=keep_above, clear_outer=not keep_above)
+        bm.to_mesh(target.data)
+        bm.free()
+        target.data.update()
+    if not len(lower.data.polygons) or not len(obj.data.polygons):
+        _remove_objects([lower])
+        raise fail("garment.why.split-nothing")
+    lower[GARMENT_TAG] = 1
+    ensure_garment_id(lower)
+    clear_flags(obj, *STALE)
+    return lower
+
+
+def snap_to_anchor(obj: Any, body: Any, joints: Dict[str, Any], kind: str, side: str) -> Dict[str, Any]:
+    """Moves a prop onto its anchor on the body (:func:`garment.snap_to_anchor`): it counts as aligned afterwards.
+    Returns how far it moved (centimetres) and turned (degrees)."""
+    positions = world_positions(obj)
+    snap = garment.snap_to_anchor(kind, positions, world_positions(body), joints, side)
+    moved = snap.apply(positions)
+    set_world_positions(obj, moved)
+    obj[ALIGNED_MARKERS] = garment.markers_json({})
+    set_flag(obj, "dct_aligned")
+    clear_flags(obj, *STALE)
+    shift = float(np.linalg.norm(moved.mean(axis=0) - positions.mean(axis=0)))
+    return {"distance": round(shift * 100.0, 1), "turn": round(snap.degrees, 1)}
+
+
+def validate_stats(obj: Any, body: Optional[Any], prop: bool = False,
+                   anchor: Optional[Sequence[float]] = None) -> Dict[str, Any]:
+    """What :func:`garment.validate` checks, measured on the garment (and its Sollumz levels of detail). A ``prop``
+    has no weights and is not measured against the body; with its ``anchor`` (the anchor point in world space) how far
+    its middle lies from it is measured."""
     mesh = obj.data
     positions = world_positions(obj)
     stats: Dict[str, Any] = {"vertices": len(positions), "triangles_high": len(mesh_triangles(mesh))}
@@ -2327,8 +2567,11 @@ def validate_stats(obj: Any, body: Optional[Any]) -> Dict[str, Any]:
         stats["colour1"] = "format"
     else:
         stats["colour1"] = "ok"
-    stats["weighted"] = weighted(obj)
+    stats["weighted"] = None if prop else weighted(obj)
     stats["unweighted"], stats["over_four"] = _influences(obj, mesh) if stats["weighted"] else (0, 0)
+    if anchor is not None and len(positions):
+        middle = (positions.min(axis=0) + positions.max(axis=0)) / 2
+        stats["anchor"] = float(np.linalg.norm(middle - np.asarray(anchor, dtype=np.float64)))
     for _level, lod_mesh in lod_meshes(obj):
         short = "medium" if _level == "sollumz_medium" else "low"
         stats[f"triangles_{short}"] = len(mesh_triangles(lod_mesh))
@@ -2338,7 +2581,7 @@ def validate_stats(obj: Any, body: Optional[Any]) -> Dict[str, Any]:
             unweighted, over = _influences(obj, lod_mesh)
             stats["unweighted"] += unweighted
             stats["over_four"] += over
-    if body is not None and len(positions):
+    if body is not None and len(positions) and not prop:
         signed, nearest, body_normals = clearance(body_tree(body), positions)
         finite = np.isfinite(signed)
         stats["inside_share"] = float((signed < -garment.INSIDE_MM / 1000.0).mean())

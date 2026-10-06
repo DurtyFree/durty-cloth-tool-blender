@@ -49,7 +49,7 @@ TEXT = {
     "garment.category.shorts": "Pantalones cortos",
     "garment.category.shorts.desc": "Pantalones que terminan a la altura de las rodillas o por encima",
     "garment.category.shoes": "Zapatos",
-    "garment.category.shoes.desc": "Zapatos, botas y sandalias",
+    "garment.category.shoes.desc": "Zapatos y botas",
     "garment.pose.a_pose": "A-pose",
     "garment.pose.a_pose.desc": "Los brazos apuntan hacia abajo en ángulo, como está el ped en el juego",
     "garment.pose.t_pose": "T-pose",
@@ -76,9 +76,10 @@ TEXT = {
     "garment.prop.gender.desc": "Para qué ped freemode es la prenda",
     "garment.prop.slot": "Ranura",
     "garment.prop.slot.desc": "La ranura de ropa en la que va la prenda en Durty Cloth Tool",
-    "garment.prop.category": "Categoría",
+    "garment.prop.category": "Tipo de prenda",
     "garment.prop.category.desc": (
-        "Qué tipo de prenda es: define dónde van los marcadores y qué regiones ofrecen las herramientas"
+        "Qué clase de prenda es: fija la ranura, cómo se encuentran los marcadores, las zonas que ofrecen las "
+        "herramientas y lo que se comprueba"
     ),
     "garment.prop.pose": "Pose de origen",
     "garment.prop.pose.desc": "La pose del avatar sobre el que se hizo la prenda",
@@ -179,8 +180,9 @@ TEXT = {
     ),
     "garment.op.auto-markers": "Marcadores automáticos",
     "garment.op.auto-markers.desc": (
-        "Colocar los marcadores de articulación a partir de la forma de la prenda (cuello, pecho, pelvis, hombros, "
-        "codos, muñecas y caderas; en pantalones las caderas, rodillas y tobillos). Mueve los que no estén en su sitio"
+        "Colocar los marcadores de articulación: en las articulaciones del avatar elegido en Configuración, a partir "
+        "de la forma de la prenda (partes superiores y pantalones) o, para empezar, en las articulaciones del cuerpo. "
+        "Mueve los que no estén en su sitio"
     ),
     "garment.op.mirror": "Reflejar izq. a der.",
     "garment.op.mirror.desc": "Copiar los marcadores del lado izquierdo del ped a su lado derecho",
@@ -319,7 +321,7 @@ TEXT = {
     "garment.why.shape-keys": "La prenda tiene formas clave. Aplícalas o elimínalas primero.",
     "garment.why.empty": "La prenda no tiene geometría.",
     "garment.why.no-body": "Primero añade el cuerpo freemode en Configuración.",
-    "garment.why.no-markers": "El calzado no necesita marcadores.",
+    "garment.why.no-markers": "Este tipo de prenda no necesita marcadores.",
     "garment.why.downloading": "Se está descargando el cuerpo.",
     "garment.why.sign-in": "Primero inicia sesión con gta.clothing (Conectar) o usa un archivo de cuerpo.",
     "garment.why.select-mesh": "Selecciona primero un objeto de malla.",
@@ -429,9 +431,11 @@ TEXT = {
     ),
     "garment.info.markers": (
         "Los marcadores representan las articulaciones del ped: cuello, pecho, pelvis, hombros, codos, muñecas y "
-        "caderas (en pantalones las caderas, rodillas y tobillos). Marcadores automáticos los coloca a partir de la "
-        "forma de la prenda, y unas líneas en la vista 3D los unen: si son naranjas, algo no cuadra. Mueve los "
-        "marcadores que no estén en su sitio; Reflejar izq. a der. copia el lado izquierdo al derecho."
+        "caderas (en pantalones las caderas, rodillas y tobillos; en una máscara la cabeza). Marcadores automáticos "
+        "los coloca en las articulaciones del avatar elegido en Configuración; si no, los lee de la forma de la prenda "
+        "(partes superiores y pantalones) o, para empezar, los pone en las articulaciones del cuerpo. Unas líneas en "
+        "la vista 3D los unen: si son naranjas, algo no cuadra. Mueve los marcadores que no estén en su sitio; "
+        "Reflejar izq. a der. copia el lado izquierdo al derecho."
     ),
     "garment.info.tpose": (
         "Gira los brazos de una prenda hecha en T-pose hasta el ángulo de brazos (o sobre los brazos del cuerpo cuando "
@@ -1167,4 +1171,204 @@ TEXT = {
     "garment.stage.bake-normal": "Horneando el mapa de normales",
     "garment.stage.bake-emission": "Horneando el mapa de emisión",
     "garment.stage.material": "Creando el material combinado",
+    "garment.slot.berd": "Máscara (berd)",
+    "garment.slot.berd.desc": "Máscaras y prendas que cubren la cara",
+    "garment.slot.hand": "Bolsa (hand)",
+    "garment.slot.hand.desc": "Bolsas, mochilas y paracaídas",
+    "garment.slot.task": "Chaleco (task)",
+    "garment.slot.task.desc": "Chalecos y chalecos antibalas",
+    "garment.slot.p_head": "Accesorio de cabeza (p_head)",
+    "garment.slot.p_head.desc": "Un accesorio en la cabeza: sombreros, gorras y cascos",
+    "garment.slot.p_eyes": "Accesorio de ojos (p_eyes)",
+    "garment.slot.p_eyes.desc": "Un accesorio en los ojos: gafas",
+    "garment.slot.p_ears": "Accesorio de orejas (p_ears)",
+    "garment.slot.p_ears.desc": "Un accesorio en las orejas: pendientes y auriculares",
+    "garment.slot.p_lwrist": "Accesorio de muñeca izquierda (p_lwrist)",
+    "garment.slot.p_lwrist.desc": "Un accesorio en la muñeca izquierda: relojes y pulseras",
+    "garment.slot.p_rwrist": "Accesorio de muñeca derecha (p_rwrist)",
+    "garment.slot.p_rwrist.desc": "Un accesorio en la muñeca derecha: relojes y pulseras",
+    "garment.category.hoodie": "Sudadera con capucha",
+    "garment.category.hoodie.desc": "Una parte superior de manga larga con capucha",
+    "garment.category.open_jacket": "Chaqueta abierta",
+    "garment.category.open_jacket.desc": "Una chaqueta que se lleva abierta: sus dos delanteros nunca se unen",
+    "garment.category.long_coat": "Abrigo largo",
+    "garment.category.long_coat.desc": (
+        "Un abrigo que llega a las rodillas o más abajo, con faldones que siguen ambas piernas"
+    ),
+    "garment.category.dress": "Vestido",
+    "garment.category.dress.desc": (
+        "Una parte superior y una falda en una: una prenda en la ranura Parte superior, o dividida en Parte superior y "
+        "Piernas"
+    ),
+    "garment.category.skirt": "Falda",
+    "garment.category.skirt.desc": "Una falda en la ranura Piernas que sigue ambas piernas",
+    "garment.category.sandals": "Sandalias",
+    "garment.category.sandals.desc": "Calzado abierto que deja los pies descalzos",
+    "garment.category.mask": "Máscara",
+    "garment.category.mask.desc": "Una máscara o prenda que cubre la cara",
+    "garment.category.armour": "Chaleco o chaleco antibalas",
+    "garment.category.armour.desc": "Un chaleco que se lleva sobre la parte superior, como un chaleco antibalas",
+    "garment.category.bag": "Bolsa o paracaídas",
+    "garment.category.bag.desc": "Una mochila, bolsa o paracaídas a la espalda",
+    "garment.category.hat": "Sombrero",
+    "garment.category.hat.desc": "Un sombrero, gorra o casco: un accesorio en la cabeza",
+    "garment.category.glasses": "Gafas",
+    "garment.category.glasses.desc": "Gafas o gafas de sol: un accesorio en los ojos",
+    "garment.category.ears": "Accesorio de oreja",
+    "garment.category.ears.desc": "Pendientes o un auricular: un accesorio en las orejas",
+    "garment.category.watch": "Reloj",
+    "garment.category.watch.desc": "Un reloj: un accesorio en la muñeca",
+    "garment.category.bracelet": "Pulsera",
+    "garment.category.bracelet.desc": "Una pulsera: un accesorio en la muñeca",
+    "garment.region.head": "Cabeza",
+    "garment.info.type": (
+        "El tipo fija la ranura a la que va la prenda, cómo se encuentran sus marcadores, las zonas que ofrecen las "
+        "herramientas y lo que se comprueba. Los accesorios (sombreros, gafas, accesorios de oreja, relojes y "
+        "pulseras) se colocan en su anclaje en lugar de ajustarse al cuerpo."
+    ),
+    "garment.hint.hood": (
+        "Marcadores automáticos encuentra el cuello bajo la capucha, y Ceñir al cuerpo deja la capucha como está."
+    ),
+    "garment.hint.open-front": (
+        "Preparar prenda nunca une los dos delanteros, por cerca que estén (Delantero abierto en Opciones)."
+    ),
+    "garment.hint.coat": (
+        "Los faldones cuelgan libres: Ceñir al cuerpo los deja como están y, tras cada ajuste, sus pesos de los muslos "
+        "se unen de una pierna a otra, para que el abrigo no se separe entre ellas."
+    ),
+    "garment.hint.dress": (
+        "Una pieza: el vestido va a la ranura Parte superior como una sola prenda, con los pesos de la falda unidos de "
+        "una pierna a otra; los jugadores llevan piernas desnudas en la ranura Piernas con él. Dos piezas: Cortar por "
+        "la cintura en Ajuste lo divide en una parte superior y una falda para la ranura Piernas, que se añaden una "
+        "tras otra, para que cada una se lleve con otra ropa."
+    ),
+    "garment.hint.bare-legs": (
+        "La ranura Piernas sustituye las piernas del ped, así que las piernas desnudas bajo el dobladillo deben formar "
+        "parte de la prenda. El complemento añade la prenda; las piernas desnudas vienen de las propias herramientas "
+        "de Durty Cloth Tool (se aplican sus propios planes). Piel visible está activado."
+    ),
+    "garment.hint.bare-feet": (
+        "La ranura Calzado sustituye los pies del ped, así que los pies descalzos deben formar parte de la prenda. El "
+        "complemento añade las sandalias; los pies descalzos vienen de las propias herramientas de Durty Cloth Tool "
+        "(se aplican sus propios planes). Piel visible está activado."
+    ),
+    "garment.hint.avatar": (
+        "Sus marcadores no se pueden leer de su forma: elige el avatar sobre el que se drapeó, o Marcadores "
+        "automáticos los pone primero en las articulaciones del cuerpo para que los muevas."
+    ),
+    "garment.hint.prop": (
+        "Un accesorio cuelga de un solo hueso y conserva su forma: no se ajusta al cuerpo ni necesita pesos. Colocar "
+        "en el anclaje en Ajuste lo pone en su sitio; desde ahí muévelo a mano."
+    ),
+    "garment.prop.open-front": "Delantero abierto",
+    "garment.prop.open-front.desc": "La prenda se lleva abierta: Preparar prenda nunca une sus dos delanteros",
+    "garment.prop.avatar": "Avatar",
+    "garment.prop.avatar.desc": (
+        "El avatar sobre el que se drapeó la prenda, si se conoce: sus articulaciones pasan a ser los marcadores"
+    ),
+    "garment.avatar.detect": "Desconocido",
+    "garment.avatar.detect.desc": "Marcadores automáticos lee los marcadores de la forma de la prenda",
+    "garment.avatar.file": "Importado con la prenda",
+    "garment.avatar.file.desc": (
+        "El avatar con rig exportado con la prenda: la importación guardó dónde estaban sus articulaciones"
+    ),
+    "garment.avatar.manne": "Manne (hombre, A-pose)",
+    "garment.avatar.manne.desc": (
+        "MaleTemplate_Manne_01, la plantilla masculina de Marvelous Designer y CLO, en su A-pose"
+    ),
+    "garment.info.avatar": (
+        "Si se conoce el avatar sobre el que se drapeó la prenda, Marcadores automáticos pone los marcadores en sus "
+        "articulaciones, con exactitud y en la pose del drapeado. Importar prenda los guarda de un FBX exportado con "
+        "el avatar con rig; si no, elige el avatar estándar sobre el que drapeaste. Una pose que cambiaste en "
+        "Marvelous Designer no se conoce: en ese caso comprueba los marcadores."
+    ),
+    "garment.marker-note.avatar": "Colocados en las articulaciones del avatar sobre el que se drapeó la prenda.",
+    "garment.marker-note.from-body": (
+        "Colocados en las articulaciones del cuerpo: mueve cada uno al punto correspondiente de la prenda."
+    ),
+    "garment.why.no-avatar-file": (
+        "Este avatar no se conoce para la prenda: no se importó con su avatar con rig. Elige otro avatar, o "
+        "Desconocido."
+    ),
+    "garment.why.avatar-markers": (
+        "Al avatar le falta un marcador que este tipo necesita. Elige Desconocido o colócalo a mano."
+    ),
+    "garment.done.import-rig": (
+        "Se importó {name} ({count} vértices) y se guardaron para los marcadores las articulaciones del avatar "
+        "exportado con ella."
+    ),
+    "garment.heading.snap": "Anclaje",
+    "garment.op.snap": "Colocar en el anclaje",
+    "garment.op.snap.desc": (
+        "Llevar el accesorio a su anclaje en el cuerpo: un sombrero a la cabeza, unas gafas delante de los ojos, un "
+        "accesorio de oreja a las orejas, un reloj o una pulsera alrededor de la muñeca"
+    ),
+    "garment.info.snap": (
+        "En el juego, un accesorio cuelga de un solo hueso: la cabeza para sombreros, gafas y accesorios de oreja, el "
+        "antebrazo junto a la muñeca para relojes y pulseras. Colocar en el anclaje lo pone donde suele ir en el "
+        "cuerpo freemode; desde ahí muévelo, gíralo o escálalo a mano. Al añadirlo, conserva su posición respecto a su "
+        "anclaje."
+    ),
+    "garment.snap.subtext": (
+        "Anclaje: {anchor}. Después de colocarlo, mueve el accesorio a mano y sigue en Listo para el juego."
+    ),
+    "garment.done.snap": "Accesorio colocado en su anclaje ({anchor}): {distance} cm, girado {turn}°.",
+    "garment.next.snap": "Siguiente: Colocar en el anclaje en Ajuste, luego mueve el accesorio a mano a su sitio.",
+    "garment.why.not-prop": "Solo los accesorios se colocan en un anclaje.",
+    "garment.why.prop-fix": "Los accesorios conservan su forma: colócalos con Colocar en el anclaje y a mano.",
+    "fit.why.prop": "Los accesorios no se ajustan al cuerpo ni necesitan pesos: se mueven con su anclaje.",
+    "garment.marker-error.no-head": "El cuerpo no tiene cabeza en la que colocar el accesorio.",
+    "garment.marker-error.no-arm": "El cuerpo no tiene brazo en el que colocar el accesorio.",
+    "garment.finding.anchor-far": (
+        "El centro del accesorio está a {distance} cm de su anclaje: colócalo en él o acércalo."
+    ),
+    "add.info.anchor": (
+        "Al añadirlo, el accesorio cuelga de su hueso de anclaje, situado según el esqueleto freemode de Durty Cloth "
+        "Tool (hecho con tus archivos del juego), y conserva su posición respecto a él. No necesita pesos."
+    ),
+    "add.anchor.ready": "Cuelga de su anclaje ({anchor}) en {name}.",
+    "add.anchor.missing": "Anclaje: {anchor}. Añadir al proyecto de Durty Cloth Tool cuelga el accesorio de él.",
+    "add.why.no-anchor": "El esqueleto de Durty Cloth Tool no tiene un hueso {bone} del que colgar el accesorio.",
+    "add.prop.missing": (
+        "El accesorio aún no cuelga de su anclaje. Añadir al proyecto de Durty Cloth Tool se encarga de ello."
+    ),
+    "add.why.prop-skeleton": "Los accesorios no van al esqueleto: cuelgan de su anclaje.",
+    "garment.heading.split": "Dos piezas",
+    "garment.op.split": "Cortar por la cintura",
+    "garment.op.split.desc": (
+        "Cortar el vestido por la cintura en una parte superior y una falda: la falda pasa a ser una prenda propia "
+        "para la ranura Piernas"
+    ),
+    "garment.info.split": (
+        "Un vestido va al juego como una sola prenda en la ranura Parte superior, o como una parte superior y una "
+        "falda. Cortar por la cintura lo corta donde es más estrecho por encima de la pelvis: el vestido conserva la "
+        "parte superior, y una prenda nueva con su nombre recibe la falda, preparada para la ranura Piernas. Corta "
+        "después de Ajustar al cuerpo, para que ambas piezas conserven el ajuste y sus pesos, y luego elige cada pieza "
+        "en Configuración para terminarla y añadirla."
+    ),
+    "garment.done.split": (
+        "{name} cortado por la cintura: {skirt} es la falda, para la ranura Piernas. Elígela en Configuración."
+    ),
+    "garment.why.not-dress": "Solo un vestido se corta por la cintura.",
+    "garment.why.split-nothing": "No hay nada a un lado de la cintura: comprueba los marcadores.",
+    "garment.op.bridge": "Unir pesos de los muslos",
+    "garment.op.bridge.desc": (
+        "Repartir los pesos de la falda o de los faldones del abrigo entre ambos muslos a través del centro, para que "
+        "la tela entre las piernas no se separe"
+    ),
+    "garment.done.bridge": "Se unieron de una pierna a otra los pesos de los muslos de {count} vértices.",
+    "garment.why.no-bridge": "Solo las faldas, los vestidos y los abrigos largos se unen de una pierna a otra.",
+    "garment.why.no-leg-weights": (
+        "La prenda aún no tiene pesos de los muslos que unir. Ajústala al cuerpo o transfiere primero los pesos."
+    ),
+    "garment.done.combine-walls": (
+        "Se combinaron {count} materiales en una textura de {size} píxeles, {density} píxeles por centímetro en la "
+        "prenda (la distribución usa el {used} %). {walls} caras no tenían sitio en el mapa UV (como las paredes "
+        "laterales de una exportación gruesa): toman el color del borde de pieza contiguo."
+    ),
+    "garment.done.combine-sparse": (
+        "La distribución combinada usa solo el {used} % de la textura, así que la prenda se vería borrosa. Su mapa UV "
+        "tiene islas sin sitio o muy apartadas: compruébalo, o vuelve a desplegar la prenda, y combina de nuevo."
+    ),
+    "garment.why.uv-degenerate": "El mapa UV de la prenda no tiene área en ninguna parte. Despliega primero la prenda.",
 }

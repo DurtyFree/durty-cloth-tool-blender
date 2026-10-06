@@ -51,7 +51,7 @@ TEXT = {
     "garment.category.shorts": "Short",
     "garment.category.shorts.desc": "Un pantalon qui s'arrête aux genoux ou au-dessus",
     "garment.category.shoes": "Chaussures",
-    "garment.category.shoes.desc": "Chaussures, bottes et sandales",
+    "garment.category.shoes.desc": "Chaussures et bottes",
     "garment.pose.a_pose": "A-pose",
     "garment.pose.a_pose.desc": "Les bras pointent vers le bas en biais, comme le ped se tient dans le jeu",
     "garment.pose.t_pose": "T-pose",
@@ -80,9 +80,10 @@ TEXT = {
     "garment.prop.gender.desc": "Le ped freemode auquel le vêtement est destiné",
     "garment.prop.slot": "Emplacement",
     "garment.prop.slot.desc": "L'emplacement de vêtement qu'occupe le vêtement dans Durty Cloth Tool",
-    "garment.prop.category": "Catégorie",
+    "garment.prop.category": "Type de vêtement",
     "garment.prop.category.desc": (
-        "Le type de vêtement : il détermine où vont les marqueurs et quelles zones les outils proposent"
+        "Le genre de vêtement : il fixe l'emplacement, la façon de trouver les marqueurs, les zones proposées par les "
+        "outils et ce qui est vérifié"
     ),
     "garment.prop.pose": "Pose d'origine",
     "garment.prop.pose.desc": "La pose de l'avatar sur lequel le vêtement a été créé",
@@ -185,8 +186,9 @@ TEXT = {
     ),
     "garment.op.auto-markers": "Marqueurs automatiques",
     "garment.op.auto-markers.desc": (
-        "Placer les marqueurs d'articulation d'après la forme du vêtement (cou, poitrine, bassin, épaules, coudes, "
-        "poignets et hanches ; pour un pantalon les hanches, genoux et chevilles). Déplacez ceux qui sont mal placés"
+        "Placer les marqueurs d'articulation : sur les articulations de l'avatar choisi dans Configuration, d'après la "
+        "forme du vêtement (hauts et pantalons), ou sur les articulations du corps pour commencer. Déplacez ceux qui "
+        "sont mal placés"
     ),
     "garment.op.mirror": "Miroir G vers D",
     "garment.op.mirror.desc": "Copier les marqueurs du côté gauche du ped sur son côté droit",
@@ -333,7 +335,7 @@ TEXT = {
     "garment.why.shape-keys": "Le vêtement a des clés de forme. Appliquez-les ou supprimez-les d'abord.",
     "garment.why.empty": "Le vêtement n'a pas de géométrie.",
     "garment.why.no-body": "Ajoutez d'abord le corps freemode sous Configuration.",
-    "garment.why.no-markers": "Les chaussures n'ont pas besoin de marqueurs.",
+    "garment.why.no-markers": "Ce type de vêtement n'a pas besoin de marqueurs.",
     "garment.why.downloading": "Le corps est en cours de téléchargement.",
     "garment.why.sign-in": (
         "Connectez-vous d'abord avec gta.clothing (Se connecter), ou utilisez un fichier de corps."
@@ -447,9 +449,11 @@ TEXT = {
     ),
     "garment.info.markers": (
         "Les marqueurs représentent les articulations du ped : cou, poitrine, bassin, épaules, coudes, poignets et "
-        "hanches (pour un pantalon les hanches, genoux et chevilles). Marqueurs automatiques les place d'après la "
-        "forme du vêtement, et des lignes les relient dans la vue 3D : des lignes orange signalent un problème. "
-        "Déplacez les marqueurs mal placés ; Miroir G vers D copie le côté gauche sur le côté droit."
+        "hanches (pour un pantalon les hanches, genoux et chevilles, pour un masque la tête). Marqueurs automatiques "
+        "les place sur les articulations de l'avatar choisi dans Configuration, sinon les lit d'après la forme du "
+        "vêtement (hauts et pantalons) ou les place d'abord sur les articulations du corps. Des lignes les relient "
+        "dans la vue 3D : des lignes orange signalent un problème. Déplacez les marqueurs mal placés ; Miroir G vers D "
+        "copie le côté gauche sur le côté droit."
     ),
     "garment.info.tpose": (
         "Tourne les bras d'un vêtement fait en T-pose jusqu'à l'angle des bras (ou sur les bras du corps quand ses "
@@ -1224,4 +1228,209 @@ TEXT = {
     "garment.stage.bake-normal": "Cuisson de la carte de normales",
     "garment.stage.bake-emission": "Cuisson de la carte d'émission",
     "garment.stage.material": "Création du matériau combiné",
+    "garment.slot.berd": "Masque (berd)",
+    "garment.slot.berd.desc": "Masques et couvre-visages",
+    "garment.slot.hand": "Sac (hand)",
+    "garment.slot.hand.desc": "Sacs, sacs à dos et parachutes",
+    "garment.slot.task": "Gilet (task)",
+    "garment.slot.task.desc": "Gilets et gilets pare-balles",
+    "garment.slot.p_head": "Accessoire de tête (p_head)",
+    "garment.slot.p_head.desc": "Un accessoire sur la tête : chapeaux, casquettes et casques",
+    "garment.slot.p_eyes": "Accessoire des yeux (p_eyes)",
+    "garment.slot.p_eyes.desc": "Un accessoire sur les yeux : lunettes",
+    "garment.slot.p_ears": "Accessoire des oreilles (p_ears)",
+    "garment.slot.p_ears.desc": "Un accessoire aux oreilles : boucles d'oreilles et oreillettes",
+    "garment.slot.p_lwrist": "Accessoire du poignet gauche (p_lwrist)",
+    "garment.slot.p_lwrist.desc": "Un accessoire au poignet gauche : montres et bracelets",
+    "garment.slot.p_rwrist": "Accessoire du poignet droit (p_rwrist)",
+    "garment.slot.p_rwrist.desc": "Un accessoire au poignet droit : montres et bracelets",
+    "garment.category.hoodie": "Sweat à capuche",
+    "garment.category.hoodie.desc": "Un haut à manches longues avec une capuche",
+    "garment.category.open_jacket": "Veste ouverte",
+    "garment.category.open_jacket.desc": "Une veste portée ouverte : ses deux devants ne sont jamais joints",
+    "garment.category.long_coat": "Manteau long",
+    "garment.category.long_coat.desc": (
+        "Un manteau qui descend aux genoux ou plus bas, ses pans suivant les deux jambes"
+    ),
+    "garment.category.dress": "Robe",
+    "garment.category.dress.desc": (
+        "Un haut et une jupe d'un seul tenant : un vêtement dans l'emplacement Haut, ou séparé en Haut et Jambes"
+    ),
+    "garment.category.skirt": "Jupe",
+    "garment.category.skirt.desc": "Une jupe dans l'emplacement Jambes qui suit les deux jambes",
+    "garment.category.sandals": "Sandales",
+    "garment.category.sandals.desc": "Des chaussures ouvertes qui laissent les pieds nus",
+    "garment.category.mask": "Masque",
+    "garment.category.mask.desc": "Un masque ou un couvre-visage",
+    "garment.category.armour": "Gilet ou gilet pare-balles",
+    "garment.category.armour.desc": "Un gilet porté sur le haut, comme un gilet pare-balles",
+    "garment.category.bag": "Sac ou parachute",
+    "garment.category.bag.desc": "Un sac à dos, un sac ou un parachute porté sur le dos",
+    "garment.category.hat": "Chapeau",
+    "garment.category.hat.desc": "Un chapeau, une casquette ou un casque : un accessoire sur la tête",
+    "garment.category.glasses": "Lunettes",
+    "garment.category.glasses.desc": "Des lunettes de vue ou de soleil : un accessoire sur les yeux",
+    "garment.category.ears": "Accessoire d'oreille",
+    "garment.category.ears.desc": "Des boucles d'oreilles ou une oreillette : un accessoire aux oreilles",
+    "garment.category.watch": "Montre",
+    "garment.category.watch.desc": "Une montre : un accessoire au poignet",
+    "garment.category.bracelet": "Bracelet",
+    "garment.category.bracelet.desc": "Un bracelet : un accessoire au poignet",
+    "garment.region.head": "Tête",
+    "garment.info.type": (
+        "Le type fixe l'emplacement du vêtement, la façon de trouver ses marqueurs, les zones proposées par les outils "
+        "et ce qui est vérifié. Les accessoires (chapeaux, lunettes, accessoires d'oreille, montres et bracelets) sont "
+        "posés sur leur ancrage au lieu d'être ajustés au corps."
+    ),
+    "garment.hint.hood": (
+        "Marqueurs automatiques trouve le cou sous la capuche, et Plaquer au corps laisse la capuche telle quelle."
+    ),
+    "garment.hint.open-front": (
+        "Préparer le vêtement ne joint jamais les deux devants, aussi proches soient-ils (Devant ouvert dans Options)."
+    ),
+    "garment.hint.coat": (
+        "Les pans pendent librement : Plaquer au corps les laisse tels quels, et après chaque ajustement leurs poids "
+        "des cuisses sont reliés d'une jambe à l'autre, pour que le manteau ne se sépare pas entre elles."
+    ),
+    "garment.hint.dress": (
+        "D'un seul tenant : la robe va dans l'emplacement Haut comme un seul vêtement, les poids de la jupe reliés "
+        "d'une jambe à l'autre ; les joueurs portent des jambes nues dans l'emplacement Jambes avec elle. En deux "
+        "pièces : Couper à la taille dans Ajustement la sépare en un haut et une jupe pour l'emplacement Jambes, "
+        "ajoutés l'un après l'autre, pour que chacun se porte avec d'autres vêtements."
+    ),
+    "garment.hint.bare-legs": (
+        "L'emplacement Jambes remplace les jambes du ped : les jambes nues sous l'ourlet doivent donc faire partie du "
+        "vêtement. L'extension ajoute le vêtement ; les jambes nues viennent des outils de Durty Cloth Tool (leurs "
+        "propres offres s'appliquent). Peau visible est activé."
+    ),
+    "garment.hint.bare-feet": (
+        "L'emplacement Chaussures remplace les pieds du ped : les pieds nus doivent donc faire partie du vêtement. "
+        "L'extension ajoute les sandales ; les pieds nus viennent des outils de Durty Cloth Tool (leurs propres offres "
+        "s'appliquent). Peau visible est activé."
+    ),
+    "garment.hint.avatar": (
+        "Ses marqueurs ne se lisent pas d'après sa forme : choisissez l'avatar sur lequel il a été drapé, ou Marqueurs "
+        "automatiques les place d'abord sur les articulations du corps pour que vous les déplaciez."
+    ),
+    "garment.hint.prop": (
+        "Un accessoire pend à un seul os et garde sa forme : il n'est pas ajusté au corps et n'a pas besoin de poids. "
+        "Poser sur l'ancrage dans Ajustement le met en place ; déplacez-le ensuite à la main."
+    ),
+    "garment.prop.open-front": "Devant ouvert",
+    "garment.prop.open-front.desc": (
+        "Le vêtement se porte ouvert : Préparer le vêtement ne joint jamais ses deux devants"
+    ),
+    "garment.prop.avatar": "Avatar",
+    "garment.prop.avatar.desc": (
+        "L'avatar sur lequel le vêtement a été drapé, s'il est connu : ses articulations deviennent les marqueurs"
+    ),
+    "garment.avatar.detect": "Inconnu",
+    "garment.avatar.detect.desc": "Marqueurs automatiques lit les marqueurs d'après la forme du vêtement",
+    "garment.avatar.file": "Importé avec le vêtement",
+    "garment.avatar.file.desc": (
+        "L'avatar riggé exporté avec le vêtement : l'importation a gardé l'emplacement de ses articulations"
+    ),
+    "garment.avatar.manne": "Manne (homme, A-pose)",
+    "garment.avatar.manne.desc": (
+        "MaleTemplate_Manne_01, le modèle masculin de Marvelous Designer et de CLO, dans son A-pose"
+    ),
+    "garment.info.avatar": (
+        "Si l'avatar sur lequel le vêtement a été drapé est connu, Marqueurs automatiques place les marqueurs sur ses "
+        "articulations, exactement et dans la pose du drapé. Importer un vêtement les garde depuis un FBX exporté avec "
+        "l'avatar riggé ; sinon choisissez l'avatar standard sur lequel vous avez drapé. Une pose modifiée dans "
+        "Marvelous Designer n'est pas connue : vérifiez alors les marqueurs."
+    ),
+    "garment.marker-note.avatar": "Placés sur les articulations de l'avatar sur lequel le vêtement a été drapé.",
+    "garment.marker-note.from-body": (
+        "Placés sur les articulations du corps : déplacez chacun sur le point correspondant du vêtement."
+    ),
+    "garment.why.no-avatar-file": (
+        "Cet avatar n'est pas connu pour ce vêtement : il n'a pas été importé avec son avatar riggé. Choisissez un "
+        "autre avatar, ou Inconnu."
+    ),
+    "garment.why.avatar-markers": (
+        "Il manque à l'avatar un marqueur dont ce type a besoin. Choisissez Inconnu, ou placez-le à la main."
+    ),
+    "garment.done.import-rig": (
+        "{name} importé ({count} sommets), avec les articulations de l'avatar exporté avec lui gardées pour les "
+        "marqueurs."
+    ),
+    "garment.heading.snap": "Ancrage",
+    "garment.op.snap": "Poser sur l'ancrage",
+    "garment.op.snap.desc": (
+        "Poser l'accessoire sur son ancrage sur le corps : un chapeau sur la tête, des lunettes devant les yeux, un "
+        "accessoire d'oreille aux oreilles, une montre ou un bracelet autour du poignet"
+    ),
+    "garment.info.snap": (
+        "Dans le jeu, un accessoire pend à un seul os : la tête pour les chapeaux, lunettes et accessoires d'oreille, "
+        "l'avant-bras au poignet pour les montres et bracelets. Poser sur l'ancrage le met là où il se trouve "
+        "d'habitude sur le corps freemode ; déplacez-le, tournez-le ou redimensionnez-le ensuite à la main. Une fois "
+        "ajouté, il garde sa position par rapport à son ancrage."
+    ),
+    "garment.snap.subtext": (
+        "Ancrage : {anchor}. Après l'avoir posé, déplacez l'accessoire à la main, puis continuez dans Prêt pour le jeu."
+    ),
+    "garment.done.snap": "Accessoire posé sur son ancrage ({anchor}) : {distance} cm, tourné de {turn}°.",
+    "garment.next.snap": (
+        "Suite : Poser sur l'ancrage dans Ajustement, puis déplacez l'accessoire à la main à sa place."
+    ),
+    "garment.why.not-prop": "Seuls les accessoires sont posés sur un ancrage.",
+    "garment.why.prop-fix": "Les accessoires gardent leur forme : placez-les avec Poser sur l'ancrage et à la main.",
+    "fit.why.prop": (
+        "Les accessoires ne sont pas ajustés au corps et n'ont pas besoin de poids : ils bougent avec leur ancrage."
+    ),
+    "garment.marker-error.no-head": "Le corps n'a pas de tête sur laquelle poser l'accessoire.",
+    "garment.marker-error.no-arm": "Le corps n'a pas de bras sur lequel poser l'accessoire.",
+    "garment.finding.anchor-far": (
+        "Le milieu de l'accessoire est à {distance} cm de son ancrage : posez-le ou rapprochez-le."
+    ),
+    "add.info.anchor": (
+        "Une fois ajouté, l'accessoire pend à son os d'ancrage, placé d'après le squelette freemode de Durty Cloth "
+        "Tool (issu de vos fichiers du jeu), et garde sa position par rapport à lui. Il n'a pas besoin de poids."
+    ),
+    "add.anchor.ready": "Pend à son ancrage ({anchor}) dans {name}.",
+    "add.anchor.missing": "Ancrage : {anchor}. Ajouter au projet Durty Cloth Tool y suspend l'accessoire.",
+    "add.why.no-anchor": "Le squelette de Durty Cloth Tool n'a pas d'os {bone} auquel suspendre l'accessoire.",
+    "add.prop.missing": (
+        "L'accessoire ne pend pas encore à son ancrage. Ajouter au projet Durty Cloth Tool s'en charge."
+    ),
+    "add.why.prop-skeleton": "Les accessoires ne vont pas sur le squelette : ils pendent à leur ancrage.",
+    "garment.heading.split": "Deux pièces",
+    "garment.op.split": "Couper à la taille",
+    "garment.op.split.desc": (
+        "Couper la robe à la taille en un haut et une jupe : la jupe devient un vêtement à part pour l'emplacement "
+        "Jambes"
+    ),
+    "garment.info.split": (
+        "Une robe va dans le jeu comme un seul vêtement dans l'emplacement Haut, ou comme un haut et une jupe. Couper "
+        "à la taille la coupe là où elle est la plus étroite au-dessus du bassin : la robe garde le haut, et un "
+        "nouveau vêtement à son nom reçoit la jupe, préparé pour l'emplacement Jambes. Coupez après Ajuster au corps, "
+        "pour que les deux pièces gardent l'ajustement et ses poids, puis choisissez chaque pièce dans Configuration "
+        "pour la terminer et l'ajouter."
+    ),
+    "garment.done.split": (
+        "{name} coupée à la taille : {skirt} est la jupe, pour l'emplacement Jambes. Choisissez-la dans Configuration."
+    ),
+    "garment.why.not-dress": "Seule une robe se coupe à la taille.",
+    "garment.why.split-nothing": "Rien ne se trouve d'un côté de la taille : vérifiez les marqueurs.",
+    "garment.op.bridge": "Relier les poids des cuisses",
+    "garment.op.bridge.desc": (
+        "Répartir les poids de la jupe ou des pans du manteau entre les deux cuisses par-dessus le milieu, pour que le "
+        "tissu entre les jambes ne se sépare pas"
+    ),
+    "garment.done.bridge": "Poids des cuisses de {count} sommets reliés d'une jambe à l'autre.",
+    "garment.why.no-bridge": "Seuls les jupes, robes et manteaux longs sont reliés d'une jambe à l'autre.",
+    "garment.why.no-leg-weights": (
+        "Le vêtement n'a pas encore de poids des cuisses à relier. Ajustez-le au corps ou transférez d'abord les poids."
+    ),
+    "garment.done.combine-walls": (
+        "{count} matériaux combinés en une texture de {size} pixels, {density} pixels par centimètre sur le vêtement "
+        "(la disposition utilise {used} %). {walls} faces n'avaient pas de place dans la carte UV (comme les flancs "
+        "d'un export épais) : elles prennent la couleur du bord de pièce voisin."
+    ),
+    "garment.done.combine-sparse": (
+        "La disposition combinée n'utilise que {used} % de la texture, le vêtement paraîtrait donc flou. Sa carte UV a "
+        "des îlots sans place ou très éloignés : vérifiez-la, ou redépliez le vêtement, puis combinez à nouveau."
+    ),
+    "garment.why.uv-degenerate": "La carte UV du vêtement n'a de surface nulle part. Dépliez d'abord le vêtement.",
 }

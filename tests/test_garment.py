@@ -22,25 +22,67 @@ def distance(a, b) -> float:
 # ---- slots and categories ---------------------------------------------------------------------------------
 
 
-def test_each_slot_offers_its_categories():
-    assert garment.categories_for("jbib") == ("vest", "tshirt", "long_sleeve", "long_jacket")
+def test_each_type_names_its_slots_and_each_slot_its_types():
+    assert garment.categories_for("jbib") == ("vest", "tshirt", "long_sleeve", "long_jacket", "hoodie",
+                                             "open_jacket", "long_coat", "dress")
     assert garment.categories_for("accs") == ("vest", "tshirt", "long_sleeve")
-    assert garment.categories_for("lowr") == ("pants", "shorts")
-    assert garment.categories_for("feet") == ("shoes",)
+    assert garment.categories_for("lowr") == ("pants", "shorts", "skirt")
+    assert garment.categories_for("feet") == ("shoes", "sandals")
+    assert garment.categories_for("berd") == ("mask",) and garment.categories_for("hand") == ("bag",)
+    assert garment.categories_for("task") == ("armour",)
+    assert garment.slots_for("watch") == ("p_lwrist", "p_rwrist") and garment.slots_for("bracelet")[0] == "p_rwrist"
+    # Every type is offered, in the picker too, and every slot it names is one the tools add to.
     assert {c for slot in garment.SLOTS for c in garment.categories_for(slot)} == set(garment.CATEGORIES)
+    assert [c for c in garment.CATEGORY_MENU if c] == sorted(garment.CATEGORIES, key=garment.CATEGORY_MENU.index)
+    assert set(garment.TYPES) == set(garment.CATEGORIES)
+    # Blender keeps a choice by its place in the list: the types and slots of earlier versions keep theirs.
+    assert garment.CATEGORIES[:7] == ("vest", "tshirt", "long_sleeve", "long_jacket", "pants", "shorts", "shoes")
+    assert garment.SLOTS[:4] == ("jbib", "accs", "lowr", "feet")
+    assert garment.REGIONS[:10] == ("shoulders", "upper_arms", "forearms", "cuffs", "chest", "back", "waist", "hips",
+                                    "neck", "legs")
+
+
+def test_props_hang_from_their_anchor_and_are_never_fitted():
+    props = [c for c in garment.CATEGORIES if garment.is_prop(c)]
+    assert props == ["hat", "glasses", "ears", "watch", "bracelet"]
+    for category in props:
+        kind = garment.garment_type(category)
+        assert set(kind.slots) <= garment.PROP_SLOTS and garment.markers_for(category) == ()
+        assert all(slot in garment.ANCHOR_BONES for slot in kind.slots) and kind.snap and not kind.skin
+    assert garment.ANCHOR_BONES["p_head"] == garment.ANCHOR_BONES["p_eyes"] == "SKEL_Head"
+    assert not any(garment.is_prop(c) for c in ("mask", "bag", "armour", "shoes"))
 
 
 def test_markers_and_regions_follow_the_category():
     assert garment.markers_for("tshirt") == garment.UPPER_MARKERS and len(garment.UPPER_MARKERS) == 11
     assert garment.markers_for("pants") == ("pelvis", "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r")
-    assert garment.markers_for("shoes") == ()
-    assert set(garment.MARKERS) == set(garment.UPPER_MARKERS) | set(garment.LOWER_MARKERS) == set(garment.MARKER_JOINTS)
+    assert garment.markers_for("shoes") == () == garment.markers_for("sandals") == garment.markers_for("hat")
+    assert garment.markers_for("mask") == ("head",) and garment.markers_for("bag") == garment.TORSO_MARKERS
+    assert garment.markers_for("hoodie") == garment.markers_for("armour") == garment.UPPER_MARKERS
+    assert garment.markers_for("skirt") == garment.LOWER_MARKERS
+    assert set(garment.MARKERS) == set(garment.UPPER_MARKERS) | set(garment.LOWER_MARKERS) | {"head"}
+    assert set(garment.MARKERS) == set(garment.MARKER_JOINTS)
     assert "upper_arms" not in garment.regions_for("vest") and "legs" not in garment.regions_for("tshirt")
     assert "forearms" not in garment.regions_for("tshirt") and "cuffs" in garment.regions_for("long_sleeve")
-    assert garment.regions_for("long_jacket") == garment.REGIONS
-    assert garment.regions_for("shorts") == ("waist", "hips", "legs")
-    # Snug never pulls the tails of a coat onto the legs; the legs of trousers are snugged.
+    assert garment.regions_for("long_jacket") == tuple(r for r in garment.REGIONS if r != "head")
+    assert garment.regions_for("shorts") == ("waist", "hips", "legs") and garment.regions_for("mask")[0] == "head"
+    # Snug never pulls the tails of a coat or a skirt onto the legs; the legs of trousers are snugged.
     assert "legs" not in garment.snug_regions_for("long_jacket") and "legs" in garment.snug_regions_for("pants")
+    assert "legs" not in garment.snug_regions_for("skirt") and "legs" not in garment.snug_regions_for("long_coat")
+    # Auto Markers reads tops and legs from their shape; masks and bags take an avatar's or the body's joints.
+    assert garment.detects_markers("hoodie") and garment.detects_markers("skirt")
+    assert not garment.detects_markers("mask") and not garment.detects_markers("bag")
+
+
+def test_type_presets():
+    """The presets the owner chose: open fronts, bridged thigh weights, bare skin, and what a type hints at."""
+    assert garment.garment_type("open_jacket").open_front and not garment.garment_type("hoodie").open_front
+    assert {c for c in garment.CATEGORIES if garment.garment_type(c).bridge} == {"long_coat", "dress", "skirt"}
+    assert {c for c in garment.CATEGORIES if garment.garment_type(c).skin} == {"shorts", "skirt", "sandals"}
+    assert garment.garment_type("shorts").hint == garment.garment_type("skirt").hint == "garment.hint.bare-legs"
+    assert garment.garment_type("dress").hint == "garment.hint.dress"
+    # An unknown name falls back to a T-shirt rather than failing.
+    assert garment.garment_type("nonsense") == garment.TYPES["tshirt"]
 
 
 # ---- markers ----------------------------------------------------------------------------------------------
@@ -404,7 +446,7 @@ def test_import_scale_brings_centimetres_and_millimetres_to_metres(size, categor
 
 
 def test_the_size_ranges_never_fit_two_units():
-    for low, high in [*garment.SIZE_RANGES.values(), garment.TOP_SIZE_RANGE]:
+    for low, high in garment.SIZE_RANGES.values():
         assert high / low < 10
 
 
@@ -449,7 +491,18 @@ def test_the_next_step_walks_through_the_local_flow():
     assert garment.next_step(unweighted) == "garment.next.skeleton"
     assert garment.next_step(unweighted._replace(skeleton=True)) == "garment.next.weights"
     assert garment.next_step(prepared._replace(prepared=False, aligned=True, checked=True)) == "garment.next.prepare"
-    assert set(garment.STEP_OPERATORS) <= set(steps) | {"garment.next.prepare"}
+    assert set(garment.STEP_OPERATORS) <= set(steps) | {"garment.next.prepare", "garment.next.snap"}
+
+
+def test_a_prop_is_snapped_and_added_without_weights_or_skeleton():
+    state = garment.FlowState(garment=True, body=True, category="hat", prop=True)
+    assert garment.next_step(state) == "garment.next.snap"
+    state = state._replace(aligned=True)
+    assert garment.next_step(state) == "garment.next.prepare"
+    state = state._replace(prepared=True, lods=True, findings="clean", validated=True, connected=True, project=True)
+    # No weights and no skeleton: a prop hangs from its anchor.
+    assert garment.next_step(state) == "garment.next.add"
+    assert garment.STEP_OPERATORS["garment.next.snap"] == "dct_link.fit_snap_anchor"
 
 
 def test_pose_angles_are_degrees_below_the_horizontal():
@@ -650,7 +703,9 @@ def test_body_regions_name_each_part():
               "shoulders": (0.1, 0.0, 0.45), "cuffs": joints["SKEL_L_Hand"]}
     labels = garment.body_regions(np.array(list(points.values())), joints)
     assert [garment.REGIONS[i] for i in labels] == list(points)
-    assert garment.body_regions(np.array([[0.0, 0.0, 0.75]]), joints)[0] == garment.OTHER  # the head (a hood)
+    # The head (where a hood lies, or a mask): no top covers it, so its fit check leaves it out.
+    assert garment.REGIONS[garment.body_regions(np.array([[0.0, 0.0, 0.75]]), joints)[0]] == "head"
+    assert "head" not in garment.regions_for("hoodie")
     assert set(regions) == set(garment.REGIONS)
 
 

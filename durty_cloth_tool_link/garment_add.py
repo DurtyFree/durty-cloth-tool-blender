@@ -18,6 +18,7 @@ from xml.etree import ElementTree
 
 import numpy as np
 
+from . import garment
 from .dct_link import protocol
 from .strings import EN, Msg, msg
 
@@ -33,8 +34,8 @@ PINNED_GROUP = "DCT Pinned"
 LINING_GROUP = "DCT Lining"
 TOOL_GROUPS = (TEARS_GROUP, PINNED_GROUP, LINING_GROUP)
 TOOL_GROUP_PREFIX = "DCT_tmp_"
-#: The slots the garment tools add (components; none of them is a prop, so each may show skin).
-SLOTS = ("jbib", "accs", "lowr", "feet")
+#: The slots the garment tools add: components (which may show skin) and props (which never do).
+SLOTS = garment.SLOTS
 
 
 # --------------------------------------------------------------------------------------------------
@@ -94,10 +95,10 @@ def _bone_matrix(translation: Tuple[float, ...], rotation: Tuple[float, ...], sc
     return matrix
 
 
-def template_joints(xml: bytes, names: Optional[Iterable[str]] = None) -> Dict[str, Tuple[float, float, float]]:
-    """Where the skeleton template's bones (``names``, all by default) sit in ped space at rest: each bone's
-    translation, rotation and scale applied down from the root. Raises :class:`TemplateError` for XML that is not a
-    skeleton template."""
+def template_matrices(xml: bytes, names: Optional[Iterable[str]] = None) -> Dict[str, np.ndarray]:
+    """Where the skeleton template's bones (``names``, all by default) sit in ped space at rest, as 4 by 4 matrices
+    (their position and how they are turned): each bone's translation, rotation and scale applied down from the root.
+    Raises :class:`TemplateError` for XML that is not a skeleton template."""
     try:
         root = ElementTree.fromstring(xml)
     except ElementTree.ParseError as exc:
@@ -129,9 +130,16 @@ def template_joints(xml: bytes, names: Optional[Iterable[str]] = None) -> Dict[s
             return world[index]  # type: ignore[return-value]
 
         wanted = set(names) if names is not None else None
-        return {name: tuple(float(v) for v in placed(i)[:3, 3])  # type: ignore[misc]
-                for i, (name, _, _) in enumerate(bones) if name and (wanted is None or name in wanted)}
+        return {name: placed(i) for i, (name, _, _) in enumerate(bones)
+                if name and (wanted is None or name in wanted)}
     raise TemplateError("the skeleton template has no bones")
+
+
+def template_joints(xml: bytes, names: Optional[Iterable[str]] = None) -> Dict[str, Tuple[float, float, float]]:
+    """Where the skeleton template's bones (``names``, all by default) sit in ped space at rest (their positions,
+    :func:`template_matrices`). Raises :class:`TemplateError` for XML that is not a skeleton template."""
+    return {name: tuple(float(v) for v in matrix[:3, 3])  # type: ignore[misc]
+            for name, matrix in template_matrices(xml, names).items()}
 
 
 def armature_problem(armature_bones: Sequence[str], template: Sequence[str]) -> Optional[Msg]:
@@ -454,6 +462,7 @@ __all__ = [
     "sorted_findings",
     "template_bones",
     "template_joints",
+    "template_matrices",
     "template_refusal",
     "variation_file",
     "variation_title",

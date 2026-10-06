@@ -23,7 +23,8 @@ never go into a public issue: follow [SECURITY.md](SECURITY.md). How the add-on 
 durty_cloth_tool_link/   the extension: blender_manifest.toml, the add-on modules, the translations and the logo
 durty_cloth_tool_link/dct_link/   the Creator Link client, vendored (read-only here)
 tests/                   pytest tests (no Blender needed), the fakes they use, and the Blender smoke test
-tools/                   manifest check, dct_link check, release checks, Blender smoke and screenshot runners
+tools/                   manifest check, dct_link check, release checks, Blender smoke and screenshot runners,
+                         avatar measurement
 .github/                 CI and release workflows, issue forms and the pull request template
 ```
 
@@ -95,6 +96,18 @@ python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Ble
 
 Add `--expanded` to open every collapsed panel, `--language de_DE` or `--theme light` for variants, and `--scenario
 garment` for Garment Fitting. Blender opens a window and quits by itself.
+
+### Measuring an avatar
+
+The garment tools know the joints of some Marvelous Designer and CLO stock avatars (`garment_avatars.py`). To add
+one, export a garment from Marvelous Designer or CLO as FBX with the rigged avatar and run:
+
+```powershell
+blender --background --factory-startup --python tools/measure_avatar.py -- <the exported .fbx>
+```
+
+It prints the avatar's joints as markers in ped space and the pose's arm angle. Only these numbers go into the
+repository, with the avatar's template id and where they were measured; never the avatar, its mesh or the file.
 
 ### Building the archive by hand
 
