@@ -382,7 +382,7 @@ RESULT_KEYS = {
     "save-failed": "add.result.save-failed",
     "needs-license": "error.needs-license",
     "needs-ultimate": "error.needs-ultimate",
-    # A Durty Cloth Tool that cannot read the add answers it by its id (since 2026-10-06) instead of never.
+    # A Durty Cloth Tool that cannot read the add answers it by its id.
     "unknown-message-type": "add.dct-too-old",
 }
 #: The level each answer is shown with.

@@ -53,8 +53,8 @@ MARKER = "dct_ped_marker"
 MARKER_OF = "dct_ped_marker_of"
 MARKER_PREFIX = "DCT_ped_"
 MODIFIER = "DCT Rig"
-#: The glTF exporter's settings for the GLB Durty Cloth Tool reads (spike S3, Blender 5.2: joints keep their names and
-#: exact rest transforms, at most four weights, images embedded, every bone exported even without weights).
+#: The glTF exporter's settings for the GLB Durty Cloth Tool reads (Blender 5.2: joints keep their names and exact rest
+#: transforms, at most four weights, images embedded, every bone exported even without weights).
 GLB_OPTIONS: Dict[str, Any] = {
     "export_format": "GLB", "export_image_format": "AUTO", "export_image_add_webp": False,
     "export_keep_originals": False, "export_texcoords": True, "export_normals": True, "export_tangents": False,

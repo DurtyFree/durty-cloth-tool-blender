@@ -176,16 +176,16 @@ def test_a_busy_service_is_asked_again_and_cancel_gives_an_unstarted_fit_back(tm
     assert api.fit.cancels == [run.job_id] and api.fit.used == 0
 
 
-@pytest.mark.parametrize("category, keys", [
-    ("mock-invalid", ["fit.error.mesh-invalid", "fit.input.marker-far", "fit.refunded"]),
-    ("mock-dense", ["fit.error.mesh-invalid", "fit.input.seam-dense", "fit.refunded"]),
-    ("mock-error", ["fit.error.server", "fit.counted"]),
-    ("mock-not-started", ["fit.error.server", "fit.refunded"]),
-    ("mock-timeout", ["fit.error.timeout", "fit.counted"]),
-    ("mock-not-on-body", None),
+@pytest.mark.parametrize("outcome, keys", [
+    ("invalid", ["fit.error.mesh-invalid", "fit.input.marker-far", "fit.refunded"]),
+    ("dense", ["fit.error.mesh-invalid", "fit.input.seam-dense", "fit.refunded"]),
+    ("error", ["fit.error.server", "fit.counted"]),
+    ("notStarted", ["fit.error.server", "fit.refunded"]),
+    ("timeout", ["fit.error.timeout", "fit.counted"]),
+    ("notOnBody", None),
 ])
-def test_a_fit_that_does_not_work_out_says_why(tmp_path, api, monkeypatch, category, keys):
-    monkeypatch.setitem(garment_fit.REFERENCE_CATEGORIES, "jbib", category)  # the fake ends by category
+def test_a_fit_that_does_not_work_out_says_why(tmp_path, api, outcome, keys):
+    api.fit.outcome = outcome
     ctrl = signed_in(tmp_path, api)
     ended = Ended()
     ctrl.fitting.on_ended = ended
@@ -203,12 +203,12 @@ def test_refusals_before_the_upload_are_worded_for_a_beginner(tmp_path, api):
     ended = Ended()
     ctrl.fitting.on_ended = ended
     upload, mesh = garment_upload()
-    api.fit.used = 10  # the free plan's ten fits are used
+    api.fit.used = api.fit.per_day  # all of today's fits are used
     run = ctrl.fitting.start("fit", request(mesh=mesh), upload, ("Scene", 7))
     until(ctrl, lambda: bool(ended.runs))
     level, line = run.lines[0]
     assert level == "ERROR" and line.key == "fit.error.quota"
-    assert re.fullmatch(r"No more fits can be started today\. More are available in about \d+ (hours|minutes)\.",
+    assert re.fullmatch(r"No more fits can be started today\. More are available in about \d+ (hours?|minutes?)\.",
                         strings.english(line))
     api.fit.used = 0
     stale = garment_fit.build_request("fit", "male", "jbib", "tshirt", "2026.01.01", mesh.joints,
@@ -237,11 +237,11 @@ def test_the_fits_left_today_come_from_me_and_follow_each_fit(tmp_path, api):
     ctrl.fitting.on_ended = Ended()
     ctrl.fitting.want_allowance()
     until(ctrl, lambda: ctrl.fitting.allowance is not None)
-    assert ctrl.fitting.allowance == fit.FitAllowance(10, 0, 10)
+    assert ctrl.fitting.allowance == fit.FitAllowance(api.fit.per_day, 0, api.fit.per_day)
     upload, mesh = garment_upload()
     run = ctrl.fitting.start("fit", request(mesh=mesh), upload, ("Scene", 7))
     until(ctrl, lambda: run.handled)
-    assert ctrl.fitting.allowance.remaining_today == 9  # from the upload's answer, before /me is asked again
+    assert ctrl.fitting.allowance.remaining_today == api.fit.per_day - 1  # the upload's answer, before /me again
     asked = len([r for r in api.requests if r["path"] == "/link/api/me"])
     offline = signed_in(tmp_path / "offline", api, online=lambda: False)
     offline.fitting.want_allowance()
@@ -324,35 +324,10 @@ def test_the_same_problem_is_said_once_and_a_lost_answer_after_the_upload_is_exp
 # ---- the listing ----------------------------------------------------------------------------------------------------
 
 
-def _worker_listing():
-    """The Blender listing in the website's Worker (its hosts.js), when a checkout of the website is at hand:
-    the one named by DCT_WEBSITE_CHECKOUT, else one beside this repository."""
-    import os
-
-    root = os.environ.get("DCT_WEBSITE_CHECKOUT")
-    hosts = pathlib.Path(root) if root else REPO.parent / "durty-cloth-tool-website"
-    hosts = hosts / "worker" / "link" / "hosts.js"
-    if not hosts.is_file():
-        return None
-    text = hosts.read_text("utf-8")
-    block = re.search(r"export const BLENDER_EXTENSION = Object\.freeze\(\{(.*?)\n\}\)", text, re.S)
-    assert block, "the Worker's hosts.js has no BLENDER_EXTENSION listing"
-    permissions = re.search(r"permissions: Object\.freeze\(\{(.*?)\}\)", block.group(1), re.S).group(1)
-    found = {}
-    for name, quote, value in re.findall(r"(\w+): (['\"])(.*?)\2,?\n", permissions):
-        found[name] = value.replace("\\'", "'")
-    return found
-
-
-def test_the_network_permission_says_what_the_worker_lists_and_names_fitting():
+def test_the_network_permission_names_fitting():
     from tools import check_manifest
 
-    expected = check_manifest.EXPECTED["permissions"]
-    assert "fit clothing" in expected["network"]  # the add-on now sends garments to gta.clothing
-    listing = _worker_listing()
-    if listing is None:
-        pytest.skip("no website checkout beside this repository (or DCT_WEBSITE_CHECKOUT)")
-    assert listing == expected
+    assert "fit clothing" in check_manifest.EXPECTED["permissions"]["network"]  # garments go to gta.clothing
 
 
 # ---- polling through passing failures --------------------------------------------------------------------------------

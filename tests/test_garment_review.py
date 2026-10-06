@@ -155,7 +155,7 @@ def test_a_seam_vertex_lying_on_the_other_panels_edge_is_not_counted_open():
 def _split_seam(crowd: int = 12):
     """Two panels of a game mesh meeting at a UV seam, which the game splits on purpose: the seam's vertices are there
     twice, on top of each other, one copy per UV island. At the seam's first vertex ``crowd`` more islands meet (a
-    small panel each), as at the points of a game-ready T-shirt where up to 104 copies lie on top of each other.
+    small panel each), as at points of a game-ready garment where many copies lie on top of each other.
     Positions, panel of each vertex, the open edges, their chains, and the vertices at that point."""
     count = 40
     seam = _strip(0.0, 0.0, count)
@@ -190,9 +190,9 @@ def test_the_split_uv_seams_of_a_game_mesh_are_no_open_seams_but_a_gap_is():
 
 
 def test_a_move_spread_along_the_edges_keeps_the_sides_of_a_split_together():
-    """Push Out of Body spreads each push along the mesh's edges, which the two sides of a split never share: on the
-    game-ready T-shirt it parted 66 pairs of its UV seams by more than the weld distance (up to 27 mm) and left the
-    open seams Prepare Garment then warned about. The vertices lying on top of each other now move alike."""
+    """Push Out of Body spreads each push along the mesh's edges, which the two sides of a split never share: on a
+    game-ready garment it parted pairs of its UV seams by more than the weld distance and left the open seams
+    Prepare Garment then warned about. The vertices lying on top of each other now move alike."""
     count = 20
     seam = _strip(0.0, 0.0, count)
     # Panel A: the seam and a row inside it; panel B: its own copy of the seam and a row on the other side.

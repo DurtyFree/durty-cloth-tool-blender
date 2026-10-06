@@ -13,8 +13,9 @@ with ``add_result`` (``hold_adds`` keeps it waiting, ``item.addCancel`` answers 
 ``ignore_cancels``). The custom ped messages: ``ped.templates`` lists ``ped_templates``, ``ped.skeleton`` and
 ``ped.rig`` use a made-up skeleton (:func:`ped_skeleton`), the rig reports its progress over ``ped_rig_seconds`` and
 stops at ``ped.rig.cancel``, and ``ped.add`` collects the chunks, checks the SHA-256 and answers with
-``ped_add_result`` (``hold_ped_adds`` keeps it waiting). Like DCT, a request the fake cannot decode, or whose type is in ``unknown_types`` (a DCT older than
-the add-on), gets an error answered by its id when the id can be read, and the connection stays once signed in.
+``ped_add_result`` (``hold_ped_adds`` keeps it waiting). A request the fake cannot decode, or whose type is in
+``unknown_types`` (a DCT older than the add-on), gets an error answered by its id when the id can be read, and the
+connection stays once signed in.
 Standard library only.
 """
 
@@ -86,38 +87,38 @@ class ClientGone(Exception):
 
 
 # ---- custom peds: a made-up template skeleton (nothing of the game: names as every human ped skeleton uses them,
-# positions of a person 1.8 m tall standing with the root between the hips, turned rest rotations) ----
+# tags of its own, positions of a person 1.8 m tall standing with the root between the hips, turned rest rotations) ----
 
 #: (name, tag, parent index, rest position in ped space) in the skeleton's order, parents first.
 PED_BONES = (
     ("SKEL_ROOT", 0, -1, (0.0, 0.0, 0.0)),
-    ("SKEL_Pelvis", 11816, 0, (0.0, 0.0, -0.02)),
-    ("SKEL_L_Thigh", 58271, 1, (0.09, 0.0, -0.06)),
-    ("SKEL_L_Calf", 63931, 2, (0.1, 0.0, -0.5)),
-    ("SKEL_L_Foot", 14201, 3, (0.11, 0.0, -0.92)),
-    ("SKEL_L_Toe0", 2108, 4, (0.11, -0.12, -0.98)),
-    ("SKEL_R_Thigh", 51826, 1, (-0.09, 0.0, -0.06)),
-    ("SKEL_R_Calf", 36864, 6, (-0.1, 0.0, -0.5)),
-    ("SKEL_R_Foot", 52301, 7, (-0.11, 0.0, -0.92)),
-    ("SKEL_R_Toe0", 20781, 8, (-0.11, -0.12, -0.98)),
-    ("SKEL_Spine_Root", 57597, 0, (0.0, 0.0, 0.0)),
-    ("SKEL_Spine0", 23553, 10, (0.0, 0.0, 0.08)),
-    ("SKEL_Spine1", 24816, 11, (0.0, 0.0, 0.17)),
-    ("SKEL_Spine2", 24817, 12, (0.0, 0.0, 0.26)),
-    ("SKEL_Spine3", 24818, 13, (0.0, 0.0, 0.35)),
-    ("SKEL_L_Clavicle", 64729, 14, (0.03, 0.0, 0.47)),
-    ("SKEL_L_UpperArm", 45509, 15, (0.18, 0.0, 0.49)),
-    ("SKEL_L_Forearm", 61163, 16, (0.41, 0.0, 0.26)),
-    ("SKEL_L_Hand", 18905, 17, (0.6, 0.0, 0.07)),
-    ("PH_L_Hand", 60309, 18, (0.66, -0.02, 0.02)),
-    ("SKEL_R_Clavicle", 10706, 14, (-0.03, 0.0, 0.47)),
-    ("SKEL_R_UpperArm", 40269, 20, (-0.18, 0.0, 0.49)),
-    ("SKEL_R_Forearm", 28252, 21, (-0.41, 0.0, 0.26)),
-    ("SKEL_R_Hand", 57005, 22, (-0.6, 0.0, 0.07)),
-    ("PH_R_Hand", 28422, 23, (-0.66, -0.02, 0.02)),
-    ("SKEL_Neck_1", 39317, 14, (0.0, 0.0, 0.53)),
-    ("SKEL_Head", 31086, 25, (0.0, 0.0, 0.62)),
-    ("IK_Head", 12844, 26, (0.0, 0.0, 0.62)),
+    ("SKEL_Pelvis", 101, 0, (0.0, 0.0, -0.02)),
+    ("SKEL_L_Thigh", 102, 1, (0.09, 0.0, -0.06)),
+    ("SKEL_L_Calf", 103, 2, (0.1, 0.0, -0.5)),
+    ("SKEL_L_Foot", 104, 3, (0.11, 0.0, -0.92)),
+    ("SKEL_L_Toe0", 105, 4, (0.11, -0.12, -0.98)),
+    ("SKEL_R_Thigh", 106, 1, (-0.09, 0.0, -0.06)),
+    ("SKEL_R_Calf", 107, 6, (-0.1, 0.0, -0.5)),
+    ("SKEL_R_Foot", 108, 7, (-0.11, 0.0, -0.92)),
+    ("SKEL_R_Toe0", 109, 8, (-0.11, -0.12, -0.98)),
+    ("SKEL_Spine_Root", 110, 0, (0.0, 0.0, 0.0)),
+    ("SKEL_Spine0", 111, 10, (0.0, 0.0, 0.08)),
+    ("SKEL_Spine1", 112, 11, (0.0, 0.0, 0.17)),
+    ("SKEL_Spine2", 113, 12, (0.0, 0.0, 0.26)),
+    ("SKEL_Spine3", 114, 13, (0.0, 0.0, 0.35)),
+    ("SKEL_L_Clavicle", 115, 14, (0.03, 0.0, 0.47)),
+    ("SKEL_L_UpperArm", 116, 15, (0.18, 0.0, 0.49)),
+    ("SKEL_L_Forearm", 117, 16, (0.41, 0.0, 0.26)),
+    ("SKEL_L_Hand", 118, 17, (0.6, 0.0, 0.07)),
+    ("PH_L_Hand", 119, 18, (0.66, -0.02, 0.02)),
+    ("SKEL_R_Clavicle", 120, 14, (-0.03, 0.0, 0.47)),
+    ("SKEL_R_UpperArm", 121, 20, (-0.18, 0.0, 0.49)),
+    ("SKEL_R_Forearm", 122, 21, (-0.41, 0.0, 0.26)),
+    ("SKEL_R_Hand", 123, 22, (-0.6, 0.0, 0.07)),
+    ("PH_R_Hand", 124, 23, (-0.66, -0.02, 0.02)),
+    ("SKEL_Neck_1", 125, 14, (0.0, 0.0, 0.53)),
+    ("SKEL_Head", 126, 25, (0.0, 0.0, 0.62)),
+    ("IK_Head", 127, 26, (0.0, 0.0, 0.62)),
 )
 #: The bones that never move the mesh (no weight goes on them).
 PED_NON_DEFORMING = frozenset(name for name, _, _, _ in PED_BONES if name == "SKEL_ROOT" or name[:3] in ("IK_", "PH_"))
@@ -405,8 +406,8 @@ class Connection:
                 pass
 
     def refuse_unreadable(self, data: bytes, binary: bool) -> bool:
-        """What DCT does with a frame it cannot decode (or a type it does not know): an ``error`` whose ``re`` is the
-        frame's id whenever that id can still be read. Before the sign-in the connection closes instead."""
+        """A frame the fake cannot decode (or a type it does not know) gets an ``error`` whose ``re`` is the frame's id
+        whenever that id can still be read. Before the sign-in the connection closes instead."""
         header: Any = None
         try:
             if binary:
@@ -662,7 +663,7 @@ class Connection:
         self.send(message)
 
     def rig(self, header: Dict[str, Any], payload: bytes) -> None:
-        """Runs a ped.rig on a thread of its own, as DCT does: accepted, progress, then the result (or ``cancelled``)."""
+        """Runs a ped.rig on a thread of its own: accepted, progress, then the result (or ``cancelled``)."""
         server = self.server
         try:
             refusal = server.ped_rig_refusal
@@ -698,8 +699,8 @@ class Connection:
         self.send(message)
 
     def kick(self, code: str) -> None:
-        """What DCT does when it signs out (``dct-signed-out``), switches account (``account-mismatch``) or the user
-        disconnects the app in DCT (``disconnected``)."""
+        """Ends the connection as for a sign-out in DCT (``dct-signed-out``), an account switch (``account-mismatch``)
+        or the app disconnected there (``disconnected``)."""
         self.send({"type": "error", "id": "k" + secrets.token_hex(3), "code": code})
         self.close(4003, code)
 
@@ -710,7 +711,7 @@ class Connection:
         if header["type"] == "live.frame":
             lease = self.leases.get(header["lease"])
             if lease is None:
-                # Like DCT: an error without re (a frame has no id), and the connection stays.
+                # An error without re (a frame has no id), and the connection stays.
                 server.unknown_lease_frames += 1
                 self.send({"type": "error", "id": "e" + secrets.token_hex(3), "code": "lease-not-found"})
                 return
@@ -836,7 +837,7 @@ class FakeDct:
         self.templates_sent: List[str] = []  # the gender of every skeleton.template answered
         #: The fields of the item.addResult that answers an item.add (default: added, no findings).
         self.add_result: Dict[str, Any] = {"ok": True, "binding": dict(ADDED_BINDING), "findings": []}
-        #: Keep every item.add waiting, as DCT does while its dialog is open: release_adds() answers them with
+        #: Keep every item.add waiting, as while a dialog is open: release_adds() answers them with
         #: add_result, an item.addCancel with request-denied.
         self.hold_adds = False
         self.item_adds: List[Any] = []  # (header, [(name, data)]) per item.add received
@@ -868,7 +869,7 @@ class FakeDct:
         self.ped_rig_cancels: List[str] = []
         #: The fields of the ped.addResult that answers a ped.add (default: created, no findings).
         self.ped_add_result: Dict[str, Any] = {"ok": True, "findings": []}
-        #: Keep every complete ped.add waiting, as DCT does while its dialog is open (release_ped_adds answers).
+        #: Keep every complete ped.add waiting, as while a dialog is open (release_ped_adds answers).
         self.hold_ped_adds = False
         self.ped_add_headers: List[Dict[str, Any]] = []
         self.ped_adds: List[Any] = []  # (header, GLB bytes) per complete upload

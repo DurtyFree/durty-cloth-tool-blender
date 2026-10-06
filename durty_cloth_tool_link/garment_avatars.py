@@ -128,14 +128,11 @@ AVATARS: Dict[str, Avatar] = {
         "ankle_l": (0.0999, 0.0342, -0.9267),
     }), "a_pose", 48.8, "male", "2026-10-06"),
 }
-#: The stock avatars still to measure (by their template ids): seen in sample projects, but never exported with their
-#: rig on this machine.
-TO_MEASURE = ("5.1_MaleTemplate_09",)
 
 
 def avatar(name: str) -> Optional[Avatar]:
     return AVATARS.get(name)
 
 
-__all__ = ["AVATARS", "AVATAR_BONES", "Avatar", "REQUIRED", "TO_MEASURE", "arm_angle", "avatar", "avatar_markers",
-           "markers_json", "parse_markers", "source_pose"]
+__all__ = ["AVATARS", "AVATAR_BONES", "Avatar", "REQUIRED", "arm_angle", "avatar", "avatar_markers", "markers_json",
+           "parse_markers", "source_pose"]

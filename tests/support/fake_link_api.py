@@ -5,15 +5,14 @@ assertions and logout, the link origin's channel manifest, tickets and hosted bo
 checks what the tests need to see the add-on handle: the add-on's own requests and each refusal it must explain to the
 user.
 
-Garment fitting (:class:`FakeFitService`) follows the website's mock of the link API: the daily ``fit`` allowance of
-the account's plan (free 10, Advanced 30, Ultimate 100), one job at a time without a licence, the ``request`` part and
-the DCTM mesh read with the service's rules, the body version, cancelling (a job that has not started gives its use
-back) and the binary result. Nothing is fitted: a job moves one stage per status request (queued, validating,
-transferring, weighting), then answers its result: the positions as sent (moved by ``position_offset``) with every
-vertex weighted 255 to one bone chosen by where it is. A request whose ``category`` is ``mock-invalid`` (a marker
-the fitting refuses), ``mock-dense`` (loose geometry it refuses, ``seam_too_dense``), ``mock-timeout``, ``mock-error``
-(a fit that failed after it began: its use stays), ``mock-not-started`` (one that could not start: its use comes back)
-or ``mock-not-on-body`` ends that way instead.
+Garment fitting (:class:`FakeFitService`): a made-up daily allowance of fits (``per_day``), one job at a time (another
+start is answered busy), the ``request`` part and the DCTM mesh checked against the rules the add-on keeps, the body
+version, cancelling (a job that has not started gives its use back) and the binary result. Nothing is fitted: a job
+moves one stage per status request (queued, then the stages the add-on names), then answers its result: the positions
+as sent (moved by ``position_offset``) with every vertex weighted 255 to one of nine bones chosen by where it is.
+``outcome`` makes the next jobs end otherwise: ``invalid`` (a marker the fitting refuses), ``dense`` (loose geometry it
+refuses, ``seam_too_dense``), ``timeout``, ``error`` (a fit that failed after it began: its use stays),
+``notStarted`` (one that could not start: its use comes back) or ``notOnBody``.
 
 MIT licensed, like dct_link. Standard library only, so the Blender smoke can use it too.
 """
@@ -294,7 +293,6 @@ class FakeLinkApi:
 Answer = Tuple[int, Dict[str, str], bytes]
 
 BODY_VERSION = "1"
-PER_DAY = {"free": 10, "advanced": 30, "ultimate": 100}
 STAGES = (("validating", 0.05), ("transferring", 0.2), ("weighting", 0.95))
 DRAWABLE_TYPES = ("head", "berd", "hair", "uppr", "lowr", "hand", "feet", "teef", "accs", "task", "decl", "jbib")
 FITTABLE = ("berd", "uppr", "lowr", "hand", "feet", "teef", "accs", "task", "jbib")
@@ -304,8 +302,9 @@ CHAINS = (("lShoulder", "lElbow", "lWrist"), ("rShoulder", "rElbow", "rWrist"), 
           ("rHip", "rKnee", "rAnkle"))
 OPTIONS = {"seamWeldMm": (0, 3), "clearanceMm": (0, 20), "maxPushMm": (1, 100), "pushOut": None,
            "matchProportions": None}
-BONE_NAMES = {35: "SKEL_Spine0", 36: "SKEL_Spine1", 37: "SKEL_Spine2", 38: "SKEL_Spine3", 40: "SKEL_L_UpperArm",
-              69: "SKEL_R_UpperArm", 2: "SKEL_L_Thigh", 14: "SKEL_R_Thigh", 1: "SKEL_Pelvis"}
+#: The bones of the fake's result, under indices of its own.
+BONE_NAMES = {1: "SKEL_Pelvis", 2: "SKEL_L_Thigh", 3: "SKEL_R_Thigh", 4: "SKEL_Spine0", 5: "SKEL_Spine1",
+              6: "SKEL_Spine2", 7: "SKEL_Spine3", 8: "SKEL_L_UpperArm", 9: "SKEL_R_UpperArm"}
 #: Made-up clearance in millimetres, not measured on anything.
 REFERENCE = {
     "top": {"chest": (4.8, 19.1, 31.5, 2140), "back": (6.2, 21.4, 38.0, 2210), "upperArmL": (5.5, 17.9, 29.3, 1180),
@@ -314,8 +313,8 @@ REFERENCE = {
     "legs": {"pelvis": (3.1, 12.6, 24.8, 1540), "thighL": (4.0, 15.2, 27.7, 980), "thighR": (4.0, 15.2, 27.7, 975)},
     "shoes": {"footL": (1.2, 4.9, 9.8, 610), "footR": (1.2, 4.9, 9.8, 612)},
 }
-OUTCOMES = {"mock-not-on-body": "notOnBody", "mock-invalid": "invalid", "mock-dense": "dense",
-            "mock-timeout": "timeout", "mock-error": "error", "mock-not-started": "notStarted"}
+#: How a job can end besides fitted (:attr:`FakeFitService.outcome`).
+OUTCOMES = ("notOnBody", "invalid", "dense", "timeout", "error", "notStarted")
 RESULT_TYPE = "application/vnd.dct.fit-result"
 
 
@@ -326,28 +325,30 @@ def _issue(code: str, field: str) -> Dict[str, str]:
 def bone_of(x: float, z: float) -> int:
     """The bone a vertex at (x, y, z) leans on in the fake's result."""
     if z < -0.05:
-        return 2 if x >= 0 else 14
+        return 2 if x >= 0 else 3
     if abs(x) > 0.2 and z > 0.2:
-        return 40 if x >= 0 else 69
+        return 8 if x >= 0 else 9
     if z > 0.4:
-        return 38
+        return 7
     if z > 0.3:
-        return 37
+        return 6
     if z > 0.2:
-        return 36
-    return 35 if z > 0.1 else 1
+        return 5
+    return 4 if z > 0.1 else 1
 
 
 class FakeFitService:
     def __init__(self) -> None:
         self.lock = threading.Lock()
-        #: The plan of the signed-in account (free, advanced or ultimate) and whether it may fit at all.
-        self.tier = "free"
+        #: Whether the signed-in account may fit at all, and its fits a day (made up).
         self.entitled = True
-        #: Fitting switched off (feature_unavailable) or its reference pack missing (fit_unavailable).
+        self.per_day = 5
+        #: Fitting switched off (feature_unavailable), or not available for now (fit_unavailable).
         self.enabled = True
         self.available = True
         self.used = 0
+        #: How the next jobs end, when not fitted (one of :data:`OUTCOMES`).
+        self.outcome: Optional[str] = None
         #: The hosted body version the fitting runs on (a request for another is refused).
         self.body_version = BODY_VERSION
         self.jobs: Dict[str, Dict[str, Any]] = {}
@@ -383,12 +384,8 @@ class FakeFitService:
             body["retryAfterSeconds"] = retry
         return self._json(status, body, headers)
 
-    def per_day(self) -> int:
-        return PER_DAY.get(self.tier, PER_DAY["free"])
-
     def allowance(self) -> Dict[str, Any]:
-        return {"perDay": self.per_day(), "usedToday": self.used, "remainingToday": max(0, self.per_day() - self.used),
-                "features": ["fit.garment", "fit.weights"]}
+        return {"perDay": self.per_day, "usedToday": self.used, "remainingToday": max(0, self.per_day - self.used)}
 
     # ---- routes -------------------------------------------------------------------------------------------
 
@@ -396,13 +393,8 @@ class FakeFitService:
         if path == "/link/api/me" and method == "GET":
             if not authorized:
                 return self._fail(401, "session_invalid")
-            limits: Dict[str, Any] = {"convertRemainingToday": 20, "quotas": {}, "pools": {}}
-            if self.entitled:
-                limits["pools"]["fit"] = self.allowance()
-            return self._json(200, {"user": {"id": "u1", "name": "Durty", "avatarUrl": None},
-                                    "entitlement": {"tier": self.tier if self.tier != "free" else "none",
-                                                    "features": ["fit.garment", "fit.weights"] if self.entitled else []},
-                                    "limits": limits})
+            pools = {"fit": self.allowance()} if self.entitled else {}
+            return self._json(200, {"limits": {"pools": pools}})  # what the add-on reads
         if not path.startswith("/link/api/fit/") or method != "POST":
             return None
         if path in self.refuse:
@@ -478,10 +470,9 @@ class FakeFitService:
         if self.busy > 0:
             self.busy -= 1
             return self._fail(429, "fit_busy", retry=5)
-        running = sum(1 for job in self.jobs.values() if not job["finished"])
-        if running >= (2 if self.tier in ("advanced", "ultimate") else 1):
+        if any(not job["finished"] for job in self.jobs.values()):
             return self._fail(429, "fit_busy", retry=5)
-        if self.used >= self.per_day():
+        if self.used >= self.per_day:
             now = datetime.datetime.now(datetime.timezone.utc)
             midnight = (now + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
             return self._fail(429, "quota_exceeded", retry=max(1, math.ceil((midnight - now).total_seconds())))
@@ -490,8 +481,8 @@ class FakeFitService:
         job_id = secrets.token_urlsafe(16)[:22].ljust(22, "A")
         self.jobs[job_id] = {"id": job_id, "request": request, "mesh": mesh, "polls": 0, "state": "queued",
                              "finished": False, "refunded": False,
-                             "outcome": OUTCOMES.get(request.get("category"), "fitted")}
-        return self._json(202, {"jobId": job_id, "state": "queued", "remainingToday": self.per_day() - self.used})
+                             "outcome": self.outcome or "fitted"}
+        return self._json(202, {"jobId": job_id, "state": "queued", "remainingToday": self.per_day - self.used})
 
     @staticmethod
     def _parts(raw: bytes, boundary: bytes) -> Optional[Dict[str, bytes]]:
@@ -687,13 +678,10 @@ class FakeFitService:
             "format": "dct-fit-result", "version": 1, "jobId": job["id"], "operation": job["request"]["operation"],
             "outcome": job["outcome"], "vertexCount": vertices, "triangleCount": mesh["triangles"],
             "sections": sections, "boneNames": {str(bone): BONE_NAMES[bone] for bone in sorted(used)},
-            "report": {"outcome": job["outcome"], "confidence": 0 if not_on_body else 0.92,
-                       "matchedAreaShare": 0.12 if not_on_body else 0.97,
-                       "reposed": job["request"]["operation"] == "fit" and job["request"]["sourcePose"] != "rest",
+            "report": {"confidence": 0 if not_on_body else 0.92, "matchedAreaShare": 0.12 if not_on_body else 0.97,
                        "maximumMarkerOffsetMm": 0, "insideBodyBefore": 0, "insideBodyAfter": 0, "pushedVertices": 0,
-                       "unweightedVertices": 0, "influenceCounts": [0, 0 if not_on_body else vertices, 0, 0, 0],
-                       "warnings": [] if not_on_body else [{"code": "marker_offset", "message": "marker_offset"}],
-                       "elapsedMs": 1200},
+                       "unweightedVertices": 0,
+                       "warnings": [] if not_on_body else [{"code": "marker_offset", "message": "marker_offset"}]},
         }
         text = json.dumps(header)
         text += " " * (-len(text) % 4)

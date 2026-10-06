@@ -36,7 +36,7 @@ BODY_FILES = {"male": "freemode_male.glb", "female": "freemode_female.glb"}
 PLAIN_FILES = {"male": "freemode_male_plain.glb", "female": "freemode_female_plain.glb"}
 #: The first Blender version known to import the compressed body.
 COMPRESSED_FROM = (5, 2)
-#: The joints of both bodies (optional: body versions before 2026-10-06 have none).
+#: The joints of both bodies (optional: earlier body versions have none).
 JOINTS_FILE = "freemode_joints.json"
 MAX_JOINTS_BYTES = 64 * 1024
 #: The glTF extension of the compressed body.
