@@ -1250,7 +1250,7 @@ _MAX_ANSWERED_HOST_REQUESTS = 256
 _MAX_LATE_ADDS = 8
 #: When the host's thread has not polled for this long (a long bake in Blender), a background thread keeps the
 #: connection alive: it answers DCT's keep-alive pings and reads what arrives, looking every
-#: ``_KEEPALIVE_PUMP_SECONDS``. DCT drops a connection that leaves its ping unanswered for 30 seconds.
+#: ``_KEEPALIVE_PUMP_SECONDS``, so a long block of the host's thread does not drop the connection.
 _KEEPALIVE_IDLE_SECONDS = 2.0
 _KEEPALIVE_PUMP_SECONDS = 1.0
 #: When DCT answers ``auth`` with ``busy`` the connection stays; the session sends a fresh assertion after these

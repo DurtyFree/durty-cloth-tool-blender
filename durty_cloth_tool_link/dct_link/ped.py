@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) Schmid Software Solutions (https://schmid-software.de)
-"""Custom peds from a character (protocol README "Custom peds"): the payloads of ``ped.rig``, ``ped.skeleton.data``
-and ``ped.rig.result``, and how a GLB travels in ``ped.add.chunk`` frames.
+"""Custom peds from a character: the payloads of ``ped.rig``, ``ped.skeleton.data`` and ``ped.rig.result``, and how
+a GLB travels in ``ped.add.chunk`` frames.
 
 Coordinates are ped space metres: +Z up, the ped facing -Y, its left at +X. Matrices are 16 floats, row major, in the
 row-vector convention (a point is the row ``[x y z 1]`` times the matrix; the last row is the bone's position).

@@ -128,7 +128,7 @@ FAILURE_CODES = (
     "mesh_invalid", "plugin_update_required", "quota_exceeded", "fit_busy", "rate_limited", "server_error",
     "fit_unavailable", "fit_timeout", "account_locked",
 )
-#: The codes of ``errors[]`` (each with a ``field``): the request's, the mesh reader's and the fitting library's.
+#: The codes of ``errors[]`` (each with a ``field``): the request's, the mesh reader's and the fitting's.
 INPUT_CODES = (
     "request_invalid", "request_part_missing", "mesh_part_missing", "part_unexpected", "operation_invalid",
     "gender_invalid", "drawable_type_invalid", "slot_unsupported", "category_invalid", "source_pose_invalid",

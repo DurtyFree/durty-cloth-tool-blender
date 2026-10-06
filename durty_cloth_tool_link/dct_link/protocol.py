@@ -114,13 +114,10 @@ CONSTANTS: Dict[str, Any] = {
         "maxPedRigTriangles": 600000,
         "maxPedRigReasons": 32,
         "maxPedRigWarnings": 32,
-        "maxPedRigProgressPerSecond": 4,
         "pedRigResultMinutes": 30,
-        "maxPedRigResultsPerConnection": 2,
         "maxPedAddBytes": 268435456,
         "maxPedAddChunkBytes": 33554432,
         "maxPedAddChunks": 8,
-        "pedAddChunkSeconds": 30,
         "maxPedAddParts": 64,
     },
     "values": {
@@ -410,7 +407,7 @@ OPEN_TEXTURE_ANSWER_SECONDS: int = _L["openTextureAnswerSeconds"]
 OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
 #: The colour variations one ``item.add`` may carry (the game's variation limit per drawable).
 MAX_ITEM_VARIATIONS: int = _L["maxItemVariations"]
-#: Custom peds (README "Custom peds"): the template list, the skeleton, the rig request and its result, the upload.
+#: Custom peds: the template list, the skeleton, the rig request and its result, the upload.
 MAX_PED_TEMPLATES: int = _L["maxPedTemplates"]
 MAX_PED_BONES: int = _L["maxPedBones"]
 MAX_PED_MARKERS: int = _L["maxPedMarkers"]
@@ -419,13 +416,10 @@ MAX_PED_RIG_VERTICES: int = _L["maxPedRigVertices"]
 MAX_PED_RIG_TRIANGLES: int = _L["maxPedRigTriangles"]
 MAX_PED_RIG_REASONS: int = _L["maxPedRigReasons"]
 MAX_PED_RIG_WARNINGS: int = _L["maxPedRigWarnings"]
-MAX_PED_RIG_PROGRESS_PER_SECOND: int = _L["maxPedRigProgressPerSecond"]
 PED_RIG_RESULT_MINUTES: int = _L["pedRigResultMinutes"]
-MAX_PED_RIG_RESULTS_PER_CONNECTION: int = _L["maxPedRigResultsPerConnection"]
 MAX_PED_ADD_BYTES: int = _L["maxPedAddBytes"]
 MAX_PED_ADD_CHUNK_BYTES: int = _L["maxPedAddChunkBytes"]
 MAX_PED_ADD_CHUNKS: int = _L["maxPedAddChunks"]
-PED_ADD_CHUNK_SECONDS: int = _L["pedAddChunkSeconds"]
 MAX_PED_ADD_PARTS: int = _L["maxPedAddParts"]
 #: The fixed record sizes of the custom ped payloads: one bone record, one bone of a rig result (its record and its
 #: pose matrix), one vertex of a rig result (rest position, four bone indices, four weights).
