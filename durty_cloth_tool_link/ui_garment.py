@@ -3266,16 +3266,18 @@ def draw_add(layout: Any, context: Any) -> None:
     adding = ctrl.item_add.adding
     job, add_job = RUNTIME.job, RUNTIME.add_job
     if job is not None or add_job is not None or adding:
-        # Where the add is (the skeleton, the export and pictures, then Durty Cloth Tool's answer), and what now.
+        # Where the add is: a bar while the add-on works (the checks, the skeleton, the export and the pictures), the
+        # step it is on and how many are done. Getting the skeleton and Durty Cloth Tool's question take as long as
+        # Durty Cloth Tool or the user need, so they show what is awaited and no bar.
         if add_job is not None:
-            done, total, text = add_job.done, add_job.steps + 1, add_job.text()
+            text = add_job.text()
+            if hasattr(layout, "progress"):
+                total = add_job.steps
+                layout.progress(factor=min(1.0, add_job.done / total), text=f"{min(add_job.done + 1, total)} / {total}")
         elif job is not None:
-            done, total, text = 0, 3, t("add.progress.skeleton")
+            text = t("add.progress.skeleton")
         else:
-            done, total = 2, 3
             text = t("add.withdrawing") if ctrl.item_add.withdrawing else t("add.waiting")
-        if hasattr(layout, "progress"):
-            layout.progress(factor=min(1.0, (done + 1) / total), text=f"{done + 1} / {total}")
         wrapped(layout, context, text, "SORTTIME")
         if adding:
             subtext(layout, context, "add.waiting.subtext")
