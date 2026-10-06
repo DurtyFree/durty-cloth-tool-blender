@@ -217,8 +217,16 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     check("Refresh (templates) runs", "FINISHED" in bpy.ops.dct_link.ped_refresh_templates())
     pump(addon, lambda: not ctrl.peds.loading_templates, what="the refreshed template list")
     log = draw_everything(package, state, "custom ped, templates")
-    check("the template list is offered with the recommended ones first",
-          ("operator", "dct_link.ped_use_template") in log and ("menu", "DCTLINK_MT_ped_templates") in log)
+    check("the template list is offered as a search, with its count",
+          ("operator", "dct_link.ped_choose_template") in log
+          and "3 ambient peds" in labels(log), labels(log)[-300:])
+    items = ui_ped._template_items(None, bpy.context)
+    check("the search lists every template, the recommended ones first and marked",
+          [item[0] for item in items] == [t["model"] for t in ctrl.peds.templates]
+          and items[0][3] == "SOLO_ON", items)
+    check("Search Templates chooses a template",
+          "FINISHED" in bpy.ops.dct_link.ped_choose_template("EXEC_DEFAULT", model="a_f_y_tester_01")
+          and scene.dct_ped.template == "a_f_y_tester_01")
     check("Use Template runs", "FINISHED" in bpy.ops.dct_link.ped_use_template(model="a_m_y_tester_01"))
     check("a rig without the rights confirmation is refused", refused(lambda: bpy.ops.dct_link.ped_rig(agree=False),
                                                                       "rights"))

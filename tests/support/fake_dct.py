@@ -535,7 +535,9 @@ class Connection:
             listed = [t for t in server.ped_templates if (m.get("all") or t["group"] == "ambient")
                       and (m.get("gender") is None or t.get("gender") == m["gender"])]
             listed.sort(key=lambda t: not t["recommended"])
-            self.reply(m, {"type": "ped.templates.list", "templates": listed, "truncated": False})
+            offset = m.get("offset", 0)
+            self.reply(m, {"type": "ped.templates.list", "offset": offset, "total": len(listed),
+                           "templates": listed[offset:offset + p.PED_TEMPLATES_PER_PAGE], "truncated": False})
         elif kind == "ped.skeleton":
             bones = ped_skeleton()
             header = {"type": "ped.skeleton.data", "re": m["id"], "model": m["model"], "gender": "male",

@@ -24,7 +24,7 @@ import bpy
 import numpy as np
 from bpy.app.handlers import persistent
 from bpy.props import BoolProperty, EnumProperty, FloatProperty, PointerProperty, StringProperty
-from bpy.types import Menu, Operator, Panel, PropertyGroup
+from bpy.types import Operator, Panel, PropertyGroup
 
 from . import host, ped, ped_link, state, strings, ui
 from . import ped_host as ph
@@ -937,23 +937,70 @@ class DCTLINK_OT_ped_use_template(_Op):
         return {"FINISHED"}
 
 
-class DCTLINK_MT_ped_templates(Menu):
-    bl_idname = "DCTLINK_MT_ped_templates"
-    bl_label = EN["ped.prop.template"]
-    bl_translation_context = CONTEXT
+#: The search items of the listed templates. Blender reads a dynamic enum's texts after the callback returned, so the
+#: module keeps the last list it gave out.
+_TEMPLATE_ITEMS: List[Tuple[str, str, str, str, int]] = []
 
-    def draw(self, context):
-        link = peds()
-        templates = (link.templates if link is not None else None) or []
-        if not templates:
-            self.layout.label(text=t("ped.templates.none"), translate=False)
-            return
-        for entry in templates:
-            label = entry["model"]
-            if entry.get("recommended"):
-                label = t("ped.template.recommended", model=label)
-            operator(self.layout, DCTLINK_OT_ped_use_template.bl_idname, None,
-                     "SOLO_ON" if entry.get("recommended") else "USER", text=label, model=entry["model"])
+
+def _template_items(self: Any, context: Any) -> List[Tuple[str, str, str, str, int]]:
+    """The listed templates as search items: the model name (recommended ones say so, with a star), the facts as the
+    description."""
+    link = peds()
+    items = []
+    for entry in (link.templates if link is not None else None) or ():
+        model = str(entry.get("model", ""))
+        if not protocol.is_ped_model(model):
+            continue
+        recommended = bool(entry.get("recommended"))
+        label = t("ped.template.recommended", model=model) if recommended else model
+        items.append((model, label, template_line(entry), "SOLO_ON" if recommended else "USER", len(items)))
+    _TEMPLATE_ITEMS[:] = items
+    return _TEMPLATE_ITEMS
+
+
+def _templates_reason() -> Optional[Msg]:
+    """Why there is no template to choose from now, or ``None``."""
+    reason = _connected_reason()
+    link = peds()
+    if reason is None and link is not None:
+        reason = link.feature(ped_link.FEATURE_TEMPLATES)
+    if reason is not None:
+        return reason
+    if link is None:
+        return msg("notice.not-ready")
+    if link.loading_templates:
+        return msg("ped.templates.loading")
+    if link.templates is None:
+        return link.templates_problem.message if link.templates_problem is not None else msg("ped.templates.refresh")
+    return None if link.templates else msg("ped.templates.none")
+
+
+class DCTLINK_OT_ped_choose_template(_Op):
+    """Choose Template: a search over every listed template (Blender's search popup filters as you type)."""
+
+    bl_idname = "dct_link.ped_choose_template"
+    bl_label = EN["ped.op.choose-template"]
+    bl_description = EN["ped.op.choose-template.desc"]
+    bl_options = {"REGISTER", "UNDO"}
+    bl_property = "model"
+
+    model: EnumProperty(items=_template_items, options={"HIDDEN", "SKIP_SAVE"}, translation_context=CONTEXT)
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _templates_reason())
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {"RUNNING_MODAL"}
+
+    def execute(self, context):
+        if not protocol.is_ped_model(self.model):
+            return {"CANCELLED"}
+        props(context).template = self.model
+        advance(context)
+        return {"FINISHED"}
+
 
 
 def template_line(entry: Dict[str, Any]) -> str:
@@ -1478,8 +1525,8 @@ def draw_rig(layout: Any, context: Any) -> None:
         row.prop(settings_, "gender", expand=True)
         ui.checkbox(layout, context, settings_, "show_all", "ped.prop.show-all")
         row = layout.row(align=True)
-        row.menu(DCTLINK_MT_ped_templates.bl_idname, text=settings_.template or t("ped.template.choose"),
-                 icon="OUTLINER_OB_ARMATURE")
+        operator(row, DCTLINK_OT_ped_choose_template.bl_idname, None, "VIEWZOOM",
+                 text=settings_.template or t("ped.template.choose"))
         operator(row, DCTLINK_OT_ped_refresh_templates.bl_idname, None, "FILE_REFRESH", text="")
         entry = link.template(settings_.template) if link is not None and settings_.template else None
         if entry is not None:
@@ -1492,8 +1539,10 @@ def draw_rig(layout: Any, context: Any) -> None:
             subtext(layout, context, "ped.templates.refresh")
         elif link is not None and not link.templates:
             wrapped(layout, context, t("ped.templates.none"), "INFO")
-        elif link is not None and link.truncated:
-            subtext(layout, context, "ped.templates.truncated", count=len(link.templates or ()))
+        elif link is not None and link.listed() is not None:
+            wrapped(layout, context, strings.text(link.listed()), dim=True)
+            if link.truncated:
+                subtext(layout, context, "ped.templates.truncated", count=len(link.templates))
         plan = link.feature(ped_link.FEATURE_RIG) if link is not None else None
         if plan is not None:
             wrapped(layout, context, strings.text(plan), "INFO")
@@ -2024,7 +2073,7 @@ CLASSES = (
     DCTLINK_OT_ped_guide,
     DCTLINK_OT_ped_refresh_templates,
     DCTLINK_OT_ped_use_template,
-    DCTLINK_MT_ped_templates,
+    DCTLINK_OT_ped_choose_template,
     DCTLINK_OT_ped_rig,
     DCTLINK_OT_ped_cancel_rig,
     DCTLINK_OT_ped_apply_rig,

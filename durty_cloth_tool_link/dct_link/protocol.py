@@ -106,7 +106,8 @@ CONSTANTS: Dict[str, Any] = {
         "openTextureAnswerSeconds": 20,
         "openModelAnswerSeconds": 60,
         "maxItemVariations": 26,
-        "maxPedTemplates": 200,
+        "maxPedTemplates": 4096,
+        "pedTemplatesPerPage": 256,
         "maxPedBones": 255,
         "maxPedMarkers": 64,
         "maxPedRigParts": 64,
@@ -409,6 +410,8 @@ OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
 MAX_ITEM_VARIATIONS: int = _L["maxItemVariations"]
 #: Custom peds: the template list, the skeleton, the rig request and its result, the upload.
 MAX_PED_TEMPLATES: int = _L["maxPedTemplates"]
+#: DCT lists the templates in pages of this many entries; every page but the last is full.
+PED_TEMPLATES_PER_PAGE: int = _L["pedTemplatesPerPage"]
 MAX_PED_BONES: int = _L["maxPedBones"]
 MAX_PED_MARKERS: int = _L["maxPedMarkers"]
 MAX_PED_RIG_PARTS: int = _L["maxPedRigParts"]
@@ -1323,7 +1326,16 @@ def _ped_template_ok(entry: Any) -> bool:
 
 def _ped_templates_list(m: Mapping[str, Any]) -> Optional[str]:
     templates = m.get("templates")
-    if not is_id(m.get("re")) or m.get("truncated") is None or templates is None or len(templates) > MAX_PED_TEMPLATES:
+    offset, total = m.get("offset"), m.get("total")
+    if (
+        not is_id(m.get("re"))
+        or m.get("truncated") is None
+        or templates is None
+        or not _in_range(offset, 0, MAX_PED_TEMPLATES)
+        or not _in_range(total, 0, MAX_PED_TEMPLATES)
+        # Every page but the last is full, so a plugin knows where the list ends.
+        or len(templates) != min(PED_TEMPLATES_PER_PAGE, max(0, total - offset))
+    ):
         return INVALID_MESSAGE
     models = set()
     for entry in templates:
@@ -1639,8 +1651,11 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     "item.addCancel": _text(TO_DCT, {}, lambda m: _check(is_id(m.get("re")))),
     "ped.templates": _text(
         TO_DCT,
-        {"gender": _STR, "all": _BOOL},
-        lambda m: _check(m.get("gender") is None or _one_of(m.get("gender"), GENDERS)),
+        {"gender": _STR, "all": _BOOL, "offset": _INT32},
+        lambda m: _check(
+            (m.get("gender") is None or _one_of(m.get("gender"), GENDERS))
+            and (m.get("offset") is None or _in_range(m.get("offset"), 0, MAX_PED_TEMPLATES))
+        ),
     ),
     "ped.skeleton": _text(TO_DCT, {"model": _STR}, lambda m: _check(is_ped_model(m.get("model")))),
     "ped.rig": _binary(
@@ -1823,6 +1838,8 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     "ped.templates.list": _text(
         TO_CLIENT,
         {
+            "offset": _INT32,
+            "total": _INT32,
             "templates": _list(
                 _obj({"model": _STR, "gender": _STR, "pedType": _STR, "layout": _STR, "group": _STR, "recommended": _BOOL})
             ),

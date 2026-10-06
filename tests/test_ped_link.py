@@ -84,6 +84,25 @@ def test_templates_list_ambient_peds_and_more_with_show_all(tmp_path, dct, api):
     assert dct.ped_template_requests[-1]["gender"] == "male" and dct.ped_template_requests[-1]["all"] is True
 
 
+def test_every_installed_template_is_listed_with_its_count(tmp_path, dct, api):
+    """Durty Cloth Tool listed at most 200 templates and the panel said "Choose a gender to see others" even with
+    Male chosen, while a real game has more than 400 male ambient peds: the whole list arrives (in pages) and the
+    panel counts it in the words of its filters."""
+    dct.ped_templates = [{"model": f"a_m_y_tester_{i:03d}", "gender": "male", "pedType": "CIVMALE", "layout": "packed",
+                          "group": "ambient", "recommended": i < 5} for i in range(418)]
+    ctrl = connected(tmp_path, dct, api)
+    peds = ctrl.peds
+    peds.fetch_templates("male", False)
+    drive(ctrl, lambda: peds.templates is not None)
+    assert [t["model"] for t in peds.templates] == [t["model"] for t in dct.ped_templates]
+    assert not peds.truncated and len(dct.ped_template_requests) == 2
+    assert strings.english(peds.listed()) == "418 male ambient peds"
+    peds.templates_for = (None, True)
+    assert strings.english(peds.listed()) == "418 peds"
+    peds.templates, peds.templates_for = peds.templates[:1], ("female", False)
+    assert strings.english(peds.listed()) == "1 female ambient ped"
+
+
 def test_templates_say_when_durty_cloth_tool_has_no_game_folder(tmp_path, dct, api):
     dct.fail["ped.templates"] = "game-required"
     ctrl = connected(tmp_path, dct, api)

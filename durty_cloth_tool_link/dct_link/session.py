@@ -1015,9 +1015,9 @@ def _item_add_answer(answer: Any) -> ItemAddResult:
 
 
 class PedTemplates(NamedTuple):
-    """The human ped templates DCT lists (``ped.templates.list``): each a dict with ``model``, ``gender`` (absent
-    when DCT cannot tell it), ``pedType``, ``layout``, ``group`` and ``recommended``, recommended entries first.
-    ``truncated`` says more matched than DCT sent."""
+    """Every human ped template DCT lists (the pages of ``ped.templates.list`` joined): each a dict with ``model``,
+    ``gender`` (absent when DCT cannot tell it), ``pedType``, ``layout``, ``group`` and ``recommended``, recommended
+    entries first, at most :data:`protocol.MAX_PED_TEMPLATES`. ``truncated`` says more matched than DCT lists."""
 
     templates: List[Dict[str, Any]]
     truncated: bool
@@ -1058,10 +1058,73 @@ class PedAddResult(NamedTuple):
     findings: List[Dict[str, str]]
 
 
-def _ped_templates_answer(answer: Any) -> Union[PedTemplates, PedRefusal]:
-    if isinstance(answer, PedRefusal):
-        return answer
-    return PedTemplates([dict(entry) for entry in answer["templates"]], bool(answer["truncated"]))
+#: How often :meth:`LinkSession.list_ped_templates` starts again when the installed peds changed while it read the pages.
+_PED_TEMPLATE_RESTARTS = 2
+
+
+class _PedTemplatePages:
+    """Asks DCT for one page of ``ped.templates`` after the other and finishes ``listing`` with every template: a
+    :class:`PedTemplates`, DCT's :class:`PedRefusal`, a page's :class:`LinkError`, or ``protocol-violation`` when the
+    pages do not join up. When the list's ``total`` changes between pages, or a model comes twice, the installed peds
+    changed meanwhile and it starts again (at most :data:`_PED_TEMPLATE_RESTARTS` times). Each page has its own
+    timeout; the codec has checked that every page but the last is full."""
+
+    def __init__(self, session: "LinkSession", listing: Request, fields: Dict[str, Any], timeout: Optional[float]) -> None:
+        self.session = session
+        self.listing = listing
+        self.fields = fields
+        self.timeout = timeout
+        self.restarts = 0
+        self.templates: List[Dict[str, Any]] = []
+        self.models: set = set()
+        self.total: Optional[int] = None
+
+    def ask(self) -> None:
+        fields = dict(self.fields)
+        if self.templates:
+            fields["offset"] = len(self.templates)
+        try:
+            page = self.session.request("ped.templates", fields, timeout=self.timeout)
+        except LinkError as exc:
+            self.finish(error=exc)
+            return
+        page.add_done_callback(self.on_page)
+
+    def on_page(self, page: Request) -> None:
+        if page.error is not None:
+            self.finish(error=page.error)
+            return
+        answer = page.result()
+        if isinstance(answer, PedRefusal):
+            self.finish(answer)
+            return
+        if answer["offset"] != len(self.templates):
+            self.finish(error=LinkError("protocol-violation", "DCT answered ped.templates with another page of the list"))
+            return
+        entries = [dict(entry) for entry in answer["templates"]]
+        if (self.total is not None and answer["total"] != self.total) or any(
+                entry["model"].lower() in self.models for entry in entries):
+            if self.restarts >= _PED_TEMPLATE_RESTARTS:
+                self.finish(error=LinkError("protocol-violation",
+                                            "the installed ped templates kept changing while DCT listed them"))
+                return
+            self.restarts += 1
+            self.templates, self.models, self.total = [], set(), None
+            self.ask()
+            return
+        self.total = answer["total"]
+        self.templates.extend(entries)
+        self.models.update(entry["model"].lower() for entry in entries)
+        if len(self.templates) < self.total:
+            self.ask()
+        else:
+            self.finish(PedTemplates(self.templates, bool(answer["truncated"])))
+
+    def finish(self, result: Any = None, error: Optional[LinkError] = None) -> None:
+        session = self.session
+        with session._lock:
+            session._finish_request(self.listing, result, error)
+        session._run_calls()
 
 
 def _ped_skeleton_answer(model: str) -> Callable[[Any], Union[ped_module.PedSkeleton, PedRefusal]]:
@@ -2700,11 +2763,14 @@ class LinkSession:
     # ---- custom peds (Blender) ------------------------------------------------------------------------
 
     def list_ped_templates(self, gender: Optional[str] = None, show_all: bool = False, timeout: Optional[float] = 120.0) -> Request:
-        """``ped.templates``: the human ped templates installed in the GTA V Legacy folder DCT uses, recommended entries
+        """``ped.templates``: every human ped template installed in the GTA V Legacy folder DCT uses, recommended entries
         first. Without ``show_all`` only ambient peds; ``show_all`` adds freemode, player, cutscene and story templates. ``gender``
-        filters by gender (``ValueError`` for another value). Resolves with :class:`PedTemplates`, or with a
-        :class:`PedRefusal` when DCT refused (``game-required``). A service request (two at a time); DCT reads its
-        game files the first time."""
+        filters by gender (``ValueError`` for another value). DCT answers in pages
+        (:data:`protocol.PED_TEMPLATES_PER_PAGE`); the request asks for one after the other and resolves with
+        :class:`PedTemplates` holding them all, or with a :class:`PedRefusal` when DCT refused (``game-required``). It
+        starts again when the installed peds change meanwhile, and fails with ``protocol-violation`` when DCT's pages
+        do not join up. Each page is a service request (two at a time) with its own ``timeout``; DCT reads its game
+        files the first time."""
         if gender is not None and gender not in protocol.GENDERS:
             raise ValueError("gender is 'male', 'female' or None")
         if type(show_all) is not bool:
@@ -2712,7 +2778,12 @@ class LinkSession:
         fields: Dict[str, Any] = {"all": show_all}
         if gender is not None:
             fields["gender"] = gender
-        return self.request("ped.templates", fields, timeout=timeout, transform=_ped_templates_answer)
+        with self._lock:
+            if self.state != READY:
+                raise LinkError("not-authenticated", "the link is not ready")
+            listing = Request(self, self._new_id(), "ped.templates", None)
+        _PedTemplatePages(self, listing, fields, timeout).ask()
+        return listing
 
     def request_ped_skeleton(self, model: str, timeout: Optional[float] = 120.0) -> Request:
         """``ped.skeleton``: the rest skeleton of an installed human template (``ValueError`` for a name that is not a

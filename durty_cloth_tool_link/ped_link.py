@@ -256,6 +256,15 @@ class PedLink:
                 self.templates_for = key
         self.controller.touch()
 
+    def listed(self) -> Optional[Msg]:
+        """How many templates the list holds, in the words of its filters ("418 male ambient peds"), or ``None``
+        without a list."""
+        if self.templates is None or self.templates_for is None:
+            return None
+        gender, show_all = self.templates_for
+        return msg(f"ped.templates.count.{gender if gender in ('male', 'female') else 'any'}."
+                   f"{'all' if show_all else 'ambient'}", count=len(self.templates))
+
     def template(self, model: str) -> Optional[Dict[str, Any]]:
         """The listed template of this model name (ignoring case), or ``None``."""
         for entry in self.templates or ():
