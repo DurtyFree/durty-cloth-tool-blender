@@ -248,6 +248,7 @@ TEXT = {
         "Agrupar todas as ilhas UV em um layout e fazer o bake de todos os materiais em um: a cor com a transparência, "
         "e normal, specular e emission maps onde houver"
     ),
+    "garment.combine.nothing": "Nada para combinar: a roupa tem um único material.",
     "garment.op.lods": "Gerar LODs",
     "garment.op.lods.desc": (
         "Criar os níveis de detalhe Médio e Baixo nos slots de LOD do Sollumz, com os pesos do nível Alto"

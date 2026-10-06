@@ -247,6 +247,7 @@ TEXT = {
         "Empaquetar todas las islas UV en una distribución y hornear todos los materiales en uno: el color con su "
         "transparencia, y mapas de normales, specular y emisión donde los haya"
     ),
+    "garment.combine.nothing": "Nada que combinar: la prenda tiene un solo material.",
     "garment.op.lods": "Generar LODs",
     "garment.op.lods.desc": (
         "Crear los niveles de detalle Medio y Bajo en las ranuras LOD de Sollumz, con los pesos del nivel Alto"

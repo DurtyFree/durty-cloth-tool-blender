@@ -251,6 +251,7 @@ TEXT = {
         "Regrouper tous les îlots UV dans une disposition et cuire chaque matériau en un seul : la couleur avec sa "
         "transparence, et des normal, specular et emission maps quand il y en a"
     ),
+    "garment.combine.nothing": "Rien à combiner : le vêtement n'a qu'un seul matériau.",
     "garment.op.lods": "Générer les LOD",
     "garment.op.lods.desc": (
         "Créer les niveaux de détail Moyen et Bas dans les emplacements LOD de Sollumz, avec les poids du niveau "

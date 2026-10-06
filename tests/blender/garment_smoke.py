@@ -546,6 +546,9 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     props.texture_size = "2048"
     check("Combine Materials runs", "FINISHED" in bpy.ops.dct_link.fit_combine_materials())
     notice = ui_garment.RUNTIME.notice
+    log = draw_everything(package, state, "garment combined")
+    check("a combined garment's Combine Materials is done, not one with nothing to combine",
+          gh.combined(tpose) and "Nothing to combine" not in " ".join(e[1] for e in log if e[0] == "label"))
     material = mesh.materials[0] if len(mesh.materials) == 1 else None
     image = next((n.image for n in material.node_tree.nodes if n.type == "TEX_IMAGE"), None) if material else None
     check("Combine Materials bakes one texture onto one material and cuts the hem strip",
@@ -587,7 +590,8 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     if dct is not None:
         results.append(add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, tpose,
                                   real))
-        results.append(add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real))
+        results.append(add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real,
+                                        draw_everything))
     results.append(types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, real))
 
     # Nothing else in the scene changed.
@@ -854,7 +858,7 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
 ADDED_BINDING_HAT = {"clothId": "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f", "textureId": "0d1e2f3a-4b5c-4d6e-9f7a-8b9c0d1e2f3a"}
 
 
-def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real):
+def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real, draw_everything):
     """A garment with one material (no Combine Materials) whose levels of detail were made first: Sollumz renames only
     the High mesh's UV map, so the add names each level's maps as High's are named and no level exports without UVs."""
     ui_garment = sys.modules[package + ".ui_garment"]
@@ -882,6 +886,10 @@ def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real
     bpy.context.view_layer.objects.active = shirt
     bpy.ops.dct_link.fit_use_garment()
     check("choosing another garment starts its add afresh", props.item_name == "smoke_shirt" and not props.variations)
+    log = draw_everything(package, state, "one-material shirt")
+    check("a garment of one material has nothing to combine (and no tick for a step that never ran)",
+          not gh.combined(shirt) and "Nothing to combine: the garment has one material."
+          in " ".join(e[1] for e in log if e[0] == "label"))
     props.slot, props.gender, props.item_name = "jbib", "female", "Smoke Shirt"
     props.lod_medium, props.lod_low = 300, 100
     check("Generate LODs runs on the one-material shirt", "FINISHED" in bpy.ops.dct_link.fit_lods())

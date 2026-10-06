@@ -253,6 +253,7 @@ TEXT = {
         "Alle UV-Inseln in ein Layout packen und jedes Material in eines backen: die Farbe mit ihrer Transparenz und, "
         "wo vorhanden, Normal-, Specular- und Emissions-Maps"
     ),
+    "garment.combine.nothing": "Nichts zusammenzufassen: Das Kleidungsstück hat nur ein Material.",
     "garment.op.lods": "LODs erzeugen",
     "garment.op.lods.desc": (
         "Die Detailstufen Mittel und Niedrig in den LOD-Slots von Sollumz erstellen, mit den Gewichten der Stufe Hoch"

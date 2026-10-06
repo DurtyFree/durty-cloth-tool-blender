@@ -3065,8 +3065,9 @@ def draw_tears(layout: Any, context: Any) -> None:
 
 
 def draw_ready(layout: Any, context: Any) -> None:
-    """Game Ready's steps in their order, one row each, with a tick once done: Prepare Garment, Combine Materials, the
-    skeleton and the weights (a prop: its anchor), Generate LODs and Validate."""
+    """Game Ready's steps in their order, one row each, with a tick once done: Prepare Garment, Combine Materials (on
+    a garment of one material: nothing to combine), the skeleton and the weights (a prop: its anchor), Generate LODs
+    and Validate."""
     settings_ = props(context)
     flow = flow_state(context)
     tool(layout, context, DCTLINK_OT_fit_prepare.bl_idname, "garment.op.prepare", "MODIFIER",
@@ -3079,8 +3080,13 @@ def draw_ready(layout: Any, context: Any) -> None:
         ui.checkbox(body, context, settings_, "overwrite_colours", "garment.prop.overwrite")
 
     layout.separator(factor=GAP)
+    # A garment of one material never needs Combine Materials: it gets a tick only where the step ran.
+    single = flow.garment and flow.materials <= 1
+    ran = gh.combined(current_garment(context))
     tool(layout, context, DCTLINK_OT_fit_combine.bl_idname, "garment.op.combine", "NODE_TEXTURE",
-         info="garment.info.combine", done=flow.prepared and flow.materials <= 1)
+         info="garment.info.combine", done=flow.prepared and single and ran)
+    if single and not ran:
+        subtext(layout, context, "garment.combine.nothing")
     body = options(layout, context, "combine")
     if body is not None:
         row = body.row(align=True)

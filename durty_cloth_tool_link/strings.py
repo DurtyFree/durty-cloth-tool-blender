@@ -777,6 +777,7 @@ EN: Dict[str, str] = {
         "Pack all UV islands into one layout and bake every material into one: the colour with its transparency, and "
         "normal, specular and emission maps where there are any"
     ),
+    "garment.combine.nothing": "Nothing to combine: the garment has one material.",
     "garment.op.lods": "Generate LODs",
     "garment.op.lods.desc": (
         "Make the Medium and Low levels of detail in Sollumz's LOD slots, with the weights of the High level"

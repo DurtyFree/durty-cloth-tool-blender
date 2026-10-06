@@ -196,6 +196,7 @@ TEXT = {
     "garment.op.prepare.desc": "合并版片接缝，移除松散部分，三角化，平滑着色，并添加 ped 顶点色",
     "garment.op.combine": "合并材质",
     "garment.op.combine.desc": "把所有 UV 岛打包进一个布局，并把所有材质烘焙为一个：带透明度的颜色，以及在有的情况下的法线、高光和自发光贴图",
+    "garment.combine.nothing": "无需合并：服装只有一个材质。",
     "garment.op.lods": "生成 LOD",
     "garment.op.lods.desc": "在 Sollumz 的 LOD 槽中生成中、低细节级别，并使用高细节级别的权重",
     "garment.op.validate": "验证",

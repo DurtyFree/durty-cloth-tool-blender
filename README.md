@@ -227,7 +227,7 @@ change sit in closed **Options** sections.
    the other garment tools wait for them, and **Esc** stops them and puts the garment back. Then the weights:
    **Transfer Weights** gets the freemode body's weights from gta.clothing for the garment as it is now (for example
    after sculpting), or weight it yourself. Then **Generate LODs** and **Validate**. Each finished step's button
-   shows a tick.
+   shows a tick (a garment of one material has nothing to combine, and Combine Materials says so instead).
 5. **Add to Project:** see below.
 
 Every step that changes the garment can be undone with **Ctrl+Z**, and the garment keeps backups of its shape for

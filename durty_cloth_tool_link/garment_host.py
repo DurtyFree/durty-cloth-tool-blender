@@ -328,6 +328,11 @@ def material_count(obj: Optional[Any]) -> int:
     return len({slot.material.name for slot in obj.material_slots if slot.material is not None}) or 1
 
 
+def combined(obj: Optional[Any]) -> bool:
+    """Whether Combine Materials ran on the garment: it keeps the original UV map as :data:`SOURCE_UV`."""
+    return obj is not None and obj.type == "MESH" and obj.data.uv_layers.get(SOURCE_UV) is not None
+
+
 def ensure_garment_id(obj: Any) -> str:
     """The garment's own id, given to it now when it has none or another object carries the same one (a copy)."""
     current = obj.get(GARMENT_ID)
