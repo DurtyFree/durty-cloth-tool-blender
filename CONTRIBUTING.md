@@ -35,8 +35,10 @@ Only `durty_cloth_tool_link/` goes into the extension archive. Inside it:
 - `link.py` runs the connection, the sign-in, the live preview and the model pushes. `bundle.py` collects a Sollumz
   export, `pixels.py` converts Blender's pixels.
 - `garment*.py` are the Garment Fitting tools, and `ui_garment.py` their panels.
-- `host.py`, `state.py`, `ui.py`, `ui_garment.py`, `garment_host.py`, `preferences.py` and `addon.py` are the
-  Blender side.
+- `ped*.py` are Custom Ped: `ped.py` the markers, checks and rig maths, `ped_link.py` its part of the link,
+  `ped_host.py` its Blender side, `ped_strings.py` its English texts, and `ui_ped.py` its panel.
+- `host.py`, `state.py`, `ui.py`, `ui_garment.py`, `garment_host.py`, `ui_ped.py`, `ped_host.py`, `preferences.py` and
+  `addon.py` are the Blender side.
 
 Modules without a Blender import can be tested with plain Python. Keep it that way: put the logic in a Blender-free
 module and keep the code that touches `bpy` thin.
@@ -94,8 +96,8 @@ states against the fakes and saves a cropped screenshot of the sidebar for each:
 python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --out <folder>
 ```
 
-Add `--expanded` to open every collapsed panel, `--language de_DE` or `--theme light` for variants, and `--scenario
-garment` for Garment Fitting. Blender opens a window and quits by itself.
+Add `--expanded` to open every collapsed panel, `--language de_DE` or `--theme light` for variants, `--scenario
+garment` for Garment Fitting and `--scenario ped` for Custom Ped. Blender opens a window and quits by itself.
 
 ### Measuring an avatar
 
@@ -138,9 +140,10 @@ The add-on speaks English, German, French, Russian, Spanish, Brazilian Portugues
 Arabic.
 
 - Every text the add-on shows has a key in `EN` in `durty_cloth_tool_link/strings.py`.
-- Each language has two modules in `durty_cloth_tool_link/translations/`, named after Blender's locale (`de`, `fr`,
-  `ru`, `es`, `pt_BR`, `zh_HANS`, `hi`, `ar`): `<locale>.py` for the link and `garment_<locale>.py` for Garment
-  Fitting. Each holds a `TEXT` dictionary with the same keys.
+- Every Custom Ped text has its key in `EN` in `durty_cloth_tool_link/ped_strings.py`, which `strings.py` merges.
+- Each language has three modules in `durty_cloth_tool_link/translations/`, named after Blender's locale (`de`, `fr`,
+  `ru`, `es`, `pt_BR`, `zh_HANS`, `hi`, `ar`): `<locale>.py` for the link, `garment_<locale>.py` for Garment
+  Fitting and `ped_<locale>.py` for Custom Ped. Each holds a `TEXT` dictionary with the same keys.
 - When you add or change an English text, change the key in all eight translations in the same pull request. The
   tests fail when a key is missing, when its `{fields}` differ from the English text, or when a protected name such
   as Durty Cloth Tool, Creator Link, gta.clothing, Blender or Sollumz is translated.

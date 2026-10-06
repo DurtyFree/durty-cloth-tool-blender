@@ -23,7 +23,7 @@ Windows app for creating GTA V clothing packs for FiveM and singleplayer. The ad
 3D Viewport sidebar. Connected to Durty Cloth Tool on the same computer, it shows the texture you paint and the model
 you edit on the cloth in Durty Cloth Tool's 3D Preview, and saves them into your project when you are happy with the
 result. Its garment tools take a garment from Marvelous Designer or any FBX, OBJ or glTF file towards a game-ready
-freemode cloth and add it to your Durty Cloth Tool project.
+freemode cloth and add it to your Durty Cloth Tool project, and Custom Ped turns a character you made into a custom ped.
 
 ## ✨ Features
 
@@ -51,6 +51,10 @@ freemode cloth and add it to your Durty Cloth Tool project.
 - ➕ **Add to Durty Cloth Tool Project (Experimental).** Put a game-ready garment on the freemode skeleton, export it
   with Sollumz and add it as a new cloth, with its colour variations, to the project open in Durty Cloth Tool.
   Durty Cloth Tool shows the cloth first, and nothing is added until you confirm it there.
+- 🧍 **Custom Ped (Experimental).** Turn a human character you made into a custom ped: check the character, place
+  joint markers (a click guide, Auto Markers or the joints of its Mixamo, Unreal, Rigify, Character Creator or VRM
+  rig), let Durty Cloth Tool rig it from an installed ped of your game, try test poses, and let Durty Cloth Tool create
+  a custom ped project from it.
 - 🌍 **Nine languages.** The add-on follows Blender's interface language: English, German, French, Russian, Spanish,
   Brazilian Portuguese, Simplified Chinese, Hindi and Arabic.
 - ↩️ **Undo-friendly.** Nothing changes in your project until you choose to save, and Durty Cloth Tool keeps every
@@ -74,6 +78,9 @@ plan; the panels say in place when a feature is not part of yours.
 | Model push, Push Automatically and Save Model to Cloth | | ✅ |
 | Texture Checks, the cloth's picture and opening its maps in Blender | | ✅ |
 | Edit in connected app from Durty Cloth Tool | | ✅ |
+| Custom Ped: the character checks, markers, test poses and the template list | ✅ | ✅ |
+| Custom Ped: Rig in Durty Cloth Tool | | ✅ |
+| Custom Ped: Create Custom Ped (a new custom ped project; Advanced works too) | | ✅ |
 
 "Free" means any free gta.clothing account. See [gta.clothing](https://gta.clothing/) for the plans.
 
@@ -86,7 +93,7 @@ plan; the panels say in place when a feature is not part of yours.
 | 👕 [Durty Cloth Tool](https://gta.clothing/) | A current version, running on the same computer | Everything that works with a project |
 | 👤 A gta.clothing account | Free, you sign in with Discord | Connecting to Durty Cloth Tool, the hosted freemode body, Fit to Body and Transfer Weights |
 | 🧩 [Sollumz](https://docs.sollumz.org/) | 2.8.0 or later (tested with 2.9.0) | Pushing and opening models, Generate LODs, adding a garment to a project |
-| 🎮 GTA V, set up in Durty Cloth Tool | | The preview on the ped, adding a garment to a project |
+| 🎮 GTA V, set up in Durty Cloth Tool | | The preview on the ped, adding a garment to a project, Custom Ped's templates and rig |
 
 Also good to know:
 
@@ -260,6 +267,36 @@ Durty Cloth Tool Ultimate), also when Durty Cloth Tool confirms the add only aft
 remove the cloth from the project; remove it in Durty Cloth Tool. The
 [Add to a Project guide](https://docs.gta.clothing/creator-link/blender/add-to-a-project) has the details.
 
+### Turn your character into a custom ped (Experimental)
+
+Choose **Custom Ped** at the top of the DCT tab (the garment tools hide meanwhile). The first line always names the
+next step, and its button is the large one. Five sections follow each other:
+
+1. **Character:** select every mesh of your character and choose **Use Selected**. The checks list what to fix, each
+   with its button: transforms and modifiers to apply, an old rig to remove (the character keeps its pose), a size
+   in centimetres or inches, a character that lies down or does not face the front view. Changes of size or direction
+   always ask first. Under **Parts**, hair, eyes and teeth get their role from their names; change one that is wrong.
+2. **Markers:** **Click Guide** shows a figure in the 3D view and asks for 12 points one after the other (right click
+   goes back one); the neck, chest, pelvis, elbows and knees are placed from them. **Auto Markers** places all 19 from
+   the character's shape, and **From Old Rig** uses the joints of the rig the character came with. Left markers are
+   blue, right ones orange; move any that are off, and the elbow or knee follows its limb.
+3. **Rig:** choose a template (an installed ped like your character; **Show All** adds freemode, player and cutscene
+   peds), confirm your rights to the character once, then **Rig in Durty Cloth Tool**. It shows its progress, and
+   **Cancel** stops it. Check where Durty Cloth Tool moved the markers (yellow), then **Apply Rig**: an armature with the
+   template's bones moves the character, which keeps its look. The report says what to look at, and names a closer
+   template when the proportions are far from the template's. **Rig Again** keeps the rig before it under **Previous
+   Rig**, and **Remove Rig** gives back the character from before rigging.
+4. **Check:** test poses (Arms Up, Squat, Walk Step and more, simple bends by bone name, not game animations) and
+   **Run Checks**, which lists what Durty Cloth Tool would refuse (a vertex without weight, a bone moved after the
+   rig) and where a pose stretches the character.
+5. **Send:** a name and a model name, then **Create Custom Ped**. Durty Cloth Tool shows the ped with its checks and
+   asks where to create the project; nothing is created until you choose Create there.
+
+Rigging needs Durty Cloth Tool Ultimate; creating the project needs Advanced or Ultimate. Durty Cloth Tool needs your
+GTA V (Legacy) folder for the templates and the rig. Sollumz is not needed. Your character goes only to Durty Cloth
+Tool on this computer, and nothing of it goes to gta.clothing. Only convert characters you made yourself or have the
+rights to use in GTA V resources.
+
 The [Blender documentation](https://docs.gta.clothing/creator-link/blender) explains the add-on step by step, with
 [live preview and models](https://docs.gta.clothing/creator-link/blender/live-preview-and-models) and [use cases](https://docs.gta.clothing/creator-link/blender/use-cases); the
 [documentation](https://docs.gta.clothing/) covers Durty Cloth Tool itself.
@@ -268,8 +305,8 @@ The [Blender documentation](https://docs.gta.clothing/creator-link/blender) expl
 
 - 🧊 **Inside Blender.** The add-on is a regular Blender extension. It needs nothing else installed, apart from
   Sollumz for models.
-- 🖥️ **Talks to Durty Cloth Tool on your computer.** Your images, models and garments go only to Durty Cloth Tool on
-  the same computer. Durty Cloth Tool sends back what you ask for: the cloths you open in Blender and, for an add,
+- 🖥️ **Talks to Durty Cloth Tool on your computer.** Your images, models, garments and characters go only to Durty
+  Cloth Tool on the same computer. Durty Cloth Tool sends back what you ask for: the cloths you open in Blender and, for an add,
   the freemode skeleton built from your own game files. The one exception is **Fit to Body** and **Transfer
   Weights**: once you agreed, they send the garment's shape, its markers and the fitting options to gta.clothing to
   fit it. The garment is not kept there; gta.clothing logs only a summary of each fit (counts such as vertices and
