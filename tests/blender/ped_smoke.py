@@ -270,6 +270,18 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     check("Run Checks finds nothing Durty Cloth Tool would refuse",
           not [f for f in findings if f.code in ped.REFUSED_CODES] and collection.get(ph.CHECKED) == 1,
           [(f.code, f.count) for f in findings])
+    # A moved armature moves every bone the GLB carries: Durty Cloth Tool would refuse it.
+    rig.location.x += 0.05
+    bpy.context.view_layer.update()
+    check("Run Checks (armature moved) runs", "FINISHED" in bpy.ops.dct_link.ped_run_checks())
+    moved_rig = {f.code: f for f in ui_ped.RUNTIME.findings[ui_ped.ident(collection)]}
+    check("Run Checks says a moved armature is refused", "armature-changed" in moved_rig
+          and moved_rig["armature-changed"].count == len(rig.data.bones) and collection.get(ph.CHECKED) == 0,
+          sorted(moved_rig))
+    rig.location.x -= 0.05
+    bpy.context.view_layer.update()
+    check("Run Checks (armature back) runs", "FINISHED" in bpy.ops.dct_link.ped_run_checks())
+    check("Run Checks passes again", collection.get(ph.CHECKED) == 1)
     log = draw_everything(package, state, "custom ped, checked")
     check("the next step is Send", ("operator", "dct_link.ped_send") in log)
 

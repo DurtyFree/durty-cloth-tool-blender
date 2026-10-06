@@ -998,8 +998,9 @@ def run_checks(context: Any, collection: Any) -> List[ped.Finding]:
     info = rig_info(collection)
     names, rests, parents = rest_matrices(rig)
     findings = ped.weight_findings({obj.name: weight_data(obj, names) for obj in parts(collection)}, names)
-    actual = {bone.name: np.array(bone.matrix_local) for bone in rig.data.bones}
-    changed = ped.armature_changes(dict(zip(names, rests)), actual)
+    world = np.array(rig.matrix_world, dtype=np.float64)
+    actual = {bone.name: world @ np.array(bone.matrix_local) for bone in rig.data.bones}
+    changed = ped.armature_changes(dict(zip(names, rests)), actual)  # a moved armature moves every bone
     if changed:
         findings.append(ped.Finding("armature-changed", len(changed), changed))
     if info.get("topology") and current_topology(collection) != info["topology"]:
