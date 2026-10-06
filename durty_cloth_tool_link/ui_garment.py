@@ -27,7 +27,7 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Menu, Operator, Panel, PropertyGroup
 
-from . import garment, garment_add, garment_body, host, link, state, strings, ui
+from . import garment, garment_add, garment_body, garment_fit, host, link, state, strings, ui
 from . import settings as addon_settings
 from . import garment_dct as gdct
 from . import garment_host as gh
@@ -63,6 +63,11 @@ class _Runtime:
         self.add_of: Optional[int] = None
         #: What Auto Markers guessed rather than found, per garment (its session uid).
         self.marker_notes: Dict[int, Tuple[str, ...]] = {}
+        #: How the last Fit to Body or Transfer Weights ended (level and text per line), which of the two it was, and
+        #: the garment it belongs to (its session uid).
+        self.fit_lines: List[Tuple[str, Msg]] = []
+        self.fit_operation: Optional[str] = None
+        self.fit_of: Optional[int] = None
         self.redraw: Callable[[], None] = lambda: None
 
 
@@ -258,6 +263,16 @@ class DCTLINK_PG_garment(PropertyGroup):
                                description=EN["garment.size.desc"], translation_context=CONTEXT)
     cut_strips: BoolProperty(name=EN["garment.prop.cut"], default=True, description=EN["garment.prop.cut.desc"],
                              translation_context=CONTEXT)
+    fit_clearance: FloatProperty(name=EN["garment.prop.clearance"], default=3.0, min=0.0, max=20.0, precision=1,
+                                 description=EN["garment.prop.clearance.desc"], translation_context=CONTEXT)
+    fit_push: BoolProperty(name=EN["garment.prop.service-push"], default=True,
+                           description=EN["garment.prop.service-push.desc"], translation_context=CONTEXT)
+    fit_max_push: FloatProperty(name=EN["garment.prop.max-push"], default=30.0, min=1.0, max=100.0, precision=0,
+                                description=EN["garment.prop.max-push.desc"], translation_context=CONTEXT)
+    fit_seam_gap: FloatProperty(name=EN["garment.prop.seam-gap"], default=1.5, min=0.0, max=3.0, precision=2,
+                                description=EN["garment.prop.seam-gap.desc"], translation_context=CONTEXT)
+    fit_proportions: BoolProperty(name=EN["garment.prop.proportions"], default=False,
+                                  description=EN["garment.prop.proportions.desc"], translation_context=CONTEXT)
     lod_medium: IntProperty(name=EN["garment.prop.lod-medium"], default=0, min=0, max=200000,
                             description=EN["garment.prop.lod.desc"], translation_context=CONTEXT)
     lod_low: IntProperty(name=EN["garment.prop.lod-low"], default=0, min=0, max=100000,
@@ -1342,6 +1357,201 @@ class DCTLINK_OT_fit_validate(_MeshOp):
 
 
 # --------------------------------------------------------------------------------------------------
+# Fit to Body and Transfer Weights on gta.clothing
+# --------------------------------------------------------------------------------------------------
+
+
+def _hosted_version(body: Optional[Any]) -> Optional[str]:
+    """The version of the hosted freemode body (a body from a file has none, and gta.clothing fits to its own)."""
+    version = body.get(gh.BODY_VERSION) if body is not None else None
+    return version if garment_body.valid_version(version) else None
+
+
+def _service_reason(context: Any, operation: str) -> Optional[Msg]:
+    """Why Fit to Body (``fit``) or Transfer Weights (``weights``) cannot run now."""
+    reason = _fit_reason(context)
+    if reason is not None:
+        return reason
+    if _hosted_version(valid_body(context)) is None:
+        return msg("fit.why.hosted-body")
+    if not host.online_access():
+        return msg("notice.online-off")
+    ctrl = state.get()
+    if ctrl.user_name is None or ctrl.signed_out:
+        return msg("fit.why.sign-in")
+    if ctrl.fitting.busy:
+        return msg("fit.why.running")
+    allowance = ctrl.fitting.allowance
+    if allowance is not None and allowance.remaining_today <= 0:
+        return msg("fit.why.no-fits", wait=garment_fit.wait_text(_until_midnight_utc()))
+    return None
+
+
+def _until_midnight_utc() -> float:
+    """Seconds until the day's fits are given anew (at midnight UTC)."""
+    now = time.time()
+    return 86400.0 - now % 86400.0
+
+
+def start_service(context: Any, operation: str) -> Any:
+    """Sends the chosen garment to gta.clothing: Fit to Body (``fit``) or Transfer Weights (``weights``). The run goes
+    on in the add-on's timer; :func:`fit_ended` applies its result."""
+    settings_ = props(context)
+    obj = current_garment(context)
+    body = valid_body(context)
+    positions, triangles, pinned, lining = gh.fit_arrays(obj)
+    upload = garment_fit.prepare_upload(positions, triangles, pinned, lining)
+    options = garment_fit.fit_options(settings_.fit_clearance, settings_.fit_push, settings_.fit_max_push,
+                                      settings_.fit_seam_gap, settings_.fit_proportions)
+    markers = gh.read_markers(context.scene) if garment.markers_for(settings_.category) else {}
+    request = garment_fit.build_request(operation, body_gender(context, body), settings_.slot, settings_.category,
+                                        _hosted_version(body), markers, options)
+    ctrl = state.get()
+    ctrl.prepare()
+    run = ctrl.fitting.start(operation, request, upload, (context.scene.name, obj.session_uid))
+    RUNTIME.fit_lines, RUNTIME.fit_operation, RUNTIME.fit_of = [], operation, obj.session_uid
+    ctrl.touch()
+    return run
+
+
+def fit_ended(run: Any) -> bool:
+    """A fit ended (the add-on's timer calls this): its result goes onto the garment it was made for, as one step that
+    can be undone and with a backup first; otherwise the panel says why not. False while the user is in Edit or Sculpt
+    Mode or in the middle of a tool (the timer asks again)."""
+    scene_name, uid = run.key
+    RUNTIME.fit_operation, RUNTIME.fit_of = run.operation, uid
+    if run.state != "done":
+        RUNTIME.fit_lines = list(run.lines)
+        host.redraw()
+        return True
+    scene = bpy.data.scenes.get(scene_name)
+    obj = host.find_object(uid)
+    if scene is None or obj is None or scene.dct_garment.garment != obj:
+        RUNTIME.fit_lines = [("WARNING", msg("fit.changed"))]
+        host.redraw()
+        return True
+    if _busy():
+        return False
+    result = run.result
+    if result.outcome == "notOnBody":
+        RUNTIME.fit_lines = [("WARNING", msg("fit.done.not-on-body"))]
+        host.redraw()
+        return True
+    if gh.fit_digest(obj) != run.upload.digest:
+        RUNTIME.fit_lines = [("WARNING", msg("fit.changed"))]
+        host.redraw()
+        return True
+    try:
+        with bpy.context.temp_override(**_job_context(scene)):
+            gh.backup(obj)
+            try:
+                if run.operation == "fit":
+                    gh.set_world_positions(obj, garment_fit.result_positions(result))
+                groups, unweighted = garment_fit.weight_groups(result)
+                bones = gh.apply_weights(obj, groups)
+            except Exception:
+                gh.roll_back(obj)
+                raise
+            if run.operation == "fit":
+                gh.set_flag(obj, "dct_fitted")
+                _after_change(bpy.context)
+            else:
+                gh.clear_flags(obj, "dct_lods", "dct_validated", gh.FINDINGS)  # the levels of detail took the old weights
+    except Exception as exc:  # noqa: BLE001 - a timer that raises stops; show the problem instead
+        traceback.print_exc()
+        RUNTIME.fit_lines = [("ERROR", msg("notice.unexpected", detail=f"{type(exc).__name__}: {exc}"))]
+        host.redraw()
+        return True
+    host.push_undo(t("garment.op.service-fit" if run.operation == "fit" else "garment.op.service-weights"))
+    warnings = garment_fit.warning_lines(result)
+    if run.operation == "weights":
+        lines = [("INFO", msg("fit.done.weights", bones=bones))]
+    elif warnings or result.outcome == "needsReview":
+        lines = [("WARNING", msg("fit.done.review", bones=bones))]
+    else:
+        lines = [("INFO", msg("fit.done.fit", bones=bones))]
+    lines += warnings
+    if unweighted:
+        lines.append(("WARNING", msg("fit.done.unweighted", count=unweighted)))
+    RUNTIME.fit_lines = lines
+    host.redraw()
+    return True
+
+
+class _ServiceOp(_Op):
+    """Fit to Body or Transfer Weights: asks once whether the garment may be uploaded, then starts the run."""
+
+    operation = "fit"
+    agreed: BoolProperty(options={"HIDDEN", "SKIP_SAVE"})
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _service_reason(context, cls.operation))
+
+    def invoke(self, context, event):
+        prefs = state.preferences()
+        if prefs is None or prefs.fit_upload_consent:
+            return self.execute(context)
+        self.agreed = True  # confirming the dialog is the consent
+        try:
+            return context.window_manager.invoke_props_dialog(self, width=420, title=t("fit.consent.title"),
+                                                              confirm_text=t("fit.consent.confirm"))
+        except TypeError:  # an older Blender without a dialog title
+            return context.window_manager.invoke_props_dialog(self, width=420)
+
+    def draw(self, context):
+        for key in ("fit.consent.what", "fit.consent.kept", "fit.consent.revoke"):
+            wrapped(self.layout, context, t(key), width=400)
+
+    def execute(self, context):
+        prefs = state.preferences()
+        if prefs is not None and not prefs.fit_upload_consent:
+            if not self.agreed:
+                self.report({"ERROR"}, t("fit.consent.what"))  # a script that never showed the question
+                return {"CANCELLED"}
+            prefs.fit_upload_consent = True
+        try:
+            start_service(context, self.operation)
+        except EXPECTED as exc:
+            _report_failure(self, exc)
+            host.redraw()
+            return {"CANCELLED"}
+        host.redraw()
+        return {"FINISHED"}
+
+
+class DCTLINK_OT_fit_service_fit(_ServiceOp):
+    bl_idname = "dct_link.fit_service_fit"
+    bl_label = EN["garment.op.service-fit"]
+    bl_description = EN["garment.op.service-fit.desc"]
+    operation = "fit"
+
+
+class DCTLINK_OT_fit_service_weights(_ServiceOp):
+    bl_idname = "dct_link.fit_service_weights"
+    bl_label = EN["garment.op.service-weights"]
+    bl_description = EN["garment.op.service-weights.desc"]
+    operation = "weights"
+
+
+class DCTLINK_OT_fit_service_cancel(_Op):
+    bl_idname = "dct_link.fit_service_cancel"
+    bl_label = EN["op.cancel-sign-in"]
+    bl_description = EN["garment.op.service-cancel.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        ctrl = state.controller
+        running = ctrl is not None and ctrl.fitting.busy and not ctrl.fitting.run.cancel_requested
+        return _refuse(cls, None if running else msg("add.why.nothing-running"))
+
+    def execute(self, context):
+        state.get().fitting.cancel()
+        host.redraw()
+        return {"FINISHED"}
+
+
+# --------------------------------------------------------------------------------------------------
 # Adding the garment to Durty Cloth Tool
 # --------------------------------------------------------------------------------------------------
 
@@ -1921,6 +2131,7 @@ def flow_state(context: Any) -> garment.FlowState:
         source_pose=settings_.source_pose,
         markers=len([name for name in expected if name in placed]),
         aligned=gh.flag(obj, "dct_aligned"),
+        fitted=gh.flag(obj, "dct_fitted"),
         sculpting=gh.sculpting(obj) or gh.session_broken(obj),
         checked=gh.flag(obj, "dct_checked"),
         inside=report.inside if report is not None else 0,
@@ -2060,6 +2271,9 @@ def draw_fit(layout: Any, context: Any) -> None:
                 operator(body, DCTLINK_OT_fit_tpose_to_apose.bl_idname, "garment.op.tpose", "POSE_HLT")
 
     layout.separator(factor=GAP)
+    draw_service(layout, context, "fit")
+
+    layout.separator(factor=GAP)
     heading(layout, context, "garment.heading.backups", "FILE_BACKUP", info="garment.info.backups")
     count = len(gh.backups(obj)) if obj is not None else 0
     subtext(layout, context, "garment.backups.count", count=count, limit=gh.MAX_BACKUPS)
@@ -2139,14 +2353,34 @@ def _mm(value: float) -> str:
     return f"{value:.0f}" if round(value) != 0 else "0"
 
 
-#: The share of the fit check table's width that the region column takes; the measurement takes the rest.
-REPORT_REGION_SHARE = 0.4
+#: The fit check table's columns: the region, the measurement, the usual range of game clothing.
+REPORT_COLUMNS = (0.34, 0.5)
 
 
-def _report_row(column: Any, first: str, second: str, icon: str = "NONE") -> None:
-    line = column.split(factor=REPORT_REGION_SHARE, align=True)
+def _report_row(column: Any, first: str, second: str, third: str, icon: str = "NONE") -> None:
+    line = column.split(factor=REPORT_COLUMNS[0], align=True)
     line.label(text=first, translate=False)
-    line.label(text=second, icon=icon, translate=False)
+    rest = line.split(factor=REPORT_COLUMNS[1] / (1.0 - REPORT_COLUMNS[0]), align=True)
+    rest.label(text=second, icon=icon, translate=False)
+    rest.label(text=third, translate=False)
+
+
+def usual_ranges(context: Any) -> Tuple[Optional[Dict[str, Tuple[float, float, float]]], Optional[str]]:
+    """How far game clothing of the garment's kind usually sits from each region (from gta.clothing), or ``None`` with
+    the text that says why there is none (``None`` while it is asked for)."""
+    settings_ = props(context)
+    body = valid_body(context)
+    version = _hosted_version(body)
+    category = garment_fit.REFERENCE_CATEGORIES.get(settings_.slot)
+    if version is None or category is None:
+        return None, None
+    ctrl = state.get()
+    if not ctrl.fitting.ready():
+        return None, "garment.check.reference-offline"
+    reference = ctrl.fitting.reference(body_gender(context, body), category, version)
+    if reference is None:
+        return None, None
+    return garment_fit.usual_ranges(reference, settings_.category), None
 
 
 def draw_report(layout: Any, context: Any) -> None:
@@ -2154,17 +2388,25 @@ def draw_report(layout: Any, context: Any) -> None:
     if report is None:
         subtext(layout, context, "garment.check.none")
         return
+    usual, why = usual_ranges(context)
     column = layout.column(align=True)
-    _report_row(column, t("garment.prop.region"), t("garment.check.measured"))
+    _report_row(column, t("garment.prop.region"), t("garment.check.measured"), t("garment.check.reference"))
+    none = t("garment.check.reference-none")
     for row in report.rows:
+        found = (usual or {}).get(row.region)
+        third = t("garment.check.value", p10=_mm(found[0]), p50=_mm(found[1]), p90=_mm(found[2])) if found else none
         _report_row(column, t(f"garment.region.{row.region}"),
-                    t("garment.check.value", p50=_mm(row.p50), p10=_mm(row.p10), p90=_mm(row.p90)),
+                    t("garment.check.value", p50=_mm(row.p50), p10=_mm(row.p10), p90=_mm(row.p90)), third,
                     "ERROR" if row.inside else "BLANK1")
     share = round(100.0 * report.inside_share, 1)
     wrapped(layout, context, t("garment.check.inside", count=report.inside, share=share),
             "ERROR" if report.inside else "CHECKMARK")
     for key, fields in garment.fit_advice(report):
         wrapped(layout, context, t(key, **fields), "INFO")
+    if usual:
+        subtext(layout, context, "garment.check.reference-subtext")
+    elif why is not None:
+        subtext(layout, context, why)
 
 
 def draw_sculpt(layout: Any, context: Any) -> None:
@@ -2236,6 +2478,9 @@ def draw_ready(layout: Any, context: Any) -> None:
     draw_skeleton(layout, context)
 
     layout.separator(factor=GAP)
+    draw_service(layout, context, "weights")
+
+    layout.separator(factor=GAP)
     heading(layout, context, "garment.heading.lods", "MOD_DECIM", info="garment.info.lods")
     step(layout, context, DCTLINK_OT_fit_lods.bl_idname, "garment.op.lods", "MOD_DECIM")
     if not gh.sollumz_lods_available():
@@ -2251,6 +2496,49 @@ def draw_ready(layout: Any, context: Any) -> None:
     draw_findings(layout, context)
     layout.separator(factor=GAP)
     draw_add(layout, context)
+
+
+def draw_service(layout: Any, context: Any, operation: str) -> None:
+    """Fit to Body (under Fit) or Transfer Weights (under Game Ready): the button, the run's progress with Cancel, the
+    fits left today, how the last run ended, and (Fit to Body) its options."""
+    ctrl = state.get()
+    obj = current_garment(context)
+    if operation == "fit":
+        heading(layout, context, "garment.heading.service", "WORLD", info="garment.info.service")
+        idname, key, icon = DCTLINK_OT_fit_service_fit.bl_idname, "garment.op.service-fit", "WORLD"
+    else:
+        heading(layout, context, "garment.heading.weights", "MOD_VERTEX_WEIGHT", info="garment.info.weights")
+        idname, key, icon = DCTLINK_OT_fit_service_weights.bl_idname, "garment.op.service-weights", "MOD_VERTEX_WEIGHT"
+    run = ctrl.fitting.run
+    if run is not None and not run.handled and run.operation == operation:
+        if hasattr(layout, "progress"):
+            layout.progress(factor=run.fraction(), text=strings.text(run.status_text()))
+        else:
+            wrapped(layout, context, strings.text(run.status_text()), "SORTTIME")
+        operator(layout, DCTLINK_OT_fit_service_cancel.bl_idname, "op.cancel-sign-in", "X")
+    else:
+        step(layout, context, idname, key, icon)
+        if obj is not None:
+            reason = _service_reason(context, operation)
+            if reason is not None and reason.key != "garment.why.align-first":
+                reason_text(layout, context, reason)
+    if ctrl.fitting.ready():
+        ctrl.fitting.want_allowance()
+        allowance = ctrl.fitting.allowance
+        if allowance is not None:
+            subtext(layout, context, "fit.left", left=allowance.remaining_today, total=allowance.per_day)
+    if obj is not None and RUNTIME.fit_operation == operation and RUNTIME.fit_of == obj.session_uid:
+        for level, line in RUNTIME.fit_lines:
+            wrapped(layout, context, strings.text(line), ui.LEVEL_ICONS.get(level, "INFO"), alert=level == "ERROR")
+    if operation == "fit":
+        settings_ = props(context)
+        body = options(layout, context, "service")
+        if body is not None:
+            body.prop(settings_, "fit_clearance", text=t("garment.prop.clearance"), translate=False)
+            ui.checkbox(body, context, settings_, "fit_push", "garment.prop.service-push")
+            body.prop(settings_, "fit_max_push", text=t("garment.prop.max-push"), translate=False)
+            body.prop(settings_, "fit_seam_gap", text=t("garment.prop.seam-gap"), translate=False)
+            ui.checkbox(body, context, settings_, "fit_proportions", "garment.prop.proportions")
 
 
 def draw_findings(layout: Any, context: Any) -> None:
@@ -2542,6 +2830,9 @@ CLASSES = (
     DCTLINK_OT_fit_combine,
     DCTLINK_OT_fit_lods,
     DCTLINK_OT_fit_validate,
+    DCTLINK_OT_fit_service_fit,
+    DCTLINK_OT_fit_service_weights,
+    DCTLINK_OT_fit_service_cancel,
     DCTLINK_OT_fit_use_skeleton,
     DCTLINK_OT_fit_add_to_dct,
     DCTLINK_OT_fit_cancel_add,
@@ -2591,5 +2882,7 @@ def on_load_pre() -> None:
         RUNTIME.add_job = None
     RUNTIME.marker_notes.clear()
     RUNTIME.add_problems, RUNTIME.add_warnings, RUNTIME.add_of = [], [], None
+    RUNTIME.fit_lines, RUNTIME.fit_operation, RUNTIME.fit_of = [], None, None
     if state.controller is not None:
+        state.controller.fitting.forget()  # a running fit is cancelled on gta.clothing and never applied
         state.controller.item_add.forget()

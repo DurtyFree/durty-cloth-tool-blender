@@ -205,6 +205,7 @@ def register() -> None:
     ctrl.documents = state.BlenderDocuments()
     ctrl.linked_binding = state.linked_binding
     ctrl.on_thumbnail = _show_thumbnail
+    ctrl.fitting.on_ended = ui_garment.fit_ended
     state.controller = ctrl
     state.watcher.clear()
     _started = False

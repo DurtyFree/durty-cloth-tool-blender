@@ -801,6 +801,9 @@ def draw_settings(layout: Any, context: Any, prefs: Any) -> None:
         if prefs is not None:
             checkbox(body, context, prefs, "share_device_name", "prop.device-name")
         subtext(body, context, "settings.device-name-subtext")
+        if prefs is not None:
+            checkbox(body, context, prefs, "fit_upload_consent", "prop.fit-consent")
+        subtext(body, context, "settings.fit-consent-subtext")
 
 
 def draw_help_menu(layout: Any) -> None:

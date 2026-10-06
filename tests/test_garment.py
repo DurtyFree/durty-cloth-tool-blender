@@ -414,7 +414,7 @@ def test_the_size_ranges_never_fit_two_units():
 def test_the_next_step_walks_through_the_local_flow():
     state = garment.FlowState()
     steps = []
-    for change in ({}, {"garment": True}, {"body": True}, {"markers": 11}, {"aligned": True},
+    for change in ({}, {"garment": True}, {"body": True}, {"markers": 11}, {"aligned": True}, {"fitted": True},
                    {"checked": True, "inside": 4}, {"prepared": True, "materials": 3}, {"materials": 1},
                    {"weighted": True}, {"lods": True}, {"findings": "blocking"},
                    {"validated": True, "findings": "clean"}, {"connected": True}, {"project": True},
@@ -422,8 +422,10 @@ def test_the_next_step_walks_through_the_local_flow():
         state = state._replace(**change)
         steps.append(garment.next_step(state))
     # The levels of detail come after the weights, which they take over.
+    # Fit to Body on gta.clothing is the next step after Align to Body (the fit check by hand skips it).
     assert steps == ["garment.next.import", "garment.next.body", "garment.next.markers", "garment.next.align",
-                     "garment.next.check", "garment.next.push", "garment.next.combine", "garment.next.weights",
+                     "garment.next.fit", "garment.next.check", "garment.next.push", "garment.next.combine",
+                     "garment.next.weights",
                      "garment.next.lods", "garment.next.validate",
                      "garment.next.validate-problems", "garment.next.connect", "garment.next.project",
                      "garment.next.skeleton", "garment.next.add", "garment.next.adding", "garment.next.done"]

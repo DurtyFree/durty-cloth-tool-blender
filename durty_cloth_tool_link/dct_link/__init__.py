@@ -5,6 +5,7 @@
 Standard library only, Python 3.10 or later. The link client is ``protocol`` (wire format, validation and frame
 codecs), ``ws`` (loopback WebSocket client), ``session`` (connecting, sign-in, live textures, models), ``auth``
 (gta.clothing sign-in) and ``tokens`` (secret storage); none of them imports anything else from this package.
+``fit`` (garment fitting on gta.clothing, for the Blender add-on) builds on ``auth``.
 """
 
 __version__ = "0.1.0"

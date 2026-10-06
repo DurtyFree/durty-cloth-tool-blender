@@ -39,8 +39,9 @@ freemode cloth and add it to your Durty Cloth Tool project.
 - 👕 **Linked Cloth.** See the open project and the selected cloth (variation, type, gender, collection and number),
   with its picture and buttons that open its maps in Blender.
 - 🪡 **Garment Fitting (Experimental).** Import a garment, add the freemode body, place joint markers, align the
-  garment to the body (a T-pose becomes the game's pose on the way), push it out of the body, snug or relax regions,
-  see problem areas in colour, run a fit check, sculpt with the body as a guide and check seams for tears.
+  garment to the body (a T-pose becomes the game's pose on the way), and let gta.clothing fit it to the body with the
+  body's weights. Push it out of the body, snug or relax regions, see problem areas in colour, compare the fit with
+  game clothing, sculpt with the body as a guide and check seams for tears.
   **Game Ready** joins seams, sets the ped vertex colours, combines all materials into one texture with its
   transparency and maps, generates levels of detail and validates the result.
 - ➕ **Add to Durty Cloth Tool Project (Experimental).** Put a game-ready garment on the freemode skeleton, export it
@@ -63,6 +64,7 @@ plan; the panels say in place when a feature is not part of yours.
 | Connect Blender to Durty Cloth Tool, see the open project and the selected cloth | ✅ | ✅ |
 | Garment Fitting tools that run in Blender (no account needed) | ✅ | ✅ |
 | The hosted freemode body for Garment Fitting | ✅ | ✅ |
+| Fit to Body and Transfer Weights on gta.clothing (a daily number of fits: 10 free, 30 with Advanced, 100 with Ultimate) | ✅ | ✅ |
 | Add a garment to your project as a new cloth (Durty Cloth Tool's project limits apply) | ✅ | ✅ |
 | Live Preview, Save to Cloth and Save as New Variation | | ✅ |
 | Model push, Push Automatically and Save Model to Cloth | | ✅ |
@@ -78,7 +80,7 @@ plan; the panels say in place when a feature is not part of yours.
 | 🪟 Windows | 64-bit | Everything: the add-on runs on Windows only |
 | 🧊 Blender | 4.2 or later (tested with 4.5 LTS and 5.2 LTS) | Everything |
 | 👕 [Durty Cloth Tool](https://gta.clothing/) | A current version, running on the same computer | Everything that works with a project |
-| 👤 A gta.clothing account | Free, you sign in with Discord | Connecting to Durty Cloth Tool, the hosted freemode body |
+| 👤 A gta.clothing account | Free, you sign in with Discord | Connecting to Durty Cloth Tool, the hosted freemode body, Fit to Body and Transfer Weights |
 | 🧩 [Sollumz](https://docs.sollumz.org/) | 2.8.0 or later (tested with 2.9.0) | Pushing and opening models, Generate LODs, adding a garment to a project |
 | 🎮 GTA V, set up in Durty Cloth Tool | | The preview on the ped, adding a garment to a project |
 
@@ -178,15 +180,27 @@ button for that step is the large one. Settings you rarely change sit in closed 
 2. **Fit:** **Auto Markers**, then check the markers and move any that are off (lines in the 3D view join them and
    turn orange when something looks wrong). Then **Align to Body**: it moves and turns the garment so the markers
    sit on the body's joints, and turns its arms (or legs) onto the body's, so a T-pose becomes the game's pose
-   without opening a seam.
-3. **Fix:** **Run Fit Check**, **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or
-   sculpt by hand. These tools wait for **Align to Body**, because they measure against the body.
+   without opening a seam. Then **Fit to Body** (under **Fit on gta.clothing**): gta.clothing puts the garment
+   exactly in the game's pose, gives it the freemode body's weights and moves it out of the body where it was
+   inside. A progress bar shows how far it is, **Cancel** stops it, and the panel shows your **Fits left today**.
+   You can skip it and fit the garment by hand under **Fix**.
+3. **Fix:** **Run Fit Check** (its **Usual** column shows how far game clothing of the same kind sits from each
+   region), **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or sculpt by hand.
+   These tools wait for **Align to Body**, because they measure against the body.
 4. **Game Ready:** **Prepare Garment** and **Combine Materials** (which keeps transparency and bakes normal,
-   specular and emission maps), then weight the garment to the freemode skeleton, then **Generate LODs** and
-   **Validate**.
+   specular and emission maps), then the weights: **Transfer Weights** gets the freemode body's weights from
+   gta.clothing for the garment as it is now (for example after sculpting), or weight it yourself. Then **Generate
+   LODs** and **Validate**.
 
 Every step that changes the garment can be undone with **Ctrl+Z**, and the garment keeps backups of its shape for
-**Back One Step** and **Restore Pre-fit**. The [Garment Fitting guide](https://docs.gta.clothing/creator-link/blender/garment-fitting) and the
+**Back One Step** and **Restore Pre-fit**; a fit from gta.clothing is one such step.
+
+**Fit to Body** and **Transfer Weights** send the garment's shape to gta.clothing: its vertex positions and
+triangles, its markers, and the gender, slot and category, never textures, materials, names or files. The first
+time, the add-on asks whether it may; to withdraw, turn off **Upload Garments for Fitting** under **Settings >
+Privacy**. gta.clothing keeps nothing: the result is deleted after ten minutes at the latest. Each run uses one of
+the day's fits; a fit that gta.clothing could not start (for example a garment it refuses) is given back, and the
+panel says so. The panel explains every refusal and what to do about it. The [Garment Fitting guide](https://docs.gta.clothing/creator-link/blender/garment-fitting) and the
 [Game Ready guide](https://docs.gta.clothing/creator-link/blender/game-ready) walk through each step.
 
 ### Add the garment to your project (Experimental)
@@ -197,9 +211,10 @@ The last part of **Game Ready** adds the garment as a new cloth to the project o
   GTA V set up in it: the freemode skeleton comes from your own game files.
 - Sollumz.
 - One material with a colour texture (**Combine Materials** makes one).
-- Weights for the freemode skeleton: vertex groups named after its bones, such as `SKEL_Spine3`. Weight the garment
-  yourself, for example with Blender's weight painting. **Use Durty Cloth Tool Skeleton** gives you the bones to
-  weight to; levels of detail made before the weights get them when the garment is added.
+- Weights for the freemode skeleton: vertex groups named after its bones, such as `SKEL_Spine3`. **Fit to Body**
+  and **Transfer Weights** give the garment the freemode body's weights, or weight it yourself, for example with
+  Blender's weight painting. **Use Durty Cloth Tool Skeleton** gives you the bones to weight to; levels of detail
+  made before the weights get them when the garment is added.
 
 Then:
 
@@ -230,14 +245,16 @@ The [Blender documentation](https://docs.gta.clothing/creator-link/blender) expl
 - 🧊 **Inside Blender.** The add-on is a regular Blender extension. It needs nothing else installed, apart from
   Sollumz for models.
 - 🖥️ **Talks to Durty Cloth Tool on your computer.** Your images, models and garments go only to Durty Cloth Tool on
-  the same computer, never over the internet. Durty Cloth Tool sends back what you ask for: the cloths you open in
-  Blender and, for an add, the freemode skeleton built from your own game files.
+  the same computer. Durty Cloth Tool sends back what you ask for: the cloths you open in Blender and, for an add,
+  the freemode skeleton built from your own game files. The one exception is **Fit to Body** and **Transfer
+  Weights**: once you agreed, they send the garment's shape to gta.clothing to fit it.
 - 👤 **Signs in with gta.clothing.** You sign in once with your gta.clothing account. Durty Cloth Tool accepts
   Blender when both are signed in with the same account, and lists it under **Options > Connected apps**, where you
   can disconnect it. The add-on never sees your Discord password.
 - 🌐 **What reaches gta.clothing:** your sign-in (with your computer's name, unless you turn that off under
   **Settings > Privacy**), a confirmation each time Blender connects to Durty Cloth Tool, your sign-out, the
-  download of the freemode body (once per body version) and Blender's update checks.
+  download of the freemode body (once per body version), Blender's update checks and, once you agreed, the shape of
+  a garment you fit there, with the questions for your fits left today and for the usual ranges of game clothing.
 - 🙅 **No tracking.** The add-on collects no usage data. **Copy Diagnostics** copies versions and status codes for
   support, without file paths, names or sign-in data.
 - 🔐 **Your sign-in stays protected.** It is kept in the add-on's user folder, encrypted for your Windows user

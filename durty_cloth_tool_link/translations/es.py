@@ -357,10 +357,10 @@ TEXT = {
         "Corrige los errores antes de guardar; las advertencias y notas son consejos."
     ),
     "info.privacy": (
-        "Se queda en este equipo: tus imágenes, modelos y los píxeles de la vista previa en directo. Solo van a "
-        "Durty Cloth Tool. Va a gta.clothing: tu inicio de sesión (con el nombre de este equipo salvo que lo "
-        "desactives), una confirmación por conexión, tu cierre de sesión y las comprobaciones de actualizaciones de "
-        "Blender."
+        "Se queda en este equipo: tus imágenes, modelos y los píxeles de la vista previa en directo. Solo van a Durty "
+        "Cloth Tool. Va a gta.clothing: tu inicio de sesión (con el nombre de este equipo salvo que lo desactives), "
+        "una confirmación por conexión, tu cierre de sesión, las comprobaciones de actualizaciones de Blender y, una "
+        "vez que aceptes, la forma de una prenda que ajustes allí."
     ),
     "op.connect": "Conectar",
     "op.connect.desc": "Conectar con Durty Cloth Tool en este equipo",

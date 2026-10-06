@@ -162,7 +162,10 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           all("UNDO" in cls.bl_options for cls in ui_garment.CLASSES
               if getattr(cls, "bl_idname", "").startswith("dct_link.fit_")
               and cls.bl_idname not in ("dct_link.fit_add_body", "dct_link.fit_cancel_body",
-                                        "dct_link.fit_save_preset", "dct_link.fit_cancel_add")))
+                                        "dct_link.fit_save_preset", "dct_link.fit_cancel_add",
+                                        # These start a run on gta.clothing; its result is an undo step of its own.
+                                        "dct_link.fit_service_fit", "dct_link.fit_service_weights",
+                                        "dct_link.fit_service_cancel")))
 
     # Import: a garment exported in centimetres on an avatar standing on the ground arrives in metres, in ped space.
     source = panel_garment("smoke_tee_source", "short", 45.0)
@@ -266,6 +269,40 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           and abs(aligned["neck"][2] - synthetic.joints_of()["SKEL_Neck_1"][2]) < 0.03,
           (ui_garment.RUNTIME.notice, np.abs(positions(tee) - before_align).max()))
 
+    # Fit to Body on the fake gta.clothing: nothing goes out before the user agreed once; the garment comes back moved
+    # by the fake's offset and weighted by bone name, as one step Back One Step takes back.
+    prefs = state.preferences()
+    prefs.fit_upload_consent = False
+    check("without consent Fit to Body uploads nothing",
+          refused(bpy.ops.dct_link.fit_service_fit, "send the garment's shape") and not api.fit.uploads)
+    prefs.fit_upload_consent = True
+    api.fit.position_offset = (0.0, 0.0, 0.004)
+    api.fit.body_version = body.get(gh.BODY_VERSION)  # the fake fits to the hosted body the smoke added
+    before_fit = positions(tee)
+    check("Fit to Body runs", "FINISHED" in bpy.ops.dct_link.fit_service_fit())
+    log = draw_everything(package, state, "garment being fitted")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the Fit panel shows the run with Cancel", ("operator", "dct_link.fit_service_cancel") in log, labels[-300:])
+    pump(addon, lambda: not ctrl.fitting.busy, timeout=60, what="the fit on gta.clothing")
+    sent_request, _ = api.fit.uploads[-1]
+    groups = {group.name for group in tee.vertex_groups}
+    check("the fit uploaded the aligned garment with its markers in the rest pose",
+          sent_request["sourcePose"] == "rest" and "lShoulder" in sent_request.get("markers", {})
+          and "lKnee" not in sent_request.get("markers", {}), sent_request)
+    check("Fit to Body moves the garment as gta.clothing answered and weights it by bone name, never to the root",
+          np.allclose(positions(tee), before_fit + [0.0, 0.0, 0.004], atol=1e-4) and "SKEL_Spine3" in groups
+          and "SKEL_ROOT" not in groups and tee.get("dct_fitted"),
+          (ui_garment.RUNTIME.fit_lines, sorted(groups)))
+    log = draw_everything(package, state, "garment fitted")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panel says the fit worked and how many fits are left today",
+          "Fitted to the body" in labels and "Fits left today" in labels, labels[-500:])
+    check("Back One Step takes the fit back", "FINISHED" in bpy.ops.dct_link.fit_back_step()
+          and np.allclose(positions(tee), before_fit, atol=1e-5))
+    for group in [g for g in tee.vertex_groups if g.name.startswith("SKEL_")]:
+        tee.vertex_groups.remove(group)  # the later steps start from an unweighted garment
+    del tee["dct_fitted"]
+
     # The fit check and the problem colours; the neck of the synthetic tee sits inside the head.
     check("Run Fit Check runs", "FINISHED" in bpy.ops.dct_link.fit_check())
     report = garment.FitReport.from_json(tee.get(gh.FIT_REPORT, ""))
@@ -274,6 +311,11 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           report is not None and {"chest", "back", "shoulders", "upper_arms"} <= set(rows)
           and 5.0 < rows["chest"].p50 < 40.0 and report.inside > 0,
           report)
+    pump(addon, lambda: ui_garment.usual_ranges(bpy.context)[0] is not None, timeout=30, what="the usual ranges")
+    log = draw_everything(package, state, "fit check with the usual ranges")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the fit check compares with game clothing from gta.clothing",
+          "Usual" in labels and "19 (5 to 32)" in labels, labels[-600:])
     RESULT = {"check": "fit check (synthetic tee)", "ok": True,
               "detail": ", ".join(f"{r.region} {r.p50}" for r in report.rows) + f"; inside {report.inside}"}
     check("Show Problems runs", "FINISHED" in bpy.ops.dct_link.fit_show_problems())

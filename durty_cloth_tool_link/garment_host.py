@@ -22,7 +22,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from . import garment
+from . import garment, garment_fit
 from .strings import UserError, msg
 
 #: Custom properties the add-on keeps on the garment (and the .blend file keeps with it).
@@ -33,7 +33,7 @@ GARMENT_ID = "dct_garment_id"
 BACKUP_SLOTS = ("dct_backup_0", "dct_backup_1", "dct_backup_2")
 #: Older files listed their backups by name (with fake users); they are taken over by the slots.
 BACKUPS = "dct_fit_backups"
-FLAGS = ("dct_aligned", "dct_converted", "dct_checked", "dct_prepared", "dct_lods", "dct_validated")
+FLAGS = ("dct_aligned", "dct_converted", "dct_fitted", "dct_checked", "dct_prepared", "dct_lods", "dct_validated")
 #: The garment's latest fit check and local checks (JSON), kept with it so they always belong to this garment.
 FIT_REPORT = "dct_fit_report"
 FINDINGS = "dct_findings"
@@ -2116,6 +2116,34 @@ def retransfer_lod_weights(context: Any, obj: Any) -> int:
 def _influences(obj: Any, mesh: Any) -> Tuple[int, int]:
     bones = set(_bone_groups(obj))
     return garment.influence_counts([[g.weight for g in v.groups if g.group in bones] for v in mesh.vertices])
+
+
+def fit_arrays(obj: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """What Fit to Body and Transfer Weights send: the garment's world positions, its triangles, the vertices the tools
+    leave where they are (Pinned, the sculpt mask) and those of a lining."""
+    return (world_positions(obj), mesh_triangles(obj.data), locked_vertices(obj),
+            group_weights(obj, LINING_GROUP) > 0.5)
+
+
+def fit_digest(obj: Any) -> str:
+    """The digest of the garment's shape as Fit to Body sent it (a result is applied only to the same shape)."""
+    return garment_fit.mesh_digest(world_positions(obj), mesh_triangles(obj.data))
+
+
+def apply_weights(obj: Any, groups: Dict[str, List[Tuple[float, np.ndarray]]]) -> int:
+    """Gives the garment the weights of a fit: one vertex group per bone name. The weights of the garment's other bone
+    groups are cleared but the groups stay (so a backup's weights still name the right groups); the add-on's own
+    groups are kept. Returns how many bones the garment is weighted to."""
+    every = list(range(len(obj.data.vertices)))
+    for group in list(obj.vertex_groups):
+        if group.name not in TOOL_GROUPS and not group.name.startswith(TEMP_PREFIX):
+            group.remove(every)
+    for name, entries in groups.items():
+        group = obj.vertex_groups.get(name) or obj.vertex_groups.new(name=name)
+        for weight, indices in entries:
+            group.add(indices.tolist(), float(weight), "ADD")
+    obj.data.update()
+    return len(groups)
 
 
 def weighted(obj: Optional[Any]) -> bool:

@@ -389,9 +389,9 @@ TEXT = {
     ),
     "info.privacy": (
         "Reste sur cet ordinateur : vos images, vos modèles et les pixels de l'aperçu en direct. Ils ne vont qu'à "
-        "Durty Cloth Tool. Va à gta.clothing : votre connexion au compte (avec le nom de cet ordinateur, sauf si "
-        "vous le désactivez), une confirmation par connexion, votre déconnexion et les vérifications de mise à jour "
-        "de Blender."
+        "Durty Cloth Tool. Va à gta.clothing : votre connexion au compte (avec le nom de cet ordinateur, sauf si vous "
+        "le désactivez), une confirmation par connexion, votre déconnexion, les vérifications de mise à jour de "
+        "Blender et, une fois que vous avez accepté, la forme d'un vêtement que vous y ajustez."
     ),
     "op.connect": "Connecter",
     "op.connect.desc": "Se connecter à Durty Cloth Tool sur cet ordinateur",

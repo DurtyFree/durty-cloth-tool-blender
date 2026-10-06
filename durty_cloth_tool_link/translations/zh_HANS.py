@@ -267,8 +267,8 @@ TEXT = {
         "Durty Cloth Tool 会像其错误列表一样，按照 GTA V 和服装的要求检查图像。保存前请修复错误；警告和提示只是建议。"
     ),
     "info.privacy": (
-        "留在这台电脑上：你的图像、模型和实时预览的像素。它们只发送给 Durty Cloth Tool。发送到 gta.clothing："
-        "你的登录（附带这台电脑的名称，除非你关闭）、每次连接的确认、你的退出登录以及 Blender 的更新检查。"
+        "留在这台电脑上：你的图像、模型和实时预览的像素。它们只发送给 Durty Cloth Tool。发送到 gta.clothing：你的登录（附带这台电脑的名称，除非你关闭）、每次连接的确认、你的退出登录、Blender "
+        "的更新检查，以及在你同意之后，你在那里适配的服装的形状。"
     ),
     "op.connect": "连接",
     "op.connect.desc": "连接到这台电脑上的 Durty Cloth Tool",

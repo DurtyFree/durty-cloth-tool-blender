@@ -22,7 +22,7 @@ license = ["SPDX:GPL-3.0-or-later"]
 copyright = ["2026 Schmid Software Solutions"]
 
 [permissions]
-network = "Durty Cloth Tool on this computer and gta.clothing for sign-in"
+network = "Durty Cloth Tool here; gta.clothing to sign in and fit clothing"
 files = "Reads Durty Cloth Tool's endpoint file, writes temporary models"
 clipboard = "Copies the sign-in code and diagnostics"
 

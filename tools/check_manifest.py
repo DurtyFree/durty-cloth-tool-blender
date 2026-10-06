@@ -38,7 +38,7 @@ EXPECTED: Dict[str, Any] = {
     "blender_version_min": "4.2.0",
     "copyright": ["2026 Schmid Software Solutions"],
     "permissions": {
-        "network": "Durty Cloth Tool on this computer and gta.clothing for sign-in",
+        "network": "Durty Cloth Tool here; gta.clothing to sign in and fit clothing",
         "files": "Reads Durty Cloth Tool's endpoint file, writes temporary models",
         "clipboard": "Copies the sign-in code and diagnostics",
     },

@@ -356,9 +356,10 @@ EN: Dict[str, str] = {
         "errors before saving; warnings and notes are advice."
     ),
     "info.privacy": (
-        "Stays on this computer: your images, models and the pixels of the live preview. They go only to Durty "
-        "Cloth Tool. Goes to gta.clothing: your sign-in (with this computer's name unless you turn that off), a "
-        "confirmation for each connection, your sign-out and Blender's update checks."
+        "Stays on this computer: your images, models and the pixels of the live preview. They go only to Durty Cloth "
+        "Tool. Goes to gta.clothing: your sign-in (with this computer's name unless you turn that off), a confirmation "
+        "for each connection, your sign-out, Blender's update checks and, once you agreed, the shape of a garment you "
+        "fit there."
     ),
     # ---- operators ----------------------------------------------------------------------------------------
     "op.connect": "Connect",
@@ -1192,8 +1193,8 @@ EN: Dict[str, str] = {
     "add.finding.picture.too-small": "A colour variation is smaller than 16 pixels on a side.",
     "garment.next.align": "Next: Align to Body under Fit, so the garment sits on the freemode body.",
     "garment.next.weights": (
-        "Next: weight the garment to the freemode skeleton's bones (vertex groups named after them, such as "
-        "SKEL_Spine3). Then generate the LODs, which take the weights over."
+        "Next: Transfer Weights under Game Ready, or weight the garment to the freemode skeleton's bones yourself. "
+        "Then generate the LODs, which take the weights over."
     ),
     "garment.region.forearms": "Forearms",
     "garment.region.cuffs": "Cuffs",
@@ -1331,6 +1332,179 @@ EN: Dict[str, str] = {
         "The add was cancelled before anything was sent. Ctrl+Z undoes what it changed on the garment."
     ),
     "add.failed-undo": "{problem} Ctrl+Z puts the garment back as it was before the add.",
+    "garment.heading.service": "Fit on gta.clothing",
+    "garment.heading.weights": "Weights",
+    "garment.op.service-fit": "Fit to Body",
+    "garment.op.service-fit.desc": (
+        "Send the garment to gta.clothing, which puts it in the game's pose, gives it the freemode body's weights and "
+        "moves it out of the body. Uses one of today's fits"
+    ),
+    "garment.op.service-weights": "Transfer Weights",
+    "garment.op.service-weights.desc": (
+        "Send the garment to gta.clothing, which gives it the freemode body's weights without moving it. Uses one of "
+        "today's fits"
+    ),
+    "garment.op.service-cancel.desc": (
+        "Stop the fit. A fit gta.clothing has not started yet does not count against today's fits"
+    ),
+    "garment.info.service": (
+        "Fit to Body sends the garment as it sits after Align to Body to gta.clothing. It comes back in the game's "
+        "pose, with the freemode body's weights, and moved out of the body where it was inside. The garment keeps a "
+        "backup, so Back One Step puts it back. Each fit uses one of today's fits."
+    ),
+    "garment.info.weights": (
+        "Transfer Weights gives the garment the freemode body's weights as vertex groups named after the bones, "
+        "without moving it. Use it after the garment's shape changed, for example after sculpting or Prepare Garment. "
+        "It uses one of today's fits; you can also weight the garment yourself."
+    ),
+    "garment.prop.clearance": "Clearance (mm)",
+    "garment.prop.clearance.desc": "How far the garment stays outside the body where it is moved out",
+    "garment.prop.service-push": "Move Out of Body",
+    "garment.prop.service-push.desc": (
+        "Move every part of the garment that is inside the body, or too close to it, out to the clearance"
+    ),
+    "garment.prop.max-push": "Deepest Move (mm)",
+    "garment.prop.max-push.desc": "Parts deeper inside the body than this stay where they are",
+    "garment.prop.seam-gap": "Seam Gap (mm)",
+    "garment.prop.seam-gap.desc": (
+        "Panel edges closer than this count as one seam, so both sides get the same weights. 0 turns it off"
+    ),
+    "garment.prop.proportions": "Match Proportions",
+    "garment.prop.proportions.desc": (
+        "Also stretch the body's arms and legs to the garment's markers, for a garment made on another avatar"
+    ),
+    "fit.left": "Fits left today: {left} of {total}",
+    "fit.stage.uploading": "Sending the garment ({percent} %)",
+    "fit.stage.busy": "gta.clothing is busy. Trying again shortly",
+    "fit.stage.queued": "Waiting for gta.clothing",
+    "fit.stage.validating": "Checking the garment",
+    "fit.stage.welding": "Joining the seams",
+    "fit.stage.posing": "Matching the pose",
+    "fit.stage.transferring": "Taking the body's weights over",
+    "fit.stage.unposing": "Putting it in the game's pose",
+    "fit.stage.pushingout": "Moving it out of the body",
+    "fit.stage.weighting": "Finishing the weights",
+    "fit.stage.running": "Fitting",
+    "fit.stage.cancelling": "Cancelling",
+    "fit.consent.title": "Upload for Fitting",
+    "fit.consent.what": (
+        "Fit to Body and Transfer Weights send the garment's shape to gta.clothing: its vertex positions and "
+        "triangles, its markers, and the gender, slot and category. No textures, materials, names or files."
+    ),
+    "fit.consent.kept": (
+        "gta.clothing fits it and sends it back. Nothing is kept: the result is deleted after ten minutes at the "
+        "latest."
+    ),
+    "fit.consent.revoke": "You agree once. To withdraw, turn off Upload Garments for Fitting under Settings > Privacy.",
+    "fit.consent.confirm": "Upload and Fit",
+    "prop.fit-consent": "Upload Garments for Fitting",
+    "prop.fit-consent.desc": (
+        "Fit to Body and Transfer Weights may send the garment's shape to gta.clothing. Turn it off to withdraw; the "
+        "add-on then asks again before it sends anything"
+    ),
+    "settings.fit-consent-subtext": (
+        "Only the garment's shape goes to gta.clothing, when you choose Fit to Body or Transfer Weights, and nothing "
+        "is kept there."
+    ),
+    "fit.why.running": "A fit is running. Wait for it or cancel it.",
+    "fit.why.hosted-body": "Fitting needs the freemode body from gta.clothing: Add Freemode Body under Setup.",
+    "fit.why.sign-in": "Sign in with gta.clothing first (Get Connected).",
+    "fit.why.no-fits": "No fits left today. More are available {wait}.",
+    "fit.error.update": "gta.clothing could not read what the add-on sent. Update the add-on and try again.",
+    "fit.error.plugin-update": (
+        "Update the add-on to fit garments: Edit > Preferences > Get Extensions > Check for Updates."
+    ),
+    "fit.error.signed-out": "Your gta.clothing sign-in has ended. Sign in again under Get Connected, then try again.",
+    "fit.error.locked": "This gta.clothing account is locked and cannot fit garments.",
+    "fit.error.not-entitled": "Your gta.clothing account cannot fit garments. Check your account on gta.clothing.",
+    "fit.error.switched-off": (
+        "Garment fitting is switched off on gta.clothing at the moment. The tools in Blender still work."
+    ),
+    "fit.error.unavailable": "Garment fitting on gta.clothing is not available just now. Try again in a minute.",
+    "fit.error.not-found": "gta.clothing no longer has this fit (a fit waits ten minutes for the add-on). Fit again.",
+    "fit.error.body-version": (
+        "gta.clothing fits to a newer freemode body. Add Freemode Body under Setup again, align the garment to it and "
+        "fit again."
+    ),
+    "fit.error.too-large": (
+        "The garment is too detailed to fit: at most 120,000 vertices and 240,000 triangles. Reduce it, for example "
+        "with a Decimate modifier."
+    ),
+    "fit.error.mesh-invalid": "gta.clothing could not fit this garment:",
+    "fit.error.quota": "You have used all of today's fits. More are available {wait}.",
+    "fit.error.busy": "gta.clothing stayed busy for a few minutes. Try again later.",
+    "fit.error.rate-limited": "Too many requests to gta.clothing in a short time. Wait a minute and try again.",
+    "fit.error.server": "Something went wrong on gta.clothing while fitting. Try again.",
+    "fit.error.timeout": "The fit took longer than gta.clothing allows. Reduce the garment's detail and try again.",
+    "fit.error.network": "gta.clothing could not be reached. Check the internet connection and try again.",
+    "fit.error.network-uploaded": (
+        "The connection broke after the garment was sent. Fits left today shows whether the fit counted. Try again."
+    ),
+    "fit.error.cancelled": "The fit was cancelled.",
+    "fit.error.other": "gta.clothing refused the fit ({code}).",
+    "fit.wait.minutes": "in about {count} minutes",
+    "fit.wait.hours": "in about {count} hours",
+    "fit.wait.later": "tomorrow",
+    "fit.refunded": "This fit does not count against today's fits.",
+    "fit.counted": "This fit counts against today's fits.",
+    "fit.input.add-on": "The add-on sent something gta.clothing does not accept. Update the add-on.",
+    "fit.input.slot": "Only clothing worn on the body can be fitted.",
+    "fit.input.options": "A fitting option is out of its range. Check the options of Fit to Body.",
+    "fit.input.too-large": (
+        "The garment has {vertices} vertices and {triangles} triangles; fitting takes at most 120,000 and 240,000. "
+        "Reduce it, for example with a Decimate modifier."
+    ),
+    "fit.input.broken": "Some vertices of the garment have broken positions. Remove them or import the garment again.",
+    "fit.input.far": "Part of the garment lies more than 3 m from the body. Remove stray parts, then align it again.",
+    "fit.input.degenerate": "The garment has faces without area. Merge by Distance in Edit Mode removes them.",
+    "fit.input.duplicate": (
+        "The garment has faces stacked on top of each other. Merge by Distance in Edit Mode removes the copies."
+    ),
+    "fit.input.seam-dense": (
+        "Many loose edges crowd one spot of the garment. Remove loose parts there (Select Loose in Edit Mode), or set "
+        "Seam Gap to 0 in the options of Fit to Body."
+    ),
+    "fit.input.marker-far": (
+        "A marker sits far from the body's joint. Check the markers, align the garment again and fit."
+    ),
+    "fit.input.marker-missing": "Markers are missing. Place them with Auto Markers, align the garment and fit again.",
+    "fit.input.marker-side": "The left and right markers are swapped. Move each marker to its own side and fit again.",
+    "fit.input.marker-length": (
+        "The elbow, wrist, knee or ankle markers are not where the joints of an arm or leg can be. Move them onto the "
+        "garment's joints."
+    ),
+    "fit.input.gender": "The garment's gender does not match the body. Choose the right gender under Setup.",
+    "fit.input.other": "gta.clothing found a problem with the garment ({code}).",
+    "fit.warning.inside-body": (
+        "Parts of the garment are still inside the body. Push Out of Body under Fix moves them out."
+    ),
+    "fit.warning.low-coverage": (
+        "Only part of the garment lies on the body. Parts far from it may move oddly in the game."
+    ),
+    "fit.warning.marker-offset": "Some markers sit away from the body's joints. Check the shoulder and elbow markers.",
+    "fit.warning.proportion-clamped": (
+        "The garment's proportions are far from the freemode body's; some were kept within range."
+    ),
+    "fit.warning.shape-strained": (
+        "Some areas stretched while the garment was posed. Show Problems under Fix finds them."
+    ),
+    "fit.warning.attachment-fallback": (
+        "Loose parts were weighted to the nearest part of the body. Check them in Weight Paint mode."
+    ),
+    "fit.warning.unweighted": "Some vertices got no weights; the game leaves them behind when the character moves.",
+    "fit.done.fit": "Fitted to the body: in the game's pose, with weights for {bones} bones.",
+    "fit.done.review": "Fitted to the body, with weights for {bones} bones. Check what gta.clothing noticed:",
+    "fit.done.weights": "Weights transferred: {bones} bones.",
+    "fit.done.not-on-body": "The garment does not lie on the body, so nothing changed. Align it to the body first.",
+    "fit.done.unweighted": "{count} vertices got no weights.",
+    "fit.changed": "The garment changed while it was being fitted, so the result was not applied. Fit again.",
+    "garment.next.fit": "Next: Fit to Body under Fit, or run the fit check under Fix and fit the garment by hand.",
+    "garment.check.reference": "Usual",
+    "garment.check.reference-none": "–",
+    "garment.check.reference-subtext": (
+        "Usual: how far game clothing of this kind sits from the body, from gta.clothing."
+    ),
+    "garment.check.reference-offline": "Sign in and allow online access to compare with game clothing.",
 }
 
 

@@ -1023,7 +1023,9 @@ class ItemAddRequest(Request):
     ``timeout`` when a withdrawn add got no answer in time.
 
     When it times out, the session first withdraws the add (``item.addCancel``) and waits a short grace for DCT's
-    answer, exactly as :meth:`cancel` does."""
+    answer, exactly as :meth:`cancel` does. When DCT answers a withdrawn add after the grace, on the same
+    connection, the session emits ``item-add-late(request, ItemAddResult)``: the user may have chosen Add just as
+    the withdrawal arrived, so a host keeps listening for that event rather than for the request."""
 
     def __init__(self, session: "LinkSession", request_id: str, message_type: str, timeout: Optional[float]) -> None:
         super().__init__(session, request_id, message_type, timeout)
@@ -1111,6 +1113,13 @@ _MAX_RETRY_AFTER = 300.0
 _SLOT_HOLD_SECONDS = 120.0
 #: How many answered DCT requests a connection remembers, so a second answer to one of them is not sent.
 _MAX_ANSWERED_HOST_REQUESTS = 256
+#: How many withdrawn adds that got no answer in time a connection remembers, so a late answer is still reported.
+_MAX_LATE_ADDS = 8
+#: When the host's thread has not polled for this long (a long bake in Blender), a background thread keeps the
+#: connection alive: it answers DCT's keep-alive pings and reads what arrives, looking every
+#: ``_KEEPALIVE_PUMP_SECONDS``. DCT drops a connection that leaves its ping unanswered for 30 seconds.
+_KEEPALIVE_IDLE_SECONDS = 2.0
+_KEEPALIVE_PUMP_SECONDS = 1.0
 #: When DCT answers ``auth`` with ``busy`` the connection stays; the session sends a fresh assertion after these
 #: waits, one after another.
 _AUTH_BUSY_WAITS = (2.0, 4.0, 8.0, 15.0)
@@ -1164,8 +1173,13 @@ class LinkSession:
     again), ``dct-signed-out()`` (DCT itself is signed out; the session keeps trying, waiting 30 seconds and then
     longer, up to about five minutes, and connects once DCT is signed in again, or at once after :meth:`start`),
     ``dct-disconnected()`` (the user disconnected this app in DCT, said over a connection DCT had welcomed; the
-    session stopped and connects again only after :meth:`start`), ``error(LinkError)``,
-    ``disconnected(code, reason)``.
+    session stopped and connects again only after :meth:`start`), ``item-add-late(request, ItemAddResult)`` (DCT
+    answered a withdrawn :meth:`add_item` after the request had failed for want of an answer, on the same
+    connection: the cloth may have been added after all), ``error(LinkError)``, ``disconnected(code, reason)``.
+
+    ``keepalive_thread`` (polling mode only): when the host's thread does not poll for a while, a daemon thread
+    answers DCT's keep-alive pings and reads what arrives, so a long block of the host's thread (a bake) does not
+    drop a healthy connection. It never runs a callback: everything it read is delivered by the next :meth:`poll`.
     """
 
     def __init__(
@@ -1184,6 +1198,7 @@ class LinkSession:
         handshake_timeout: float = 15.0,
         max_auth_refusals: int = 3,
         token_threads: bool = True,
+        keepalive_thread: bool = True,
         clock: Callable[[], float] = time.monotonic,
         ws_options: Optional[Dict[str, Any]] = None,
         logger: Optional[logging.Logger] = None,
@@ -1201,6 +1216,7 @@ class LinkSession:
         self.handshake_timeout = handshake_timeout
         self.max_auth_refusals = max_auth_refusals
         self.token_threads = token_threads
+        self.keepalive_thread = keepalive_thread
         self._dispatcher = dispatch
         self._clock = clock
         self._ws_options = dict(ws_options or {})
@@ -1211,6 +1227,9 @@ class LinkSession:
         self._calls: List[Tuple[Callable[..., Any], Tuple[Any, ...]]] = []
         self._thread: Optional[threading.Thread] = None
         self._stop_thread = threading.Event()
+        self._pump: Optional[threading.Thread] = None
+        self._stop_pump = threading.Event()
+        self._last_poll = clock()
 
         self.state = IDLE
         self.welcome: Optional[Dict[str, Any]] = None
@@ -1260,6 +1279,8 @@ class LinkSession:
         self._signed_out_tries = 0  # dct-signed-out answers in a row (for the growing wait)
         # DCT requests answered with host.result on one connection (its epoch), oldest first.
         self._answered_host_requests: Tuple[int, "collections.OrderedDict[str, None]"] = (-1, collections.OrderedDict())
+        # Withdrawn adds that failed for want of an answer on this connection, oldest first (item-add-late).
+        self._late_adds: "collections.OrderedDict[str, ItemAddRequest]" = collections.OrderedDict()
 
     # ---- events and host calls ---------------------------------------------------------------------
 
@@ -1346,7 +1367,37 @@ class LinkSession:
                 self._signed_out_tries = 0
                 self._dct_signed_out = False  # a fresh start tells the host again when DCT is still signed out
                 self._begin_connect()
+            self._start_pump()
         self._run_calls()
+
+    def _start_pump(self) -> None:
+        """Starts the keep-alive thread (polling mode, see the class text) unless it runs. Under the lock."""
+        if not self.keepalive_thread or (self._pump is not None and self._pump.is_alive()):
+            return
+        self._stop_pump = threading.Event()
+        self._pump = threading.Thread(target=self._pump_loop, args=(self._stop_pump,), name="dct-link-keepalive",
+                                      daemon=True)
+        self._pump.start()
+
+    def _pump_loop(self, stop: threading.Event) -> None:
+        """Keeps the connection alive while the host's thread does not poll (see the class text). It only touches the
+        socket of the current connection, under that socket's own lock, never the session's state."""
+        while not stop.wait(_KEEPALIVE_PUMP_SECONDS):
+            if self._thread is not None or self._clock() - self._last_poll < _KEEPALIVE_IDLE_SECONDS:
+                continue  # a session thread drives the session, or the host polls
+            ws = self._ws
+            if ws is None:
+                continue
+            try:
+                ws.service()
+            except Exception:  # never let the helper die; the next poll reports what is wrong with the socket
+                self._log.debug("the keep-alive thread could not service the connection", exc_info=True)
+
+    def _stop_pump_thread(self) -> None:
+        self._stop_pump.set()
+        pump, self._pump = self._pump, None
+        if pump is not None and pump is not threading.current_thread():
+            pump.join(2.0)
 
     def stop(self) -> None:
         """Says ``bye`` and closes. Pending requests fail with ``disconnected``."""
@@ -1380,6 +1431,7 @@ class LinkSession:
             self.stop_thread()
         else:
             self.stop()
+        self._stop_pump_thread()
         with self._lock:
             closing, self._closing = self._closing, []
         for ws in closing:
@@ -1463,6 +1515,7 @@ class LinkSession:
     def poll(self, budget: int = 1 << 20) -> None:
         """Does a bounded amount of work: connection progress, I/O, sign-in steps, live frames, timeouts and
         callbacks. Host code (callbacks, pixel sources, token sources) runs outside the session's lock."""
+        self._last_poll = self._clock()
         with self._lock:
             try:
                 self._step_io(budget)
@@ -1595,6 +1648,7 @@ class LinkSession:
         for request in list(self._pending.values()):
             self._finish_request(request, error=LinkError("disconnected", reason))
         self._pending.clear()
+        self._late_adds.clear()  # a later connection cannot answer them
         self._service_queue.clear()
         self._service_in_flight.clear()
         self._slot_release_at.clear()
@@ -2084,6 +2138,11 @@ class LinkSession:
         re_id = message.get("re")
         if re_id:
             self._release_slot(re_id)
+        if re_id and kind in ("item.addResult", "error") and re_id in self._late_adds:
+            late = self._late_adds.pop(re_id)
+            result = ItemAddResult(False, message["code"], None, []) if kind == "error" else _item_add_answer(message)
+            self._emit("item-add-late", late, result)
+            return
         request = self._pending.get(re_id) if re_id else None
         if kind == "error":
             if request is not None:
@@ -2312,6 +2371,10 @@ class LinkSession:
                     self._pending.pop(request.id, None)
                     self._finish_request(request, error=LinkError(
                         request._withdrawn, "DCT did not answer the withdrawn item.add"))
+                    # DCT may still answer it (the user chose Add as the withdrawal arrived): report that answer.
+                    self._late_adds[request.id] = request
+                    while len(self._late_adds) > _MAX_LATE_ADDS:
+                        self._late_adds.popitem(last=False)
                 continue
             self._pending.pop(request.id, None)
             if request.id in self._service_in_flight:
@@ -2450,7 +2513,8 @@ class LinkSession:
         Resolves with an :class:`ItemAddResult`, whatever DCT decided (also when DCT answered with an error such as
         ``busy`` or ``rate-limited``). Fails with :class:`LinkError` only when no answer came: ``disconnected``, or
         ``timeout`` / ``cancelled`` when the withdrawn add (see :meth:`ItemAddRequest.cancel`; a timeout withdraws
-        it too) got no answer within 10 seconds. It does not take a service slot. Callable from any thread."""
+        it too) got no answer within 10 seconds; DCT's answer after that arrives as the ``item-add-late`` event. It
+        does not take a service slot. Callable from any thread."""
         header, files_out, size = _prepare_item(drawable_type, gender, skin, name, variations, files)
         with self._lock:
             request = self._register("item.add", timeout, ItemAddRequest)

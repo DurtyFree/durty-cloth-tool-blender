@@ -27,8 +27,9 @@ import time
 import traceback
 from typing import Any, Callable, Deque, Dict, List, NamedTuple, Optional, Protocol, Set
 
-from . import bundle, garment_add, settings
+from . import bundle, garment_add, garment_fit, settings
 from .dct_link import auth, protocol, tokens
+from .dct_link import fit as dct_fit
 from .dct_link.session import (
     AUTHENTICATING,
     HELLO,
@@ -1071,16 +1072,14 @@ class ItemAdd:
     shows the cloth in a dialog of its own and adds nothing unless the user chooses Add there; until then the add-on
     can withdraw it (``item.addCancel``).
 
-    The add-on keeps its own clock: after :attr:`TIMEOUT` it withdraws the add, and :attr:`GRACE` after a withdrawal
-    without an answer it stops showing the add as running. The request keeps listening all the same (dct_link would
-    drop an answer that comes later), so when DCT added the cloth after all (the user chose Add just before the
-    withdrawal arrived, and the import took a while), the add-on still links it and says so."""
+    dct_link withdraws an add DCT asked about for :attr:`TIMEOUT` by itself, and fails a withdrawn add that got no
+    answer within its grace. When DCT answers such an add later after all (the user chose Add just before the
+    withdrawal arrived, and the import took a while), dct_link reports it as ``item-add-late``: the add-on then still
+    links the cloth and says so."""
 
-    #: How long DCT may ask the user before the add-on withdraws the add (seconds).
+    #: How long DCT may ask the user before the add is withdrawn (seconds).
     TIMEOUT = 900.0
-    #: How long a withdrawn add waits for DCT's answer before the panel stops showing it as running (seconds).
-    GRACE = 10.0
-    #: Withdrawn adds the panel no longer shows, at most this many (the oldest go).
+    #: Withdrawn adds without an answer the add-on still listens for, at most this many (the oldest go).
     MAX_LATE = 4
 
     def __init__(self, controller: "LinkController") -> None:
@@ -1093,12 +1092,8 @@ class ItemAdd:
         self.added: Optional[Dict[str, Any]] = None
         self._plan: Optional[Dict[str, Any]] = None
         self._on_added: Optional[Callable[[Dict[str, str]], None]] = None
-        self._started = 0.0
-        self._withdrawn_at: Optional[float] = None
-        self._reason = "cancelled"
-        #: Adds that ended without an answer and may still be answered: ``(request, plan, on_added, reason)``.
+        #: Withdrawn adds that ended without an answer and may still be answered: ``(request, plan, on_added)``.
         self._late: List[Any] = []
-        self.clock: Callable[[], float] = time.monotonic
 
     @property
     def adding(self) -> bool:
@@ -1106,7 +1101,7 @@ class ItemAdd:
 
     @property
     def withdrawing(self) -> bool:
-        return self.adding and self._withdrawn_at is not None
+        return self.adding and bool(getattr(self.request, "withdrawn", False))
 
     def problem(self) -> Optional[Msg]:
         """Why an add cannot start now (the link, DCT's project, one add at a time), or ``None``."""
@@ -1127,15 +1122,12 @@ class ItemAdd:
         if problem is not None:
             raise UserError(problem)
         try:
-            # No deadline in dct_link: the add-on times the add itself (tick), so a late answer is never dropped.
-            request = session.add_item(drawable_type, gender, skin, name, variations, files, timeout=None)
+            request = session.add_item(drawable_type, gender, skin, name, variations, files, timeout=self.TIMEOUT)
         except ValueError as exc:
             raise UserError(msg("add.invalid", detail=str(exc))) from exc
         self.request = request
         self._plan = {"name": name, "slot": drawable_type, "gender": gender}
         self._on_added = on_added
-        self._started = self.clock()
-        self._withdrawn_at = None
         self.findings = []
         self.added = None
         self.status = Notice("INFO", msg("add.waiting"))
@@ -1143,95 +1135,72 @@ class ItemAdd:
         self.controller.touch()
         return request
 
-    def cancel(self, reason: str = "cancelled") -> bool:
+    def cancel(self) -> bool:
         """Withdraws the add while DCT's dialog is open. DCT answers it as refused, unless the user chose Add at that
         moment (then the cloth is added after all, and the panel says so, also when the answer comes late)."""
         request = self.request
-        if request is None or request.done or self._withdrawn_at is not None:
+        if request is None or request.done:
             return False
         sent = bool(request.cancel())  # type: ignore[attr-defined]
         if sent:
-            # dct_link gives a withdrawn add ten seconds; keep listening instead (see the class text).
-            request.deadline = float("inf")
-            self._withdrawn_at = self.clock()
-            self._reason = reason
             self.status = Notice("INFO", msg("add.withdrawing"))
             self.controller.touch()
         return sent
 
-    def tick(self, now: Optional[float] = None) -> None:
-        """Withdraws an add DCT asked about for too long, and stops showing a withdrawn add that got no answer."""
-        if not self.adding:
-            return
-        now = self.clock() if now is None else now
-        if self._withdrawn_at is None:
-            if now - self._started > self.TIMEOUT:
-                self.cancel("timeout")
-            return
-        if now - self._withdrawn_at > self.GRACE:
-            request = self.request
-            self._late.append((request, self._plan or {}, self._on_added, self._reason))
-            del self._late[:-self.MAX_LATE]
-            self.request = None
-            self._on_added = None
-            self.status = Notice(*garment_add.failure_message(self._reason))
-            self.findings = []
-            self.controller.touch()
-
-    def _late_answer(self, request: Request) -> None:
-        """An add the panel gave up on was answered after all."""
-        entry = next((e for e in self._late if e[0] is request), None)
-        if entry is None:
-            return
-        self._late.remove(entry)
-        _, plan, on_added, _reason = entry
-        if request.error is not None or not getattr(request.result(), "ok", False):
-            if request.error is None and self.request is None:
-                self.status = Notice("INFO", msg("add.result.withdrawn"))  # the withdrawal is confirmed now
-                self.controller.touch()
-            return
-        result = request.result()
-        binding = dict(result.binding or {})
+    def _link(self, plan: Dict[str, Any], on_added: Optional[Callable[[Dict[str, str]], None]],
+              binding: Dict[str, str], late: bool) -> None:
+        name = plan.get("name") or ""
         self.added = {"name": plan.get("name"), "slot": plan.get("slot"), "binding": binding}
-        self.findings = garment_add.sorted_findings(result.findings)
-        self.status = Notice("WARNING", msg("add.result.added-late", name=plan.get("name") or ""))
+        if late:
+            self.status = Notice("WARNING", msg("add.result.added-late", name=name))
+        else:
+            self.status = Notice("INFO", msg("add.result.added", name=name,
+                                             slot=msg(f"garment.slot.{plan.get('slot')}")
+                                             if plan.get("slot") in garment_add.SLOTS else plan.get("slot") or ""))
         if on_added is not None:
             try:
                 on_added(binding)
             except Exception as exc:  # noqa: BLE001 - the cloth is added; only the link in Blender failed
                 traceback.print_exc()
-                self.status = Notice("WARNING", msg("add.result.added-unlinked", name=plan.get("name") or "",
+                self.status = Notice("WARNING", msg("add.result.added-unlinked", name=name,
                                                     detail=f"{type(exc).__name__}: {exc}"))
+
+    def on_late(self, request: Request, result: Any) -> None:
+        """dct_link's ``item-add-late``: DCT answered a withdrawn add after it had failed for want of an answer."""
+        entry = next((e for e in self._late if e[0] is request), None)
+        if entry is None:
+            return
+        self._late.remove(entry)
+        _, plan, on_added = entry
+        if not getattr(result, "ok", False):
+            if not self.adding:
+                self.status = Notice("INFO", msg("add.result.withdrawn"))  # the withdrawal is confirmed now
+                self.controller.touch()
+            return
+        self.findings = garment_add.sorted_findings(result.findings)
+        self._link(plan, on_added, dict(result.binding or {}), late=True)
         self.controller.touch()
 
     def _on_done(self, request: Request) -> None:
         if request is not self.request:
-            self._late_answer(request)
             return
-        withdrawn = self._withdrawn_at is not None
+        withdrawn = bool(getattr(request, "withdrawn", False))
         plan = self._plan or {}
         on_added, self._on_added = self._on_added, None
         if request.error is not None:
-            self.controller._remember_error(request.error.code)
-            self.status = Notice(*garment_add.failure_message(request.error.code))
+            code = request.error.code
+            self.controller._remember_error(code)
+            if withdrawn and code in ("cancelled", "timeout"):
+                self._late.append((request, plan, on_added))  # DCT may still answer it (item-add-late)
+                del self._late[:-self.MAX_LATE]
+            self.status = Notice(*garment_add.failure_message(code))
             self.findings = []
             self.controller.touch()
             return
         result = request.result()
         self.findings = garment_add.sorted_findings(result.findings)
         if result.ok:
-            binding = dict(result.binding or {})
-            self.added = {"name": plan.get("name"), "slot": plan.get("slot"), "binding": binding}
-            self.status = Notice("INFO", msg("add.result.added", name=plan.get("name") or "",
-                                             slot=msg(f"garment.slot.{plan.get('slot')}")
-                                             if plan.get("slot") in garment_add.SLOTS else plan.get("slot") or ""))
-            if on_added is not None:
-                try:
-                    on_added(binding)
-                except Exception as exc:  # noqa: BLE001 - the cloth is added; only the link in Blender failed
-                    traceback.print_exc()
-                    self.status = Notice("WARNING", msg("add.result.added-unlinked", name=plan.get("name") or "",
-                                                        detail=f"{type(exc).__name__}: {exc}"))
+            self._link(plan, on_added, dict(result.binding or {}), late=False)
         else:
             self.controller._remember_error(result.code)
             self.status = Notice(*garment_add.result_message(result.code, withdrawn=withdrawn))
@@ -1473,6 +1442,9 @@ class LinkController:
         self.model = ModelPush(self)
         self.skeletons = SkeletonTemplates(self)
         self.item_add = ItemAdd(self)
+        #: Fit to Body and Transfer Weights on gta.clothing, the fits left today and the fit check's usual ranges.
+        self.fitting = garment_fit.FitService(self._fit_client, ready=self._fit_ready)
+        self._fit_api: Optional[dct_fit.FitClient] = None
 
     # ---- set-up --------------------------------------------------------------------------------------
 
@@ -1506,6 +1478,18 @@ class LinkController:
         self.data_dir = folder
         self._remove_stale_model_files()
         self.refresh_account()
+
+    def _fit_client(self) -> dct_fit.FitClient:
+        """The fitting routes for the signed-in account (made once the add-on's folder and sign-in are set up)."""
+        self._ensure_setup()
+        assert self.link_auth is not None
+        if self._fit_api is None or self._fit_api.auth is not self.link_auth:
+            self._fit_api = dct_fit.FitClient(self.link_auth)
+        return self._fit_api
+
+    def _fit_ready(self) -> bool:
+        """Whether gta.clothing may be asked about fitting now: online access on and somebody signed in."""
+        return bool(self.online()) and self.link_auth is not None and self.user_name is not None and not self.signed_out
 
     def prepare(self) -> None:
         """Creates the add-on's folder and reads the stored sign-in (for the panels)."""
@@ -1550,6 +1534,7 @@ class LinkController:
                 ("live-error", self.stream.on_live_error),
                 ("model-applied", self.model.on_applied),
                 ("model-closed", self.model.on_closed),
+                ("item-add-late", self.item_add.on_late),
                 ("open-texture", self._on_open_texture),
                 ("open-model", self._on_open_model),
                 ("incompatible", self._on_incompatible),
@@ -1595,6 +1580,7 @@ class LinkController:
         self._browser_fallback_at = None
         self._model_import = None
         self._keep_texture = None
+        self.fitting.forget()  # a running fit is cancelled on gta.clothing too
         self.release_model_files()
         self.session = None
         self.state = IDLE
@@ -1902,7 +1888,14 @@ class LinkController:
             traceback.print_exc()
             self.model.status = Notice("ERROR", msg("model.failed", detail=f"{type(exc).__name__}: {exc}"))
             self.touch()
-        self.item_add.tick()
+        try:
+            if self.fitting.tick(now):
+                self.touch()
+        except Exception as exc:  # noqa: BLE001 - show why the fit stopped, keep the link running
+            traceback.print_exc()
+            self.fitting.run = None
+            self.notice = Notice("ERROR", msg("notice.unexpected", detail=f"{type(exc).__name__}: {exc}"))
+            self.touch()
         working = self.stream.active or self.model.pushing or self._model_import is not None or self.item_add.adding
         waiting = (self._sign_in_task is not None or self._logout_task is not None or self.active_sign_in() is not None
                    or self._browser_fallback_at is not None)
@@ -1911,7 +1904,7 @@ class LinkController:
             return 0.02
         if state in (HELLO, SIGNING_IN, AUTHENTICATING):
             return 0.05
-        if state == READY or waiting:
+        if state == READY or waiting or self.fitting.busy:
             return 0.1
         return 0.25
 

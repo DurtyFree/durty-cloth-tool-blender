@@ -786,8 +786,8 @@ TEXT = {
         "Weiter: An Körper ausrichten unter Anpassen, damit das Kleidungsstück auf dem Freemode-Körper sitzt."
     ),
     "garment.next.weights": (
-        "Weiter: Gewichte das Kleidungsstück auf die Knochen des Freemode-Skeletts (Vertexgruppen mit ihren Namen, zum "
-        "Beispiel SKEL_Spine3). Erzeuge danach die LODs, die die Gewichte übernehmen."
+        "Weiter: Gewichte übertragen unter Spielfertig, oder gewichte das Kleidungsstück selbst auf die Knochen des "
+        "Freemode-Skeletts. Erzeuge danach die LODs, die die Gewichte übernehmen."
     ),
     "garment.region.forearms": "Unterarme",
     "garment.region.cuffs": "Bündchen",
@@ -942,4 +942,240 @@ TEXT = {
         "Kleidungsstück geändert hat."
     ),
     "add.failed-undo": "{problem} Strg+Z setzt das Kleidungsstück auf den Stand vor dem Hinzufügen zurück.",
+    # ---- garment fitting on gta.clothing ------------------------------------------------------------------
+    "garment.heading.service": "Anpassen mit gta.clothing",
+    "garment.heading.weights": "Gewichte",
+    "garment.op.service-fit": "An Körper anpassen",
+    "garment.op.service-fit.desc": (
+        "Schickt das Kleidungsstück an gta.clothing, das es in die Spielpose bringt, ihm die Gewichte des "
+        "Freemode-Körpers gibt und es aus dem Körper bewegt. Verbraucht eine deiner Anpassungen für heute"
+    ),
+    "garment.op.service-weights": "Gewichte übertragen",
+    "garment.op.service-weights.desc": (
+        "Schickt das Kleidungsstück an gta.clothing, das ihm die Gewichte des Freemode-Körpers gibt, ohne es zu "
+        "bewegen. Verbraucht eine deiner Anpassungen für heute"
+    ),
+    "garment.op.service-cancel.desc": (
+        "Bricht die Anpassung ab. Eine Anpassung, die gta.clothing noch nicht begonnen hat, zählt nicht für heute"
+    ),
+    "garment.info.service": (
+        "An Körper anpassen schickt das Kleidungsstück so, wie es nach An Körper ausrichten sitzt, an gta.clothing. Es "
+        "kommt in der Spielpose zurück, mit den Gewichten des Freemode-Körpers und dort aus dem Körper bewegt, wo es "
+        "darin lag. Das Kleidungsstück behält eine Sicherung, also stellt Einen Schritt zurück es wieder her. Jede "
+        "Anpassung verbraucht eine deiner Anpassungen für heute."
+    ),
+    "garment.info.weights": (
+        "Gewichte übertragen gibt dem Kleidungsstück die Gewichte des Freemode-Körpers als Vertexgruppen mit den Namen "
+        "der Knochen, ohne es zu bewegen. Nutze es, nachdem sich die Form geändert hat, zum Beispiel nach dem "
+        "Sculpting oder Kleidungsstück vorbereiten. Es verbraucht eine deiner Anpassungen für heute; du kannst das "
+        "Kleidungsstück auch selbst gewichten."
+    ),
+    "garment.prop.clearance": "Abstand (mm)",
+    "garment.prop.clearance.desc": "Wie weit das Kleidungsstück außerhalb des Körpers bleibt, wo es herausbewegt wird",
+    "garment.prop.service-push": "Aus dem Körper bewegen",
+    "garment.prop.service-push.desc": (
+        "Bewegt jeden Teil des Kleidungsstücks, der im Körper oder zu nah an ihm liegt, auf den Abstand heraus"
+    ),
+    "garment.prop.max-push": "Tiefste Bewegung (mm)",
+    "garment.prop.max-push.desc": "Teile, die tiefer im Körper liegen, bleiben, wo sie sind",
+    "garment.prop.seam-gap": "Nahtabstand (mm)",
+    "garment.prop.seam-gap.desc": (
+        "Schnittkanten, die näher beieinander liegen, zählen als eine Naht, damit beide Seiten dieselben Gewichte "
+        "bekommen. 0 schaltet das aus"
+    ),
+    "garment.prop.proportions": "Proportionen angleichen",
+    "garment.prop.proportions.desc": (
+        "Streckt auch Arme und Beine des Körpers zu den Markern des Kleidungsstücks, für ein Kleidungsstück, das auf "
+        "einem anderen Avatar entstand"
+    ),
+    "fit.left": "Anpassungen heute übrig: {left} von {total}",
+    "fit.stage.uploading": "Kleidungsstück wird gesendet ({percent} %)",
+    "fit.stage.busy": "gta.clothing ist beschäftigt. Gleich wird es erneut versucht",
+    "fit.stage.queued": "Warten auf gta.clothing",
+    "fit.stage.validating": "Kleidungsstück wird geprüft",
+    "fit.stage.welding": "Nähte werden verbunden",
+    "fit.stage.posing": "Pose wird angeglichen",
+    "fit.stage.transferring": "Gewichte des Körpers werden übernommen",
+    "fit.stage.unposing": "Es wird in die Spielpose gebracht",
+    "fit.stage.pushingout": "Es wird aus dem Körper bewegt",
+    "fit.stage.weighting": "Gewichte werden fertiggestellt",
+    "fit.stage.running": "Anpassen",
+    "fit.stage.cancelling": "Wird abgebrochen",
+    "fit.consent.title": "Zum Anpassen hochladen",
+    "fit.consent.what": (
+        "An Körper anpassen und Gewichte übertragen schicken die Form des Kleidungsstücks an gta.clothing: seine "
+        "Vertex-Positionen und Dreiecke, seine Marker sowie Geschlecht, Slot und Kategorie. Keine Texturen, "
+        "Materialien, Namen oder Dateien."
+    ),
+    "fit.consent.kept": (
+        "gta.clothing passt es an und schickt es zurück. Nichts wird aufbewahrt: Das Ergebnis wird spätestens nach "
+        "zehn Minuten gelöscht."
+    ),
+    "fit.consent.revoke": (
+        "Du stimmst einmal zu. Zum Widerrufen schalte Kleidung zum Anpassen hochladen unter Einstellungen > "
+        "Datenschutz aus."
+    ),
+    "fit.consent.confirm": "Hochladen und anpassen",
+    "prop.fit-consent": "Kleidung zum Anpassen hochladen",
+    "prop.fit-consent.desc": (
+        "An Körper anpassen und Gewichte übertragen dürfen die Form des Kleidungsstücks an gta.clothing schicken. "
+        "Schalte es aus, um zu widerrufen; das Add-on fragt dann vor dem nächsten Senden erneut"
+    ),
+    "settings.fit-consent-subtext": (
+        "Nur die Form des Kleidungsstücks geht an gta.clothing, wenn du An Körper anpassen oder Gewichte übertragen "
+        "wählst, und dort wird nichts aufbewahrt."
+    ),
+    "fit.why.running": "Eine Anpassung läuft. Warte auf sie oder brich sie ab.",
+    "fit.why.hosted-body": (
+        "Anpassen braucht den Freemode-Körper von gta.clothing: Freemode-Körper hinzufügen unter Einrichtung."
+    ),
+    "fit.why.sign-in": "Melde dich zuerst mit gta.clothing an (Verbinden).",
+    "fit.why.no-fits": "Für heute sind keine Anpassungen übrig. Neue gibt es {wait}.",
+    "fit.error.update": (
+        "gta.clothing konnte nicht lesen, was das Add-on gesendet hat. Aktualisiere das Add-on und versuche es erneut."
+    ),
+    "fit.error.plugin-update": (
+        "Aktualisiere das Add-on, um Kleidung anzupassen: Bearbeiten > Einstellungen > Erweiterungen holen > Nach "
+        "Updates suchen."
+    ),
+    "fit.error.signed-out": (
+        "Deine Anmeldung bei gta.clothing ist abgelaufen. Melde dich unter Verbinden erneut an und versuche es dann "
+        "noch einmal."
+    ),
+    "fit.error.locked": "Dieses gta.clothing-Konto ist gesperrt und kann keine Kleidung anpassen.",
+    "fit.error.not-entitled": (
+        "Dein gta.clothing-Konto kann keine Kleidung anpassen. Prüfe dein Konto auf gta.clothing."
+    ),
+    "fit.error.switched-off": (
+        "Das Anpassen ist auf gta.clothing gerade abgeschaltet. Die Werkzeuge in Blender funktionieren weiter."
+    ),
+    "fit.error.unavailable": (
+        "Das Anpassen auf gta.clothing ist gerade nicht verfügbar. Versuche es in einer Minute erneut."
+    ),
+    "fit.error.not-found": (
+        "gta.clothing hat diese Anpassung nicht mehr (eine Anpassung wartet zehn Minuten auf das Add-on). Passe erneut "
+        "an."
+    ),
+    "fit.error.body-version": (
+        "gta.clothing passt an einen neueren Freemode-Körper an. Wähle Freemode-Körper hinzufügen unter Einrichtung "
+        "erneut, richte das Kleidungsstück daran aus und passe erneut an."
+    ),
+    "fit.error.too-large": (
+        "Das Kleidungsstück ist zu detailliert zum Anpassen: höchstens 120.000 Vertices und 240.000 Dreiecke. "
+        "Reduziere es, zum Beispiel mit einem Decimate-Modifikator."
+    ),
+    "fit.error.mesh-invalid": "gta.clothing konnte dieses Kleidungsstück nicht anpassen:",
+    "fit.error.quota": "Du hast alle Anpassungen für heute verbraucht. Neue gibt es {wait}.",
+    "fit.error.busy": "gta.clothing war einige Minuten lang beschäftigt. Versuche es später erneut.",
+    "fit.error.rate-limited": (
+        "Zu viele Anfragen an gta.clothing in kurzer Zeit. Warte eine Minute und versuche es erneut."
+    ),
+    "fit.error.server": "Bei gta.clothing ist beim Anpassen etwas schiefgegangen. Versuche es erneut.",
+    "fit.error.timeout": (
+        "Die Anpassung dauerte länger, als gta.clothing erlaubt. Verringere die Details des Kleidungsstücks und "
+        "versuche es erneut."
+    ),
+    "fit.error.network": "gta.clothing ist nicht erreichbar. Prüfe die Internetverbindung und versuche es erneut.",
+    "fit.error.network-uploaded": (
+        "Die Verbindung brach ab, nachdem das Kleidungsstück gesendet war. Anpassungen heute übrig zeigt, ob die "
+        "Anpassung gezählt hat. Versuche es erneut."
+    ),
+    "fit.error.cancelled": "Die Anpassung wurde abgebrochen.",
+    "fit.error.other": "gta.clothing hat die Anpassung abgelehnt ({code}).",
+    "fit.wait.minutes": "in etwa {count} Minuten",
+    "fit.wait.hours": "in etwa {count} Stunden",
+    "fit.wait.later": "morgen",
+    "fit.refunded": "Diese Anpassung zählt nicht für heute.",
+    "fit.counted": "Diese Anpassung zählt für heute.",
+    "fit.input.add-on": "Das Add-on hat etwas gesendet, das gta.clothing nicht annimmt. Aktualisiere das Add-on.",
+    "fit.input.slot": "Nur Kleidung, die am Körper getragen wird, kann angepasst werden.",
+    "fit.input.options": (
+        "Eine Anpassungsoption liegt außerhalb ihres Bereichs. Prüfe die Optionen von An Körper anpassen."
+    ),
+    "fit.input.too-large": (
+        "Das Kleidungsstück hat {vertices} Vertices und {triangles} Dreiecke; Anpassen nimmt höchstens 120.000 und "
+        "240.000. Reduziere es, zum Beispiel mit einem Decimate-Modifikator."
+    ),
+    "fit.input.broken": (
+        "Einige Vertices des Kleidungsstücks haben kaputte Positionen. Entferne sie oder importiere das Kleidungsstück "
+        "erneut."
+    ),
+    "fit.input.far": (
+        "Ein Teil des Kleidungsstücks liegt mehr als 3 m vom Körper entfernt. Entferne verirrte Teile und richte es "
+        "dann erneut aus."
+    ),
+    "fit.input.degenerate": (
+        "Das Kleidungsstück hat Flächen ohne Fläche. Nach Abstand zusammenführen im Bearbeitungsmodus entfernt sie."
+    ),
+    "fit.input.duplicate": (
+        "Das Kleidungsstück hat übereinanderliegende doppelte Flächen. Nach Abstand zusammenführen im "
+        "Bearbeitungsmodus entfernt die Kopien."
+    ),
+    "fit.input.seam-dense": (
+        "Viele lose Kanten drängen sich an einer Stelle des Kleidungsstücks. Entferne dort lose Teile (im "
+        "Bearbeitungsmodus) oder setze Nahtabstand in den Optionen von An Körper anpassen auf 0."
+    ),
+    "fit.input.marker-far": (
+        "Ein Marker sitzt weit vom Gelenk des Körpers entfernt. Prüfe die Marker, richte das Kleidungsstück erneut aus "
+        "und passe an."
+    ),
+    "fit.input.marker-missing": (
+        "Es fehlen Marker. Setze sie mit Auto-Marker, richte das Kleidungsstück aus und passe erneut an."
+    ),
+    "fit.input.marker-side": (
+        "Die linken und rechten Marker sind vertauscht. Setze jeden Marker auf seine Seite und passe erneut an."
+    ),
+    "fit.input.marker-length": (
+        "Die Marker von Ellbogen, Handgelenk, Knie oder Knöchel liegen nicht dort, wo die Gelenke eines Arms oder "
+        "Beins sein können. Setze sie auf die Gelenke des Kleidungsstücks."
+    ),
+    "fit.input.gender": (
+        "Das Geschlecht des Kleidungsstücks passt nicht zum Körper. Wähle unter Einrichtung das richtige Geschlecht."
+    ),
+    "fit.input.other": "gta.clothing hat ein Problem mit dem Kleidungsstück gefunden ({code}).",
+    "fit.warning.inside-body": (
+        "Teile des Kleidungsstücks liegen noch im Körper. Aus dem Körper schieben unter Korrigieren bewegt sie heraus."
+    ),
+    "fit.warning.low-coverage": (
+        "Nur ein Teil des Kleidungsstücks liegt am Körper. Teile weit davon können sich im Spiel seltsam bewegen."
+    ),
+    "fit.warning.marker-offset": (
+        "Einige Marker sitzen neben den Gelenken des Körpers. Prüfe die Marker von Schultern und Ellbogen."
+    ),
+    "fit.warning.proportion-clamped": (
+        "Die Proportionen des Kleidungsstücks weichen stark vom Freemode-Körper ab; einige wurden begrenzt."
+    ),
+    "fit.warning.shape-strained": (
+        "Einige Bereiche wurden beim Posieren gedehnt. Probleme zeigen unter Korrigieren findet sie."
+    ),
+    "fit.warning.attachment-fallback": (
+        "Lose Teile wurden mit dem nächsten Teil des Körpers gewichtet. Prüfe sie im Weight-Paint-Modus."
+    ),
+    "fit.warning.unweighted": (
+        "Einige Vertices haben keine Gewichte bekommen; das Spiel lässt sie zurück, wenn sich die Figur bewegt."
+    ),
+    "fit.done.fit": "An den Körper angepasst: in der Spielpose, mit Gewichten für {bones} Knochen.",
+    "fit.done.review": (
+        "An den Körper angepasst, mit Gewichten für {bones} Knochen. Prüfe, was gta.clothing aufgefallen ist:"
+    ),
+    "fit.done.weights": "Gewichte übertragen: {bones} Knochen.",
+    "fit.done.not-on-body": (
+        "Das Kleidungsstück liegt nicht am Körper, also hat sich nichts geändert. Richte es zuerst am Körper aus."
+    ),
+    "fit.done.unweighted": "{count} Vertices haben keine Gewichte bekommen.",
+    "fit.changed": (
+        "Das Kleidungsstück hat sich während des Anpassens geändert, daher wurde das Ergebnis nicht übernommen. Passe "
+        "erneut an."
+    ),
+    "garment.next.fit": (
+        "Weiter: An Körper anpassen unter Anpassen, oder Passform prüfen unter Korrigieren und von Hand anpassen."
+    ),
+    "garment.check.reference": "Üblich",
+    "garment.check.reference-none": "–",
+    "garment.check.reference-subtext": (
+        "Üblich: wie weit Spielkleidung dieser Art vom Körper absteht, von gta.clothing."
+    ),
+    "garment.check.reference-offline": (
+        "Melde dich an und erlaube den Online-Zugriff, um mit Spielkleidung zu vergleichen."
+    ),
 }

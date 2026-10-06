@@ -213,6 +213,7 @@ class WebSocketClient:
         self._rbuf = bytearray()
         self._wbuf = memoryview(b"")
         self._wbuf_done: Optional[Callable[[], None]] = None
+        self._sent_later: List[Callable[[], None]] = []
         self._queue: Deque[_Outgoing] = collections.deque()
         self._control: Deque[bytes] = collections.deque()
         self._message_opcode: Optional[int] = None
@@ -352,11 +353,39 @@ class WebSocketClient:
         """Does a bounded amount of non-blocking work and returns the events it produced."""
         with self._lock:
             try:
+                self._run_sent_callbacks()
                 self._step(budget)
             except OSError as exc:
                 self._finish(CLOSE_ABNORMAL, f"socket error: {exc.strerror or exc}")
             events, self._events = self._events, []
             return events
+
+    def service(self, budget: int = _DEFAULT_BUDGET) -> None:
+        """Keeps an open connection alive while the thread that polls it is busy elsewhere (Blender's main thread
+        during a long bake): reads what arrived, answers pings, sends the keep-alive ping, and writes control
+        frames and the rest of a frame already started. It starts no new message and runs no ``on_sent``
+        callback, and the events it reads stay queued for the next :meth:`poll`, so the host still sees
+        everything on its own thread. Safe to call from another thread."""
+        with self._lock:
+            if self.state not in (self.OPEN, self.CLOSING):
+                return
+            try:
+                if self._queued_event_bytes() <= self.max_binary_bytes + self.max_text_bytes:
+                    self._flush(budget, control_only=True)
+                    if self.state != self.CLOSED and not self._drop_after_flush:
+                        self._read(budget)
+                if self.state == self.OPEN:
+                    self._keepalive(self._clock())
+                if self.state != self.CLOSED:
+                    self._flush(budget, control_only=True)
+                if self.state != self.CLOSED and self._drop_after_flush and not self._has_output():
+                    self._finish(self.close_code or CLOSE_ABNORMAL, self.close_reason)
+            except OSError as exc:
+                self._finish(CLOSE_ABNORMAL, f"socket error: {exc.strerror or exc}")
+
+    def _queued_event_bytes(self) -> int:
+        """What :meth:`service` read that no :meth:`poll` has taken yet (it stops reading past a bound)."""
+        return len(self._rbuf) + sum(len(event.data or b"") for event in self._events)
 
     def wait(self, timeout: Optional[float]) -> None:
         """Blocks until the socket is ready, another thread queued data, or ``timeout`` passes."""
@@ -523,13 +552,21 @@ class WebSocketClient:
             self._wbuf_done = message.on_sent
         return True
 
-    def _flush(self, budget: int) -> int:
-        """Writes up to ``budget`` bytes; returns how many were written."""
+    def _flush(self, budget: int, control_only: bool = False) -> int:
+        """Writes up to ``budget`` bytes; returns how many were written. ``control_only`` (:meth:`service`) finishes
+        the frame in progress but starts control frames only, and keeps a finished message's ``on_sent`` for the
+        next :meth:`poll`."""
         sock = self._sock
         written = 0
         while written < budget and sock is not None and self.state != self.CLOSED:
-            if not self._wbuf and not self._next_chunk():
-                return written
+            if not self._wbuf:
+                if control_only:
+                    if not self._control:
+                        return written
+                    self._wbuf = memoryview(self._control.popleft())
+                    self._wbuf_done = None
+                elif not self._next_chunk():
+                    return written
             try:
                 sent = sock.send(self._wbuf[: budget - written])
             except (BlockingIOError, InterruptedError):
@@ -538,8 +575,16 @@ class WebSocketClient:
             self._wbuf = self._wbuf[sent:]
             if not self._wbuf and self._wbuf_done is not None:
                 done, self._wbuf_done = self._wbuf_done, None
-                done()
+                if control_only:
+                    self._sent_later.append(done)
+                else:
+                    done()
         return written
+
+    def _run_sent_callbacks(self) -> None:
+        """The ``on_sent`` callbacks of messages :meth:`service` finished writing, on the polling thread."""
+        while self._sent_later:
+            self._sent_later.pop(0)()
 
     # ---- reading -----------------------------------------------------------------------------------
 

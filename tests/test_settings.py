@@ -41,6 +41,7 @@ GENERATED_FOLDERS = frozenset({"dist", "release", "release-notes", "__pycache__"
 GENERATED_DOCUMENTS = frozenset({"notes.md"})
 #: Words joined by slashes that are not paths (and element paths in the XML Sollumz reads and writes).
 NOT_PATHS = frozenset({"HTTP/1", "HTTP/1.1", "I/O", "application/json", "hello/challenge/auth", "GLB/glTF",
+                       "fit/jobs", "fit/status", "fit/cancel", "fit/reference",
                        "folder/model_file", "Skeleton/Bones", "Skeleton/Bones/Item"})
 #: Paths that exist somewhere else on purpose: the sculpt brush in Blender's bundled assets, and the files the tests
 #: write into temporary folders or refuse because they would leave their folder.
@@ -54,7 +55,7 @@ OUTSIDE_PATHS = frozenset({
 _NOT_REPOSITORY_PATHS = (re.compile(r"\b[a-z][a-z0-9+.-]*://[^\s\"'`<>]*", re.IGNORECASE),
                          re.compile(r"\b[A-Za-z]:[\\/][^\"'`\n]*"), re.compile(r"\brefs/[\w./-]+"),
                          re.compile(r"\buses:\s*\S+"),
-                         re.compile(r"\b(?:application|audio|font|image|model|text|video)/[a-z0-9.+-]+\b"))
+                         re.compile(r"\b(?:application|audio|font|image|model|multipart|text|video)/[a-z0-9.+-]+\b"))
 _PATH = re.compile(r"(?<![\w/:.\\%$@~-])[A-Za-z_.][\w.-]*(?:(?:/[\w.-]+)+/?|/(?=[\s\"'`),;]|$))", re.MULTILINE)
 #: A Markdown document or a Windows script (PowerShell, batch), named with or without its folder.
 _DOCUMENT = re.compile(r"[\w.-]+\.(?:md|ps[dm]?\d|bat)\b")
@@ -230,5 +231,5 @@ def test_the_checks_notice_foreign_names():
 
 def test_only_the_modules_the_add_on_uses_are_shipped():
     shipped = {p.name for p in VENDORED.iterdir() if p.is_file()}
-    assert shipped == {"__init__.py", "auth.py", "protocol.py", "session.py", "tokens.py", "ws.py", "LICENSE",
+    assert shipped == {"__init__.py", "auth.py", "fit.py", "protocol.py", "session.py", "tokens.py", "ws.py", "LICENSE",
                        "VENDORED.md"}

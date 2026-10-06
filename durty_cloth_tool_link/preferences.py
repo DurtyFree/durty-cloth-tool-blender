@@ -35,6 +35,12 @@ class DCTLINK_AddonPreferences(AddonPreferences):
         description=EN["prop.device-name.desc"],
         translation_context=CONTEXT,
     )
+    fit_upload_consent: BoolProperty(
+        name=EN["prop.fit-consent"],
+        default=False,
+        description=EN["prop.fit-consent.desc"],
+        translation_context=CONTEXT,
+    )
     auto_push_delay: FloatProperty(
         name=EN["prop.delay"],
         default=settings.AUTO_PUSH_DELAY_DEFAULT,

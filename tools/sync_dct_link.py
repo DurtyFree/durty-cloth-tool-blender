@@ -38,7 +38,7 @@ VENDOR_DIR = REPO_ROOT / "durty_cloth_tool_link" / "dct_link"
 RECORD_NAME = "VENDORED.md"
 PACKAGE_NAME = "dct_link"
 #: The modules the add-on imports; whatever they import from dct_link is added automatically.
-ROOT_MODULES = ("__init__", "protocol", "ws", "session", "auth", "tokens")
+ROOT_MODULES = ("__init__", "protocol", "ws", "session", "auth", "tokens", "fit")
 SPDX_MIT = "# SPDX-License-Identifier: MIT"
 #: Where a Durty Cloth Tool checkout usually sits: next to this repository.
 SIBLING_CHECKOUT = REPO_ROOT.parent / "durty-cloth-tool"

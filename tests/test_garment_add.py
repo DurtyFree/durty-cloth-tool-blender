@@ -18,6 +18,7 @@ import pytest
 
 from durty_cloth_tool_link import garment_add, link, strings
 from durty_cloth_tool_link.dct_link import protocol
+from durty_cloth_tool_link.dct_link import session as link_session
 from tests.support import synthetic
 from tests.support.fake_dct import ADDED_BINDING, FakeDct
 from tests.support.fake_link_api import FakeLinkApi
@@ -399,11 +400,11 @@ def test_an_add_needs_a_project_and_a_valid_request(tmp_path, dct, api):
 # ---- late answers, an older Durty Cloth Tool and a full-size skeleton ---------------------------------------------
 
 
-def test_a_cloth_added_after_the_cancel_is_still_linked(tmp_path, dct, api):
+def test_a_cloth_added_after_the_cancel_is_still_linked(tmp_path, dct, api, monkeypatch):
     # The user chose Add in Durty Cloth Tool a moment before the cancel arrived, and the import took longer than the
-    # add-on waits: the answer comes after the panel stopped showing the add.
+    # add-on waits: the answer comes after the panel stopped showing the add (dct_link reports it as item-add-late).
+    monkeypatch.setattr(link_session, "_ADD_CANCEL_GRACE_SECONDS", 0.2)
     ctrl = connected(tmp_path, dct, api)
-    ctrl.item_add.GRACE = 0.2
     files, variations = add_files()
     linked = []
     dct.hold_adds = True
@@ -422,10 +423,10 @@ def test_a_cloth_added_after_the_cancel_is_still_linked(tmp_path, dct, api):
     ctrl.disconnect()
 
 
-def test_an_add_left_waiting_too_long_is_withdrawn_and_a_late_answer_still_counts(tmp_path, dct, api):
+def test_an_add_left_waiting_too_long_is_withdrawn_and_a_late_answer_still_counts(tmp_path, dct, api, monkeypatch):
+    monkeypatch.setattr(link_session, "_ADD_CANCEL_GRACE_SECONDS", 0.2)
     ctrl = connected(tmp_path, dct, api)
     ctrl.item_add.TIMEOUT = 0.2
-    ctrl.item_add.GRACE = 0.2
     files, variations = add_files()
     linked = []
     dct.hold_adds = True
@@ -440,9 +441,9 @@ def test_an_add_left_waiting_too_long_is_withdrawn_and_a_late_answer_still_count
     ctrl.disconnect()
 
 
-def test_a_late_refusal_confirms_the_cancel(tmp_path, dct, api):
+def test_a_late_refusal_confirms_the_cancel(tmp_path, dct, api, monkeypatch):
+    monkeypatch.setattr(link_session, "_ADD_CANCEL_GRACE_SECONDS", 0.2)
     ctrl = connected(tmp_path, dct, api)
-    ctrl.item_add.GRACE = 0.2
     files, variations = add_files()
     dct.hold_adds = True
     dct.ignore_cancels = True

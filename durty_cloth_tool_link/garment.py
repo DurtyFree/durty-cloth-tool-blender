@@ -133,6 +133,8 @@ class FlowState(NamedTuple):
     source_pose: str = "a_pose"
     markers: int = 0
     aligned: bool = False
+    #: Fit to Body on gta.clothing put the garment on the body (with weights).
+    fitted: bool = False
     sculpting: bool = False
     checked: bool = False
     inside: int = 0
@@ -160,6 +162,8 @@ STEP_OPERATORS = {
     "garment.next.body": "dct_link.fit_add_body",
     "garment.next.markers": "dct_link.fit_auto_markers",
     "garment.next.align": "dct_link.fit_align",
+    "garment.next.fit": "dct_link.fit_service_fit",
+    "garment.next.weights": "dct_link.fit_service_weights",
     "garment.next.check": "dct_link.fit_check",
     "garment.next.push": "dct_link.fit_push_out",
     "garment.next.prepare": "dct_link.fit_prepare",
@@ -184,6 +188,8 @@ def next_step(state: FlowState) -> str:
             return "garment.next.markers"
         if markers_for(state.category) and not state.aligned:
             return "garment.next.align"
+        if not state.fitted and not state.checked:
+            return "garment.next.fit"
         if not state.checked:
             return "garment.next.check"
         if state.inside > 0:

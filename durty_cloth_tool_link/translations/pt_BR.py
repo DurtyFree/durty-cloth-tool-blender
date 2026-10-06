@@ -348,7 +348,8 @@ TEXT = {
     "info.privacy": (
         "Fica neste computador: suas imagens, modelos e os pixels da pré-visualização ao vivo. Eles vão só para o "
         "Durty Cloth Tool. Vai para o gta.clothing: o seu login (com o nome deste computador, a menos que você "
-        "desligue isso), uma confirmação por conexão, a sua saída e as verificações de atualização do Blender."
+        "desligue isso), uma confirmação por conexão, a sua saída, as verificações de atualização do Blender e, depois "
+        "que você concordar, a forma de uma roupa que você ajustar lá."
     ),
     "op.connect": "Conectar",
     "op.connect.desc": "Conectar ao Durty Cloth Tool neste computador",
