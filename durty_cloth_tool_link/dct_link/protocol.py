@@ -1819,7 +1819,8 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
     "host.openModel": _binary(
         TO_CLIENT,
-        {"binding": _BINDING, "name": _STR, "format": _STR, "files": _MODEL_FILES},
+        # lentSkeleton: true when DCT lent the ped's skeleton to a cloth stored without one (optional).
+        {"binding": _BINDING, "name": _STR, "format": _STR, "files": _MODEL_FILES, "lentSkeleton": _BOOL},
         _host_open_model,
     ),
     "item.thumbnail.data": _binary(
