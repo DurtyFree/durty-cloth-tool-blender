@@ -1102,7 +1102,7 @@ TEXT = {
         "туда, где их ждут материалы (или упакуйте их), затем объедините снова."
     ),
     "garment.done.step-cancelled": "{step}: отменено; одежда такая же, как до этого.",
-    "garment.step.status": "{step}: {stage} ({done} из {total}). Esc отменяет.",
+    "garment.step.status": "{step}: {stage} ({done} из {total}). Esc отменяет по окончании этого этапа.",
     "garment.stage.seams": "Поиск швов",
     "garment.stage.weld": "Соединение швов",
     "garment.stage.clean": "Очистка и триангуляция",

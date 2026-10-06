@@ -224,7 +224,8 @@ change sit in closed **Options** sections.
    (which keeps transparency, bakes normal, specular and emission maps, says when a texture file is missing, gives the
    side walls of a thick export the colour of the panel edge next to them, and warns when the layout would use little
    of the texture); both show their progress in the status bar,
-   the other garment tools wait for them, and **Esc** stops them and puts the garment back. Then the weights:
+   the other garment tools wait for them, and **Esc** stops them and puts the garment back (at the end of the stage
+   that is running: packing the UV layout and each bake finish first). Then the weights:
    **Transfer Weights** gets the freemode body's weights from gta.clothing for the garment as it is now (for example
    after sculpting), or weight it yourself. Then **Generate LODs** and **Validate**. Each finished step's button
    shows a tick (a garment of one material has nothing to combine, and Combine Materials says so instead).

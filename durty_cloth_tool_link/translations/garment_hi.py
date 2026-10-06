@@ -1057,7 +1057,7 @@ TEXT = {
         "रखें जहाँ मटीरियल उन्हें ढूँढते हैं (या उन्हें पैक करें), फिर दोबारा मिलाएँ।"
     ),
     "garment.done.step-cancelled": "{step} रद्द किया गया; कपड़ा पहले जैसा है।",
-    "garment.step.status": "{step}: {stage} ({total} में से {done})। Esc से रद्द करें।",
+    "garment.step.status": "{step}: {stage} ({total} में से {done})। Esc इस चरण के अंत में रद्द करता है।",
     "garment.stage.seams": "सीम ढूँढे जा रहे हैं",
     "garment.stage.weld": "सीम जोड़े जा रहे हैं",
     "garment.stage.clean": "सफ़ाई और ट्राएंगुलेशन",

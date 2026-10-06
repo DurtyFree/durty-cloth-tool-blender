@@ -1236,7 +1236,7 @@ TEXT = {
         "Bilddateien dorthin, wo die Materialien sie erwarten (oder packe sie), und fasse erneut zusammen."
     ),
     "garment.done.step-cancelled": "{step} wurde abgebrochen; das Kleidungsstück ist wie vorher.",
-    "garment.step.status": "{step}: {stage} ({done} von {total}). Esc bricht ab.",
+    "garment.step.status": "{step}: {stage} ({done} von {total}). Esc bricht am Ende dieses Schritts ab.",
     "garment.stage.seams": "Nähte werden gesucht",
     "garment.stage.weld": "Nähte werden verbunden",
     "garment.stage.clean": "Aufräumen und triangulieren",

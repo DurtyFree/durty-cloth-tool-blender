@@ -747,7 +747,7 @@ TEXT = {
     ),
     "garment.done.combine-missing": "已合并，但有 {count} 张纹理找不到，烘焙时没有它们的像素：{names}。请把图像文件放到材质期望的位置（或打包它们），然后重新合并。",
     "garment.done.step-cancelled": "{step}已取消；服装保持原样。",
-    "garment.step.status": "{step}：{stage}（第 {done} / {total} 步）。按 Esc 取消。",
+    "garment.step.status": "{step}：{stage}（第 {done} / {total} 步）。按 Esc 会在这一步结束时取消。",
     "garment.stage.seams": "正在查找接缝",
     "garment.stage.weld": "正在连接接缝",
     "garment.stage.clean": "正在清理并三角化",

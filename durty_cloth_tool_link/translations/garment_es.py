@@ -1164,7 +1164,7 @@ TEXT = {
         "de imagen donde los esperan los materiales (o empaquétalos) y vuelve a combinar."
     ),
     "garment.done.step-cancelled": "{step} se canceló; la prenda está como antes.",
-    "garment.step.status": "{step}: {stage} ({done} de {total}). Esc cancela.",
+    "garment.step.status": "{step}: {stage} ({done} de {total}). Esc cancela al terminar esta etapa.",
     "garment.stage.seams": "Buscando las costuras",
     "garment.stage.weld": "Uniendo las costuras",
     "garment.stage.clean": "Limpiando y triangulando",

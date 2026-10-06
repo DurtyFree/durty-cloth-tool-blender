@@ -976,7 +976,7 @@ TEXT = {
         "(أو احزمها)، ثم ادمج مرة أخرى."
     ),
     "garment.done.step-cancelled": "أُلغي {step}؛ قطعة الملابس كما كانت.",
-    "garment.step.status": "{step}: {stage} ({done} من {total}). يلغي Esc.",
+    "garment.step.status": "{step}: {stage} ({done} من {total}). يلغي Esc عند نهاية هذه المرحلة.",
     "garment.stage.seams": "البحث عن الخياطات",
     "garment.stage.weld": "وصل الخياطات",
     "garment.stage.clean": "التنظيف والتثليث",

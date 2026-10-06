@@ -2013,6 +2013,12 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
                 bpy.ops.uv.average_islands_scale()
             finally:
                 bpy.ops.object.mode_set(mode="OBJECT")
+    # Packing stays one stage that Esc cannot stop halfway (Esc acts when the stage ends, as after a bake). It is one
+    # Blender call, which runs at once from a script; started as from Blender's menu, it first opens its own options
+    # dialog, which an add-on cannot confirm. Packing in batches with Esc looked at between them needs the final scale
+    # before the first batch: at the scale one pack finds, four batches of islands (largest first, each packed around
+    # the locked ones before it) fill the square as well, but finding that scale is the whole work of the pack, and the
+    # scale of a quick bounding-box pack only lays the islands out as that pack does.
     yield "garment.stage.pack", 2, total
     deselect_all(layer, keep=obj)
     obj.select_set(True)

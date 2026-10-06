@@ -1217,7 +1217,7 @@ TEXT = {
         "fichiers d'image là où les matériaux les attendent (ou empaquetez-les), puis combinez à nouveau."
     ),
     "garment.done.step-cancelled": "{step} a été annulé ; le vêtement est comme avant.",
-    "garment.step.status": "{step} : {stage} ({done} sur {total}). Échap annule.",
+    "garment.step.status": "{step} : {stage} ({done} sur {total}). Échap annule à la fin de cette étape.",
     "garment.stage.seams": "Recherche des coutures",
     "garment.stage.weld": "Réunion des coutures",
     "garment.stage.clean": "Nettoyage et triangulation",

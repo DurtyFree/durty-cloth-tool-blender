@@ -1740,7 +1740,7 @@ EN: Dict[str, str] = {
         "files where the materials expect them (or pack them), then combine again."
     ),
     "garment.done.step-cancelled": "{step} was cancelled; the garment is as it was before.",
-    "garment.step.status": "{step}: {stage} ({done} of {total}). Esc cancels.",
+    "garment.step.status": "{step}: {stage} ({done} of {total}). Esc cancels at the end of this stage.",
     "garment.stage.seams": "Finding the seams",
     "garment.stage.weld": "Joining the seams",
     "garment.stage.clean": "Cleaning up and triangulating",
