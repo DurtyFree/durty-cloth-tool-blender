@@ -686,9 +686,9 @@ TEXT = {
         "de adicionar a roupa de novo."
     ),
     "add.result.item-limit": (
-        "O Durty Cloth Tool não adicionou a roupa: o projeto já tem o máximo de roupas que a versão gratuita do "
-        "Durty Cloth Tool permite. Quem define e verifica esse limite é o Durty Cloth Tool, não o add-on; o seu "
-        "plano no Durty Cloth Tool decide quantas você pode adicionar."
+        "O Durty Cloth Tool não adicionou a roupa: o projeto já tem o máximo de roupas que o seu plano no Durty Cloth "
+        "Tool permite, ou a roupa tem mais variações de cor do que o plano permite para uma roupa. Quem define e "
+        "verifica esses limites é o Durty Cloth Tool, não o add-on."
     ),
     "add.result.rejected": (
         "O Durty Cloth Tool não conseguiu usar o modelo ou uma variação de cor, então nada foi adicionado. As "
@@ -728,4 +728,25 @@ TEXT = {
         "Este Blender não consegue ler o corpo freemode comprimido. Use o Blender 5.2 ou mais novo, ou um arquivo de "
         "corpo, até que o gta.clothing ofereça o corpo sem compressão."
     ),
+    "add.result.added-late": (
+        "O Durty Cloth Tool adicionou {name} afinal: Adicionar ao projeto foi escolhido lá antes de o cancelamento "
+        "chegar. A roupa agora está vinculada aqui."
+    ),
+    "add.warning.normal-not-embedded": (
+        "O normal map {name} não é um arquivo DDS, então não é enviado com o modelo. Adicione-o no Durty Cloth Tool "
+        "depois da adição."
+    ),
+    "add.warning.specular-not-embedded": (
+        "O specular map {name} não é um arquivo DDS, então não é enviado com o modelo. Adicione-o no Durty Cloth Tool "
+        "depois da adição."
+    ),
+    "add.why.no-ped-shader": (
+        "O Sollumz não tem shader ped (ped.sps), então a roupa não pode receber o material de roupa. Atualize ou "
+        "reinstale o Sollumz."
+    ),
+    "add.progress.prepare": "Colocando a roupa no esqueleto e configurando o material dela…",
+    "add.progress.export": "Exportando a roupa com o Sollumz…",
+    "add.progress.pictures": "Gravando as variações de cor ({done} de {total})…",
+    "add.cancelled-local": "A adição foi cancelada antes de qualquer envio. Ctrl+Z desfaz o que ela mudou na roupa.",
+    "add.failed-undo": "{problem} Ctrl+Z coloca a roupa de volta como estava antes da adição.",
 }

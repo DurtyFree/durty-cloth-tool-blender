@@ -263,6 +263,43 @@ def skeleton_template_file(gender: str = "male") -> str:
     return ("mp_m_freemode_01" if gender == "male" else "mp_f_freemode_01") + "_skeleton.ydd.xml"
 
 
+def skeleton_bones_128() -> Tuple[Tuple[str, int, Tuple[float, float, float]], ...]:
+    """A made-up skeleton with the freemode skeleton's bone count (128), listed depth first with each bone's children
+    in order as a ped skeleton lists them: :data:`SKELETON_BONES` with numbered helper bones (``DCT_Test_###``, a few
+    centimetres off their parent) hung under its bones. Nothing of the game: only the count and the ordering rule."""
+    children: Dict[int, List[int]] = {}
+    for index, (_, parent, _) in enumerate(SKELETON_BONES):
+        children.setdefault(parent, []).append(index)
+    extra = 128 - len(SKELETON_BONES)
+    hosts = [i for i in range(len(SKELETON_BONES))]
+    added: Dict[int, int] = {}
+    for n in range(extra):
+        host = hosts[n % len(hosts)]
+        added[host] = added.get(host, 0) + 1
+    result: List[Tuple[str, int, Tuple[float, float, float]]] = []
+    counter = [0]
+
+    def visit(index: int, parent: int) -> None:
+        name, _, head = SKELETON_BONES[index]
+        position = len(result)
+        result.append((name, parent, head))
+        for _ in range(added.get(index, 0)):
+            counter[0] += 1
+            offset = (0.01 * (counter[0] % 3), 0.01 * (counter[0] % 5), -0.01)
+            result.append((f"DCT_Test_{counter[0]:03d}", position, tuple(h + o for h, o in zip(head, offset))))
+        for child in children.get(index, []):
+            visit(child, position)
+
+    visit(0, -1)
+    assert len(result) == 128
+    return tuple(result)
+
+
+def joints_of(bones=SKELETON_BONES) -> Dict[str, Tuple[float, float, float]]:
+    """The rest position (head) of every bone of a synthetic skeleton, by name."""
+    return {name: head for name, _, head in bones}
+
+
 def triangles(faces: List[Tuple[int, ...]]) -> np.ndarray:
     tris = []
     for face in faces:

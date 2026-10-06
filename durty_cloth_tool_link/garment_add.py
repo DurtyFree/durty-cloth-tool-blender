@@ -66,6 +66,71 @@ def template_bones(xml: bytes) -> List[str]:
     raise TemplateError("the skeleton template has no bones")
 
 
+def _numbers(element: Any, names: str, default: Tuple[float, ...]) -> Tuple[float, ...]:
+    if element is None:
+        return default
+    try:
+        values = tuple(float(element.get(name, value)) for name, value in zip(names, default))
+    except (TypeError, ValueError):
+        raise TemplateError("the skeleton template has a bone transform that is no number") from None
+    if not all(np.isfinite(values)):
+        raise TemplateError("the skeleton template has a bone transform that is no number")
+    return values
+
+
+def _bone_matrix(translation: Tuple[float, ...], rotation: Tuple[float, ...], scale: Tuple[float, ...]) -> np.ndarray:
+    x, y, z, w = rotation
+    norm = float(np.sqrt(x * x + y * y + z * z + w * w)) or 1.0
+    x, y, z, w = x / norm, y / norm, z / norm, w / norm
+    turn = np.array([[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+                     [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+                     [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]])
+    matrix = np.eye(4)
+    matrix[:3, :3] = turn * np.asarray(scale)
+    matrix[:3, 3] = translation
+    return matrix
+
+
+def template_joints(xml: bytes, names: Optional[Iterable[str]] = None) -> Dict[str, Tuple[float, float, float]]:
+    """Where the skeleton template's bones (``names``, all by default) sit in ped space at rest: each bone's
+    translation, rotation and scale applied down from the root. Raises :class:`TemplateError` for XML that is not a
+    skeleton template."""
+    try:
+        root = ElementTree.fromstring(xml)
+    except ElementTree.ParseError as exc:
+        raise TemplateError(f"the skeleton template is not XML ({exc})") from None
+    for drawable in root.findall("Item"):
+        items = drawable.findall("Skeleton/Bones/Item")
+        if not items:
+            continue
+        bones = []
+        for item in items:
+            parent = item.find("ParentIndex")
+            try:
+                parent_index = int(parent.get("value", "-1")) if parent is not None else -1
+            except (TypeError, ValueError):
+                raise TemplateError("the skeleton template has a parent index that is no number") from None
+            local = _bone_matrix(_numbers(item.find("Translation"), "xyz", (0.0, 0.0, 0.0)),
+                                 _numbers(item.find("Rotation"), "xyzw", (0.0, 0.0, 0.0, 1.0)),
+                                 _numbers(item.find("Scale"), "xyz", (1.0, 1.0, 1.0)))
+            bones.append(((item.findtext("Name") or "").strip(), parent_index, local))
+        world: List[Optional[np.ndarray]] = [None] * len(bones)
+
+        def placed(index: int, depth: int = 0) -> np.ndarray:
+            if world[index] is None:
+                _, parent_index, local = bones[index]
+                if 0 <= parent_index < len(bones) and parent_index != index and depth < len(bones):
+                    world[index] = placed(parent_index, depth + 1) @ local
+                else:
+                    world[index] = local
+            return world[index]  # type: ignore[return-value]
+
+        wanted = set(names) if names is not None else None
+        return {name: tuple(float(v) for v in placed(i)[:3, 3])  # type: ignore[misc]
+                for i, (name, _, _) in enumerate(bones) if name and (wanted is None or name in wanted)}
+    raise TemplateError("the skeleton template has no bones")
+
+
 def armature_problem(armature_bones: Sequence[str], template: Sequence[str]) -> Optional[Msg]:
     """Why the armature cannot carry the garment into the game, or ``None``: it must hold exactly the template's bones in
     the template's order, because each exported weight names its bone by its position in the armature."""
@@ -306,6 +371,8 @@ RESULT_KEYS = {
     "save-failed": "add.result.save-failed",
     "needs-license": "error.needs-license",
     "needs-ultimate": "error.needs-ultimate",
+    # A Durty Cloth Tool that cannot read the add answers it by its id (since 2026-10-06) instead of never.
+    "unknown-message-type": "add.dct-too-old",
 }
 #: The level each answer is shown with.
 RESULT_LEVELS = {"request-denied": "INFO", "item-limit": "WARNING", "busy": "WARNING", "rate-limited": "WARNING"}
@@ -332,6 +399,18 @@ def failure_message(code: str) -> Tuple[str, Msg]:
     if code == "disconnected":
         return "WARNING", msg("add.result.disconnected")
     return result_message(code)
+
+
+#: How big a picture's PNG can get at most, per pixel (zlib stores what it cannot compress with a small overhead,
+#: plus the filter byte of each row).
+PNG_BYTES_PER_PIXEL = 4.01
+
+
+def payload_estimate(model_bytes: int, sizes: Sequence[Tuple[int, int]]) -> Tuple[int, int]:
+    """``(at least, at most)`` bytes an add will carry before its pictures are written: the model and its textures,
+    plus each picture's PNG between nothing and its worst case."""
+    most = model_bytes + sum(int(w * h * PNG_BYTES_PER_PIXEL) + h + 1024 for w, h in sizes)
+    return model_bytes, most
 
 
 def template_refusal(code: Optional[str]) -> Msg:
@@ -364,12 +443,14 @@ __all__ = [
     "group_report",
     "item_files",
     "name_problem",
+    "payload_estimate",
     "payload_size",
     "picture_check",
     "png_bytes",
     "result_message",
     "sorted_findings",
     "template_bones",
+    "template_joints",
     "template_refusal",
     "variation_file",
     "variation_title",

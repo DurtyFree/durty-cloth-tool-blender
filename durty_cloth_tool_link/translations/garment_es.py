@@ -699,9 +699,9 @@ TEXT = {
         "antes de volver a añadir la prenda."
     ),
     "add.result.item-limit": (
-        "Durty Cloth Tool no añadió la prenda: el proyecto ya tiene tantas prendas como permite la versión "
-        "gratuita de Durty Cloth Tool. Durty Cloth Tool fija y comprueba este límite, no el complemento; tu plan "
-        "en Durty Cloth Tool decide cuántas puedes añadir."
+        "Durty Cloth Tool no añadió la prenda: el proyecto ya tiene tantas prendas como permite tu plan en Durty Cloth "
+        "Tool, o la prenda tiene más variaciones de color de las que el plan permite para una prenda. Durty Cloth Tool "
+        "fija y comprueba estos límites, no el complemento."
     ),
     "add.result.rejected": (
         "Durty Cloth Tool no pudo usar el modelo o una variante de color, así que no se añadió nada. Sus "
@@ -741,4 +741,25 @@ TEXT = {
         "Este Blender no puede leer el cuerpo freemode comprimido. Usa Blender 5.2 o posterior, o un archivo de "
         "cuerpo, hasta que gta.clothing ofrezca el cuerpo sin comprimir."
     ),
+    "add.result.added-late": (
+        "Durty Cloth Tool añadió {name} después de todo: allí se eligió Añadir al proyecto antes de que llegara la "
+        "cancelación. Ahora está vinculada aquí."
+    ),
+    "add.warning.normal-not-embedded": (
+        "El mapa de normales {name} no es un archivo DDS, así que no se envía con el modelo. Añádelo en Durty Cloth "
+        "Tool después de la adición."
+    ),
+    "add.warning.specular-not-embedded": (
+        "El mapa specular {name} no es un archivo DDS, así que no se envía con el modelo. Añádelo en Durty Cloth Tool "
+        "después de la adición."
+    ),
+    "add.why.no-ped-shader": (
+        "Sollumz no tiene shader ped (ped.sps), así que la prenda no puede recibir el material de ropa. Actualiza o "
+        "reinstala Sollumz."
+    ),
+    "add.progress.prepare": "Poniendo la prenda en el esqueleto y preparando su material…",
+    "add.progress.export": "Exportando la prenda con Sollumz…",
+    "add.progress.pictures": "Escribiendo las variaciones de color ({done} de {total})…",
+    "add.cancelled-local": "Se canceló la adición antes de enviar nada. Ctrl+Z deshace lo que cambió en la prenda.",
+    "add.failed-undo": "{problem} Ctrl+Z devuelve la prenda a como estaba antes de la adición.",
 }

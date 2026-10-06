@@ -533,8 +533,8 @@ TEXT = {
         "添加期间与 Durty Cloth Tool 的连接已断开。再次添加服装之前，请在 Durty Cloth Tool 中检查项目。"
     ),
     "add.result.item-limit": (
-        "Durty Cloth Tool 没有添加这件服装：项目中的服装数量已达到 Durty Cloth Tool 免费版允许的上限。"
-        "此上限由 Durty Cloth Tool 设定和检查，而不是插件；你在 Durty Cloth Tool 中的方案决定你可以添加多少件。"
+        "Durty Cloth Tool 没有添加这件服装：项目中的服装数量已达到你在 Durty Cloth Tool 中的方案所允许的上限，或者这件服装的颜色变体数量超过了方案对单件服装的限制。这些限制由 Durty "
+        "Cloth Tool 设定和检查，而不是插件。"
     ),
     "add.result.rejected": (
         "Durty Cloth Tool 无法使用该模型或某个颜色变体，因此没有添加任何内容。下方的检查结果说明了原因。"
@@ -558,4 +558,13 @@ TEXT = {
     ),
     "add.finding.picture.too-small": "某个颜色变体的边长小于 16 像素。",
     "garment.body.compressed": "此 Blender 无法读取压缩的 freemode 身体。请使用 Blender 5.2 或更新版本，或使用身体文件，直到 gta.clothing 提供未压缩的身体。",
+    "add.result.added-late": "Durty Cloth Tool 最终还是添加了 {name}：在取消请求到达之前，那边已经选择了添加到项目。现在它已在这里关联。",
+    "add.warning.normal-not-embedded": "法线贴图 {name} 不是 DDS 文件，因此不会随模型一起发送。请在添加之后于 Durty Cloth Tool 中添加它。",
+    "add.warning.specular-not-embedded": "高光贴图 {name} 不是 DDS 文件，因此不会随模型一起发送。请在添加之后于 Durty Cloth Tool 中添加它。",
+    "add.why.no-ped-shader": "Sollumz 中没有 ped 着色器（ped.sps），因此服装无法获得服装材质。请更新或重新安装 Sollumz。",
+    "add.progress.prepare": "正在把服装放到骨架上并设置其材质…",
+    "add.progress.export": "正在用 Sollumz 导出服装…",
+    "add.progress.pictures": "正在写入颜色变体（{done}/{total}）…",
+    "add.cancelled-local": "添加在发送任何内容之前已取消。Ctrl+Z 可以撤销它对服装做的更改。",
+    "add.failed-undo": "{problem} Ctrl+Z 可以把服装恢复到添加之前的状态。",
 }

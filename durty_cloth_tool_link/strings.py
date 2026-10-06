@@ -1142,9 +1142,9 @@ EN: Dict[str, str] = {
         "add the garment again."
     ),
     "add.result.item-limit": (
-        "Durty Cloth Tool did not add the cloth: the project already has as many clothes as the free version of Durty "
-        "Cloth Tool allows. Durty Cloth Tool sets and checks this limit, not the add-on; your plan in Durty Cloth Tool "
-        "decides how many you can add."
+        "Durty Cloth Tool did not add the cloth: the project already has as many clothes as your plan in Durty Cloth "
+        "Tool allows, or the cloth has more colour variations than the plan allows for one cloth. Durty Cloth Tool "
+        "sets and checks these limits, not the add-on."
     ),
     "add.result.rejected": (
         "Durty Cloth Tool could not use the model or a colour variation, so nothing was added. Its checks below say why."
@@ -1179,6 +1179,29 @@ EN: Dict[str, str] = {
         "This Blender cannot read the compressed freemode body. Use Blender 5.2 or later, or a body file, until "
         "gta.clothing offers the uncompressed body."
     ),
+    "add.result.added-late": (
+        "Durty Cloth Tool added {name} after all: Add to project was chosen there before the cancel arrived. It is "
+        "linked here now."
+    ),
+    "add.warning.normal-not-embedded": (
+        "The normal map {name} is not a DDS file, so it is not sent with the model. Add it in Durty Cloth Tool after "
+        "the add."
+    ),
+    "add.warning.specular-not-embedded": (
+        "The specular map {name} is not a DDS file, so it is not sent with the model. Add it in Durty Cloth Tool after "
+        "the add."
+    ),
+    "add.why.no-ped-shader": (
+        "Sollumz has no ped shader (ped.sps), so the garment cannot get the clothing material. Update or reinstall "
+        "Sollumz."
+    ),
+    "add.progress.prepare": "Putting the garment on the skeleton and setting up its material…",
+    "add.progress.export": "Exporting the garment with Sollumz…",
+    "add.progress.pictures": "Writing the colour variations ({done} of {total})…",
+    "add.cancelled-local": (
+        "The add was cancelled before anything was sent. Ctrl+Z undoes what it changed on the garment."
+    ),
+    "add.failed-undo": "{problem} Ctrl+Z puts the garment back as it was before the add.",
 }
 
 

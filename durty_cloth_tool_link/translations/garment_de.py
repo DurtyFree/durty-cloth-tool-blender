@@ -723,8 +723,8 @@ TEXT = {
     ),
     "add.result.item-limit": (
         "Durty Cloth Tool hat das Kleidungsstück nicht hinzugefügt: Das Projekt hat schon so viele Kleidungsstücke, "
-        "wie die kostenlose Version von Durty Cloth Tool erlaubt. Diese Grenze legt Durty Cloth Tool fest und prüft "
-        "sie, nicht das Add-on; dein Plan in Durty Cloth Tool entscheidet, wie viele du hinzufügen kannst."
+        "wie dein Plan in Durty Cloth Tool erlaubt, oder das Kleidungsstück hat mehr Farbvarianten, als der Plan für "
+        "ein Kleidungsstück erlaubt. Diese Grenzen legt Durty Cloth Tool fest und prüft sie, nicht das Add-on."
     ),
     "add.result.rejected": (
         "Durty Cloth Tool konnte das Modell oder eine Farbvariante nicht verwenden, darum wurde nichts hinzugefügt. "
@@ -771,4 +771,28 @@ TEXT = {
         "Dieses Blender kann den komprimierten Freemode-Körper nicht lesen. Nutze Blender 5.2 oder neuer oder eine "
         "Körperdatei, bis gta.clothing den unkomprimierten Körper anbietet."
     ),
+    "add.result.added-late": (
+        "Durty Cloth Tool hat {name} doch hinzugefügt: Dort wurde Zum Projekt hinzufügen gewählt, bevor der Abbruch "
+        "ankam. Es ist jetzt hier verknüpft."
+    ),
+    "add.warning.normal-not-embedded": (
+        "Die Normal-Map {name} ist keine DDS-Datei und wird deshalb nicht mit dem Modell gesendet. Füge sie nach dem "
+        "Hinzufügen in Durty Cloth Tool hinzu."
+    ),
+    "add.warning.specular-not-embedded": (
+        "Die Specular-Map {name} ist keine DDS-Datei und wird deshalb nicht mit dem Modell gesendet. Füge sie nach dem "
+        "Hinzufügen in Durty Cloth Tool hinzu."
+    ),
+    "add.why.no-ped-shader": (
+        "Sollumz hat keinen Ped-Shader (ped.sps), das Kleidungsstück kann das Kleidungsmaterial also nicht bekommen. "
+        "Aktualisiere oder installiere Sollumz neu."
+    ),
+    "add.progress.prepare": "Setze das Kleidungsstück auf das Skelett und richte sein Material ein…",
+    "add.progress.export": "Exportiere das Kleidungsstück mit Sollumz…",
+    "add.progress.pictures": "Schreibe die Farbvarianten ({done} von {total})…",
+    "add.cancelled-local": (
+        "Das Hinzufügen wurde abgebrochen, bevor etwas gesendet wurde. Strg+Z macht rückgängig, was es am "
+        "Kleidungsstück geändert hat."
+    ),
+    "add.failed-undo": "{problem} Strg+Z setzt das Kleidungsstück auf den Stand vor dem Hinzufügen zurück.",
 }

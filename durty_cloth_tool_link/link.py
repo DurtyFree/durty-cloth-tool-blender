@@ -1069,7 +1069,19 @@ class SkeletonTemplates:
 class ItemAdd:
     """Adds a garment as a new cloth to the project open in DCT (``item.add``) and keeps the outcome for the panel. DCT
     shows the cloth in a dialog of its own and adds nothing unless the user chooses Add there; until then the add-on
-    can withdraw it (``item.addCancel``)."""
+    can withdraw it (``item.addCancel``).
+
+    The add-on keeps its own clock: after :attr:`TIMEOUT` it withdraws the add, and :attr:`GRACE` after a withdrawal
+    without an answer it stops showing the add as running. The request keeps listening all the same (dct_link would
+    drop an answer that comes later), so when DCT added the cloth after all (the user chose Add just before the
+    withdrawal arrived, and the import took a while), the add-on still links it and says so."""
+
+    #: How long DCT may ask the user before the add-on withdraws the add (seconds).
+    TIMEOUT = 900.0
+    #: How long a withdrawn add waits for DCT's answer before the panel stops showing it as running (seconds).
+    GRACE = 10.0
+    #: Withdrawn adds the panel no longer shows, at most this many (the oldest go).
+    MAX_LATE = 4
 
     def __init__(self, controller: "LinkController") -> None:
         self.controller = controller
@@ -1081,6 +1093,12 @@ class ItemAdd:
         self.added: Optional[Dict[str, Any]] = None
         self._plan: Optional[Dict[str, Any]] = None
         self._on_added: Optional[Callable[[Dict[str, str]], None]] = None
+        self._started = 0.0
+        self._withdrawn_at: Optional[float] = None
+        self._reason = "cancelled"
+        #: Adds that ended without an answer and may still be answered: ``(request, plan, on_added, reason)``.
+        self._late: List[Any] = []
+        self.clock: Callable[[], float] = time.monotonic
 
     @property
     def adding(self) -> bool:
@@ -1088,7 +1106,7 @@ class ItemAdd:
 
     @property
     def withdrawing(self) -> bool:
-        return self.adding and bool(getattr(self.request, "withdrawn", False))
+        return self.adding and self._withdrawn_at is not None
 
     def problem(self) -> Optional[Msg]:
         """Why an add cannot start now (the link, DCT's project, one add at a time), or ``None``."""
@@ -1109,12 +1127,15 @@ class ItemAdd:
         if problem is not None:
             raise UserError(problem)
         try:
-            request = session.add_item(drawable_type, gender, skin, name, variations, files)
+            # No deadline in dct_link: the add-on times the add itself (tick), so a late answer is never dropped.
+            request = session.add_item(drawable_type, gender, skin, name, variations, files, timeout=None)
         except ValueError as exc:
             raise UserError(msg("add.invalid", detail=str(exc))) from exc
         self.request = request
         self._plan = {"name": name, "slot": drawable_type, "gender": gender}
         self._on_added = on_added
+        self._started = self.clock()
+        self._withdrawn_at = None
         self.findings = []
         self.added = None
         self.status = Notice("INFO", msg("add.waiting"))
@@ -1122,22 +1143,72 @@ class ItemAdd:
         self.controller.touch()
         return request
 
-    def cancel(self) -> bool:
+    def cancel(self, reason: str = "cancelled") -> bool:
         """Withdraws the add while DCT's dialog is open. DCT answers it as refused, unless the user chose Add at that
-        moment (then the cloth is added after all, and the panel says so)."""
+        moment (then the cloth is added after all, and the panel says so, also when the answer comes late)."""
         request = self.request
-        if request is None or request.done:
+        if request is None or request.done or self._withdrawn_at is not None:
             return False
         sent = bool(request.cancel())  # type: ignore[attr-defined]
         if sent:
+            # dct_link gives a withdrawn add ten seconds; keep listening instead (see the class text).
+            request.deadline = float("inf")
+            self._withdrawn_at = self.clock()
+            self._reason = reason
             self.status = Notice("INFO", msg("add.withdrawing"))
             self.controller.touch()
         return sent
 
+    def tick(self, now: Optional[float] = None) -> None:
+        """Withdraws an add DCT asked about for too long, and stops showing a withdrawn add that got no answer."""
+        if not self.adding:
+            return
+        now = self.clock() if now is None else now
+        if self._withdrawn_at is None:
+            if now - self._started > self.TIMEOUT:
+                self.cancel("timeout")
+            return
+        if now - self._withdrawn_at > self.GRACE:
+            request = self.request
+            self._late.append((request, self._plan or {}, self._on_added, self._reason))
+            del self._late[:-self.MAX_LATE]
+            self.request = None
+            self._on_added = None
+            self.status = Notice(*garment_add.failure_message(self._reason))
+            self.findings = []
+            self.controller.touch()
+
+    def _late_answer(self, request: Request) -> None:
+        """An add the panel gave up on was answered after all."""
+        entry = next((e for e in self._late if e[0] is request), None)
+        if entry is None:
+            return
+        self._late.remove(entry)
+        _, plan, on_added, _reason = entry
+        if request.error is not None or not getattr(request.result(), "ok", False):
+            if request.error is None and self.request is None:
+                self.status = Notice("INFO", msg("add.result.withdrawn"))  # the withdrawal is confirmed now
+                self.controller.touch()
+            return
+        result = request.result()
+        binding = dict(result.binding or {})
+        self.added = {"name": plan.get("name"), "slot": plan.get("slot"), "binding": binding}
+        self.findings = garment_add.sorted_findings(result.findings)
+        self.status = Notice("WARNING", msg("add.result.added-late", name=plan.get("name") or ""))
+        if on_added is not None:
+            try:
+                on_added(binding)
+            except Exception as exc:  # noqa: BLE001 - the cloth is added; only the link in Blender failed
+                traceback.print_exc()
+                self.status = Notice("WARNING", msg("add.result.added-unlinked", name=plan.get("name") or "",
+                                                    detail=f"{type(exc).__name__}: {exc}"))
+        self.controller.touch()
+
     def _on_done(self, request: Request) -> None:
         if request is not self.request:
+            self._late_answer(request)
             return
-        withdrawn = bool(getattr(request, "withdrawn", False))
+        withdrawn = self._withdrawn_at is not None
         plan = self._plan or {}
         on_added, self._on_added = self._on_added, None
         if request.error is not None:
@@ -1831,6 +1902,7 @@ class LinkController:
             traceback.print_exc()
             self.model.status = Notice("ERROR", msg("model.failed", detail=f"{type(exc).__name__}: {exc}"))
             self.touch()
+        self.item_add.tick()
         working = self.stream.active or self.model.pushing or self._model_import is not None or self.item_add.adding
         waiting = (self._sign_in_task is not None or self._logout_task is not None or self.active_sign_in() is not None
                    or self._browser_fallback_at is not None)

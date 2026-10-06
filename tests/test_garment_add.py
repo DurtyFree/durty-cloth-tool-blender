@@ -394,3 +394,103 @@ def test_an_add_needs_a_project_and_a_valid_request(tmp_path, dct, api):
         ctrl.item_add.start("jbib", "male", False, "Jacket", variations, files)
     assert dct.item_adds == []
     ctrl.disconnect()
+
+
+# ---- late answers, an older Durty Cloth Tool and a full-size skeleton ---------------------------------------------
+
+
+def test_a_cloth_added_after_the_cancel_is_still_linked(tmp_path, dct, api):
+    # The user chose Add in Durty Cloth Tool a moment before the cancel arrived, and the import took longer than the
+    # add-on waits: the answer comes after the panel stopped showing the add.
+    ctrl = connected(tmp_path, dct, api)
+    ctrl.item_add.GRACE = 0.2
+    files, variations = add_files()
+    linked = []
+    dct.hold_adds = True
+    dct.ignore_cancels = True
+    ctrl.item_add.start("jbib", "male", False, "Late Jacket", variations, files, on_added=linked.append)
+    drive(ctrl, lambda: bool(dct.item_adds))
+    assert ctrl.item_add.cancel()
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    assert ctrl.item_add.status.message.key == "add.result.cancel-unanswered" and linked == []
+    assert ctrl.item_add.problem() is None  # another add may start meanwhile
+    dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING), "findings": []}
+    dct.release_adds()
+    drive(ctrl, lambda: bool(linked))
+    assert linked == [ADDED_BINDING] and ctrl.item_add.added["binding"] == ADDED_BINDING
+    assert ctrl.item_add.status.message.key == "add.result.added-late"
+    ctrl.disconnect()
+
+
+def test_an_add_left_waiting_too_long_is_withdrawn_and_a_late_answer_still_counts(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    ctrl.item_add.TIMEOUT = 0.2
+    ctrl.item_add.GRACE = 0.2
+    files, variations = add_files()
+    linked = []
+    dct.hold_adds = True
+    dct.ignore_cancels = True
+    request = ctrl.item_add.start("jbib", "female", False, "Slow Coat", variations, files, on_added=linked.append)
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    assert dct.add_cancels == [request.id]
+    assert ctrl.item_add.status.message.key == "add.result.timeout"
+    dct.release_adds()
+    drive(ctrl, lambda: bool(linked))
+    assert ctrl.item_add.status.message.key == "add.result.added-late"
+    ctrl.disconnect()
+
+
+def test_a_late_refusal_confirms_the_cancel(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    ctrl.item_add.GRACE = 0.2
+    files, variations = add_files()
+    dct.hold_adds = True
+    dct.ignore_cancels = True
+    ctrl.item_add.start("feet", "male", False, "Boots", variations, files)
+    drive(ctrl, lambda: bool(dct.item_adds))
+    ctrl.item_add.cancel()
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    dct.release_adds({"ok": False, "code": "request-denied", "findings": []})
+    drive(ctrl, lambda: ctrl.item_add.status.message.key == "add.result.withdrawn")
+    assert ctrl.item_add.added is None
+    ctrl.disconnect()
+
+
+def test_a_durty_cloth_tool_that_cannot_read_the_add_says_so_at_once(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.unknown_types = {"item.add", "skeleton.template"}
+    ctrl.item_add.start("jbib", "male", False, "Jacket", variations, files)
+    drive(ctrl, lambda: not ctrl.item_add.adding, timeout=5.0)  # answered by its id, never a 15-minute wait
+    assert ctrl.item_add.status.message.key == "add.dct-too-old"
+    ctrl.skeletons.fetch("male")
+    drive(ctrl, lambda: "male" in ctrl.skeletons.problems, timeout=5.0)
+    assert ctrl.skeletons.problems["male"].message.key == "add.dct-too-old"
+    assert dct.refused_frames == [("item.add", "unknown-message-type"), ("skeleton.template", "unknown-message-type")]
+    assert ctrl.ready  # the connection stays
+    ctrl.disconnect()
+
+
+def test_a_full_size_skeleton_keeps_its_order_and_joints():
+    bones = synthetic.skeleton_bones_128()
+    xml = synthetic.skeleton_template_xml("male", bones)
+    names = garment_add.template_bones(xml)
+    assert len(names) == 128 and names == [name for name, _, _ in bones]
+    assert garment_add.armature_problem(names, names) is None
+    swapped = names[:]
+    swapped[5], swapped[6] = swapped[6], swapped[5]
+    assert garment_add.armature_problem(swapped, names).key == "add.skeleton.order"
+    # Depth first: every bone comes after its parent, and a parent's subtree is one block.
+    parents = [parent for _, parent, _ in bones]
+    assert all(parent < index for index, parent in enumerate(parents) if parent >= 0)
+    joints = garment_add.template_joints(xml)
+    heads = synthetic.joints_of(bones)
+    assert set(joints) == set(heads)
+    assert all(np.linalg.norm(np.array(joints[name]) - np.array(heads[name])) < 1e-5 for name in heads)
+
+
+def test_the_payload_is_estimated_before_any_picture_is_written():
+    least, most = garment_add.payload_estimate(1000, [(2048, 2048), (16, 16)])
+    assert least == 1000 and most >= 1000 + 2048 * 2048 * 4 + 16 * 16 * 4
+    picture = garment_add.png_bytes(np.random.default_rng(1).integers(0, 255, 64 * 64 * 4, dtype=np.uint8), 64, 64)
+    assert len(picture) <= garment_add.payload_estimate(0, [(64, 64)])[1]

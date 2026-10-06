@@ -724,9 +724,9 @@ TEXT = {
         "avant d'ajouter de nouveau le vêtement."
     ),
     "add.result.item-limit": (
-        "Durty Cloth Tool n'a pas ajouté le vêtement : le projet contient déjà autant de vêtements que la version "
-        "gratuite de Durty Cloth Tool le permet. C'est Durty Cloth Tool qui fixe et vérifie cette limite, pas le "
-        "module ; votre offre dans Durty Cloth Tool détermine combien vous pouvez en ajouter."
+        "Durty Cloth Tool n'a pas ajouté le vêtement : le projet contient déjà autant de vêtements que votre offre "
+        "dans Durty Cloth Tool le permet, ou le vêtement a plus de variantes de couleur que l'offre n'en permet pour "
+        "un vêtement. C'est Durty Cloth Tool qui fixe et vérifie ces limites, pas le module."
     ),
     "add.result.rejected": (
         "Durty Cloth Tool n'a pas pu utiliser le modèle ou une variante de couleur, rien n'a donc été ajouté. Ses "
@@ -774,4 +774,25 @@ TEXT = {
         "Ce Blender ne peut pas lire le corps freemode compressé. Utilisez Blender 5.2 ou plus récent, ou un fichier "
         "de corps, jusqu'à ce que gta.clothing propose le corps non compressé."
     ),
+    "add.result.added-late": (
+        "Durty Cloth Tool a finalement ajouté {name} : Ajouter au projet y a été choisi avant l'arrivée de "
+        "l'annulation. Il est maintenant lié ici."
+    ),
+    "add.warning.normal-not-embedded": (
+        "La normal map {name} n'est pas un fichier DDS, elle n'est donc pas envoyée avec le modèle. Ajoutez-la dans "
+        "Durty Cloth Tool après l'ajout."
+    ),
+    "add.warning.specular-not-embedded": (
+        "La specular map {name} n'est pas un fichier DDS, elle n'est donc pas envoyée avec le modèle. Ajoutez-la dans "
+        "Durty Cloth Tool après l'ajout."
+    ),
+    "add.why.no-ped-shader": (
+        "Sollumz n'a pas de shader ped (ped.sps), le vêtement ne peut donc pas recevoir le matériau des vêtements. "
+        "Mettez à jour ou réinstallez Sollumz."
+    ),
+    "add.progress.prepare": "Mise du vêtement sur le squelette et préparation de son matériau…",
+    "add.progress.export": "Exportation du vêtement avec Sollumz…",
+    "add.progress.pictures": "Écriture des variantes de couleur ({done} sur {total})…",
+    "add.cancelled-local": "L'ajout a été annulé avant tout envoi. Ctrl+Z annule ce qu'il a modifié sur le vêtement.",
+    "add.failed-undo": "{problem} Ctrl+Z rétablit le vêtement tel qu'il était avant l'ajout.",
 }

@@ -9,7 +9,9 @@ smoke (which uses the add-on's vendored copy). A ``glb`` model push is answered 
 ``save_busy`` makes ``model.save`` answer ``busy`` that many times; ``texture.read`` answers for the cloth and map
 asked for; ``open_texture`` and ``open_model`` send ``host.openTexture`` and ``host.openModel`` ("Edit in connected
 app"); ``skeleton.template`` answers with a synthetic skeleton template (or ``skeleton_files``), and ``item.add``
-with ``add_result`` (``hold_adds`` keeps it waiting, ``item.addCancel`` answers it as refused).
+with ``add_result`` (``hold_adds`` keeps it waiting, ``item.addCancel`` answers it as refused unless
+``ignore_cancels``). Like DCT, a request the fake cannot decode, or whose type is in ``unknown_types`` (a DCT older than
+the add-on), gets an error answered by its id when the id can be read, and the connection stays once signed in.
 Standard library only.
 """
 
@@ -230,6 +232,8 @@ class Connection:
             while not self.closed:
                 opcode, data = self.read_message()
                 self.server.raw_frames.append(data)
+                if self.refuse_unreadable(data, binary=opcode != 0x1):
+                    continue
                 if opcode == 0x1:
                     message = p.decode_text(data, p.TO_DCT)
                     self.server.received.append(message)
@@ -247,6 +251,41 @@ class Connection:
                 self.sock.close()
             except OSError:
                 pass
+
+    def refuse_unreadable(self, data: bytes, binary: bool) -> bool:
+        """What DCT does with a frame it cannot decode (or a type it does not know): an ``error`` whose ``re`` is the
+        frame's id whenever that id can still be read. Before the sign-in the connection closes instead."""
+        header: Any = None
+        try:
+            if binary:
+                length = int.from_bytes(data[:4], "little")
+                header = json.loads(bytes(data[4:4 + length]).decode("utf-8"))
+            else:
+                header = json.loads(bytes(data).decode("utf-8"))
+        except (ValueError, UnicodeDecodeError):
+            header = None
+        if not isinstance(header, dict):
+            header = {}
+        if header.get("type") in self.server.unknown_types:
+            code = "unknown-message-type"
+        else:
+            try:
+                if binary:
+                    p.decode_binary(data, p.TO_DCT)
+                else:
+                    p.decode_text(data, p.TO_DCT)
+                return False
+            except p.ProtocolError as exc:
+                code = exc.code
+        self.server.refused_frames.append((header.get("type"), code))
+        if not self.authenticated:
+            self.close(1008, code)
+            return True
+        reply: Dict[str, Any] = {"type": "error", "id": "u" + secrets.token_hex(3), "code": code}
+        if p.is_id(header.get("id")):
+            reply["re"] = header["id"]
+        self.send(reply)
+        return True
 
     def reply(self, request: Dict[str, Any], message: Dict[str, Any]) -> None:
         message.setdefault("id", "s" + secrets.token_hex(3))
@@ -349,6 +388,8 @@ class Connection:
             self.send_binary(header, b"".join(data for _, data in files))
         elif kind == "item.addCancel":
             server.add_cancels.append(m["re"])
+            if server.ignore_cancels:
+                return  # "the user" chose Add a moment before: the import goes on and answers later
             # Like the user choosing Cancel: the add answers request-denied. A cancel for an add that already
             # answered, or that never was, has no reply of its own.
             if self.waiting_adds.pop(m["re"], None) is not None:
@@ -543,6 +584,11 @@ class FakeDct:
         #: add_result, an item.addCancel with request-denied.
         self.hold_adds = False
         self.item_adds: List[Any] = []  # (header, [(name, data)]) per item.add received
+        #: Message types the fake answers as unknown, as a DCT older than the add-on does.
+        self.unknown_types: set = set()
+        #: Leave item.addCancel unanswered (DCT already adds the cloth); release_adds() answers later.
+        self.ignore_cancels = False
+        self.refused_frames: List[Any] = []  # (type, error code) of every frame refused undecoded
         self.add_cancels: List[str] = []  # the add ids item.addCancel named
         self.host_results: List[Dict[str, Any]] = []
         self.fragment_size = 0
