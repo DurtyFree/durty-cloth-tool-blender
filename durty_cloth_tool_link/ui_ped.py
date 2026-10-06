@@ -243,6 +243,24 @@ def _filter_changed(self: Any, context: Any) -> None:
             pass  # the Rig section says why
 
 
+def _template_filters(settings_: Any) -> Tuple[Optional[str], bool]:
+    return None if settings_.gender == "any" else settings_.gender, bool(settings_.show_all)
+
+
+def _auto_templates() -> Optional[float]:
+    """Asks Durty Cloth Tool for the template list by itself while the Rig stage shows it (a timer, because drawing a
+    panel never sends anything); see :meth:`ped_link.PedLink.auto_templates`."""
+    link = peds()
+    settings_ = getattr(getattr(bpy.context, "scene", None), "dct_ped", None)
+    if link is None or settings_ is None:
+        return None
+    try:
+        return link.auto_templates(*_template_filters(settings_))
+    except Exception:  # noqa: BLE001 - Blender drops a timer that raises; Refresh still asks
+        traceback.print_exc()
+        return None
+
+
 def _character_changed(self: Any, context: Any) -> None:
     RUNTIME.notice = None
     collection = self.character
@@ -1450,6 +1468,9 @@ def draw_rig(layout: Any, context: Any) -> None:
     if ctrl is None or not ctrl.ready:
         wrapped(layout, context, t("ped.why.connect"), "UNLINKED")
     else:
+        wanted = link is not None and link.wants_templates(*_template_filters(settings_))
+        if wanted and not bpy.app.timers.is_registered(_auto_templates):
+            bpy.app.timers.register(_auto_templates, first_interval=0.0)
         row = layout.row(align=True)
         row.prop(settings_, "gender", expand=True)
         ui.checkbox(layout, context, settings_, "show_all", "ped.prop.show-all")
@@ -2034,8 +2055,9 @@ def unregister() -> None:
     for handlers in (bpy.app.handlers.undo_post, bpy.app.handlers.redo_post):
         if _on_undo_redo in handlers:
             handlers.remove(_on_undo_redo)
-    if bpy.app.timers.is_registered(_redraw_later):
-        bpy.app.timers.unregister(_redraw_later)
+    for timer in (_redraw_later, _auto_templates):
+        if bpy.app.timers.is_registered(timer):
+            bpy.app.timers.unregister(timer)
     RUNTIME.guide = None
     del bpy.types.Object.dct_ped_role
     del bpy.types.Scene.dct_ped

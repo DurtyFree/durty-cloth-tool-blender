@@ -107,6 +107,40 @@ def test_nothing_is_asked_without_a_connection(tmp_path, dct, api):
     assert ctrl.peds.feature(ped_link.FEATURE_RIG).key == "ped.why.connect"
     with pytest.raises(UserError):
         ctrl.peds.fetch_templates(None, False)
+    assert ctrl.peds.auto_templates(None, False) is None and not ctrl.peds.loading_templates
+
+
+def test_the_rig_stage_lists_the_templates_by_itself_and_tries_again_quietly(tmp_path, dct, api):
+    """An empty template list made Refresh the next step although nothing else could be done there: the Rig stage
+    now asks for the list itself. A failed try (Durty Cloth Tool without its game folder yet) is tried again a few
+    times, later each time, without a message of its own, and then left to Refresh."""
+    dct.fail["ped.templates"] = "game-required"
+    ctrl = connected(tmp_path, dct, api)
+    peds = ctrl.peds
+    now = 1000.0
+    assert peds.wants_templates(None, False)
+    assert peds.auto_templates(None, False, now) == peds.AUTO_POLL and peds.loading_templates
+    assert peds.auto_templates(None, False, now) == peds.AUTO_POLL  # one request at a time
+    drive(ctrl, lambda: peds.templates_problem is not None)
+    assert peds.auto_templates(None, False, now + 1.0) == pytest.approx(peds.AUTO_RETRIES[0] - 1.0)
+    assert not peds.loading_templates  # waits before trying again
+    for retry, wait in enumerate(peds.AUTO_RETRIES):
+        now += wait
+        assert peds.auto_templates(None, False, now) == peds.AUTO_POLL, retry
+        drive(ctrl, lambda: not peds.loading_templates)
+    assert peds.auto_templates(None, False, now + 3600.0) is None and not peds.loading_templates
+    assert not peds.wants_templates(None, False)  # Refresh is left
+    assert peds.wants_templates("male", False)  # other filters start again
+    # Durty Cloth Tool has its game folder now: the next connection lists the templates by itself, once.
+    del dct.fail["ped.templates"]
+    ctrl.disconnect()
+    ctrl.connect()
+    drive(ctrl, lambda: ctrl.ready)
+    assert peds.auto_templates(None, False, now) == peds.AUTO_POLL
+    drive(ctrl, lambda: peds.templates is not None)
+    assert peds.templates_problem is None and peds.templates_for == (None, False)
+    assert peds.auto_templates(None, False, now) is None and not peds.wants_templates(None, False)
+    assert len(dct.ped_template_requests) == 1
 
 
 # ---- the rig ----------------------------------------------------------------------------------------------

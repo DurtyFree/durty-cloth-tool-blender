@@ -98,6 +98,11 @@ class PedLink:
     ADD_TIMEOUT = 900.0
     #: Withdrawn adds without an answer the add-on still listens for, at most this many (the oldest go).
     MAX_LATE = 4
+    #: The template list is asked for by itself when the Rig stage shows it (:meth:`auto_templates`); a failed try is
+    #: tried again quietly after these many seconds, one entry per retry, and then left to Refresh.
+    AUTO_RETRIES = (5.0, 20.0, 60.0)
+    #: How often the panel's timer looks again while the list is being read (seconds).
+    AUTO_POLL = 0.5
 
     def __init__(self, controller: Any) -> None:
         self.controller = controller
@@ -107,6 +112,11 @@ class PedLink:
         self.truncated = False
         self.templates_request: Optional[Request] = None
         self.templates_problem: Optional[Notice] = None
+        #: The list asked for by itself: for which session and filters (forgotten when the connection ends), how many
+        #: tries, and when the next may go.
+        self._auto: Tuple[Any, Optional[Tuple[Optional[str], bool]]] = (None, None)
+        self._auto_tries = 0
+        self._auto_next = 0.0
         # The rig.
         self.rig_request: Optional[Request] = None
         self.stage: Optional[str] = None
@@ -187,6 +197,45 @@ class PedLink:
         self.templates_request = request
         request.add_done_callback(lambda done: self._on_templates(done, key))
         self.controller.touch()
+
+    def wants_templates(self, gender: Optional[str], show_all: bool) -> bool:
+        """Whether :meth:`auto_templates` has something left to do for these filters: no list for them yet, and the
+        quiet retries of this connection not used up."""
+        key = (gender, bool(show_all))
+        if self.templates is not None and self.templates_for == key:
+            return False
+        used_up = self._auto_tries > len(self.AUTO_RETRIES) and not self.loading_templates
+        return not (self._auto == (self.controller.session, key) and used_up)
+
+    def auto_templates(self, gender: Optional[str], show_all: bool, now: Optional[float] = None) -> Optional[float]:
+        """Asks for the template list by itself, so the Rig stage shows it without Refresh: when none is listed for
+        these filters yet, Durty Cloth Tool is connected and the plan includes the list. A failed try is tried again
+        quietly (the panel keeps saying why), later each time (:data:`AUTO_RETRIES`), and then left to Refresh; a new
+        connection or other filters start again. Returns in how many seconds to call again, or ``None`` when nothing
+        is left to do."""
+        now = time.monotonic() if now is None else now
+        ctrl = self.controller
+        key = (gender, bool(show_all))
+        if not ctrl.ready or ctrl.session is None or self.feature(FEATURE_TEMPLATES) is not None:
+            return None
+        if self.templates is not None and self.templates_for == key:
+            return None
+        if self._auto != (ctrl.session, key):
+            self._auto = (ctrl.session, key)
+            self._auto_tries, self._auto_next = 0, now
+        if self.loading_templates:
+            return self.AUTO_POLL
+        if self._auto_tries > len(self.AUTO_RETRIES):
+            return None
+        if now < self._auto_next:
+            return self._auto_next - now
+        try:
+            self.fetch_templates(gender, show_all)
+        except UserError:
+            return None
+        self._auto_next = now + self.AUTO_RETRIES[min(self._auto_tries, len(self.AUTO_RETRIES) - 1)]
+        self._auto_tries += 1
+        return self.AUTO_POLL
 
     def _on_templates(self, request: Request, key: Tuple[Optional[str], bool]) -> None:
         if request is not self.templates_request:
@@ -295,6 +344,7 @@ class PedLink:
 
     def _on_disconnected(self, *_args: Any) -> None:
         self.jobs.clear()  # Durty Cloth Tool forgets the connection's rigs with it
+        self._auto = (None, None)  # the next connection lists the templates by itself again
 
     def rig_job(self, job: Optional[str], character: str) -> Optional[str]:
         """``job`` when Durty Cloth Tool may still hold it for this character on the open connection; ``None``

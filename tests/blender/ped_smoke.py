@@ -207,9 +207,15 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     log = draw_everything(package, state, "custom ped, markers placed")
     check("the markers section counts the markers", "19 of 19 placed" in labels(log))
 
-    # The template and the rig.
-    check("Refresh (templates) runs", "FINISHED" in bpy.ops.dct_link.ped_refresh_templates())
+    # The template and the rig. The Rig stage asks for the template list by itself (from Blender's timer, called here:
+    # background Blender runs no timers while the smoke runs); Refresh asks again.
+    check("the Rig stage asks for the template list by itself while connected",
+          ctrl.peds.templates is None and bpy.app.timers.is_registered(ui_ped._auto_templates))
+    ui_ped._auto_templates()
+    check("the template list is being read", ctrl.peds.loading_templates)
     pump(addon, lambda: ctrl.peds.templates is not None, what="the template list")
+    check("Refresh (templates) runs", "FINISHED" in bpy.ops.dct_link.ped_refresh_templates())
+    pump(addon, lambda: not ctrl.peds.loading_templates, what="the refreshed template list")
     log = draw_everything(package, state, "custom ped, templates")
     check("the template list is offered with the recommended ones first",
           ("operator", "dct_link.ped_use_template") in log and ("menu", "DCTLINK_MT_ped_templates") in log)

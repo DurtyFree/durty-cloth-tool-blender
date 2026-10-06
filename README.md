@@ -293,7 +293,8 @@ always names the next step, and its button is the large one. Five sections follo
    the character's shape, and **From Old Rig** uses the joints of the rig the character came with. Left markers are
    blue, right ones orange; move any that are off, and the elbow or knee follows its limb.
 3. **Rig:** choose a template (an installed ped like your character; **Show All** adds freemode, player and cutscene
-   peds), confirm your rights to the character once, then **Rig in Durty Cloth Tool**. It shows its progress, and
+   peds; the list loads by itself while Durty Cloth Tool is connected, and **Refresh** reads it again), confirm your
+   rights to the character once, then **Rig in Durty Cloth Tool**. It shows its progress, and
    **Cancel** stops it. Check where Durty Cloth Tool moved the markers (yellow), then **Apply Rig**: an armature with the
    template's bones moves the character, which keeps its look. The report says what to look at, and names a closer
    template when the proportions are far from the template's. **Rig Again** keeps the rig before it under **Previous
