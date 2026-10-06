@@ -456,6 +456,24 @@ def centre_x(markers: Mapping[str, Any]) -> float:
     return 0.0
 
 
+def markers_json(markers: Mapping[str, Any]) -> str:
+    """The markers as Align to Body left them, to tell later whether one was moved."""
+    return json.dumps({name: [round(float(v), 5) for v in _vec(value)] for name, value in sorted(markers.items())})
+
+
+def markers_moved(markers: Mapping[str, Any], aligned: str, tolerance: float = 0.0005) -> bool:
+    """Whether a marker was moved, added or removed since Align to Body (``aligned``: :func:`markers_json`)."""
+    try:
+        before = json.loads(aligned) if aligned else None
+    except ValueError:
+        before = None
+    if not isinstance(before, dict):
+        return False  # aligned before this was recorded: nothing to compare with
+    if set(before) != set(markers):
+        return True
+    return any(float(np.linalg.norm(_vec(markers[name]) - _vec(before[name]))) > tolerance for name in markers)
+
+
 def mirror_markers(markers: Mapping[str, Any]) -> Dict[str, Vector]:
     """The markers with each right one replaced by its left one mirrored across the centre plane."""
     cx = centre_x(markers)
@@ -605,7 +623,9 @@ def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: flo
         if left > 0.04 and right > 0.04:
             sides += [left, right]
             centres.append(cx + (left - right) / 2)
-    if len(sides) >= 4:
+    # Short sleeves that hang against the torso widen these sections: the re-measure counts only when it is narrower
+    # than the first estimate (it is there for a flared hem, a hood or a strap that widen the lower part).
+    if len(sides) >= 4 and float(np.median(sides)) <= torso * 1.02:
         torso = float(np.median(sides))
         cx = float(np.median(centres))
     neck[0] = cx
@@ -648,6 +668,10 @@ def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: flo
         direction = _pose_direction(side, source_pose)
         if sleeves != "none" and enough:
             sleeve = points[own]
+            # A hem that flares out at the torso's side is no sleeve: the cuff is looked for beyond the torso's width.
+            beyond = sleeve[np.abs(sleeve[:, 0] - cx) > torso + 0.01]
+            if len(beyond) >= max(8, int(0.002 * len(points))):
+                sleeve = beyond
             distance = np.linalg.norm(sleeve - shoulder, axis=1)
             cuff = sleeve[distance >= distance.max() - 0.02]
             cuff_centre = cuff.mean(axis=0)
@@ -955,10 +979,14 @@ class AlignPlan(NamedTuple):
 
 
 def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: str,
-               scale: bool = True) -> AlignPlan:
+               scale: bool = True, reference: Optional[Mapping[str, Any]] = None) -> AlignPlan:
     """How to align a garment with these markers to a body with these joints. Raises :class:`MarkerError`
     (``align-markers``) when the fit would scale or turn the garment more than a garment ever needs, which means
-    the markers are not on the garment's joints."""
+    the markers are not on the garment's joints.
+
+    Markers sit on the garment's surface, joints inside the body, so the size is measured against ``reference``: the
+    markers Auto Markers gives the body itself (surface against surface). Without it the joints' own span is used,
+    which reads every garment as too wide and shrinks it."""
     kind = "lower" if category in LOWER else "upper"
     weights = ALIGN_WEIGHTS[kind]
     full = complete_joints(joints)
@@ -968,11 +996,17 @@ def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: 
     source = np.array([_vec(markers[n]) for n in names])
     target = np.array([full[MARKER_JOINTS[n]] for n in names])
     fit = similarity_fit(source, target, [weights[n] for n in names])
-    if not (1.0 / ALIGN_MAX_SCALE <= fit.scale <= ALIGN_MAX_SCALE) or fit.turn > ALIGN_MAX_TURN:
+    size = fit.scale
+    if reference:
+        alike = [n for n in names if n in reference]
+        if len(alike) >= 3:
+            size = similarity_fit(np.array([_vec(markers[n]) for n in alike]),
+                                  np.array([_vec(reference[n]) for n in alike]), [weights[n] for n in alike]).scale
+    if not (1.0 / ALIGN_MAX_SCALE <= size <= ALIGN_MAX_SCALE) or fit.turn > ALIGN_MAX_TURN:
         raise MarkerError("align-markers")
-    if not scale:  # keep the garment's size: the best rotation and translation alone
-        w = np.array([weights[n] for n in names]) / sum(weights[n] for n in names)
-        fit = Similarity(1.0, fit.rotation, w @ target - fit.rotation @ (w @ source))
+    w = np.array([weights[n] for n in names]) / sum(weights[n] for n in names)
+    chosen = size if scale else 1.0  # without scaling: the best rotation and translation alone
+    fit = Similarity(chosen, fit.rotation, w @ target - chosen * fit.rotation @ (w @ source))
     moved = fit.apply(source)
     w = np.array([weights[n] for n in names])
     residual = float((w * np.linalg.norm(moved - target, axis=1)).sum() / w.sum() * 1000.0)
@@ -1388,6 +1422,17 @@ def push_out_offsets(positions: Any, nearest: Any, normals: Any, clearance: Any,
     return offsets
 
 
+def clamp_moves(start: Any, positions: Any, limit: float) -> np.ndarray:
+    """``positions`` with no vertex further than ``limit`` from where it started (the passes of a push add up)."""
+    start, positions = as_points(start), as_points(positions)
+    moves = positions - start
+    lengths = np.linalg.norm(moves, axis=1)
+    over = lengths > limit
+    result = positions.copy()
+    result[over] = start[over] + moves[over] * (limit / lengths[over])[:, None]
+    return result
+
+
 def layer_follow(positions: Any, offsets: Any, clearance: Any, reach: float = LAYER_REACH) -> np.ndarray:
     """Offsets with the layers that lie over a pushed vertex (a shell over its lining, a pocket over the front) moved
     along by at least as much, so the layers keep their order and their distance."""
@@ -1531,8 +1576,11 @@ def seam_candidates(positions: Any, distance: float, candidates: Optional[Any] =
                     fabrics: Optional[Any] = None, apart: Iterable[Tuple[Any, Any]] = (),
                     groups: Optional[Any] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Pairs of vertices that may be two sides of one seam: closer than ``distance``, never two vertices of one face,
-    never neighbours along the same open edge, never surfaces facing apart, never across a pair of ``fabrics`` named
-    in ``apart`` (a lining and its shell), and with ``groups`` only within one group. ``(first, second, distance)``."""
+    never neighbours along the same open edge, never across a pair of ``fabrics`` named in ``apart`` (a lining and its
+    shell), and with ``groups`` only within one group. Surfaces facing apart are a fold or a slab, never a seam, within
+    one part of the garment (``components``) and in a thick export (``cross_components_only``); two separate panels
+    may face apart at their seam, because exports often flip some panels' normals, so the rule does not part them.
+    ``(first, second, distance)``."""
     points = as_points(positions)
     count = len(points)
     indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else np.arange(count)
@@ -1550,7 +1598,11 @@ def seam_candidates(positions: Any, distance: float, candidates: Optional[Any] =
         keep &= ~(same & (along < max(CHAIN_GAP_FACTOR * distance, 0.01)))
     if normals is not None and len(a):
         n = as_points(normals)
-        keep &= np.einsum("ij,ij->i", n[a], n[b]) > math.cos(math.radians(FACING_LIMIT))
+        facing = np.einsum("ij,ij->i", n[a], n[b]) > math.cos(math.radians(FACING_LIMIT))
+        if components is not None and not cross_components_only:
+            comp = np.asarray(components)
+            facing |= comp[a] != comp[b]  # two panels: their normals may be flipped against each other
+        keep &= facing
     if cross_components_only and components is not None:
         comp = np.asarray(components)
         keep &= comp[a] != comp[b]
@@ -1564,12 +1616,48 @@ def seam_candidates(positions: Any, distance: float, candidates: Optional[Any] =
     return a[keep], b[keep], d[keep]
 
 
+#: A weld group (the vertices that become one) holds at most this many: where several panels meet in one corner.
+MAX_WELD_GROUP = 8
+#: Rounds of joining each group to its mutual nearest neighbour group.
+WELD_ROUNDS = 8
+#: Group pairs whose combined width is measured at once (bounds the memory of a round).
+WELD_BLOCK = 20000
+
+
+def _group_width(points: np.ndarray, root: np.ndarray, first: np.ndarray, second: np.ndarray) -> np.ndarray:
+    """The largest distance between a vertex of group ``first[i]`` and one of group ``second[i]`` (groups named by
+    their root, each of at most :data:`MAX_WELD_GROUP` vertices)."""
+    roots = np.unique(np.concatenate([first, second]))
+    involved = np.nonzero(np.isin(root, roots))[0]
+    order = involved[np.argsort(root[involved], kind="stable")]
+    sorted_roots = root[order]
+    starts = np.searchsorted(sorted_roots, roots)
+    sizes = np.searchsorted(sorted_roots, roots, "right") - starts
+    rank = np.arange(len(order)) - np.repeat(starts, sizes)
+    table = np.full((len(roots), MAX_WELD_GROUP), -1, dtype=np.int64)
+    slot = np.searchsorted(roots, sorted_roots)
+    table[slot, np.minimum(rank, MAX_WELD_GROUP - 1)] = order
+    widths = np.zeros(len(first))
+    for begin in range(0, len(first), WELD_BLOCK):
+        left = table[np.searchsorted(roots, first[begin:begin + WELD_BLOCK])]
+        right = table[np.searchsorted(roots, second[begin:begin + WELD_BLOCK])]
+        pa = points[np.maximum(left, 0)][:, :, None, :]
+        pb = points[np.maximum(right, 0)][:, None, :, :]
+        squared = ((pa - pb) ** 2).sum(axis=3)
+        valid = (left >= 0)[:, :, None] & (right >= 0)[:, None, :]
+        widths[begin:begin + WELD_BLOCK] = np.sqrt(np.where(valid, squared, 0.0).max(axis=(1, 2)))
+    return widths
+
+
 def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = None,
-                 groups: Optional[Any] = None, **rules: Any) -> Tuple[np.ndarray, np.ndarray]:
+                 groups: Optional[Any] = None, progress: Optional[Any] = None,
+                 **rules: Any) -> Tuple[np.ndarray, np.ndarray]:
     """Which vertex each vertex merges into (itself when it stays) and where the merged vertices go (the mean of
-    their group). Pairs come from :func:`seam_candidates` (``rules`` are its keyword arguments) and are joined
-    greedily from the closest, and a group is never wider than ``distance``: a dense hem cannot collapse into a
-    point."""
+    their group). Pairs come from :func:`seam_candidates` (``rules`` are its keyword arguments). Each round joins every
+    group to the group nearest to it when that one's nearest is it too, and only when the joined group is no wider
+    than ``distance``, so a dense hem cannot collapse into a point; a corner where several panels meet grows over the
+    rounds. Everything runs on whole arrays: a shirt with half a million candidate pairs takes seconds. ``progress``
+    is called after each round."""
     points = as_points(positions)
     count = len(points)
     target = np.arange(count)
@@ -1577,44 +1665,64 @@ def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = No
     a, b, d = seam_candidates(points, distance, candidates, groups=groups, **rules)
     if not len(a):
         return target, merged
-    # A pair whose two vertices pair with nothing else is a group of its own (most seam vertices are): joined at
-    # once, without the greedy walk below.
-    uses = np.bincount(np.concatenate([a, b]), minlength=count)
-    alone = (uses[a] == 1) & (uses[b] == 1)
-    low, high = np.minimum(a[alone], b[alone]), np.maximum(a[alone], b[alone])
-    target[high] = low
-    merged[low] = merged[high] = (points[low] + points[high]) / 2
-    a, b, d = a[~alone], b[~alone], d[~alone]
-    parent: Dict[int, int] = {}
-    members: Dict[int, List[int]] = {}
-
-    def find(i: int) -> int:
-        root = i
-        while parent.get(root, root) != root:
-            root = parent[root]
-        while parent.get(i, i) != root:
-            parent[i], i = root, parent[i]
-        return root
-
-    limit = distance * distance + 1e-18
-    for index in np.argsort(d, kind="stable"):
-        i, j = int(a[index]), int(b[index])
-        ri, rj = find(i), find(j)
-        if ri == rj:
-            continue
-        group_i, group_j = members.get(ri, [ri]), members.get(rj, [rj])
-        diff = points[group_i][:, None, :] - points[group_j][None, :, :]
-        if float(np.einsum("ijk,ijk->ij", diff, diff).max()) > limit:
-            continue  # the joined group would be wider than the weld distance
-        root, other = min(ri, rj), max(ri, rj)
-        parent[other] = root
-        members[root] = group_i + group_j
-        members.pop(other, None)
-    for root, group in members.items():
-        if len(group) > 1:
-            target[group] = root
-            merged[group] = points[group].mean(axis=0)
+    root = np.arange(count)
+    size = np.ones(count, dtype=np.int64)
+    for _ in range(WELD_ROUNDS):
+        ra, rb = root[a], root[b]
+        apart = ra != rb
+        ra, rb, dd = ra[apart], rb[apart], d[apart]
+        if not len(ra):
+            break
+        # Each group's nearest other group (by its closest vertex pair).
+        first = np.concatenate([ra, rb])
+        second = np.concatenate([rb, ra])
+        gap = np.concatenate([dd, dd])
+        order = np.lexsort((second, gap, first))
+        first, second = first[order], second[order]
+        lead = np.ones(len(first), dtype=bool)
+        lead[1:] = first[1:] != first[:-1]
+        best = np.full(count, -1, dtype=np.int64)
+        best[first[lead]] = second[lead]
+        mine = first[lead]
+        mutual = mine[(best[best[mine]] == mine) & (mine < best[mine])]
+        partner = best[mutual]
+        fits = size[mutual] + size[partner] <= MAX_WELD_GROUP
+        mutual, partner = mutual[fits], partner[fits]
+        if len(mutual):
+            narrow = _group_width(points, root, mutual, partner) <= distance + 1e-9
+            mutual, partner = mutual[narrow], partner[narrow]
+        if not len(mutual):
+            break
+        remap = np.arange(count)
+        remap[partner] = mutual
+        root = remap[root]
+        size[mutual] += size[partner]
+        size[partner] = 0
+        if progress is not None:
+            progress()
+    joined = np.nonzero(np.bincount(root, minlength=count) > 1)[0]
+    if not len(joined):
+        return target, merged
+    lowest = np.full(count, count, dtype=np.int64)
+    np.minimum.at(lowest, root, np.arange(count))
+    members = np.nonzero(np.isin(root, joined))[0]
+    target[members] = lowest[root[members]]
+    sums = np.zeros((count, 3))
+    np.add.at(sums, root[members], points[members])
+    totals = np.bincount(root[members], minlength=count).astype(np.float64)
+    merged[members] = sums[root[members]] / totals[root[members], None]
     return target, merged
+
+
+def open_seam_count(positions: Any, distance: float, boundary: Any, parts: Any, target: Any) -> int:
+    """How many vertices on the open edges of one part still lie within ``distance`` of the open edge of another part
+    after the weld, without being joined to it: seams that stay open."""
+    points = as_points(positions)
+    a, b, _d = close_pairs(points, distance, np.nonzero(np.asarray(boundary, dtype=bool))[0])
+    parts = np.asarray(parts)
+    target = np.asarray(target)
+    open_pairs = (parts[a] != parts[b]) & (target[a] != target[b])
+    return int(len(np.unique(np.concatenate([a[open_pairs], b[open_pairs]]))))
 
 
 def lining_pairs(positions: Any, normals: Any, groups: Any, *, weld: float = 0.002, near: float = 0.03,
@@ -2006,22 +2114,35 @@ def parse_preset(text: str) -> Tuple[Dict[str, Vector], Optional[str], Optional[
 #: spans less than a factor of 10, the step from centimetres to millimetres, so at most one of those units fits.
 SIZE_RANGES = {"shoes": (0.08, 0.5), "pants": (0.25, 1.6), "shorts": (0.25, 1.6), "long_jacket": (0.4, 2.2)}
 TOP_SIZE_RANGE = (0.3, 1.8)
-#: The units Import Garment knows, with their factor to metres. Inches are tried last: a size that fits both
-#: centimetres and inches is far more often centimetres (Marvelous Designer's default).
-UNITS = {"m": 1.0, "cm": 0.01, "mm": 0.001, "in": 0.0254}
+#: The units Import Garment knows, with their factor to metres. Decimetres stand for the FBX files of Marvelous
+#: Designer and CLO that Blender reads ten times too large. Inches are tried last: a size that fits both centimetres
+#: and inches is far more often centimetres (Marvelous Designer's default).
+UNITS = {"m": 1.0, "cm": 0.01, "mm": 0.001, "dm": 0.1, "in": 0.0254}
+#: The units Automatic picks without saying so (the usual units of garment files).
+USUAL_UNITS = ("m", "cm", "mm")
 
 
 def import_scale(size: float, category: str = "tshirt", unit: str = "auto") -> float:
     """The factor that brings an imported garment whose largest dimension is ``size`` (Blender units) to metres.
     With ``unit`` ``auto``, the unit whose size fits the category wins (Marvelous Designer files are often in
     centimetres or millimetres, other tools' in inches); a size that fits none is kept as it is."""
+    return UNITS[import_unit(size, category, unit) or "m"]
+
+
+def import_unit(size: float, category: str = "tshirt", unit: str = "auto") -> Optional[str]:
+    """The unit :func:`import_scale` reads the garment in, or ``None`` when no unit gives it a garment's size."""
     if unit in UNITS:
-        return UNITS[unit]
+        return unit
+    for name, factor in UNITS.items():
+        if plausible_size(size * factor, category):
+            return name
+    return None
+
+
+def plausible_size(size: float, category: str = "tshirt") -> bool:
+    """Whether a garment of ``category`` can be ``size`` metres at its largest."""
     low, high = SIZE_RANGES.get(category, TOP_SIZE_RANGE)
-    for factor in UNITS.values():
-        if low <= size * factor <= high:
-            return factor
-    return 1.0
+    return low <= size <= high
 
 
 def upright_turn(positions: Any, category: str) -> Optional[Tuple[str, float]]:
@@ -2056,6 +2177,13 @@ def upright_turn(positions: Any, category: str) -> Optional[Tuple[str, float]]:
         return None
     cx = float(np.median(points[:, 0]))
     cy = float((low[1] + high[1]) / 2)
+    # A hood or a high collar is the top of the garment and hangs at the back: where the top band sits says which way
+    # the garment faces, whatever the neckline under it does.
+    band = points[points[:, 2] > high[2] - 0.08]
+    if len(band) >= 10 and float(np.ptp(band[:, 0])) < 0.6 * extent[0]:
+        lean = (float(band[:, 1].mean()) - cy) / max(extent[1], 1e-6)
+        if abs(lean) > 0.12:
+            return ("z", 180.0) if lean < 0 else None
     column = points[(np.abs(points[:, 0] - cx) < 0.03) & (points[:, 2] > high[2] - 0.35)]
     front, back = column[column[:, 1] < cy], column[column[:, 1] >= cy]
     if len(front) < 3 or len(back) < 3:

@@ -1216,8 +1216,8 @@ EN: Dict[str, str] = {
     "garment.heading.options": "Options",
     "garment.op.align": "Align to Body",
     "garment.op.align.desc": (
-        "Move, turn and scale the garment so its markers sit on the body's joints, then turn its arms or legs onto the "
-        "body's"
+        "Move and turn the garment (and scale it, with Keep Size off) so its markers sit on the body's joints, then "
+        "turn its arms or legs onto the body's"
     ),
     "garment.op.back": "Back One Step",
     "garment.op.back.desc": "Put back the garment's shape from before the last step that changed it",
@@ -1230,9 +1230,10 @@ EN: Dict[str, str] = {
     ),
     "garment.align.fetching": "Getting the joints of the freemode skeleton from Durty Cloth Tool…",
     "garment.info.align": (
-        "Moves, turns and scales the garment so its markers sit on the joints of the freemode body, then turns each "
-        "arm (or leg) onto the body's. The tools under Fix measure against the body, so they wait for this step. Run "
-        "Auto Markers first and move any marker that is off."
+        "Moves and turns the garment so its markers sit on the joints of the freemode body, then turns each arm (or "
+        "leg) onto the body's. With Keep Size off it also scales the garment to the body. The tools under Fix measure "
+        "against the body, so they wait for this step, and again when a marker was moved since. Run Auto Markers first "
+        "and move any marker that is off."
     ),
     "garment.done.align": (
         "Aligned to the body: moved {shift} cm, turned {turn}°, scaled to {scale} %, {limbs} arms or legs turned. The "
@@ -1505,6 +1506,36 @@ EN: Dict[str, str] = {
         "Usual: how far game clothing of this kind sits from the body, from gta.clothing."
     ),
     "garment.check.reference-offline": "Sign in and allow online access to compare with game clothing.",
+    # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
+    "garment.unit.dm": "Decimetres",
+    "garment.done.import-unit": (
+        "Imported {name} ({count} vertices), reading its size in {unit}, the only unit that gives it a garment's size. "
+        "If it looks wrong, import it again and choose the Unit."
+    ),
+    "garment.done.import-size": (
+        "Imported {name} ({count} vertices), but at {size} m it does not have the size of this kind of garment. Import "
+        "it again and choose the Unit, or check the category."
+    ),
+    "garment.done.prepare-open": (
+        "Prepared, but {count} seam vertices stayed open ({welded} joined): the panels do not quite meet there. Raise "
+        "Weld Distance (mm) in the options of Prepare Garment and prepare again, or join them by hand."
+    ),
+    "garment.done.combine-missing": (
+        "Combined, but {count} textures could not be found and were baked without their pixels: {names}. Put the image "
+        "files where the materials expect them (or pack them), then combine again."
+    ),
+    "garment.done.step-cancelled": "{step} was cancelled; the garment is as it was before.",
+    "garment.step.status": "{step}: {stage} ({done} of {total}). Esc cancels.",
+    "garment.stage.seams": "Finding the seams",
+    "garment.stage.weld": "Joining the seams",
+    "garment.stage.clean": "Cleaning up and triangulating",
+    "garment.stage.pack": "Packing the UV layout",
+    "garment.stage.bake-colour": "Baking the colour",
+    "garment.stage.bake-alpha": "Baking the transparency",
+    "garment.stage.bake-specular": "Baking the specular map",
+    "garment.stage.bake-normal": "Baking the normal map",
+    "garment.stage.bake-emission": "Baking the emission map",
+    "garment.stage.material": "Making the combined material",
 }
 
 

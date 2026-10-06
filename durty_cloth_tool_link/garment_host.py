@@ -12,6 +12,7 @@ Only the garment chosen in the panel, its markers and the body the add-on added 
 from __future__ import annotations
 
 import math
+import os
 import pathlib
 import secrets
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -22,7 +23,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from . import garment, garment_fit
+from . import garment, garment_add, garment_fit
 from .strings import UserError, msg
 
 #: Custom properties the add-on keeps on the garment (and the .blend file keeps with it).
@@ -60,11 +61,10 @@ PACKED_UV = "UVMap 0"
 SOURCE_UV = "DCT Source UV"
 #: The vertex colours the ped shader reads, as Sollumz names them.
 COLOUR_ATTRIBUTES = ("Color 1", "Color 2")
-TEARS_GROUP = "DCT Tears"
-#: Vertex groups the user can set: vertices the tools never move, and a lining that is never welded to its shell.
-PINNED_GROUP = "DCT Pinned"
-LINING_GROUP = "DCT Lining"
-TOOL_GROUPS = (TEARS_GROUP, PINNED_GROUP, LINING_GROUP)
+#: The add-on's own vertex groups (the tear check's, and those the user can set: vertices the tools never move, and a
+#: lining that is never welded to its shell). The add leaves them out of the export (garment_add.TOOL_GROUPS).
+TEARS_GROUP, PINNED_GROUP, LINING_GROUP = garment_add.TEARS_GROUP, garment_add.PINNED_GROUP, garment_add.LINING_GROUP
+TOOL_GROUPS = garment_add.TOOL_GROUPS
 #: The most backups kept per garment: the first (the shape before any fitting) and the newest ones.
 MAX_BACKUPS = len(BACKUP_SLOTS)
 
@@ -696,13 +696,15 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
         raise fail("garment.error.no-mesh")
     corners = np.concatenate([np.array([obj.matrix_world @ Vector(c) for c in obj.bound_box]) for obj in meshes])
     size = float((corners.max(axis=0) - corners.min(axis=0)).max())
-    factor = garment.import_scale(size, category, unit)
+    unit_name = garment.import_unit(size, category, unit)
+    factor = garment.UNITS[unit_name or "m"]
     avatars = [obj for obj in meshes if _looks_like_avatar(obj, factor)] if len(meshes) > 1 else []
     if avatars and len(avatars) < len(meshes):
         meshes = [obj for obj in meshes if obj not in avatars]
         corners = np.concatenate([np.array([obj.matrix_world @ Vector(c) for c in obj.bound_box]) for obj in meshes])
         size = float((corners.max(axis=0) - corners.min(axis=0)).max())
-        factor = garment.import_scale(size, category, unit)
+        unit_name = garment.import_unit(size, category, unit)
+        factor = garment.UNITS[unit_name or "m"]
     else:
         avatars = []
     rigged = [obj for obj in new if obj.type == "ARMATURE"]
@@ -742,7 +744,8 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
     if layer.objects.get(chosen.name) is not None:
         chosen.select_set(True)
         layer.objects.active = chosen
-    return chosen, {"factor": factor, "turned": [step[0] for step in turns], "avatar": bool(avatars)}
+    return chosen, {"factor": factor, "turned": [step[0] for step in turns], "avatar": bool(avatars),
+                    "unit": unit_name or "m", "plausible": unit_name is not None, "size": round(size * factor, 2)}
 
 
 def _collection_of(obj: Any, context: Any) -> Any:
@@ -916,16 +919,47 @@ def _shading(color_type: str, only_from: Optional[str] = None) -> None:
 # --------------------------------------------------------------------------------------------------
 
 
+#: On the garment: its markers as Align to Body left them (a marker moved since means the garment needs aligning again).
+ALIGNED_MARKERS = "dct_aligned_markers"
+_REFERENCE: Dict[str, Any] = {"key": None, "markers": None}
+
+
+def body_reference(body: Optional[Any]) -> Optional[Dict[str, Any]]:
+    """Where Auto Markers puts the markers on the body itself (kept while the body does not change): what Align to
+    Body measures a garment's size against, surface against surface."""
+    if body is None:
+        return None
+    key = _body_key(body)
+    if _REFERENCE["key"] != key:
+        try:
+            joints = garment.estimate_body_joints(world_positions(body), mesh_edges(body.data))
+            _REFERENCE["markers"] = {name: joints[bone] for name, bone in garment.MARKER_JOINTS.items()
+                                     if bone in joints and not name.startswith("ankle")}
+        except garment.MarkerError:
+            _REFERENCE["markers"] = None
+        _REFERENCE["key"] = key
+    return _REFERENCE["markers"]
+
+
+def aligned(obj: Optional[Any], scene: Any) -> bool:
+    """Whether the garment sits on the body as Align to Body put it: aligned, and no marker moved since."""
+    if not flag(obj, "dct_aligned"):
+        return False
+    return not garment.markers_moved(read_markers(scene, obj), stored_text(obj, ALIGNED_MARKERS))
+
+
 def align(context: Any, obj: Any, markers: Dict[str, Any], joints: Dict[str, Any], category: str,
-          keep_size: bool = False) -> Dict[str, Any]:
+          keep_size: bool = True, body: Optional[Any] = None) -> Dict[str, Any]:
     """Moves, turns and (unless ``keep_size``) scales the garment so its markers sit on the body's joints, then turns
-    each arm (or leg) onto the body's; the markers follow. Raises :class:`garment.MarkerError` when the markers
-    would need a fit no garment needs."""
-    plan = garment.align_plan(markers, joints, category, scale=not keep_size)
+    each arm (or leg) onto the body's; the markers follow. The size is measured against the markers of the body
+    itself (``body``), not its joints, which lie inside it. Raises :class:`garment.MarkerError` when the markers would
+    need a fit no garment needs."""
+    plan = garment.align_plan(markers, joints, category, scale=not keep_size, reference=body_reference(body))
     positions = world_positions(obj)
     moved, placed = garment.apply_align(positions, markers, plan)
     set_world_positions(obj, moved)
     write_markers(context.scene, placed, context.scene.dct_garment.marker_size, obj)
+    obj[ALIGNED_MARKERS] = garment.markers_json(read_markers(context.scene, obj))
     set_flag(obj, "dct_aligned")
     clear_flags(obj, *STALE)
     shift = float(np.linalg.norm(moved.mean(axis=0) - positions.mean(axis=0)))
@@ -988,7 +1022,8 @@ def push_out(obj: Any, body: Any, gap: float, passes: int = 4, progress: Optiona
         offsets = garment.spread_offsets(offsets, edges, needs, iterations=3)
         offsets[locked] = 0.0
         changed = np.nonzero(np.linalg.norm(offsets, axis=1) > 1e-7)[0]
-        positions = positions + offsets
+        # However the passes and the spreading add up, no vertex moves further than the deepest push to the gap.
+        positions = garment.clamp_moves(start, positions + offsets, garment.MAX_PUSH + gap)
         if len(changed):
             s, n, nn = clearance(tree, positions[changed])
             signed[changed], nearest[changed], normals[changed] = s, n, nn
@@ -1149,6 +1184,7 @@ def start_sculpt(context: Any, obj: Any, body: Optional[Any], radius: float, str
             if plain:
                 mesh.transform(Matrix.Translation((-offset, 0.0, 0.0)))
                 obj.location.x += offset
+                context.view_layer.update()  # the world matrix follows now, not at the next redraw
                 shift = offset
             else:
                 mirror_off = True
@@ -1180,15 +1216,11 @@ def _end_sculpt(context: Any, obj: Any, body: Optional[Any]) -> Dict[str, Any]:
     obj.data.use_mirror_x = bool(state.get("mirror", 0))
     shift = float(state.get("shift", 0.0) or 0.0)
     if shift:
+        # The snapshot was taken before the shift, in the garment's own frame, which this puts back: it stays as it is
+        # (Mesh.transform moves the vertices, never an attribute).
         obj.data.transform(Matrix.Translation((shift, 0.0, 0.0)))
         obj.location.x -= shift
-        snapshot = obj.data.attributes.get(PRESCULPT)
-        if snapshot is not None and len(snapshot.data) == len(obj.data.vertices):
-            before = np.empty(len(obj.data.vertices) * 3, dtype=np.float32)
-            snapshot.data.foreach_get("vector", before)
-            before = before.reshape(-1, 3)
-            before[:, 0] += shift
-            snapshot.data.foreach_set("vector", before.reshape(-1))
+        context.view_layer.update()
     if body is not None and state.get("body_display") in ("BOUNDS", "WIRE", "SOLID", "TEXTURED"):
         body.display_type = state["body_display"]
     if SCULPT_STATE in obj:
@@ -1496,18 +1528,29 @@ def _remove_interior_walls(bm: Any) -> int:
     return len(doomed)
 
 
+def run_steps(steps: Any) -> Any:
+    """Runs a step generator (:func:`prepare_steps`, :func:`combine_steps`) to its end and returns its result."""
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+
+
 def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool) -> Dict[str, Any]:
+    """:func:`prepare_steps` at once."""
+    return run_steps(prepare_steps(context, obj, weld, colours, overwrite))
+
+
+def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool) -> Any:
     """Welds the panel seams within ``weld`` metres (never a lining onto its shell, never a hem onto itself), removes
     loose and degenerate geometry, triangulates, shades smooth and adds the ped vertex colours. A thick export (panels
-    closed into slabs, without open edges) is welded across panels and the walls between them are removed."""
-    hide_problems(obj)
-    applied = apply_transform(obj)
+    closed into slabs, without open edges) is welded across panels and the walls between them are removed. A
+    generator: it yields ``(stage text key, done, total)`` before each stage, so a modal operator can show the progress
+    and stop between stages; nothing changes on the garment before the last stage. Returns what it did, with ``open``,
+    the seam vertices that stayed open."""
+    yield "garment.stage.seams", 0, 3
     mesh = obj.data
-    tears_group = obj.vertex_groups.get(TEARS_GROUP)
-    if tears_group is not None:
-        obj.vertex_groups.remove(tears_group)
-    if mesh.attributes.get(PRESCULPT) is not None:
-        mesh.attributes.remove(mesh.attributes[PRESCULPT])
     positions = world_positions(obj)
     count = len(positions)
     normals = vertex_normals(obj)
@@ -1524,8 +1567,18 @@ def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[floa
             if len(set(material.tolist())) > 1 else []
         fabrics, lining = material, bool(apart)
     rules = seam_rules(obj, positions, normals)
+    yield "garment.stage.weld", 1, 3
     target, merged = garment.weld_targets(positions, weld, None if thick else boundary, fabrics=fabrics, apart=apart,
                                           components=parts, cross_components_only=thick, **rules)
+    open_seams = 0 if thick else garment.open_seam_count(positions, weld, boundary, parts, target)
+    yield "garment.stage.clean", 2, 3
+    hide_problems(obj)
+    applied = apply_transform(obj)  # world positions stay; the weld below works in the object's own frame
+    tears_group = obj.vertex_groups.get(TEARS_GROUP)
+    if tears_group is not None:
+        obj.vertex_groups.remove(tears_group)
+    if mesh.attributes.get(PRESCULPT) is not None:
+        mesh.attributes.remove(mesh.attributes[PRESCULPT])
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bm.verts.ensure_lookup_table()
@@ -1575,7 +1628,8 @@ def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[floa
     set_flag(obj, "dct_prepared")
     clear_flags(obj, *STALE)
     return {"welded": welded, "removed": removed, "triangles": triangles, "lining": lining,
-            "colours": colours_written, "applied": applied, "thick": thick, "walls": walls}
+            "colours": colours_written, "applied": applied, "thick": thick, "walls": walls, "open": open_seams,
+            "boundary": int(boundary.sum())}
 
 
 def _texture_nodes(material: Any) -> List[Any]:
@@ -1725,13 +1779,56 @@ SUPERSAMPLED = (512, 1024, 2048)
 PACK_MARGIN = 16
 
 
+def missing_textures(materials: Sequence[Any]) -> List[str]:
+    """The images the materials use whose pixels Blender cannot find: a file that is not where the material says (UDIM
+    tiles included) and that is not packed into the .blend file."""
+    missing: List[str] = []
+    for material in materials:
+        for node in _texture_nodes(material):
+            image = node.image
+            if image.packed_file is not None or image.source not in ("FILE", "TILED") or image.name in missing:
+                continue
+            path = bpy.path.abspath(image.filepath_raw or image.filepath)
+            if image.source == "TILED":
+                tiles = [path.replace("<UDIM>", str(tile.number)) for tile in image.tiles] if "<UDIM>" in path else [path]
+                found = any(os.path.isfile(tile) for tile in tiles)
+            else:
+                found = bool(path) and os.path.isfile(path)
+            if not found and not (image.has_data and image.is_dirty):
+                missing.append(image.name)
+    return missing
+
+
 def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
                       progress: Optional[Progress] = None) -> Dict[str, Any]:
+    """:func:`combine_steps` at once."""
+    steps = combine_steps(context, obj, size, cut_strips)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+        if progress is not None:
+            progress.step()
+
+
+def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
     """Packs every UV island of the garment into one 0 to 1 layout (long thin strips cut into pieces first) and
     bakes all its materials into one material of ``size`` pixels: the colour with the see-through parts in its alpha,
     and a normal, a specular and an emission map where a material has one. The original UV layout is kept as
-    ``DCT Source UV``."""
+    ``DCT Source UV``. A generator: it yields ``(stage text key, done, total)`` before each stage (one per bake), so a
+    modal operator can show the progress and stop between stages (a stopped run puts the scene's bake settings and
+    the materials back; the garment's backup puts its mesh back). Returns what it did, with ``missing``, the textures
+    that could not be found and were baked without their pixels."""
     mesh = obj.data
+    materials = []
+    for slot in obj.material_slots:
+        if slot.material is not None and slot.material not in materials:
+            materials.append(slot.material)
+    maps = _maps_present(materials)
+    total = 3 + sum(1 for key in ("alpha", "specular", "normal", "emission") if maps.get(key))
+    missing = missing_textures(materials)
+    yield "garment.stage.pack", 0, total
     if not mesh.uv_layers:
         raise fail("garment.why.no-uv")
     if any(slot.material is None for slot in obj.material_slots) or not obj.material_slots:
@@ -1782,14 +1879,6 @@ def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
                                     shape_method="CONCAVE")
         finally:
             bpy.ops.object.mode_set(mode="OBJECT")
-    if progress is not None:
-        progress.step()
-
-    materials = []
-    for slot in obj.material_slots:
-        if slot.material is not None and slot.material not in materials:
-            materials.append(slot.material)
-    maps = _maps_present(materials)
     factor = 2 if size in SUPERSAMPLED else 1
     bake_size = size * factor
     added: List[Tuple[Any, Any]] = []
@@ -1832,23 +1921,27 @@ def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
         bake.margin_type = "EXTEND"
         bake.use_clear = True
         bake.target = "IMAGE_TEXTURES"
+        done = 1
+        yield "garment.stage.bake-colour", done, total
         results["diffuse"] = _bake_into(context, obj, materials, f"{obj.name}_bake", bake_size, "DIFFUSE")
-        if progress is not None:
-            progress.step()
         for key, kind, names in (("alpha", "EMIT", ("Alpha",)), ("specular", "EMIT", ("Specular IOR Level", "Specular"))):
             if not maps[key]:
                 continue
+            done += 1
+            yield f"garment.stage.bake-{key}", done, total
             rewire = _Rewire(materials, names)
             try:
                 results[key] = _bake_into(context, obj, materials, f"{obj.name}_bake", bake_size, kind, data=True)
             finally:
                 rewire.undo()
-            if progress is not None:
-                progress.step()
         if maps["normal"]:
+            done += 1
+            yield "garment.stage.bake-normal", done, total
             results["normal"] = _bake_into(context, obj, materials, f"{obj.name}_bake", bake_size, "NORMAL",
                                            data=True)
         if maps["emission"]:
+            done += 1
+            yield "garment.stage.bake-emission", done, total
             results["emission"] = _bake_into(context, obj, materials, f"{obj.name}_bake", bake_size, "EMIT")
     except RuntimeError as exc:
         raise fail("garment.error.bake", detail=str(exc).strip()) from exc
@@ -1872,6 +1965,7 @@ def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
             except ReferenceError:
                 continue
     mesh.uv_layers[PACKED_UV].active_render = True
+    yield "garment.stage.material", total - 1, total
 
     diffuse = _downsample(results["diffuse"], factor)
     if "alpha" in results:
@@ -1893,7 +1987,8 @@ def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
     return {"materials": len(materials), "size": size, "cut": cut,
             "used": round(100.0 * min(1.0, garment.uv_area(triangles_uv)), 1),
             "density": garment.texel_density(triangles_uv, triangles, size), "image": images["diffuse"].name,
-            "maps": sorted(key for key in images if key != "diffuse") + (["alpha"] if "alpha" in results else [])}
+            "maps": sorted(key for key in images if key != "diffuse") + (["alpha"] if "alpha" in results else []),
+            "missing": missing}
 
 
 def _combined_material(name: str, images: Dict[str, Any], alpha: bool) -> Any:

@@ -227,7 +227,7 @@ class DCTLINK_PG_garment(PropertyGroup):
     marker_size: FloatProperty(name=EN["garment.prop.marker-size"], default=0.03, min=0.005, max=0.2,
                                subtype="DISTANCE", unit="LENGTH", update=_marker_size_changed,
                                description=EN["garment.prop.marker-size.desc"], translation_context=CONTEXT)
-    keep_size: BoolProperty(name=EN["garment.prop.keep-size"], default=False,
+    keep_size: BoolProperty(name=EN["garment.prop.keep-size"], default=True,
                             description=EN["garment.prop.keep-size.desc"], translation_context=CONTEXT)
     arm_angle: FloatProperty(name=EN["garment.prop.arm-angle"], default=math.radians(40.0), min=0.0,
                              max=math.radians(80.0), subtype="ANGLE", unit="ROTATION",
@@ -306,10 +306,10 @@ def _body_reason(context: Any) -> Optional[Msg]:
 
 
 def _aligned(context: Any) -> bool:
-    """The garment sits on the body: aligned, past the fitting steps (prepared), or a category without markers."""
+    """The garment sits on the body: aligned (and no marker moved since), or a category without markers. Prepare
+    Garment does not count: a garment prepared without Align to Body was never put on the body."""
     obj = current_garment(context)
-    return (not garment.markers_for(props(context).category) or gh.flag(obj, "dct_aligned")
-            or gh.flag(obj, "dct_prepared"))
+    return not garment.markers_for(props(context).category) or gh.aligned(obj, context.scene)
 
 
 def _fit_reason(context: Any, *, sculpting_ok: bool = False) -> Optional[Msg]:
@@ -423,11 +423,96 @@ class _MeshOp(_Op):
             notify("ERROR", failure)
             host.redraw()
             return {"CANCELLED"}
+        level = "INFO"
+        if isinstance(message, tuple) and not isinstance(message, Msg):  # (level, message)
+            level, message = message
         if message is not None:
-            self.report({"INFO"}, strings.text(message))
-            notify("INFO", message)
+            self.report({level}, strings.text(message))
+            notify(level, message)
         host.redraw()
         return {"FINISHED"}
+
+
+class _SteppedOp(_MeshOp):
+    """A step that takes a while (Prepare Garment, Combine Materials): run from the panel it goes stage by stage on a
+    timer, shows each stage in the status bar and stops at Esc, putting the garment back from the backup it made
+    first. Run from a script it runs at once. Subclasses give :meth:`steps` (a generator of ``(stage text key, done,
+    total)`` that returns the step's result) and :meth:`finished` (the result's message)."""
+
+    title = "garment.op.prepare"
+
+    def steps(self, context: Any) -> Any:
+        raise NotImplementedError
+
+    def finished(self, context: Any, result: Any) -> Any:
+        raise NotImplementedError
+
+    def execute(self, context):
+        return self.run(context, lambda: self.finished(context, gh.run_steps(self.steps(context))))
+
+    def invoke(self, context, event):
+        obj = current_garment(context)
+        gh.backup(obj)
+        self._garment = obj
+        self._steps = self.steps(bpy.context)
+        self._timer = context.window_manager.event_timer_add(0.05, window=context.window)
+        context.window_manager.progress_begin(0, 100)
+        context.window_manager.modal_handler_add(self)
+        return {"RUNNING_MODAL"}
+
+    def _end(self, context: Any) -> None:
+        if self._timer is not None:
+            context.window_manager.event_timer_remove(self._timer)
+            self._timer = None
+        context.window_manager.progress_end()
+        try:
+            context.workspace.status_text_set(None)
+        except (AttributeError, TypeError):
+            pass  # no status bar to clear (background)
+        host.redraw()
+
+    def _fail(self, context: Any, failure: Msg, level: str = "ERROR") -> set:
+        self._steps.close()  # restores what the step changed around the garment (bake settings, materials)
+        obj = self._garment
+        try:
+            if obj.mode != "OBJECT":
+                bpy.ops.object.mode_set(mode="OBJECT")
+            gh.roll_back(obj)
+        except Exception:  # noqa: BLE001 - the rollback is best effort; Ctrl+Z still has the garment
+            traceback.print_exc()
+        self._end(context)
+        self.report({"WARNING" if level == "INFO" else level}, strings.text(failure))
+        notify(level, failure)
+        return {"CANCELLED"}
+
+    def modal(self, context, event):
+        if event.type == "ESC" and event.value == "PRESS":
+            return self._fail(context, msg("garment.done.step-cancelled", step=msg(self.title)), "INFO")
+        if event.type != "TIMER":
+            return {"PASS_THROUGH"}
+        try:
+            stage, done, total = next(self._steps)
+        except StopIteration as stop:
+            self._end(context)
+            message = self.finished(context, stop.value)
+            level = "INFO"
+            if isinstance(message, tuple) and not isinstance(message, Msg):  # (level, message)
+                level, message = message
+            self.report({level}, strings.text(message))
+            notify(level, message)
+            return {"FINISHED"}
+        except Exception as exc:  # noqa: BLE001 - every failure is reported, and the half-made change undone
+            if not isinstance(exc, EXPECTED):
+                traceback.print_exc()
+            return self._fail(context, _failure_message(exc))
+        context.window_manager.progress_update(int(100 * done / max(1, total)))
+        try:
+            context.workspace.status_text_set(t("garment.step.status", step=msg(self.title), stage=msg(stage),
+                                                done=done + 1, total=total))
+        except (AttributeError, TypeError):
+            pass  # no status bar (background)
+        host.redraw()
+        return {"RUNNING_MODAL"}
 
 
 def _use_reason(context: Any) -> Optional[Msg]:
@@ -514,9 +599,15 @@ class DCTLINK_OT_fit_import_garment(_MeshOp):
                                           unit=self.unit, orient=self.orient)
             settings_.garment = obj
             _add_kept_body(context)
+            count = len(obj.data.vertices)
+            if not info["plausible"]:
+                return "WARNING", msg("garment.done.import-size", name=obj.name, count=count, size=info["size"])
+            if self.unit == "auto" and info["unit"] not in garment.USUAL_UNITS:
+                return "WARNING", msg("garment.done.import-unit", name=obj.name, count=count,
+                                      unit=msg(f"garment.unit.{info['unit']}"))
             key = "garment.done.import-avatar" if info["avatar"] else (
                 "garment.done.import-turned" if info["turned"] else "garment.done.import")
-            return msg(key, name=obj.name, count=len(obj.data.vertices))
+            return msg(key, name=obj.name, count=count)
 
         return self.run(context, load, backup=False)
 
@@ -848,7 +939,7 @@ def align_now(context: Any) -> Msg:
         raise UserError(msg("garment.why.no-body"))
     obj = current_garment(context)
     result = gh.align(context, obj, gh.read_markers(context.scene), found, props(context).category,
-                      keep_size=props(context).keep_size)
+                      keep_size=props(context).keep_size, body=valid_body(context))
     _after_change(context)
     return msg("garment.done.align", **result)
 
@@ -1261,33 +1352,41 @@ class DCTLINK_OT_fit_check_tears(_MeshOp):
         return self.run(context, check, backup=False)
 
 
-class DCTLINK_OT_fit_prepare(_MeshOp):
+#: Seam vertices that may stay open before Prepare Garment warns: some, and more than a small share of the open edges.
+OPEN_SEAMS_WARN = (10, 0.02)
+
+
+class DCTLINK_OT_fit_prepare(_SteppedOp):
     bl_idname = "dct_link.fit_prepare"
     bl_label = EN["garment.op.prepare"]
     bl_description = EN["garment.op.prepare.desc"]
+    title = "garment.op.prepare"
 
     @classmethod
     def poll(cls, context):
         return _refuse(cls, _garment_reason(context))
 
-    def execute(self, context):
-        def prepare() -> Msg:
-            settings_ = props(context)
-            result = gh.prepare(context, current_garment(context), settings_.weld / 1000.0,
+    def steps(self, context):
+        settings_ = props(context)
+        return gh.prepare_steps(context, current_garment(context), settings_.weld / 1000.0,
                                 (tuple(settings_.colour_1), tuple(settings_.colour_2)), settings_.overwrite_colours)
-            if result["thick"]:
-                return msg("garment.done.prepare-thick", welded=result["welded"], walls=result["walls"],
-                           triangles=result["triangles"])
-            key = "garment.done.prepare-lining" if result["lining"] else "garment.done.prepare"
-            return msg(key, welded=result["welded"], removed=result["removed"], triangles=result["triangles"])
 
-        return self.run(context, prepare)
+    def finished(self, context, result):
+        least, share = OPEN_SEAMS_WARN
+        if result["open"] > max(least, share * result["boundary"]):
+            return "WARNING", msg("garment.done.prepare-open", welded=result["welded"], count=result["open"])
+        if result["thick"]:
+            return msg("garment.done.prepare-thick", welded=result["welded"], walls=result["walls"],
+                       triangles=result["triangles"])
+        key = "garment.done.prepare-lining" if result["lining"] else "garment.done.prepare"
+        return msg(key, welded=result["welded"], removed=result["removed"], triangles=result["triangles"])
 
 
-class DCTLINK_OT_fit_combine(_MeshOp):
+class DCTLINK_OT_fit_combine(_SteppedOp):
     bl_idname = "dct_link.fit_combine_materials"
     bl_label = EN["garment.op.combine"]
     bl_description = EN["garment.op.combine.desc"]
+    title = "garment.op.combine"
 
     @classmethod
     def poll(cls, context):
@@ -1296,19 +1395,16 @@ class DCTLINK_OT_fit_combine(_MeshOp):
             reason = msg("garment.why.no-uv")
         return _refuse(cls, reason)
 
-    def execute(self, context):
-        def combine() -> Msg:
-            settings_ = props(context)
-            progress = gh.Progress(5)
-            try:
-                result = gh.combine_materials(context, current_garment(context), int(settings_.texture_size),
-                                              settings_.cut_strips, progress)
-            finally:
-                progress.end()
-            return msg("garment.done.combine", count=result["materials"], size=result["size"], used=result["used"],
-                       cut=result["cut"], density=result["density"])
+    def steps(self, context):
+        settings_ = props(context)
+        return gh.combine_steps(context, current_garment(context), int(settings_.texture_size), settings_.cut_strips)
 
-        return self.run(context, combine)
+    def finished(self, context, result):
+        if result["missing"]:
+            return "WARNING", msg("garment.done.combine-missing", count=len(result["missing"]),
+                                  names=", ".join(result["missing"][:4]))
+        return msg("garment.done.combine", count=result["materials"], size=result["size"], used=result["used"],
+                   cut=result["cut"], density=result["density"])
 
 
 class DCTLINK_OT_fit_lods(_MeshOp):
@@ -2130,7 +2226,7 @@ def flow_state(context: Any) -> garment.FlowState:
         category=settings_.category,
         source_pose=settings_.source_pose,
         markers=len([name for name in expected if name in placed]),
-        aligned=gh.flag(obj, "dct_aligned"),
+        aligned=gh.aligned(obj, context.scene) if obj is not None else False,
         fitted=gh.flag(obj, "dct_fitted"),
         sculpting=gh.sculpting(obj) or gh.session_broken(obj),
         checked=gh.flag(obj, "dct_checked"),

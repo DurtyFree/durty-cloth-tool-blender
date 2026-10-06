@@ -776,8 +776,8 @@ TEXT = {
     "garment.heading.options": "Opciones",
     "garment.op.align": "Alinear al cuerpo",
     "garment.op.align.desc": (
-        "Mover, girar y escalar la prenda para que sus marcadores queden sobre las articulaciones del cuerpo, y luego "
-        "girar sus brazos o piernas sobre los del cuerpo"
+        "Mueve y gira la prenda (y la escala, con Mantener tamaño desactivado) para que sus marcadores queden sobre "
+        "las articulaciones del cuerpo, y luego gira sus brazos o piernas hacia los del cuerpo"
     ),
     "garment.op.back": "Un paso atrás",
     "garment.op.back.desc": "Recuperar la forma de la prenda de antes del último paso que la cambió",
@@ -791,10 +791,11 @@ TEXT = {
     ),
     "garment.align.fetching": "Obteniendo las articulaciones del esqueleto freemode de Durty Cloth Tool…",
     "garment.info.align": (
-        "Mueve, gira y escala la prenda para que sus marcadores queden sobre las articulaciones del cuerpo freemode, y "
-        "luego gira cada brazo (o pierna) sobre el del cuerpo. Las herramientas de Corregir miden contra el cuerpo, "
-        "así que esperan a este paso. Usa primero Marcadores automáticos y mueve los marcadores que no estén en su "
-        "sitio."
+        "Mueve y gira la prenda para que sus marcadores queden sobre las articulaciones del cuerpo freemode, y luego "
+        "gira cada brazo (o pierna) hacia el del cuerpo. Con Mantener tamaño desactivado también la escala al cuerpo. "
+        "Las herramientas de Corregir miden contra el cuerpo, así que esperan a este paso, y de nuevo si desde "
+        "entonces se movió un marcador. Ejecuta primero Marcadores automáticos y mueve cualquier marcador que esté "
+        "mal."
     ),
     "garment.done.align": (
         "Alineada al cuerpo: movida {shift} cm, girada {turn}°, escalada al {scale} %, {limbs} brazos o piernas "
@@ -1113,4 +1114,35 @@ TEXT = {
     "garment.check.reference-offline": (
         "Inicia sesión y permite el acceso en línea para comparar con la ropa del juego."
     ),
+    # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
+    "garment.unit.dm": "Decímetros",
+    "garment.done.import-unit": (
+        "{name} importada ({count} vértices), leyendo su tamaño en {unit}, la única unidad que le da el tamaño de una "
+        "prenda. Si parece incorrecto, vuelve a importarla y elige la unidad."
+    ),
+    "garment.done.import-size": (
+        "{name} importada ({count} vértices), pero con {size} m no tiene el tamaño de este tipo de prenda. Vuelve a "
+        "importarla y elige la unidad, o revisa la categoría."
+    ),
+    "garment.done.prepare-open": (
+        "Preparada, pero {count} vértices de costura quedaron abiertos ({welded} unidos): las piezas no llegan a "
+        "juntarse ahí. Sube Distancia de fusión (mm) en las opciones de Preparar prenda y vuelve a prepararla, o "
+        "únelos a mano."
+    ),
+    "garment.done.combine-missing": (
+        "Combinada, pero no se encontraron {count} texturas y se hornearon sin sus píxeles: {names}. Pon los archivos "
+        "de imagen donde los esperan los materiales (o empaquétalos) y vuelve a combinar."
+    ),
+    "garment.done.step-cancelled": "{step} se canceló; la prenda está como antes.",
+    "garment.step.status": "{step}: {stage} ({done} de {total}). Esc cancela.",
+    "garment.stage.seams": "Buscando las costuras",
+    "garment.stage.weld": "Uniendo las costuras",
+    "garment.stage.clean": "Limpiando y triangulando",
+    "garment.stage.pack": "Empaquetando el mapa UV",
+    "garment.stage.bake-colour": "Horneando el color",
+    "garment.stage.bake-alpha": "Horneando la transparencia",
+    "garment.stage.bake-specular": "Horneando el mapa especular",
+    "garment.stage.bake-normal": "Horneando el mapa de normales",
+    "garment.stage.bake-emission": "Horneando el mapa de emisión",
+    "garment.stage.material": "Creando el material combinado",
 }

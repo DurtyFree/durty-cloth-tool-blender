@@ -175,20 +175,23 @@ Open **Garment Fitting (Experimental)** in the DCT tab. Its first line always te
 button for that step is the large one. Settings you rarely change sit in closed **Options** sections.
 
 1. **Setup:** choose gender, slot, category and the pose the garment was made in, then **Import Garment** and
-   **Add Freemode Body**. The import converts centimetres, millimetres and inches to metres, and turns a garment
-   that lies down or faces backwards.
+   **Add Freemode Body**. The import converts centimetres, millimetres and inches to metres (and the FBX files of
+   Marvelous Designer and CLO that arrive ten times too large), says when the size does not look like a garment's,
+   and turns a garment that lies down or faces backwards.
 2. **Fit:** **Auto Markers**, then check the markers and move any that are off (lines in the 3D view join them and
    turn orange when something looks wrong). Then **Align to Body**: it moves and turns the garment so the markers
    sit on the body's joints, and turns its arms (or legs) onto the body's, so a T-pose becomes the game's pose
-   without opening a seam. Then **Fit to Body** (under **Fit on gta.clothing**): gta.clothing puts the garment
+   without opening a seam. It keeps the garment's size unless you turn off **Keep Size** in its options. Then **Fit to Body** (under **Fit on gta.clothing**): gta.clothing puts the garment
    exactly in the game's pose, gives it the freemode body's weights and moves it out of the body where it was
    inside. A progress bar shows how far it is, **Cancel** stops it, and the panel shows your **Fits left today**.
    You can skip it and fit the garment by hand under **Fix**.
 3. **Fix:** **Run Fit Check** (its **Usual** column shows how far game clothing of the same kind sits from each
    region), **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or sculpt by hand.
-   These tools wait for **Align to Body**, because they measure against the body.
-4. **Game Ready:** **Prepare Garment** and **Combine Materials** (which keeps transparency and bakes normal,
-   specular and emission maps), then the weights: **Transfer Weights** gets the freemode body's weights from
+   These tools wait for **Align to Body**, because they measure against the body, and again when a marker was
+   moved after it.
+4. **Game Ready:** **Prepare Garment** (which says when seams stay open) and **Combine Materials** (which keeps
+   transparency, bakes normal, specular and emission maps and says when a texture file is missing); both show their
+   progress in the status bar, and **Esc** stops them and puts the garment back. Then the weights: **Transfer Weights** gets the freemode body's weights from
    gta.clothing for the garment as it is now (for example after sculpting), or weight it yourself. Then **Generate
    LODs** and **Validate**.
 

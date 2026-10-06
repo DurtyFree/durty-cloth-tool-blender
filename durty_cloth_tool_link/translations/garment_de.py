@@ -814,8 +814,8 @@ TEXT = {
     "garment.heading.options": "Optionen",
     "garment.op.align": "An Körper ausrichten",
     "garment.op.align.desc": (
-        "Das Kleidungsstück verschieben, drehen und skalieren, bis seine Marker auf den Gelenken des Körpers sitzen, "
-        "dann seine Arme oder Beine auf die des Körpers drehen"
+        "Verschiebt und dreht das Kleidungsstück (und skaliert es, wenn Größe behalten aus ist), sodass seine Marker "
+        "auf den Gelenken des Körpers sitzen, und dreht dann seine Arme oder Beine auf die des Körpers"
     ),
     "garment.op.back": "Einen Schritt zurück",
     "garment.op.back.desc": (
@@ -831,10 +831,11 @@ TEXT = {
     ),
     "garment.align.fetching": "Hole die Gelenke des Freemode-Skeletts aus Durty Cloth Tool…",
     "garment.info.align": (
-        "Verschiebt, dreht und skaliert das Kleidungsstück, bis seine Marker auf den Gelenken des Freemode-Körpers "
-        "sitzen, und dreht dann jeden Arm (oder jedes Bein) auf den des Körpers. Die Werkzeuge unter Korrigieren "
-        "messen am Körper und warten deshalb auf diesen Schritt. Nutze zuerst Auto-Marker und verschiebe alle Marker, "
-        "die danebenliegen."
+        "Verschiebt und dreht das Kleidungsstück, sodass seine Marker auf den Gelenken des Freemode-Körpers sitzen, "
+        "und dreht dann jeden Arm (oder jedes Bein) auf den des Körpers. Ist Größe behalten aus, skaliert es das "
+        "Kleidungsstück auch auf den Körper. Die Werkzeuge unter Korrigieren messen am Körper, darum warten sie auf "
+        "diesen Schritt, und erneut, wenn seitdem ein Marker verschoben wurde. Führe zuerst Auto-Marker aus und "
+        "verschiebe jeden Marker, der danebenliegt."
     ),
     "garment.done.align": (
         "Am Körper ausgerichtet: um {shift} cm verschoben, um {turn}° gedreht, auf {scale} % skaliert, {limbs} Arme "
@@ -1178,4 +1179,35 @@ TEXT = {
     "garment.check.reference-offline": (
         "Melde dich an und erlaube den Online-Zugriff, um mit Spielkleidung zu vergleichen."
     ),
+    # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
+    "garment.unit.dm": "Dezimeter",
+    "garment.done.import-unit": (
+        "{name} importiert ({count} Vertices), Größe in {unit} gelesen, der einzigen Einheit, die ihm die Größe eines "
+        "Kleidungsstücks gibt. Wirkt es falsch, importiere es erneut und wähle die Einheit."
+    ),
+    "garment.done.import-size": (
+        "{name} importiert ({count} Vertices), aber mit {size} m hat es nicht die Größe dieser Art Kleidungsstück. "
+        "Importiere es erneut und wähle die Einheit, oder prüfe die Kategorie."
+    ),
+    "garment.done.prepare-open": (
+        "Vorbereitet, aber {count} Naht-Vertices blieben offen ({welded} verbunden): Die Schnittteile treffen sich "
+        "dort nicht ganz. Erhöhe Schweißabstand (mm) in den Optionen von Kleidungsstück vorbereiten und bereite erneut "
+        "vor, oder verbinde sie von Hand."
+    ),
+    "garment.done.combine-missing": (
+        "Zusammengefasst, aber {count} Texturen wurden nicht gefunden und ohne ihre Pixel gebacken: {names}. Lege die "
+        "Bilddateien dorthin, wo die Materialien sie erwarten (oder packe sie), und fasse erneut zusammen."
+    ),
+    "garment.done.step-cancelled": "{step} wurde abgebrochen; das Kleidungsstück ist wie vorher.",
+    "garment.step.status": "{step}: {stage} ({done} von {total}). Esc bricht ab.",
+    "garment.stage.seams": "Nähte werden gesucht",
+    "garment.stage.weld": "Nähte werden verbunden",
+    "garment.stage.clean": "Aufräumen und triangulieren",
+    "garment.stage.pack": "UV-Layout wird gepackt",
+    "garment.stage.bake-colour": "Farbe wird gebacken",
+    "garment.stage.bake-alpha": "Transparenz wird gebacken",
+    "garment.stage.bake-specular": "Specular-Map wird gebacken",
+    "garment.stage.bake-normal": "Normal-Map wird gebacken",
+    "garment.stage.bake-emission": "Emission-Map wird gebacken",
+    "garment.stage.material": "Gemeinsames Material wird erstellt",
 }

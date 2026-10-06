@@ -816,8 +816,8 @@ TEXT = {
     "garment.heading.options": "Options",
     "garment.op.align": "Aligner sur le corps",
     "garment.op.align.desc": (
-        "Déplacer, tourner et mettre à l'échelle le vêtement pour que ses marqueurs soient sur les articulations du "
-        "corps, puis tourner ses bras ou ses jambes sur ceux du corps"
+        "Déplace et tourne le vêtement (et le met à l'échelle, Garder la taille désactivé) pour que ses marqueurs se "
+        "trouvent sur les articulations du corps, puis tourne ses bras ou ses jambes sur ceux du corps"
     ),
     "garment.op.back": "Revenir d'une étape",
     "garment.op.back.desc": "Rétablir la forme du vêtement d'avant la dernière étape qui l'a modifié",
@@ -831,10 +831,11 @@ TEXT = {
     ),
     "garment.align.fetching": "Récupération des articulations du squelette freemode dans Durty Cloth Tool…",
     "garment.info.align": (
-        "Déplace, tourne et met à l'échelle le vêtement pour que ses marqueurs soient sur les articulations du corps "
-        "freemode, puis tourne chaque bras (ou jambe) sur celui du corps. Les outils sous Correction mesurent par "
-        "rapport au corps, ils attendent donc cette étape. Lancez d'abord Marqueurs automatiques et déplacez les "
-        "marqueurs mal placés."
+        "Déplace et tourne le vêtement pour que ses marqueurs se trouvent sur les articulations du corps freemode, "
+        "puis tourne chaque bras (ou jambe) sur celui du corps. Avec Garder la taille désactivé, il met aussi le "
+        "vêtement à l'échelle du corps. Les outils sous Correction mesurent par rapport au corps, ils attendent donc "
+        "cette étape, et à nouveau quand un marqueur a été déplacé depuis. Lancez d'abord Marqueurs automatiques et "
+        "déplacez tout marqueur mal placé."
     ),
     "garment.done.align": (
         "Aligné sur le corps : déplacé de {shift} cm, tourné de {turn}°, mis à {scale} %, {limbs} bras ou jambes "
@@ -1165,4 +1166,35 @@ TEXT = {
     "garment.check.reference-offline": (
         "Connectez-vous et autorisez l'accès en ligne pour comparer avec les vêtements du jeu."
     ),
+    # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
+    "garment.unit.dm": "Décimètres",
+    "garment.done.import-unit": (
+        "{name} importé ({count} sommets), sa taille lue en {unit}, la seule unité qui lui donne la taille d'un "
+        "vêtement. Si elle semble fausse, importez-le à nouveau et choisissez l'unité."
+    ),
+    "garment.done.import-size": (
+        "{name} importé ({count} sommets), mais avec {size} m il n'a pas la taille de ce genre de vêtement. "
+        "Importez-le à nouveau et choisissez l'unité, ou vérifiez la catégorie."
+    ),
+    "garment.done.prepare-open": (
+        "Préparé, mais {count} sommets de couture sont restés ouverts ({welded} réunis) : les pièces ne se rejoignent "
+        "pas tout à fait à cet endroit. Augmentez Distance de soudure (mm) dans les options de Préparer le vêtement et "
+        "préparez à nouveau, ou réunissez-les à la main."
+    ),
+    "garment.done.combine-missing": (
+        "Combiné, mais {count} textures sont introuvables et ont été cuites sans leurs pixels : {names}. Placez les "
+        "fichiers d'image là où les matériaux les attendent (ou empaquetez-les), puis combinez à nouveau."
+    ),
+    "garment.done.step-cancelled": "{step} a été annulé ; le vêtement est comme avant.",
+    "garment.step.status": "{step} : {stage} ({done} sur {total}). Échap annule.",
+    "garment.stage.seams": "Recherche des coutures",
+    "garment.stage.weld": "Réunion des coutures",
+    "garment.stage.clean": "Nettoyage et triangulation",
+    "garment.stage.pack": "Empaquetage de la disposition UV",
+    "garment.stage.bake-colour": "Cuisson de la couleur",
+    "garment.stage.bake-alpha": "Cuisson de la transparence",
+    "garment.stage.bake-specular": "Cuisson de la carte spéculaire",
+    "garment.stage.bake-normal": "Cuisson de la carte de normales",
+    "garment.stage.bake-emission": "Cuisson de la carte d'émission",
+    "garment.stage.material": "Création du matériau combiné",
 }

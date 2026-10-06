@@ -28,7 +28,10 @@ MAX_PICTURE_EDGE = protocol.MAX_TEXTURE_EDGE
 ADVISED_PICTURE_EDGE = 2048
 MIN_PICTURE_EDGE = 16
 #: The add-on's own vertex groups (the tear check's and a conversion's leftovers): no bone weights, never sent.
-TOOL_GROUPS = ("DCT Tears",)
+TEARS_GROUP = "DCT Tears"
+PINNED_GROUP = "DCT Pinned"
+LINING_GROUP = "DCT Lining"
+TOOL_GROUPS = (TEARS_GROUP, PINNED_GROUP, LINING_GROUP)
 TOOL_GROUP_PREFIX = "DCT_tmp_"
 #: The slots the garment tools add (components; none of them is a prop, so each may show skin).
 SLOTS = ("jbib", "accs", "lowr", "feet")

@@ -559,7 +559,7 @@ TEXT = {
     "garment.heading.align": "对齐到身体",
     "garment.heading.options": "选项",
     "garment.op.align": "对齐到身体",
-    "garment.op.align.desc": "移动、旋转并缩放服装，让它的标记落在身体的关节上，然后把它的手臂或腿转到身体的手臂或腿上",
+    "garment.op.align.desc": "移动并旋转服装（关闭保持尺寸时还会缩放），让它的标记落在身体的关节上，然后把它的手臂或腿转到身体的手臂或腿上",
     "garment.op.back": "后退一步",
     "garment.op.back.desc": "恢复服装在上一次更改它的步骤之前的形状",
     "garment.op.remove-backups": "移除备份",
@@ -569,7 +569,8 @@ TEXT = {
     "garment.align.source.estimate": "关节：根据身体形状估算。连接 Durty Cloth Tool 后，对齐到身体会使用精确的关节。",
     "garment.align.fetching": "正在从 Durty Cloth Tool 获取 freemode 骨架的关节…",
     "garment.info.align": (
-        "移动、旋转并缩放服装，让它的标记落在 freemode 身体的关节上，然后把每条手臂（或腿）转到身体的对应部位上。修正面板中的工具以身体为参照进行测量，因此要等这一步完成。请先运行自动标记，并移动位置不对的标记。"
+        "移动并旋转服装，让它的标记落在 freemode "
+        "身体的关节上，然后把每条手臂（或腿）转到身体的手臂（或腿）上。关闭保持尺寸时，它还会把服装缩放到身体的大小。修正中的工具以身体为基准测量，所以要等这一步完成，之后如果移动过标记也要重新对齐。请先运行自动标记，并移动任何位置不对的标记。"
     ),
     "garment.done.align": "已对齐到身体：移动 {shift} 厘米，旋转 {turn}°，缩放到 {scale}%，转动了 {limbs} 条手臂或腿。标记平均距离关节 {residual} 毫米。",
     "garment.why.align-first": "请先在适配面板中把服装对齐到身体。",
@@ -717,4 +718,24 @@ TEXT = {
     "garment.check.reference-none": "–",
     "garment.check.reference-subtext": "常见：这类游戏服装通常离身体多远，数据来自 gta.clothing。",
     "garment.check.reference-offline": "登录并允许在线访问，即可与游戏服装进行比较。",
+    # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
+    "garment.unit.dm": "分米",
+    "garment.done.import-unit": "已导入 {name}（{count} 个顶点），按{unit}读取尺寸，这是唯一能让它具有服装尺寸的单位。如果看起来不对，请重新导入并选择单位。",
+    "garment.done.import-size": "已导入 {name}（{count} 个顶点），但 {size} m 不是这类服装的尺寸。请重新导入并选择单位，或检查类别。",
+    "garment.done.prepare-open": (
+        "已准备，但有 {count} 个接缝顶点仍然开着（已连接 {welded} 个）：那里的裁片没有完全对齐。请在准备服装的选项中调大焊接距离（mm）后重新准备，或手动连接它们。"
+    ),
+    "garment.done.combine-missing": "已合并，但有 {count} 张纹理找不到，烘焙时没有它们的像素：{names}。请把图像文件放到材质期望的位置（或打包它们），然后重新合并。",
+    "garment.done.step-cancelled": "{step}已取消；服装保持原样。",
+    "garment.step.status": "{step}：{stage}（第 {done} / {total} 步）。按 Esc 取消。",
+    "garment.stage.seams": "正在查找接缝",
+    "garment.stage.weld": "正在连接接缝",
+    "garment.stage.clean": "正在清理并三角化",
+    "garment.stage.pack": "正在打包 UV 布局",
+    "garment.stage.bake-colour": "正在烘焙颜色",
+    "garment.stage.bake-alpha": "正在烘焙透明度",
+    "garment.stage.bake-specular": "正在烘焙高光贴图",
+    "garment.stage.bake-normal": "正在烘焙法线贴图",
+    "garment.stage.bake-emission": "正在烘焙自发光贴图",
+    "garment.stage.material": "正在生成合并材质",
 }

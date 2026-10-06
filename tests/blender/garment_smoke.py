@@ -22,6 +22,7 @@ import tempfile
 
 import bmesh
 import bpy
+from mathutils import Matrix
 import numpy as np
 
 from tests.support import synthetic
@@ -262,6 +263,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("the fit check waits for Align to Body", refused(bpy.ops.dct_link.fit_check, "Align the garment"))
     check("Push Out of Body waits for Align to Body", refused(bpy.ops.dct_link.fit_push_out, "Align the garment"))
     before_align = positions(tee)
+    check("Align to Body keeps the garment's size unless asked", props.keep_size)
     check("Align to Body runs", "FINISHED" in bpy.ops.dct_link.fit_align())
     aligned = gh.read_markers(scene)
     check("Align to Body puts the markers on the joints and leaves a garment that sits there almost as it is",
@@ -332,7 +334,11 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Refresh runs", "FINISHED" in bpy.ops.dct_link.fit_refresh_problems())
 
     # Push out, snug and relax (each keeps a backup).
+    before_push = positions(tee)
     check("Push Out of Body runs", "FINISHED" in bpy.ops.dct_link.fit_push_out())
+    pushed = np.linalg.norm(positions(tee) - before_push, axis=1).max()
+    check("no vertex moves further than the deepest push to the gap", pushed <= garment.MAX_PUSH
+          + props.push_gap / 1000.0 + 1e-5, pushed)
     check("a change makes the fit check stale", not tee.get("dct_checked") and not tee.get(gh.FIT_REPORT))
     signed, _, _ = gh.clearance(gh.body_tree(body), positions(tee))
     check("nothing is inside the body after Push Out of Body", int((signed < -0.001).sum()) == 0,
@@ -371,6 +377,21 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Cancel runs", "FINISHED" in bpy.ops.dct_link.fit_sculpt_cancel())
     check("Cancel puts back the shape from before the session",
           np.abs(positions(tee) - shape).max() < 1e-6 and not gh.sculpting(tee) and tee.mode == "OBJECT")
+    # A garment whose origin is off the ped's centre is shifted onto it for Mirror X; Cancel puts it back exactly.
+    tee.data.transform(Matrix.Translation((-0.2, 0.0, 0.0)))
+    tee.location.x += 0.2
+    bpy.context.view_layer.update()
+    shape = positions(tee)
+    props.sculpt_mirror = True
+    check("Start Sculpting runs on a garment with its origin off the centre",
+          "FINISHED" in bpy.ops.dct_link.fit_sculpt_start())
+    bpy.ops.object.mode_set(mode="OBJECT")
+    check("Cancel puts an off-centre garment back where it was, origin and all",
+          "FINISHED" in bpy.ops.dct_link.fit_sculpt_cancel() and np.abs(positions(tee) - shape).max() < 1e-5
+          and abs(tee.location.x - 0.2) < 1e-6, (np.abs(positions(tee) - shape).max(), tee.location.x))
+    tee.data.transform(Matrix.Translation((0.2, 0.0, 0.0)))
+    tee.location.x -= 0.2
+    bpy.context.view_layer.update()
     bpy.ops.dct_link.fit_sculpt_start()
     bpy.ops.object.mode_set(mode="OBJECT")
     chest = np.array(gh.read_markers(scene)["chest"])

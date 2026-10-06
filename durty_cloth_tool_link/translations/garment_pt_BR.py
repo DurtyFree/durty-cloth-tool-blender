@@ -764,8 +764,8 @@ TEXT = {
     "garment.heading.options": "Opções",
     "garment.op.align": "Alinhar ao corpo",
     "garment.op.align.desc": (
-        "Mover, girar e redimensionar a roupa para que os marcadores fiquem sobre as articulações do corpo, e depois "
-        "girar os braços ou as pernas dela até os do corpo"
+        "Move e gira a roupa (e a escala, com Manter tamanho desligado) para que os marcadores fiquem sobre as "
+        "articulações do corpo, depois gira os braços ou as pernas dela para os do corpo"
     ),
     "garment.op.back": "Voltar um passo",
     "garment.op.back.desc": "Colocar de volta a forma da roupa de antes do último passo que a alterou",
@@ -779,9 +779,10 @@ TEXT = {
     ),
     "garment.align.fetching": "Buscando as articulações do esqueleto freemode no Durty Cloth Tool…",
     "garment.info.align": (
-        "Move, gira e redimensiona a roupa para que os marcadores fiquem sobre as articulações do corpo freemode, e "
-        "depois gira cada braço (ou perna) até o do corpo. As ferramentas em Correção medem em relação ao corpo, então "
-        "esperam por este passo. Use Marcadores automáticos primeiro e mova os marcadores fora do lugar."
+        "Move e gira a roupa para que os marcadores fiquem sobre as articulações do corpo freemode, depois gira cada "
+        "braço (ou perna) para o do corpo. Com Manter tamanho desligado, também escala a roupa ao corpo. As "
+        "ferramentas em Correção medem em relação ao corpo, então esperam por este passo, e de novo quando um marcador "
+        "foi movido desde então. Execute primeiro Marcadores automáticos e mova qualquer marcador fora do lugar."
     ),
     "garment.done.align": (
         "Alinhada ao corpo: movida {shift} cm, girada {turn}°, redimensionada para {scale} %, {limbs} braços ou pernas "
@@ -1081,4 +1082,35 @@ TEXT = {
         "Usual: o quanto roupas do jogo deste tipo ficam afastadas do corpo, segundo o gta.clothing."
     ),
     "garment.check.reference-offline": "Entre e permita o acesso online para comparar com as roupas do jogo.",
+    # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
+    "garment.unit.dm": "Decímetros",
+    "garment.done.import-unit": (
+        "{name} importada ({count} vértices), lendo o tamanho em {unit}, a única unidade que lhe dá o tamanho de uma "
+        "roupa. Se parecer errado, importe de novo e escolha a unidade."
+    ),
+    "garment.done.import-size": (
+        "{name} importada ({count} vértices), mas com {size} m ela não tem o tamanho deste tipo de roupa. Importe de "
+        "novo e escolha a unidade, ou confira a categoria."
+    ),
+    "garment.done.prepare-open": (
+        "Preparada, mas {count} vértices de costura ficaram abertos ({welded} unidos): as peças não chegam a se "
+        "encontrar ali. Aumente Distância de solda (mm) nas opções de Preparar roupa e prepare de novo, ou una-os à "
+        "mão."
+    ),
+    "garment.done.combine-missing": (
+        "Combinada, mas {count} texturas não foram encontradas e foram assadas sem os seus pixels: {names}. Coloque os "
+        "arquivos de imagem onde os materiais os esperam (ou empacote-os) e combine de novo."
+    ),
+    "garment.done.step-cancelled": "{step} foi cancelado; a roupa está como antes.",
+    "garment.step.status": "{step}: {stage} ({done} de {total}). Esc cancela.",
+    "garment.stage.seams": "Procurando as costuras",
+    "garment.stage.weld": "Unindo as costuras",
+    "garment.stage.clean": "Limpando e triangulando",
+    "garment.stage.pack": "Empacotando o layout UV",
+    "garment.stage.bake-colour": "Assando a cor",
+    "garment.stage.bake-alpha": "Assando a transparência",
+    "garment.stage.bake-specular": "Assando o mapa specular",
+    "garment.stage.bake-normal": "Assando o mapa normal",
+    "garment.stage.bake-emission": "Assando o mapa de emissão",
+    "garment.stage.material": "Criando o material combinado",
 }
