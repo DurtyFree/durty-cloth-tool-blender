@@ -152,6 +152,75 @@ def test_a_seam_vertex_lying_on_the_other_panels_edge_is_not_counted_open():
     assert gaps.tolist() == [20 + 17]
 
 
+def _split_seam(crowd: int = 12):
+    """Two panels of a game mesh meeting at a UV seam, which the game splits on purpose: the seam's vertices are there
+    twice, on top of each other, one copy per UV island. At the seam's first vertex ``crowd`` more islands meet (a
+    small panel each), as at the points of a game-ready T-shirt where up to 104 copies lie on top of each other.
+    Positions, panel of each vertex, the open edges, their chains, and the vertices at that point."""
+    count = 40
+    seam = _strip(0.0, 0.0, count)
+    angles = np.linspace(0.0, math.pi, crowd)
+    spokes = seam[0] + 0.005 * np.column_stack([np.cos(angles), -np.sin(angles), np.zeros(crowd)])
+    positions = np.concatenate([seam, seam, np.repeat(seam[:1], crowd, axis=0), spokes])
+    islands = np.arange(crowd) + 2
+    parts = np.concatenate([np.zeros(count, int), np.ones(count, int), islands, islands])
+    along = np.array([[i, i + 1] for i in range(count - 1)])
+    edges = np.concatenate([along, along + count,
+                            np.column_stack([2 * count + np.arange(crowd), 2 * count + crowd + np.arange(crowd)])])
+    chains = garment.boundary_chains(edges, len(positions), positions)
+    point = np.nonzero(np.linalg.norm(positions - seam[0], axis=1) < 1e-9)[0]
+    return positions, parts, edges, chains, point
+
+
+def test_the_split_uv_seams_of_a_game_mesh_are_no_open_seams_but_a_gap_is():
+    """Prepare Garment warned about open seams on a game-ready mesh. Where the weld cannot join every copy of a split
+    vertex (a weld group holds eight), the copies still lie on top of each other: the seam is closed. Only a side
+    standing apart from the other is a gap, on both sides of it."""
+    positions, parts, edges, chains, point = _split_seam()
+    boundary = np.ones(len(positions), bool)
+    target, _ = garment.weld_targets(positions, 0.001, boundary, chains=chains, components=parts)
+    assert (~garment.joined_across(target, parts)[point]).any()  # copies the weld could not join
+    assert garment.open_seams(positions, 0.001, boundary, parts, target, edges=edges, chains=chains).size == 0
+    unwelded = np.arange(len(positions))
+    assert garment.open_seams(positions, 0.001, boundary, parts, unwelded, edges=edges, chains=chains).size == 0
+    apart = positions.copy()
+    apart[40 + 20] += [0.0, 0.0, 0.0005]  # one side of the seam half a millimetre off the other
+    gaps = garment.open_seams(apart, 0.001, boundary, parts, unwelded, edges=edges, chains=chains)
+    assert gaps.tolist() == [20, 40 + 20]
+
+
+def test_a_move_spread_along_the_edges_keeps_the_sides_of_a_split_together():
+    """Push Out of Body spreads each push along the mesh's edges, which the two sides of a split never share: on the
+    game-ready T-shirt it parted 66 pairs of its UV seams by more than the weld distance (up to 27 mm) and left the
+    open seams Prepare Garment then warned about. The vertices lying on top of each other now move alike."""
+    count = 20
+    seam = _strip(0.0, 0.0, count)
+    # Panel A: the seam and a row inside it; panel B: its own copy of the seam and a row on the other side.
+    positions = np.concatenate([seam, _strip(-0.01, 0.0, count), seam, _strip(0.01, 0.0, count)])
+    along = np.array([[i, i + 1] for i in range(count - 1)])
+    rungs = np.column_stack([np.arange(count), np.arange(count) + count])
+    panel = np.concatenate([along, along + count, rungs])
+    edges = np.concatenate([panel, panel + 2 * count])
+    offsets = np.zeros_like(positions)
+    pushed = np.zeros(len(positions), bool)
+    pushed[count + 8:count + 12] = True  # only panel A's inner row lay inside the body
+    offsets[pushed] = [0.0, 0.0, 0.003]
+    moved = positions + garment.spread_offsets(offsets, edges, pushed)
+    side_a, side_b = np.arange(count), np.arange(count) + 2 * count
+    assert np.linalg.norm(moved[side_a] - moved[side_b], axis=1).max() > 0.0005  # the split tore open
+    groups = garment.stacked_groups(positions)
+    assert len(np.unique(groups)) == 3 * count  # only the seam's copies lie on top of each other
+    kept = garment.keep_stacked(positions, moved, groups)
+    assert np.allclose(kept[side_a], kept[side_b], atol=1e-12)
+    assert np.allclose(kept[side_a] - positions[side_a], (moved[side_a] + moved[side_b]) / 2 - positions[side_a])
+    assert np.array_equal(kept[pushed], moved[pushed])  # what lies on nothing moves as it was moved
+    # A pinned side holds its copy too.
+    pinned = np.zeros(len(positions), bool)
+    pinned[side_b[10]] = True
+    held = garment.keep_stacked(positions, moved, groups, pinned)
+    assert np.array_equal(held[[side_a[10], side_b[10]]], positions[[side_a[10], side_b[10]]])
+
+
 # ---- markers ----------------------------------------------------------------------------------------------------------
 
 

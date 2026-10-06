@@ -403,6 +403,10 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("a region the category does not cover is refused", refused(bpy.ops.dct_link.fit_snug, "not part"))
     props.region = "chest"
     check("Relax Stretched runs", "FINISHED" in bpy.ops.dct_link.fit_relax())
+    first, second, apart = garment.close_pairs(before_push, garment.STACKED)
+    parted = (np.linalg.norm(positions(tee)[first] - positions(tee)[second], axis=1) - apart).max(initial=0.0)
+    check("Push Out of Body, Snug to Body and Relax Stretched keep the sides of the open seams together",
+          len(first) > 0 and parted < 1e-6, (len(first), parted))
     check("three backups are kept at most", len(gh.backups(tee)) == gh.MAX_BACKUPS, len(gh.backups(tee)))
     check("the garment holds its backups itself (no fake users)",
           all(not mesh.use_fake_user for mesh in gh.backups(tee)) and tee.get(gh.BACKUP_SLOTS[0]) is not None)

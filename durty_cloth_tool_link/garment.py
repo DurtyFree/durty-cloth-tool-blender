@@ -463,6 +463,43 @@ def spread_offsets(offsets: np.ndarray, edges: np.ndarray, fixed: np.ndarray, it
     return result
 
 
+#: Vertices closer than this (metres) lie on top of each other: the two sides of a UV seam of a game mesh (its
+#: vertices are split there on purpose, one per UV island), of an open seam, or a point where many such sides meet.
+STACKED = 1e-5
+
+
+def stacked_groups(positions: Any, tolerance: float = STACKED) -> np.ndarray:
+    """The group of each vertex: the vertices that lie on top of it share one (a vertex alone has its own). Moves
+    that spread along the mesh's edges (:func:`spread_offsets`, :func:`soft_mask`, relaxing) would part them, because
+    the two sides of a split share no edge; :func:`keep_stacked` moves them together again."""
+    points = as_points(positions)
+    a, b, _d = close_pairs(points, tolerance)
+    return components(len(points), np.column_stack([a, b]))
+
+
+def keep_stacked(start: Any, moved: Any, groups: Any, fixed: Optional[Any] = None) -> np.ndarray:
+    """``moved`` with the vertices of each group (:func:`stacked_groups` of ``start``) moved alike: by the mean of
+    their moves, or not at all when one of them is ``fixed`` (pinned), so a split never tears into a gap."""
+    start, moved = as_points(start), as_points(moved)
+    groups = np.asarray(groups, dtype=np.int64)
+    count = int(groups.max()) + 1 if len(groups) else 0
+    sizes = np.bincount(groups, minlength=count)
+    shared = sizes[groups] > 1
+    if not shared.any():
+        return moved.copy()
+    moves = moved - start
+    mean = np.zeros((count, 3))
+    for axis in range(3):
+        mean[:, axis] = np.bincount(groups, weights=moves[:, axis], minlength=count)
+    mean /= np.maximum(sizes, 1)[:, None]
+    if fixed is not None:
+        held = np.bincount(groups, weights=np.asarray(fixed, dtype=np.float64), minlength=count) > 0
+        mean[held] = 0.0
+    result = moved.copy()
+    result[shared] = start[shared] + mean[groups[shared]]
+    return result
+
+
 def vertex_stretch(edges: np.ndarray, rest: np.ndarray, current: np.ndarray) -> np.ndarray:
     """Per vertex, the largest length ratio (now / rest) of the edges around it (1 where it has none)."""
     edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)

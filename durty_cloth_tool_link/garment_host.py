@@ -1070,14 +1070,16 @@ def tpose_to_apose(context: Any, obj: Any, markers: Dict[str, Any], target: floa
 def push_out(obj: Any, body: Any, gap: float, passes: int = 4, progress: Optional[Progress] = None) -> Dict[str, int]:
     """Moves every vertex closer to the body than ``gap`` to ``gap`` outside it; the vertices around follow
     softly, so no crease forms, and layers lying over a moved vertex (a shell over its lining) move with it. Vertices
-    deeper inside than :data:`garment.MAX_PUSH`, pinned ones and those under the sculpt mask stay. After the first pass
-    only the vertices that moved are measured again. Returns how many vertices were inside before and after, how
-    many moved, and how many were too deep to move."""
+    deeper inside than :data:`garment.MAX_PUSH`, pinned ones and those under the sculpt mask stay, and vertices lying
+    on top of each other (the two sides of a UV seam or an open seam) move alike. After the first pass only the
+    vertices that moved are measured again. Returns how many vertices were inside before and after, how many moved,
+    and how many were too deep to move."""
     tree = body_tree(body)
     positions = world_positions(obj)
     edges = mesh_edges(obj.data)
     locked = locked_vertices(obj)
     start = positions.copy()
+    stacked = garment.stacked_groups(start)
     signed, nearest, normals = clearance(tree, positions)
     before = int((signed < -garment.INSIDE_MM / 1000.0).sum())
     if progress is not None:
@@ -1090,9 +1092,12 @@ def push_out(obj: Any, body: Any, gap: float, passes: int = 4, progress: Optiona
         offsets = garment.layer_follow(positions, offsets, signed)
         offsets = garment.spread_offsets(offsets, edges, needs, iterations=3)
         offsets[locked] = 0.0
-        changed = np.nonzero(np.linalg.norm(offsets, axis=1) > 1e-7)[0]
+        previous = positions
         # However the passes and the spreading add up, no vertex moves further than the deepest push to the gap.
         positions = garment.clamp_moves(start, positions + offsets, garment.MAX_PUSH + gap)
+        # The spreading follows the edges, which the sides of a split do not share: they would part into a gap.
+        positions = garment.keep_stacked(start, positions, stacked, locked)
+        changed = np.nonzero(np.linalg.norm(positions - previous, axis=1) > 1e-7)[0]
         if len(changed):
             s, n, nn = clearance(tree, positions[changed])
             signed[changed], nearest[changed], normals[changed] = s, n, nn
@@ -1118,7 +1123,9 @@ def snug(scene: Any, obj: Any, body: Any, region: str, gap: float, amount: float
     weights = region_weights(data, [region]) * ~locked_vertices(obj)
     offsets = garment.snug_offsets(data["positions"], data["nearest"], data["normals"], data["clearance"], gap,
                                    amount, weights)
-    positions = data["positions"] + offsets
+    positions = garment.keep_stacked(data["positions"], data["positions"] + offsets,
+                                     garment.stacked_groups(data["positions"]), locked_vertices(obj))
+    offsets = positions - data["positions"]
     set_world_positions(obj, positions)
     moved = np.linalg.norm(offsets, axis=1)
     count = int((moved > 1e-4).sum())
@@ -1151,6 +1158,7 @@ def relax(scene: Any, obj: Any, body: Optional[Any], region: str, amount: float,
             mean = garment.neighbour_mean(relaxed, edges, len(relaxed))
             relaxed += (mean - relaxed) * (weights * float(np.clip(amount, 0.0, 1.0)))[:, None]
         smoothed = True
+    relaxed = garment.keep_stacked(positions, relaxed, garment.stacked_groups(positions), locked_vertices(obj))
     set_world_positions(obj, relaxed)
     moved = int((np.linalg.norm(relaxed - positions, axis=1) > 1e-4).sum())
     if body is not None:
@@ -1299,7 +1307,9 @@ def _end_sculpt(context: Any, obj: Any, body: Optional[Any]) -> Dict[str, Any]:
 
 def accept_sculpt(context: Any, obj: Any, body: Optional[Any], keep_out: bool, gap: float) -> Dict[str, int]:
     """Keeps the sculpted shape (moving what was dragged into the body back out when ``keep_out``) and ends the
-    session. A vertex the user only brought closer than the gap, but not into the body, stays where it was put."""
+    session. A vertex the user only brought closer than the gap, but not into the body, stays where it was put.
+    Vertices that lay on top of each other before (the two sides of a UV seam or an open seam) end up together again:
+    brushes that smooth along the mesh's edges move each side on its own."""
     state = _end_sculpt(context, obj, body)
     mesh = obj.data
     now = np.empty(len(mesh.vertices) * 3, dtype=np.float32)
@@ -1308,6 +1318,11 @@ def accept_sculpt(context: Any, obj: Any, body: Optional[Any], keep_out: bool, g
     before = now.copy()  # without the snapshot (a remesh drops it) nothing counts as moved
     if snapshot is not None and len(snapshot.data) == len(mesh.vertices):
         snapshot.data.foreach_get("vector", before)
+        start = before.reshape(-1, 3).astype(np.float64)
+        kept = garment.keep_stacked(start, now.reshape(-1, 3), garment.stacked_groups(start))
+        if np.abs(kept - now.reshape(-1, 3)).max(initial=0.0) > 1e-7:
+            now = kept.astype(np.float32).reshape(-1)
+            mesh.vertices.foreach_set("co", now)
     if snapshot is not None:
         mesh.attributes.remove(snapshot)
     moved_mask = np.linalg.norm((now - before).reshape(-1, 3), axis=1) > 1e-4
