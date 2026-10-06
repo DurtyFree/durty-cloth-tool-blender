@@ -474,6 +474,10 @@ TEXT = {
     "notice.secrets-unreadable": "Не удалось прочитать сохранённый вход ({detail}). Войдите снова.",
     "notice.secret-store": "Не удалось прочитать или записать защищённый вход. Войдите снова.",
     "notice.file-error": "Не удалось прочитать или записать файл: {detail}",
+    "notice.path-too-long": (
+        "Путь к файлу длиннее, чем допускает Windows. Укажите для временной папки Windows (TEMP) более короткий путь и "
+        "попробуйте снова."
+    ),
     "notice.not-ready": "Дополнение не готово.",
     "notice.connect-first": "Сначала подключитесь к Durty Cloth Tool.",
     "notice.select-cloth": "Сначала выберите одежду в Durty Cloth Tool.",

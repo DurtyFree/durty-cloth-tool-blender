@@ -13,7 +13,7 @@ import bpy
 from bpy.app.handlers import persistent
 
 from . import garment_dct, host, link, ped_link, preferences, settings, state, strings, translations, ui, ui_garment
-from . import ui_ped
+from . import ped_host, ui_ped
 from .strings import msg
 
 _started = False
@@ -59,6 +59,7 @@ def _start(ctrl: link.LinkController) -> None:
         ctrl.notice = link.Notice("ERROR", msg("notice.secrets-unreadable", detail=type(exc).__name__))
     try:
         garment_dct.remove_stale_work(ctrl.data_dir)  # left over from a Blender that closed during an add
+        ped_host.remove_stale_work(ctrl.data_dir)  # or while it created a custom ped
     except OSError:
         traceback.print_exc()
     if prefs is not None and prefs.auto_connect:

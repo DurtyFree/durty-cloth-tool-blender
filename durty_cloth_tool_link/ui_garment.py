@@ -638,6 +638,8 @@ def _failure_message(exc: BaseException) -> Msg:
         return msg(f"garment.body.{exc.code}")
     if isinstance(exc, UserError):
         return exc.message
+    if link.path_too_long(exc):
+        return msg("notice.path-too-long")
     if isinstance(exc, OSError):
         return msg("notice.file-error", detail=str(exc.strerror or exc))
     return msg("notice.unexpected", detail=ui._report_text(exc))
@@ -2123,7 +2125,7 @@ def ensure_skeleton(context: Any, obj: Any, gender: str) -> gdct.Skeleton:
             gdct.armature_bones(skeleton.armature), bones) is not None:
         ctrl.prepare()
         assert ctrl.data_dir is not None
-        skeleton = gdct.import_skeleton(context, template, ctrl.data_dir, bones, gender, obj)
+        skeleton = gdct.import_skeleton(context, template, bones, gender, obj)
     gdct.attach(context, obj, skeleton)
     problem = gdct.skeleton_problem(obj, gender, bones)
     if problem is not None:
@@ -2227,9 +2229,7 @@ class AddJob:
             self.stage = "export"
             return 0.0
         if self.stage == "export":
-            ctrl.prepare()
-            assert ctrl.data_dir is not None
-            folder = gdct.work_folder(ctrl.data_dir)
+            folder = gdct.work_folder()
             try:
                 self.export = gdct.export_garment(self.skeleton, folder)
             finally:

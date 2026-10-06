@@ -470,6 +470,10 @@ EN: Dict[str, str] = {
     "notice.secrets-unreadable": "The stored sign-in could not be read ({detail}). Sign in again.",
     "notice.secret-store": "The protected sign-in could not be read or written. Sign in again.",
     "notice.file-error": "A file could not be read or written: {detail}",
+    "notice.path-too-long": (
+        "A file path is longer than Windows allows. Set Windows' temporary folder (TEMP) to a shorter path and try "
+        "again."
+    ),
     "notice.not-ready": "The add-on is not ready.",
     "notice.connect-first": "Connect to Durty Cloth Tool first.",
     "notice.select-cloth": "Select a cloth in Durty Cloth Tool first.",
@@ -1333,7 +1337,6 @@ EN: Dict[str, str] = {
         "The model and its pictures are larger than {size} MiB together and cannot be sent. Use smaller images or fewer "
         "colour variations."
     ),
-    "add.why.work-folder": "The add-on's folder for the export is a link to another place, so it is not used.",
     "add.why.convert": "Sollumz could not make the garment a Drawable Model ({detail}).",
     "add.why.material": "Sollumz could not give the garment the ped shader ({detail}).",
     "add.picture.empty": "The image {name} has no pixels.",

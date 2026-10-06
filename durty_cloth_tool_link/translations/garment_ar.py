@@ -605,7 +605,6 @@ TEXT = {
     "add.why.too-large": (
         "حجم النموذج وصوره معًا أكبر من {size} MiB ولا يمكن إرسالها. استخدم صورًا أصغر أو تنويعات لونية أقل."
     ),
-    "add.why.work-folder": "مجلد الإضافة المخصص للتصدير رابط إلى مكان آخر، لذا لا يُستخدم.",
     "add.why.convert": "تعذّر على Sollumz جعل قطعة الملابس Drawable Model ({detail}).",
     "add.why.material": "تعذّر على Sollumz منح قطعة الملابس مظلّل الـ ped ({detail}).",
     "add.picture.empty": "الصورة {name} بلا بكسلات.",

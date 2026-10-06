@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import pathlib
 import re
-import secrets
 import shutil
 import sys
 import time
@@ -24,7 +23,7 @@ from mathutils import Matrix
 
 from . import bundle, garment, garment_add, host, pixels
 from . import garment_host as gh
-from .link import _is_link
+from .link import _is_link, stale_temporary_folders, temporary_folder
 from .strings import Msg, UserError, msg
 
 #: On the Drawable Dictionary and the Drawable the skeleton template became: the gender of that template.
@@ -38,8 +37,10 @@ ADDED = "dct_added"
 #: On the garment: the material it had before the add gave it the ped shader (kept in the file through this reference,
 #: never lost on save, and back with Ctrl+Z).
 SOURCE_MATERIAL = "dct_source_material"
-#: The add-on's folder (inside its data folder) for the skeleton template and the export of an add, one folder per
-#: use, removed right after.
+#: The kind of the add-on's temporary folders (:func:`link.temporary_folder`) for the skeleton template and the export
+#: of an add, one folder per use, removed right after.
+WORK_KIND = "add"
+#: Where earlier versions put those folders (inside the add-on's data folder); still cleaned up.
 WORK_FOLDER = "garment-add"
 WORK_PREFIX = "add-"
 STALE_SECONDS = 600.0
@@ -73,19 +74,17 @@ def _override(context: Any, obj: Any) -> Dict[str, Any]:
 # --------------------------------------------------------------------------------------------------
 
 
-def work_folder(data_dir: pathlib.Path) -> pathlib.Path:
-    """A new, empty folder for one use inside the add-on's data folder (never through a link)."""
-    base = data_dir / WORK_FOLDER
-    if _is_link(base):
-        raise fail("add.why.work-folder")
-    base.mkdir(parents=True, exist_ok=True)
-    folder = base / f"{WORK_PREFIX}{secrets.token_hex(6)}"
-    folder.mkdir()
-    return folder
+def work_folder() -> pathlib.Path:
+    """A new, empty folder for one use, with a short path whatever the Blender user folder (Sollumz writes a model's
+    name twice into the paths of its files)."""
+    return temporary_folder(WORK_KIND)
 
 
 def remove_stale_work(data_dir: Optional[pathlib.Path]) -> None:
-    """Work folders a Blender that closed in the middle of an add left behind (only the add-on's own)."""
+    """Work folders a Blender that closed in the middle of an add left behind (only the add-on's own), in the
+    temporary folder and where earlier versions kept them."""
+    for entry in stale_temporary_folders(WORK_KIND, STALE_SECONDS):
+        shutil.rmtree(entry, ignore_errors=True)
     base = data_dir / WORK_FOLDER if data_dir is not None else None
     if base is None or _is_link(base) or not base.is_dir():
         return
@@ -165,13 +164,12 @@ def _move_to(objects: Sequence[Any], collection: Any) -> None:
                 other.objects.unlink(obj)
 
 
-def import_skeleton(context: Any, template: Any, data_dir: pathlib.Path, bones: Sequence[str], gender: str,
-                    garment_obj: Any) -> Skeleton:
+def import_skeleton(context: Any, template: Any, bones: Sequence[str], gender: str, garment_obj: Any) -> Skeleton:
     """Imports the skeleton template with Sollumz (its own skeleton, never an external one), checks the armature against
     the template and moves it into the garment's collection. Raises :class:`UserError` when Sollumz did not import
     the template as one armature with the template's bones in order."""
     file = template.files[0]
-    folder = work_folder(data_dir)
+    folder = work_folder()
     try:
         (folder / file.name).write_bytes(file.data)
         root, _warnings = host.import_with_sollumz(folder, file.name, IMPORT_OVERRIDES)

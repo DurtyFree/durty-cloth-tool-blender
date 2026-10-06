@@ -475,6 +475,10 @@ TEXT = {
     "notice.secrets-unreadable": "Não foi possível ler o login salvo ({detail}). Entre de novo.",
     "notice.secret-store": "Não foi possível ler ou gravar o login protegido. Entre de novo.",
     "notice.file-error": "Não foi possível ler ou gravar um arquivo: {detail}",
+    "notice.path-too-long": (
+        "Um caminho de arquivo é mais longo do que o Windows permite. Defina a pasta temporária do Windows (TEMP) para "
+        "um caminho mais curto e tente de novo."
+    ),
     "notice.not-ready": "O add-on não está pronto.",
     "notice.connect-first": "Conecte ao Durty Cloth Tool primeiro.",
     "notice.select-cloth": "Selecione uma roupa no Durty Cloth Tool primeiro.",

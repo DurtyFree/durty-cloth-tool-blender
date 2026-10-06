@@ -361,6 +361,7 @@ TEXT = {
     "notice.secrets-unreadable": "无法读取保存的登录（{detail}）。请重新登录。",
     "notice.secret-store": "无法读取或写入受保护的登录。请重新登录。",
     "notice.file-error": "无法读取或写入文件：{detail}",
+    "notice.path-too-long": "文件路径超出了 Windows 允许的长度。请把 Windows 的临时文件夹（TEMP）设为更短的路径，然后重试。",
     "notice.not-ready": "插件尚未就绪。",
     "notice.connect-first": "请先连接到 Durty Cloth Tool。",
     "notice.select-cloth": "请先在 Durty Cloth Tool 中选择一件服装。",

@@ -40,7 +40,14 @@ def make_controller(tmp_path, dct, api, stores, *, online: Callable[[], bool] = 
                                secret_store=stores, open_url=(opened.append if opened is not None else lambda url: None))
     ctrl.port_override = dct.port
     ctrl.auth_base_url = api.base_url
+    ctrl.temp_root = tmp_path / "temp"  # the system's temporary folder, for this test
+    ctrl.temp_root.mkdir(parents=True, exist_ok=True)
     return ctrl
+
+
+def opened_folders(tmp_path) -> List[pathlib.Path]:
+    """The folders of opened models in the test's temporary folder."""
+    return sorted((tmp_path / "temp").glob(link.TEMPORARY_PREFIX + "open-*"))
 
 
 def drive(ctrl: link.LinkController, until: Callable[[], bool], timeout: float = 15.0) -> None:
@@ -929,10 +936,10 @@ def test_a_model_opened_from_dct_is_imported_and_pushed_bound(tmp_path, dct, api
     assert dct.host_result(request_id)["ok"] is True
     (imported,) = documents.imports
     folder = imported["folder"]
-    # The files sit in the add-on's own folder, in a folder of this open's own, and the textures in a folder named
+    # The files sit in a short folder of this open's own in the temporary folder, and the textures in a folder named
     # after the model, as Sollumz reads them.
-    assert folder.name == "jbib_003_u" and folder.parent.name.startswith(request_id + "-")
-    assert folder.parent.parent == tmp_path / "user" / link.MODELS_FOLDER and imported["model"] == "jbib_003_u.ydd.xml"
+    assert folder.name == "jbib_003_u" and folder.parent.name.startswith(link.TEMPORARY_PREFIX + "open-")
+    assert folder.parent.parent == tmp_path / "temp" and imported["model"] == "jbib_003_u.ydd.xml"
     assert imported["files"] == {"jbib_003_u.ydd.xml": b"<DrawableDictionary />",
                                  "jbib_003_u/jbib_diff_003_a_uni.dds": b"DDS " + bytes(12),
                                  "jbib_003_u/jbib_normal_003.dds": b"DDS " + bytes(8)}
@@ -975,7 +982,7 @@ def test_a_model_without_sollumz_is_refused_with_what_to_install(tmp_path, dct, 
     assert dct.host_result(request_id)["code"] == "dependency-missing"
     assert ctrl.model.open_notice.text == ("Durty Cloth Tool sent the model jbib_003_u. Install and enable Sollumz "
                                            f"{settings.SOLLUMZ_MINIMUM} or later to open and push models.")
-    assert documents.imports == [] and not (tmp_path / "user" / link.MODELS_FOLDER).exists()
+    assert documents.imports == [] and not opened_folders(tmp_path)
 
 
 def test_a_model_is_refused_while_another_is_pushed(tmp_path, dct, api, stores):
@@ -993,14 +1000,13 @@ def test_a_failed_import_and_unloading_remove_the_files(tmp_path, dct, api, stor
     dct.open_model(model_files())
     drive(ctrl, lambda: ctrl.model.open_notice is not None and ctrl.model.open_notice.level == "ERROR")
     assert ctrl.model.open_notice.message.key == "open.model-failed"
-    base = tmp_path / "user" / link.MODELS_FOLDER
-    assert not any(base.iterdir())
+    assert not opened_folders(tmp_path)
     documents.import_model = FakeDocuments.import_model.__get__(documents)
     dct.open_model(model_files())
     drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
-    assert any(base.iterdir())
+    assert opened_folders(tmp_path)
     ctrl.shutdown()  # the add-on is disabled
-    assert not any(base.iterdir())
+    assert not opened_folders(tmp_path)
 
 
 def test_model_files_stay_inside_the_add_ons_folder(tmp_path):
@@ -1041,7 +1047,7 @@ def test_nothing_stays_open_when_dct_no_longer_waits_for_the_answer(tmp_path, dc
     drive(ctrl, lambda: ctrl.model.open_notice is not None and ctrl.model.open_notice.level == "WARNING")
     for _ in range(5):
         ctrl.poll()
-    assert documents.imports == [] and not any((tmp_path / "user" / link.MODELS_FOLDER).iterdir())
+    assert documents.imports == [] and not opened_folders(tmp_path)
     assert [m for m in dct.received if m.get("type") == "host.result"] == []
 
 
@@ -1077,30 +1083,71 @@ def stale_model_folder(base: pathlib.Path, name: str, model: bool = True, age: f
 
 
 def test_start_up_removes_only_model_folders_the_add_on_left(tmp_path, dct, api, stores):
+    temp = tmp_path / "temp"
+    left = stale_model_folder(temp, link.TEMPORARY_PREFIX + "open-a1b2c3d4")
+    recent = stale_model_folder(temp, link.TEMPORARY_PREFIX + "open-e5f6g7h8", age=0)
+    foreign = stale_model_folder(temp, link.TEMPORARY_PREFIX + "open-i9j0k1l2", model=False)
+    unrelated = stale_model_folder(temp, "something-else")
+    # Where earlier versions kept them, inside the add-on's folder.
     base = tmp_path / "user" / link.MODELS_FOLDER
-    left = stale_model_folder(base, "om1-0000aaaa")
-    recent = stale_model_folder(base, "om2-0000bbbb", age=0)
-    foreign = stale_model_folder(base, "something-else", model=False)
+    earlier = stale_model_folder(base, "om1-0000aaaa")
     loose = base / "loose.txt"
     loose.write_bytes(b"x")
     ctrl = make_controller(tmp_path, dct, api, stores)
     ctrl.prepare()
-    assert not left.exists() and recent.exists() and foreign.exists() and loose.exists()
+    assert not left.exists() and recent.exists() and foreign.exists() and unrelated.exists()
+    assert not earlier.exists() and loose.exists()
 
 
-def test_start_up_leaves_a_linked_models_folder_alone(tmp_path, dct, api, stores):
+def test_start_up_leaves_linked_model_folders_alone(tmp_path, dct, api, stores):
     elsewhere = tmp_path / "elsewhere"
     target = stale_model_folder(elsewhere, "om1-0000aaaa")
     (tmp_path / "user").mkdir()
     make_link(elsewhere, tmp_path / "user" / link.MODELS_FOLDER)
+    (tmp_path / "temp").mkdir()
+    make_link(target, tmp_path / "temp" / (link.TEMPORARY_PREFIX + "open-a1b2c3d4"))
     ctrl = make_controller(tmp_path, dct, api, stores)
     ctrl.prepare()
-    assert target.exists()  # nothing behind a link is removed
+    assert (target / "jbib_003_u" / "jbib_003_u.ydd.xml").exists()  # nothing behind a link is removed
     dct.on_assist = api.approve
     ctrl.connect()
     drive(ctrl, lambda: ctrl.ready)
     ctrl.documents = FakeDocuments(ctrl)
     request_id = dct.open_model(model_files())
     drive(ctrl, lambda: dct.host_result(request_id) is not None)
-    assert dct.host_result(request_id).get("code") == "open-failed"  # and nothing is written through one
+    assert dct.host_result(request_id).get("ok") is True  # into a new folder of its own, never through a link
     assert sorted(p.name for p in elsewhere.iterdir()) == ["om1-0000aaaa"]
+
+
+def test_a_model_opens_from_a_deep_blender_user_folder(tmp_path, dct, api, stores):
+    """Opening a model failed with "The filename or extension is too long" when Blender's user folder sat deep: the
+    files went into the add-on's folder there, and a Sollumz model nests its name twice. They go into a short
+    temporary folder now, whatever the user folder, and a path the system still refuses is said plainly."""
+    deep = tmp_path.joinpath(*(["a_rather_long_folder_name_of_a_blender_user"] * 4))
+    ctrl = link.LinkController(lambda: deep / "user", "4.5.9", online=lambda: True, device_name=lambda: "TEST-PC",
+                               secret_store=stores, open_url=lambda url: None)
+    ctrl.port_override, ctrl.auth_base_url = dct.port, api.base_url
+    ctrl.temp_root = tmp_path / "temp"
+    ctrl.temp_root.mkdir()
+    dct.on_assist = api.approve
+    dct.focused = FOCUSED
+    ctrl.connect()
+    drive(ctrl, lambda: ctrl.ready)
+    documents = FakeDocuments(ctrl)
+    ctrl.documents = documents
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    folder = documents.imports[0]["folder"]
+    assert folder.parent.parent == ctrl.temp_root and deep not in folder.parents
+    assert len(folder.parent.name) <= len(link.TEMPORARY_PREFIX + "open-") + 8
+    refused = OSError(2, "The filename or extension is too long")
+    refused.winerror = 206
+    assert link.path_too_long(refused) and not link.path_too_long(OSError(2, "No such file or directory"))
+    documents.import_model = lambda *args: (_ for _ in ()).throw(refused)
+    ctrl.model.discard()
+    drive(ctrl, lambda: ctrl.model.lease is None)
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.open_notice is not None and ctrl.model.open_notice.level == "ERROR")
+    assert ctrl.model.open_notice.message == strings.msg("open.model-failed", name="jbib_003_u",
+                                                         detail=strings.msg("notice.path-too-long"))
+    ctrl.shutdown()

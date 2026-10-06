@@ -419,6 +419,10 @@ TEXT = {
     "notice.secrets-unreadable": "تعذرت قراءة تسجيل الدخول المحفوظ ({detail}). سجّل الدخول مرة أخرى.",
     "notice.secret-store": "تعذرت قراءة أو كتابة تسجيل الدخول المحمي. سجّل الدخول مرة أخرى.",
     "notice.file-error": "تعذرت قراءة ملف أو كتابته: {detail}",
+    "notice.path-too-long": (
+        "مسار أحد الملفات أطول مما يسمح به Windows. اضبط المجلد المؤقت لـ Windows (TEMP) على مسار أقصر ثم حاول مرة "
+        "أخرى."
+    ),
     "notice.not-ready": "الإضافة ليست جاهزة.",
     "notice.connect-first": "اتصل بـ Durty Cloth Tool أولًا.",
     "notice.select-cloth": "حدد قطعة ملابس في Durty Cloth Tool أولًا.",

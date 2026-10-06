@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import pathlib
 import secrets
+import shutil
 import time
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -22,7 +23,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from . import ped
+from . import link, ped
 from .strings import UserError, msg
 
 #: On the character's collection: its id, the confirmations (rights, facing), the old rig's joints, the applied rig
@@ -68,8 +69,11 @@ GLB_OPTIONS: Dict[str, Any] = {
     "export_armature_object_remove": False, "export_rest_position_armature": True, "export_animations": False,
     "export_morph": False, "export_current_frame": False, "will_save_settings": False, "check_existing": False,
 }
-#: The add-on's folder (inside its data folder) for the export of a send, one folder per send, removed right after.
+#: The kind of the add-on's temporary folder for a character's export (:func:`link.temporary_folder`).
+WORK_KIND = "ped"
+#: Where earlier versions put it (inside the add-on's data folder); still cleaned up.
 WORK_FOLDER = "ped-send"
+STALE_SECONDS = 600.0
 
 
 def fail(key: str, **fields: Any) -> UserError:
@@ -1104,9 +1108,23 @@ def export_glb(context: Any, collection: Any, folder: pathlib.Path) -> bytes:
         layer.update()
 
 
-def work_folder(data_dir: pathlib.Path) -> pathlib.Path:
-    base = data_dir / WORK_FOLDER
-    base.mkdir(parents=True, exist_ok=True)
-    folder = base / f"send-{secrets.token_hex(6)}"
-    folder.mkdir()
-    return folder
+def work_folder() -> pathlib.Path:
+    """A new, empty folder for the character's export, with a short path whatever the Blender user folder."""
+    return link.temporary_folder(WORK_KIND)
+
+
+def remove_stale_work(data_dir: Optional[pathlib.Path]) -> None:
+    """Export folders a Blender that closed in the middle of creating a ped left behind (only the add-on's own), in
+    the temporary folder and where earlier versions kept them."""
+    stale = link.stale_temporary_folders(WORK_KIND, STALE_SECONDS)
+    base = data_dir / WORK_FOLDER if data_dir is not None else None
+    if base is not None and not link._is_link(base) and base.is_dir():
+        cutoff = time.time() - STALE_SECONDS
+        for entry in base.glob("send-*"):
+            try:
+                if not link._is_link(entry) and entry.is_dir() and entry.stat().st_mtime < cutoff:
+                    stale.append(entry)
+            except OSError:
+                continue  # another Blender may be using it; it goes with the next start
+    for entry in stale:
+        shutil.rmtree(entry, ignore_errors=True)

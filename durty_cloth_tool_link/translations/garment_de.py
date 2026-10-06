@@ -718,9 +718,6 @@ TEXT = {
         "Modell und Bilder sind zusammen größer als {size} MiB und können nicht gesendet werden. Nutze kleinere "
         "Bilder oder weniger Farbvarianten."
     ),
-    "add.why.work-folder": (
-        "Der Ordner des Add-ons für den Export ist ein Link an einen anderen Ort, darum wird er nicht genutzt."
-    ),
     "add.why.convert": "Sollumz konnte aus dem Kleidungsstück kein Drawable Model machen ({detail}).",
     "add.why.material": "Sollumz konnte dem Kleidungsstück nicht den Ped-Shader geben ({detail}).",
     "add.picture.empty": "Das Bild {name} hat keine Pixel.",

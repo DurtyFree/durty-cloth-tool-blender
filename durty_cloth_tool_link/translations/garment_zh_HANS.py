@@ -508,7 +508,6 @@ TEXT = {
     "add.why.too-many": "一件服装最多有 {limit} 个颜色变体。",
     "add.why.variation-twice": "图像 {name} 被用于两个颜色变体。每个变体都需要自己的图像。",
     "add.why.too-large": "模型及其图像合计超过 {size} MiB，无法发送。请使用更小的图像或更少的颜色变体。",
-    "add.why.work-folder": "插件用于导出的文件夹是指向其他位置的链接，因此不会使用它。",
     "add.why.convert": "Sollumz 无法把服装转换为 Drawable Model（{detail}）。",
     "add.why.material": "Sollumz 无法为服装设置 ped 着色器（{detail}）。",
     "add.picture.empty": "图像 {name} 没有像素。",

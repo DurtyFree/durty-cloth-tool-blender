@@ -29,6 +29,7 @@ from bpy.types import Menu, Operator, Panel, PropertyGroup
 from . import host, ped, ped_link, state, strings, ui
 from . import ped_host as ph
 from .dct_link import auth, protocol
+from .link import path_too_long
 from .strings import CONTEXT, EN, Msg, UserError, msg, t, tt
 from .ui import GAP, GAP_SMALL, guide, heading, info_button, operator, primary, reason_text, subtext, wrapped
 
@@ -328,6 +329,8 @@ def _failure(exc: BaseException) -> Msg:
         return msg(f"ped.marker-error.{exc.code}")
     if isinstance(exc, UserError):
         return exc.message
+    if path_too_long(exc):
+        return msg("notice.path-too-long")
     if isinstance(exc, OSError):
         return msg("notice.file-error", detail=str(exc.strerror or exc))
     return msg("notice.unexpected", detail=ui._report_text(exc))
@@ -1294,7 +1297,7 @@ class DCTLINK_OT_ped_send(_Op):
                 raise UserError(msg("ped.why.rights"))
             info = ph.rig_info(collection)
             template = info.get("template") or settings_.template
-            folder = ph.work_folder(ctrl.data_dir)
+            folder = ph.work_folder()
             context.window_manager.progress_begin(0, 1)  # the export can take a while: the cursor says so
             try:
                 glb = ph.export_glb(context, collection, folder)

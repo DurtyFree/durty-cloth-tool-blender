@@ -533,6 +533,10 @@ TEXT = {
     "notice.secrets-unreadable": "La connexion enregistrée n'a pas pu être lue ({detail}). Connectez-vous à nouveau.",
     "notice.secret-store": "La connexion protégée n'a pas pu être lue ou écrite. Connectez-vous à nouveau.",
     "notice.file-error": "Un fichier n'a pas pu être lu ou écrit : {detail}",
+    "notice.path-too-long": (
+        "Un chemin de fichier est plus long que Windows ne le permet. Donnez au dossier temporaire de Windows (TEMP) "
+        "un chemin plus court, puis réessayez."
+    ),
     "notice.not-ready": "Le module n'est pas prêt.",
     "notice.connect-first": "Connectez-vous d'abord à Durty Cloth Tool.",
     "notice.select-cloth": "Sélectionnez d'abord un vêtement dans Durty Cloth Tool.",

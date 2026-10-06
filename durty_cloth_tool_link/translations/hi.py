@@ -450,6 +450,10 @@ TEXT = {
     "notice.secrets-unreadable": "सेव किया गया साइन इन पढ़ा नहीं जा सका ({detail})। फिर से साइन इन करें।",
     "notice.secret-store": "सुरक्षित साइन इन पढ़ा या लिखा नहीं जा सका। फिर से साइन इन करें।",
     "notice.file-error": "एक फ़ाइल पढ़ी या लिखी नहीं जा सकी: {detail}",
+    "notice.path-too-long": (
+        "फ़ाइल का पाथ Windows की अनुमति से लंबा है। Windows का अस्थायी फ़ोल्डर (TEMP) किसी छोटे पाथ पर सेट करें और फिर "
+        "से कोशिश करें।"
+    ),
     "notice.not-ready": "ऐड-ऑन तैयार नहीं है।",
     "notice.connect-first": "पहले Durty Cloth Tool से कनेक्ट करें।",
     "notice.select-cloth": "पहले Durty Cloth Tool में एक कपड़ा चुनें।",

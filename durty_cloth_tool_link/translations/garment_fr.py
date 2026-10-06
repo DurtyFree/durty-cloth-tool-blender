@@ -717,9 +717,6 @@ TEXT = {
         "Le modèle et ses images dépassent ensemble {size} MiB et ne peuvent pas être envoyés. Utilisez des images "
         "plus petites ou moins de variantes de couleur."
     ),
-    "add.why.work-folder": (
-        "Le dossier d'export du module est un lien vers un autre emplacement, il n'est donc pas utilisé."
-    ),
     "add.why.convert": "Sollumz n'a pas pu faire du vêtement un Drawable Model ({detail}).",
     "add.why.material": "Sollumz n'a pas pu donner au vêtement le shader de ped ({detail}).",
     "add.picture.empty": "L'image {name} n'a pas de pixels.",

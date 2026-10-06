@@ -487,6 +487,10 @@ TEXT = {
     "notice.secrets-unreadable": "No se pudo leer la sesión guardada ({detail}). Vuelve a iniciar sesión.",
     "notice.secret-store": "No se pudo leer ni escribir la sesión protegida. Vuelve a iniciar sesión.",
     "notice.file-error": "No se pudo leer ni escribir un archivo: {detail}",
+    "notice.path-too-long": (
+        "Una ruta de archivo es más larga de lo que Windows permite. Pon la carpeta temporal de Windows (TEMP) en una "
+        "ruta más corta y vuelve a intentarlo."
+    ),
     "notice.not-ready": "El complemento no está listo.",
     "notice.connect-first": "Conecta primero con Durty Cloth Tool.",
     "notice.select-cloth": "Selecciona primero una prenda en Durty Cloth Tool.",

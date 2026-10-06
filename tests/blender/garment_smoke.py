@@ -1049,6 +1049,8 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     # The add: Durty Cloth Tool adds the cloth and answers with its binding and findings.
     dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING),
                       "findings": [{"code": "non-power-of-two", "severity": "warning"}]}
+    work_glob = sys.modules[package + ".link"].TEMPORARY_PREFIX + gdct.WORK_KIND + "-*"
+    work_before = set(pathlib.Path(tempfile.gettempdir()).glob(work_glob))
     check("Add to Project runs", "FINISHED" in add("the add"))
     pump(addon, lambda: not ctrl.item_add.adding, timeout=30, what="the add")
     header, files = dct.item_adds[-1]
@@ -1080,8 +1082,8 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
           status is not None and status.message.key == "add.result.added"
           and host.stored_binding(skeleton.root) == ADDED_BINDING and coat.get(gdct.ADDED) == "Smoke Coat", status)
     check("the backups go once the cloth is in the project", not gh.backups(coat))
-    work = pathlib.Path(ctrl.data_dir) / gdct.WORK_FOLDER
-    check("the add leaves no files behind", not any(work.iterdir()) if work.is_dir() else True)
+    work = set(pathlib.Path(tempfile.gettempdir()).glob(work_glob))
+    check("the add leaves no files behind", not work - work_before, sorted(work - work_before))
     log = draw_everything(package, state, "garment added")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the panel says what was added, with Durty Cloth Tool's checks",

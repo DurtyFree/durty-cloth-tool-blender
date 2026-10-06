@@ -598,6 +598,7 @@ def open_model_from_dct(addon, ctrl, dct, files, host, link, binding):
     Drawable Dictionary and the folder its files were written to."""
     pushes = len(dct.pushes)
     objects_before = {obj.session_uid for obj in bpy.data.objects}
+    folders_before = set(ctrl._model_folders)
     request_id = dct.open_model(files)
     pump(addon, lambda: dct.host_result(request_id) is not None, what="the answer to the model")
     check("DCT hears ok for the model it sent", dct.host_result(request_id)["ok"] is True, dct.host_result(request_id))
@@ -610,10 +611,11 @@ def open_model_from_dct(addon, ctrl, dct, files, host, link, binding):
     header = dct.pushes[pushes][0]
     check("the first push of the opened model names its cloth", header.get("binding") == binding
           and "lease" not in header, header)
-    base = pathlib.Path(ctrl.data_dir) / link.MODELS_FOLDER
-    folders = [d for d in base.iterdir() if d.name.startswith(request_id + "-")]
-    check("each open of a model gets a folder of its own",
-          len(folders) == 1 and (folders[0] / "smoke_open" / "smoke_open.ydd.xml").is_file(), sorted(base.iterdir()))
+    folders = sorted(set(ctrl._model_folders) - folders_before)
+    check("each open of a model gets a short folder of its own in the temporary folder",
+          len(folders) == 1 and (folders[0] / "smoke_open" / "smoke_open.ydd.xml").is_file()
+          and folders[0].parent == pathlib.Path(tempfile.gettempdir())
+          and folders[0].name.startswith(link.TEMPORARY_PREFIX + "open-"), folders)
     return roots[0], folders[0]
 
 

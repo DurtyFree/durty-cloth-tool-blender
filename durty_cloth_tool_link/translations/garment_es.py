@@ -693,9 +693,6 @@ TEXT = {
         "El modelo y sus imágenes superan juntos {size} MiB y no se pueden enviar. Usa imágenes más pequeñas o "
         "menos variantes de color."
     ),
-    "add.why.work-folder": (
-        "La carpeta del complemento para la exportación es un enlace a otro lugar, así que no se usa."
-    ),
     "add.why.convert": "Sollumz no pudo convertir la prenda en un Drawable Model ({detail}).",
     "add.why.material": "Sollumz no pudo darle a la prenda el shader del ped ({detail}).",
     "add.picture.empty": "La imagen {name} no tiene píxeles.",

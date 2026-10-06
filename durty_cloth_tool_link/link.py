@@ -17,9 +17,9 @@ can be tested against a fake Durty Cloth Tool without Blender.
 from __future__ import annotations
 
 import collections
+import errno
 import os
 import pathlib
-import secrets
 import shutil
 import stat
 import tempfile
@@ -73,6 +73,8 @@ def _detail(exc: BaseException) -> Any:
     """What went wrong, for a message field: the user's message, or the error itself (logged to the console)."""
     if isinstance(exc, UserError):
         return exc.message
+    if path_too_long(exc):
+        return msg("notice.path-too-long")
     if isinstance(exc, OSError):
         return str(exc.strerror or exc)
     traceback.print_exception(type(exc), exc, exc.__traceback__)
@@ -1312,7 +1314,12 @@ class _ModelImport(NamedTuple):
     poll_number: int
 
 
-#: The add-on's folder (inside its data folder) for the files of models opened from DCT.
+#: The add-on's temporary folders (the files of models opened from DCT, the exports of an add or a custom ped): one per
+#: use, ``<system temporary folder>/dct-<kind>-<random>``. Sollumz nests a model's name twice (``<name>/<name>/
+#: <texture>``) and Windows refuses longer paths than 260 characters, which the add-on's own folder inside a deep
+#: Blender user folder reached.
+TEMPORARY_PREFIX = "dct-"
+#: Where earlier versions kept the files of opened models (inside the add-on's data folder); still cleaned up.
 MODELS_FOLDER = "opened-models"
 #: The maps in Blender image names (data names stay English, like file names).
 MAP_NAMES = {"diffuse": "Diffuse", "normal": "Normal", "specular": "Specular"}
@@ -1341,6 +1348,46 @@ def _opened_model_folder(folder: pathlib.Path) -> bool:
         return False
     model = entries[0] / (entries[0].name + bundle.MODEL_SUFFIX)
     return not _is_link(model) and model.is_file()
+
+
+def temporary_folder(kind: str, root: Optional[pathlib.Path] = None) -> pathlib.Path:
+    """A new, empty folder for one use that only this user can open, with a short path: ``dct-<kind>-<random>`` in
+    ``root`` (the system's temporary folder unless a test gives its own)."""
+    return pathlib.Path(tempfile.mkdtemp(prefix=f"{TEMPORARY_PREFIX}{kind}-", dir=root))
+
+
+def stale_temporary_folders(kind: str, seconds: float, root: Optional[pathlib.Path] = None) -> List[pathlib.Path]:
+    """The add-on's temporary folders of ``kind`` older than ``seconds``: what a Blender that closed meanwhile left
+    behind. Plain folders only, never a link."""
+    base = pathlib.Path(root) if root is not None else pathlib.Path(tempfile.gettempdir())
+    cutoff = time.time() - seconds
+    found = []
+    try:
+        entries = list(base.glob(f"{TEMPORARY_PREFIX}{kind}-*"))
+    except OSError:
+        return []
+    for entry in entries:
+        try:
+            if not _is_link(entry) and entry.is_dir() and entry.stat().st_mtime < cutoff:
+                found.append(entry)
+        except OSError:
+            continue  # another Blender may be using it
+    return found
+
+
+#: Windows' error for a path longer than it allows (ERROR_FILENAME_EXCED_RANGE).
+_PATH_TOO_LONG = 206
+
+
+def path_too_long(exc: BaseException) -> bool:
+    """Whether ``exc`` (or what caused it) is the system refusing a path as too long."""
+    seen = 0
+    while exc is not None and seen < 5:
+        if isinstance(exc, OSError) and (getattr(exc, "winerror", None) == _PATH_TOO_LONG
+                                         or exc.errno == errno.ENAMETOOLONG):
+            return True
+        exc, seen = exc.__cause__ or exc.__context__, seen + 1
+    return False
 
 
 def _inside(folder: pathlib.Path, name: str) -> pathlib.Path:
@@ -1436,6 +1483,8 @@ class LinkController:
         self._clothes: "collections.OrderedDict[str, Dict[str, Any]]" = collections.OrderedDict()
         self._model_import: Optional[_ModelImport] = None
         self._model_folders: Set[pathlib.Path] = set()
+        #: Where the add-on's temporary folders go (``None``: the system's temporary folder; tests give their own).
+        self.temp_root: Optional[pathlib.Path] = None
         self._keep_texture: Optional[tuple] = None
 
         self.stream = TextureStream(self)
@@ -2096,7 +2145,7 @@ class LinkController:
             self.touch()
             return
         try:
-            folder, directory = self._write_model_files(request.request_id, name, model_file, request.files)
+            folder, directory = self._write_model_files(name, model_file, request.files)
         except (OSError, ValueError) as exc:
             request.refuse("open-failed")
             self.model.open_notice = Notice("ERROR", msg("open.model-failed", name=name, detail=_detail(exc)))
@@ -2113,19 +2162,14 @@ class LinkController:
         self.model.open_notice = Notice("INFO", msg("open.model-importing", name=name))
         self.touch()
 
-    def _write_model_files(self, request_id: str, name: str, model_file: str,
+    def _write_model_files(self, name: str, model_file: str,
                            files: List[Any]) -> "tuple[pathlib.Path, pathlib.Path]":
-        """``<data folder>/opened-models/<request>/<model>/<model>.ydd.xml`` with its textures in ``<model>/`` beside
-        it, the folder Sollumz reads them from. Each open gets a folder of its own, so Sollumz never takes a texture
-        it loaded for an earlier open of the same model. Every name is a bare file name and is joined inside its
-        folder only; a link in place of the add-on's folder is refused. Returns this open's folder and the model's."""
-        assert self.data_dir is not None
-        base = self.data_dir / MODELS_FOLDER
-        if _is_link(base):
-            raise ValueError(f"{MODELS_FOLDER} is a link")
-        base.mkdir(parents=True, exist_ok=True)
-        folder = _inside(base, f"{request_id}-{secrets.token_hex(4)}")
-        folder.mkdir()
+        """``<temporary folder>/dct-open-<random>/<model>/<model>.ydd.xml`` with its textures in ``<model>/`` beside
+        it, the folder Sollumz reads them from. Each open gets a new folder of its own (:func:`temporary_folder`,
+        short whatever the Blender user folder), so Sollumz never takes a texture it loaded for an earlier open of the
+        same model. Every name is a bare file name and is joined inside its folder only. Returns this open's folder
+        and the model's."""
+        folder = temporary_folder("open", self.temp_root)
         self._model_folders.add(folder)
         try:
             directory = _inside(folder, name)
@@ -2189,9 +2233,12 @@ class LinkController:
         shutil.rmtree(folder, ignore_errors=True)
 
     def _remove_stale_model_files(self) -> None:
-        """Files of opened models an earlier session left behind (Blender closed before the model was discarded).
-        Only folders the add-on made are removed (see :func:`_opened_model_folder`), and nothing when the add-on's
-        folder is a link."""
+        """Files of opened models an earlier session left behind (Blender closed before the model was discarded), in
+        the temporary folder and where earlier versions kept them. Only folders the add-on made are removed (see
+        :func:`_opened_model_folder`), and nothing behind a link."""
+        for entry in stale_temporary_folders("open", self.STALE_MODEL_FILES_SECONDS, self.temp_root):
+            if _opened_model_folder(entry):
+                shutil.rmtree(entry, ignore_errors=True)
         base = self.data_dir / MODELS_FOLDER if self.data_dir is not None else None
         if base is None or _is_link(base) or not base.is_dir():
             return

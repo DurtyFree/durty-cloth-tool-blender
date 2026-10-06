@@ -685,7 +685,6 @@ TEXT = {
         "O modelo e as imagens juntos passam de {size} MiB e não podem ser enviados. Use imagens menores ou menos "
         "variações de cor."
     ),
-    "add.why.work-folder": "A pasta de exportação do add-on é um link para outro lugar, então ela não é usada.",
     "add.why.convert": "O Sollumz não conseguiu transformar a roupa em um Drawable Model ({detail}).",
     "add.why.material": "O Sollumz não conseguiu dar à roupa o shader do ped ({detail}).",
     "add.picture.empty": "A imagem {name} não tem pixels.",

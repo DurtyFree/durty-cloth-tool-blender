@@ -495,6 +495,10 @@ TEXT = {
         "Die geschützte Anmeldung konnte nicht gelesen oder geschrieben werden. Melde dich erneut an."
     ),
     "notice.file-error": "Eine Datei konnte nicht gelesen oder geschrieben werden: {detail}",
+    "notice.path-too-long": (
+        "Ein Dateipfad ist länger, als Windows erlaubt. Setze den temporären Ordner von Windows (TEMP) auf einen "
+        "kürzeren Pfad und versuche es erneut."
+    ),
     "notice.not-ready": "Das Add-on ist nicht bereit.",
     "notice.connect-first": "Verbinde dich zuerst mit Durty Cloth Tool.",
     "notice.select-cloth": "Wähle zuerst ein Kleidungsstück in Durty Cloth Tool.",
