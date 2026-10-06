@@ -502,6 +502,8 @@ def test_refusals_and_refined_markers():
     sent = {"elbowL": (0.4, 0.0, 1.2), "kneeL": (0.1, 0.0, 0.5)}
     report = {"markers": {"elbowL": [0.4, 0.03, 1.2], "kneeL": [0.1, 0.005, 0.5]}}
     assert ped.refined_moves(report, sent) == [("elbowL", pytest.approx(0.03))]
+    # The 3D view showed every reported marker yellow; only the moved one is, where the panel lists it.
+    assert ped.moved_markers(report, sent) == {"elbowL": (0.4, 0.03, 1.2)}
     assert ped.markers_from_json(json.dumps(report["markers"])) == {"elbowL": (0.4, 0.03, 1.2),
                                                                      "kneeL": (0.1, 0.005, 0.5)}
     assert ped.markers_from_json("not json") == {}

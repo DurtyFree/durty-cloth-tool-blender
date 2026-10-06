@@ -1811,10 +1811,12 @@ def _draw_markers() -> None:
             _dots([point], PROBLEM_COLOUR if name in bad else _marker_colour(name), 9.0)
         waiting = waiting_rig(collection)
         if waiting is not None:
-            refined = ped.markers_from_json(json.dumps(waiting.report.get("markers") or {}))
-            moved = [(markers.get(name), point) for name, point in refined.items() if name in markers]
-            _lines([p for pair in moved for p in pair if pair[0] is not None], REFINED_COLOUR, 1.5)
-            _dots(list(refined.values()), REFINED_COLOUR, 7.0)
+            # Only the markers the panel lists as moved: the rig reports every marker, most where they were sent.
+            sent = (peds().rig_sent or {}).get("markers") or markers
+            moved = ped.moved_markers(waiting.report, sent)
+            _lines([p for name, point in moved.items() if name in markers for p in (markers[name], point)],
+                   REFINED_COLOUR, 1.5)
+            _dots(list(moved.values()), REFINED_COLOUR, 7.0)
         gpu.state.blend_set("NONE")
     except (ReferenceError, AttributeError, ImportError, ValueError, SystemError):
         return  # nothing to draw on (background mode, a scene being freed)

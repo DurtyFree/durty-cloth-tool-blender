@@ -1381,7 +1381,12 @@ def report_lines(report: Mapping[str, Any]) -> List[ReportLine]:
     return lines
 
 
-def refined_moves(report: Mapping[str, Any], markers: Mapping[str, Any], *, minimum: float = 0.01
+#: How far Durty Cloth Tool must move a marker (metres) before it counts as moved: the panel lists it and the 3D view
+#: shows it yellow. The rig reports every marker, most of them where they were sent.
+MOVED = 0.01
+
+
+def refined_moves(report: Mapping[str, Any], markers: Mapping[str, Any], *, minimum: float = MOVED
                   ) -> List[Tuple[str, float]]:
     """The markers Durty Cloth Tool moved by more than ``minimum`` metres (``report.markers`` against the markers that
     were sent), largest first."""
@@ -1393,6 +1398,13 @@ def refined_moves(report: Mapping[str, Any], markers: Mapping[str, Any], *, mini
             if distance > minimum:
                 moves.append((name, distance))
     return sorted(moves, key=lambda move: -move[1])
+
+
+def moved_markers(report: Mapping[str, Any], markers: Mapping[str, Any]) -> Dict[str, Tuple[float, float, float]]:
+    """Where Durty Cloth Tool put the markers it moved (:func:`refined_moves`), by name: what the 3D view shows
+    yellow, the same markers the panel lists."""
+    refined = markers_from_json(json.dumps(report.get("markers") or {}))
+    return {name: refined[name] for name, _ in refined_moves(report, markers) if name in refined}
 
 
 #: Refusal codes whose text explains them; others get the general one.
