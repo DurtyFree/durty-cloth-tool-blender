@@ -344,7 +344,16 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
     pump(addon, lambda: ctrl.peds.rig is not None, what="the third rig")
     check("Apply Rig (third) runs", "FINISHED" in bpy.ops.dct_link.ped_apply_rig())
 
-    # Create.
+    # Create. A garment selected in another scene and an object selected beside the character stay out of the GLB.
+    stray = bpy.data.meshes.new("smoke_stray")
+    stray.from_pydata([(0, 0, 0), (0.1, 0, 0), (0, 0.1, 0)], [], [(0, 1, 2)])
+    other_scene = bpy.data.scenes.new("smoke_other_scene")
+    elsewhere = bpy.data.objects.new("OtherSceneGarment", stray)
+    other_scene.collection.objects.link(elsewhere)
+    elsewhere.select_set(True, view_layer=other_scene.view_layers[0])
+    beside = bpy.data.objects.new("UnrelatedBeside", stray)
+    scene.collection.objects.link(beside)
+    beside.select_set(True)
     props.ped_name = "Smoke Hero"
     props.model_name = "a_m_y_smoke"
     check("a model name like the game's own peds is refused", refused(bpy.ops.dct_link.ped_send, "game"))
@@ -366,6 +375,15 @@ def run(package, addon, state, ctrl, check, refused, pump, draw_everything, dct)
           == sorted(b["name"] for b in template), joint_names[:5])
     check("the GLB holds the four parts, skinned", {nodes[i]["name"] for i, n in enumerate(nodes) if "mesh" in n}
           == {"Body", "Head", "Hair", "Eyes"} and all("skin" in n for n in nodes if "mesh" in n))
+    check("the GLB holds nothing from another scene or beside the character",
+          not {"OtherSceneGarment", "UnrelatedBeside"} & {n.get("name") for n in nodes}
+          and len(document.get("scenes", [])) == 1, [n.get("name") for n in nodes if "mesh" in n])
+    check("the objects selected before stay selected", beside.select_get()
+          and elsewhere.select_get(view_layer=other_scene.view_layers[0]))
+    bpy.data.objects.remove(elsewhere)
+    bpy.data.objects.remove(beside)
+    bpy.data.meshes.remove(stray)
+    bpy.data.scenes.remove(other_scene)
     by_name = {b["name"]: b for b in template}
     turned = 0.0
     for index in skin["joints"]:

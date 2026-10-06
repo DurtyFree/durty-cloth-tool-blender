@@ -54,7 +54,9 @@ MARKER_OF = "dct_ped_marker_of"
 MARKER_PREFIX = "DCT_ped_"
 MODIFIER = "DCT Rig"
 #: The glTF exporter's settings for the GLB Durty Cloth Tool reads (Blender 5.2: joints keep their names and exact rest
-#: transforms, at most four weights, images embedded, every bone exported even without weights).
+#: transforms, at most four weights, images embedded, every bone exported even without weights). Only the selection of
+#: the scene the character is in: without ``use_active_scene`` the exporter visits every scene of the file and takes
+#: whatever is selected there too.
 GLB_OPTIONS: Dict[str, Any] = {
     "export_format": "GLB", "export_image_format": "AUTO", "export_image_add_webp": False,
     "export_keep_originals": False, "export_texcoords": True, "export_normals": True, "export_tangents": False,
@@ -63,7 +65,7 @@ GLB_OPTIONS: Dict[str, Any] = {
     "export_draco_mesh_compression_enable": False, "export_meshopt_compression_enable": False,
     "export_use_gltfpack": False, "export_gn_mesh": False, "use_mesh_edges": False, "use_mesh_vertices": False,
     "export_cameras": False, "export_lights": False, "use_selection": True, "use_visible": False,
-    "use_renderable": False, "use_active_collection": False, "use_active_scene": False, "export_skins": True,
+    "use_renderable": False, "use_active_collection": False, "use_active_scene": True, "export_skins": True,
     "export_influence_nb": 4, "export_all_influences": False, "export_def_bones": False, "export_leaf_bone": False,
     "export_hierarchy_flatten_bones": False, "export_hierarchy_flatten_objs": False,
     "export_armature_object_remove": False, "export_rest_position_armature": True, "export_animations": False,
