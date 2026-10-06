@@ -270,6 +270,10 @@ def next_step(state: FlowState) -> str:
         return "garment.next.sculpting"
     if not state.garment:
         return "garment.next.import"
+    if state.added:
+        # Finished: the cloth is in the project, whatever steps the garment skipped (a model opened from Durty Cloth
+        # Tool needs no body, markers or fit). Push Model updates it from here.
+        return "garment.next.adding" if state.adding else "garment.next.done"
     if not state.body:
         return "garment.next.body"
     if not state.prepared:
@@ -355,7 +359,7 @@ def stage_status(state: FlowState, stage: str) -> StageStatus:
         if not state.garment:
             return status("garment.status.no-garment")
         if not state.body:
-            return status("garment.status.no-body")
+            return status(None if done else "garment.status.no-body")
         return StageStatus("garment.status.setup", {}, {"type": f"garment.category.{state.category}",
                                                          "gender": f"gender.{state.gender}"}, done)
     if stage == "fit":

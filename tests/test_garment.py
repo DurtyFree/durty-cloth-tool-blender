@@ -495,6 +495,21 @@ def test_the_next_step_walks_through_the_local_flow():
                                                         "garment.next.skeleton"}
 
 
+def test_an_added_garment_is_done_whatever_steps_it_skipped():
+    """A model opened from Durty Cloth Tool goes straight to Add to Project: no body, markers or fit. Once it is
+    added, the hint says so instead of sending the user back to the body, and Setup does not report the body as
+    missing beside its tick."""
+    added = garment.FlowState(garment=True, weighted=True, connected=True, project=True, skeleton=True, added=True)
+    assert garment.next_step(added) == "garment.next.done"
+    assert garment.stage_of(added) == "add"
+    setup = garment.stage_status(added, "setup")
+    assert setup.done and setup.key != "garment.status.no-body"
+    assert garment.stage_status(added, "add").key == "garment.status.added"
+    # Another add of the same garment shows its progress; before the first add the steps still lead to it.
+    assert garment.next_step(added._replace(adding=True)) == "garment.next.adding"
+    assert garment.next_step(added._replace(added=False)) == "garment.next.body"
+
+
 def test_the_open_stage_is_the_one_that_holds_the_next_step():
     """The panel opens the stage of the next step and folds the others: a step mapped to the wrong stage would put
     its large button into a closed section, and a stage that went back would fold the work in progress."""
