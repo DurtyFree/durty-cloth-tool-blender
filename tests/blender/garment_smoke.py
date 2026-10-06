@@ -1,11 +1,13 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
 """The garment fitting tools in Blender, on a synthetic body and synthetic garments (no game files): importing a
-garment, the hosted body from the fake gta.clothing and a body file, markers and presets, the fit check and the
-problem colours, push out, snug, relax, the sculpt session, T-pose to A-pose, the tear check, prepare, combine
-materials, levels of detail, validate, backups, adding the coat to the project open in the fake Durty Cloth Tool
-(the skeleton template, the checks, the export, the add, Cancel and the free limit), and that nothing else in the
-scene changes.
+garment, the hosted body with its joints from the fake gta.clothing and a body file, markers and presets, Align to
+Body and the tools that wait for it, the fit check and the problem colours, push out, snug, relax, the sculpt session,
+T-pose to A-pose without tearing a seam, the tear check, prepare, combine materials (with transparency and a normal
+map), levels of detail, validate, backups, adding the coat to the project open in the fake Durty Cloth Tool (a
+128-bone skeleton template, the checks, the export, the add, an add that fails after the garment changed, Cancel and
+the free limit), a one-material garment whose levels of detail keep their UVs, and that nothing else in the scene
+changes.
 
 Called by ``smoke_in_blender.py`` while the add-on is signed in to the fake gta.clothing. Only for use inside
 Blender.
@@ -48,7 +50,7 @@ def body_glb(folder):
     return path
 
 
-def textured_material(name, rgb):
+def textured_material(name, rgb, alpha=1.0, normal=False):
     image = bpy.data.images.new(f"{name}_tex", 64, 64)
     pixels = np.tile(np.array([*rgb, 1.0], dtype=np.float32), 64 * 64)
     pixels.reshape(64, 64, 4)[::8, :, :3] = 0.1  # stripes, so the bake has something to copy
@@ -61,16 +63,31 @@ def textured_material(name, rgb):
     texture = tree.nodes.new("ShaderNodeTexImage")
     texture.image = image
     tree.links.new(texture.outputs["Color"], shader.inputs["Base Color"])
+    shader.inputs["Alpha"].default_value = alpha  # a see-through fabric (lace, mesh)
+    if normal:  # a woven fabric's normal map
+        bumps = bpy.data.images.new(f"{name}_normal", 64, 64)
+        values = np.tile(np.array([0.5, 0.5, 1.0, 1.0], dtype=np.float32), 64 * 64).reshape(64, 64, 4)
+        values[::4, :, 0] = 0.8
+        bumps.pixels.foreach_set(values.reshape(-1))
+        bumps.colorspace_settings.name = "Non-Color"
+        bumps.pack()
+        node = tree.nodes.new("ShaderNodeTexImage")
+        node.image = bumps
+        normal_map = tree.nodes.new("ShaderNodeNormalMap")
+        tree.links.new(node.outputs["Color"], normal_map.inputs["Color"])
+        tree.links.new(normal_map.outputs["Normal"], shader.inputs["Normal"])
     return material
 
 
-def panel_garment(name, sleeves, angle, collection=None):
+def panel_garment(name, sleeves, angle, collection=None, maps=False):
     """A synthetic top made like a Marvelous Designer export: front, back and hem band as separate panels (three
-    materials, open seams where they meet) with their own UV islands, the hem band a long thin strip."""
+    materials, open seams where they meet) with their own UV islands, the hem band a long thin strip. With ``maps``
+    the band is half see-through and the front has a normal map."""
     obj = mesh_object(name, synthetic.top(sleeves, angle), collection)
     mesh = obj.data
     for material, rgb in (("front", (0.8, 0.2, 0.2)), ("back", (0.2, 0.3, 0.8)), ("band", (0.9, 0.9, 0.2))):
-        mesh.materials.append(textured_material(f"{name}_{material}", rgb))
+        mesh.materials.append(textured_material(f"{name}_{material}", rgb, alpha=0.5 if maps and material == "band"
+                                                else 1.0, normal=maps and material == "front"))
     bm = bmesh.new()
     bm.from_mesh(mesh)
     hem = min(v.co.z for v in bm.verts) + 0.04
@@ -105,6 +122,16 @@ def split_weights(obj):
     arm.remove(chosen)
     spine.add(chosen, 1.0, "REPLACE")
     return chosen
+
+
+def joints_file():
+    """The hosted body's joints (``freemode_joints.json``) for the synthetic body: its skeleton's bone heads."""
+    import json
+
+    heads = synthetic.joints_of()
+    return json.dumps({"schema": 1, "space": "ped", "units": "m",
+                       **{gender: {name: list(head) for name, head in heads.items() if name.startswith("SKEL_")}
+                          for gender in ("male", "female")}}).encode("utf-8")
 
 
 def positions(obj):
@@ -163,7 +190,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
 
     # The hosted body: downloaded from the fake gta.clothing for the signed-in account and kept per version.
     glb = body_glb(folder)
-    api.body_files = {"freemode_male.glb": glb.read_bytes()}
+    api.body_files = {"freemode_male.glb": glb.read_bytes(), "freemode_joints.json": joints_file()}
     ui_garment.BODY_ORIGIN["url"] = api.base_url
     props.gender = "male"
     check("Add Freemode Body runs", "FINISHED" in bpy.ops.dct_link.fit_add_body())
@@ -176,6 +203,8 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           body is not None and body.get(gh.BODY_TAG) == "male" and body.get(gh.BODY_VERSION) == version
           and (pathlib.Path(ctrl.data_dir) / "body" / version / "freemode_male.glb").is_file()
           and "POST /link/panel/ticket" in api.paths(), (ui_garment.RUNTIME.notice, api.paths()[-3:]))
+    check("the hosted body brought its joints", body is not None and body.get(gh.JOINTS_TAG)
+          and ui_garment.joints(bpy.context)[1] == "hosted", ui_garment.joints(bpy.context)[1])
     tickets = len(api.tickets)
     check("Add Freemode Body runs again", "FINISHED" in bpy.ops.dct_link.fit_add_body())
     pump(addon, lambda: ui_garment.RUNTIME.download is None or (ui_garment.body_tick() is None), timeout=30,
@@ -187,7 +216,15 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Use a Body File runs", "FINISHED" in bpy.ops.dct_link.fit_body_file(filepath=str(glb)))
     check("a body file replaces the added body", len([o for o in scene.objects if o.get(gh.BODY_TAG)]) == 1
           and props.body is not None and len(props.body.data.polygons) > 100)
+    check("without the hosted joints Align to Body reads them from the body's shape",
+          ui_garment.joints(bpy.context)[1] == "estimate")
+    check("Add Freemode Body runs once more (the kept body with its joints)",
+          "FINISHED" in bpy.ops.dct_link.fit_add_body())
+    pump(addon, lambda: ui_garment.RUNTIME.download is None or (ui_garment.body_tick() is None), timeout=30,
+         what="the kept body")
+    ui_garment.body_tick()
     body = props.body
+    check("the kept body has its joints again", ui_garment.joints(bpy.context)[1] == "hosted")
 
     # Markers.
     props.slot = "jbib"
@@ -215,6 +252,19 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     props.marker_size = 0.05
     check("Marker Size resizes the markers", all(abs(o.empty_display_size - 0.05) < 1e-6
                                                  for o in gh.marker_objects(scene).values()))
+    check("the markers belong to the garment", all(o.get(gh.MARKER_OWNER) == tee.get(gh.GARMENT_ID)
+                                                    for o in gh.marker_objects(scene).values()))
+
+    # Align to Body: the tools that measure against the body wait for it.
+    check("the fit check waits for Align to Body", refused(bpy.ops.dct_link.fit_check, "Align the garment"))
+    check("Push Out of Body waits for Align to Body", refused(bpy.ops.dct_link.fit_push_out, "Align the garment"))
+    before_align = positions(tee)
+    check("Align to Body runs", "FINISHED" in bpy.ops.dct_link.fit_align())
+    aligned = gh.read_markers(scene)
+    check("Align to Body puts the markers on the joints and leaves a garment that sits there almost as it is",
+          tee.get("dct_aligned") and np.abs(positions(tee) - before_align).max() < 0.03
+          and abs(aligned["neck"][2] - synthetic.joints_of()["SKEL_Neck_1"][2]) < 0.03,
+          (ui_garment.RUNTIME.notice, np.abs(positions(tee) - before_align).max()))
 
     # The fit check and the problem colours; the neck of the synthetic tee sits inside the head.
     check("Run Fit Check runs", "FINISHED" in bpy.ops.dct_link.fit_check())
@@ -241,6 +291,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
 
     # Push out, snug and relax (each keeps a backup).
     check("Push Out of Body runs", "FINISHED" in bpy.ops.dct_link.fit_push_out())
+    check("a change makes the fit check stale", not tee.get("dct_checked") and not tee.get(gh.FIT_REPORT))
     signed, _, _ = gh.clearance(gh.body_tree(body), positions(tee))
     check("nothing is inside the body after Push Out of Body", int((signed < -0.001).sum()) == 0,
           int((signed < -0.001).sum()))
@@ -258,6 +309,12 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     props.region = "chest"
     check("Relax Stretched runs", "FINISHED" in bpy.ops.dct_link.fit_relax())
     check("three backups are kept at most", len(gh.backups(tee)) == gh.MAX_BACKUPS, len(gh.backups(tee)))
+    check("the garment holds its backups itself (no fake users)",
+          all(not mesh.use_fake_user for mesh in gh.backups(tee)) and tee.get(gh.BACKUP_SLOTS[0]) is not None)
+    relaxed = positions(tee)
+    check("Back One Step runs", "FINISHED" in bpy.ops.dct_link.fit_back_step())
+    check("Back One Step puts back the shape from before the last step",
+          np.abs(positions(tee) - relaxed).max() > 1e-5 and len(gh.backups(tee)) == gh.MAX_BACKUPS - 1)
 
     # The sculpt session: Cancel puts the shape back, Accept keeps it and moves what went inside back out.
     shape = positions(tee)
@@ -293,8 +350,8 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Restore Pre-fit runs", "FINISHED" in bpy.ops.dct_link.fit_restore())
     check("Restore Pre-fit puts back the imported shape", np.abs(positions(tee) - expected).max() < 1e-4)
 
-    # T-pose to A-pose on a garment made in T-pose.
-    tpose = panel_garment("smoke_tpose", "long", 0.0)
+    # T-pose to A-pose on a garment made in T-pose (its panels unwelded): the arms go onto the body's, and no seam opens.
+    tpose = panel_garment("smoke_tpose", "long", 0.0, maps=True)
     for obj in bpy.context.view_layer.objects:
         obj.select_set(obj == tpose)
     bpy.context.view_layer.objects.active = tpose
@@ -304,14 +361,20 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     bpy.ops.dct_link.fit_auto_markers()
     props.arm_angle = math.radians(40.0)
     reach = positions(tpose)[:, 0].max()
+    seams = garment.seam_pairs(positions(tpose), 0.0005, gh.boundary_vertices(tpose.data))
     check("T-pose to A-pose runs", "FINISHED" in bpy.ops.dct_link.fit_tpose_to_apose())
     after = gh.read_markers(scene)
-    check("T-pose to A-pose lowers the arms and the markers to the arm angle",
-          abs(garment.arm_angle(after, "l") - 40.0) < 2.0 and abs(garment.arm_angle(after, "r") - 40.0) < 2.0
+    opened = np.linalg.norm(positions(tpose)[seams[:, 0]] - positions(tpose)[seams[:, 1]], axis=1).max() \
+        if len(seams) else 0.0
+    check("T-pose to A-pose lowers the arms and the markers onto the body's arms without opening a seam",
+          abs(garment.arm_angle(after, "l") - 45.0) < 2.0 and abs(garment.arm_angle(after, "r") - 45.0) < 2.0
           and positions(tpose)[:, 0].max() < reach - 0.05 and props.source_pose == "a_pose"
+          and len(seams) > 0 and opened < 0.0005
           and not any(o.name.startswith(gh.TEMP_PREFIX) for o in bpy.data.objects)
           and not any(g.name.startswith(gh.TEMP_PREFIX) for g in tpose.vertex_groups),
-          (garment.arm_angle(after, "l"), reach, positions(tpose)[:, 0].max()))
+          (garment.arm_angle(after, "l"), reach, positions(tpose)[:, 0].max(), len(seams), opened))
+    RESULT_TPOSE = {"check": "tears (T-pose to A-pose, unwelded)", "ok": True,
+                    "detail": f"{len(seams)} seam pairs, widest gap after the turn {opened * 1000:.3f} mm"}
 
     # The tear check needs an armature and weights: a small freemode-like rig with Blender's automatic weights.
     rig_data = bpy.data.armatures.new("smoke_rig")
@@ -339,12 +402,13 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Check Tears runs", "FINISHED" in bpy.ops.dct_link.fit_check_tears())
     tears = ui_garment.RUNTIME.tears
     torn = {pose["pose"]: pose["torn"] for pose in tears["poses"]} if tears else {}
-    check("the tear check poses the garment and finds the seams that open",
-          tears is not None and len(tears["poses"]) == 3 and tears["pairs"] > 0  # no thigh bones: no leg pose
+    check("the tear check poses the garment, finds the seams that open and names the pose it skipped",
+          tears is not None and len(tears["poses"]) == 4 and tears["skipped"] == 1 and tears["pairs"] > 0
           and torn.get("garment.pose.arms-up", 0) > 0 and tpose.vertex_groups.get(gh.TEARS_GROUP) is not None,
           tears)
     RESULT2 = {"check": "tears (synthetic, unwelded)", "ok": True,
-               "detail": "; ".join(f"{p['pose']}: {p['torn']} torn, {p['gap']} mm" for p in tears["poses"])}
+               "detail": "; ".join(f"{p['pose']}: {p['torn']} torn, {p['gap']} mm" for p in tears["poses"]
+                                   if not p.get("skipped"))}
     rest_pose = [pose.matrix_basis.copy() for pose in rig.pose.bones]
     check("the tear check puts the pose back", all(
         (pose.matrix_basis - before).to_translation().length < 1e-6 for pose, before in zip(rig.pose.bones, rest_pose)))
@@ -373,10 +437,17 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Combine Materials bakes one texture onto one material and cuts the hem strip",
           material is not None and image is not None and tuple(image.size) == (2048, 2048)
           and image.packed_file is not None and mesh.uv_layers.active.name == "UVMap 0"
-          and mesh.uv_layers.get("DCT Source UV") is not None and notice.message.fields["cut"] >= 1, notice)
+          and mesh.uv_layers.get("DCT Source UV") is not None and notice.message.fields["cut"] >= 1
+          and notice.message.fields["density"] > 0, notice)
     baked = np.empty(2048 * 2048 * 4, dtype=np.float32)
     image.pixels.foreach_get(baked)
     check("the baked texture holds the fabrics' colours", float(baked.reshape(-1, 4)[:, 0].max()) > 0.5)
+    shader = next(n for n in material.node_tree.nodes if n.type == "BSDF_PRINCIPLED")
+    alpha = baked.reshape(-1, 4)[:, 3]
+    check("Combine Materials keeps the see-through fabric in the alpha and bakes the normal map",
+          shader.inputs["Alpha"].is_linked and shader.inputs["Normal"].is_linked
+          and float(alpha.min()) < 0.75 and float(alpha.max()) > 0.95
+          and bpy.data.images.get("smoke_tpose_normal") is not None, (float(alpha.min()), float(alpha.max())))
     RESULT3 = {"check": "combine materials (synthetic)", "ok": True,
                "detail": f"layout uses {notice.message.fields['used']} %, {notice.message.fields['cut']} strips cut"}
     props.lod_medium = 600
@@ -398,15 +469,76 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("the Game Ready panel shows the result of Validate",
           any(entry[0] == "label" and ("CLEAN" in entry[1] or "Validate" in entry[1]) for entry in log))
 
-    results = [RESULT, RESULT2, RESULT3, RESULT4]
+    results = [RESULT, RESULT_TPOSE, RESULT2, RESULT3, RESULT4]
     if dct is not None:
         results.append(add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, tpose,
                                   real))
+        results.append(add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real))
 
     # Nothing else in the scene changed.
     check("the user's other objects are untouched", np.abs(positions(users_cube) - users_shape).max() == 0
           and users_cube.name == "users_cube")
     return results
+
+
+def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real):
+    """A garment with one material (no Combine Materials) whose levels of detail were made first: Sollumz renames only
+    the High mesh's UV map, so the add names each level's maps as High's are named and no level exports without UVs."""
+    ui_garment = sys.modules[package + ".ui_garment"]
+    gh = sys.modules[package + ".garment_host"]
+    scene = bpy.context.scene
+    props = scene.dct_garment
+    shirt = mesh_object("smoke_shirt", synthetic.top("short", 45.0))
+    mesh = shirt.data
+    mesh.materials.append(textured_material("smoke_shirt_fabric", (0.3, 0.7, 0.3)))
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    uv = bm.loops.layers.uv.new("UVMap")
+    for face in bm.faces:
+        for loop in face.loops:
+            loop[uv].uv = (loop.vert.co.x * 0.7 + 0.5, loop.vert.co.z * 0.7 + 0.35)
+    bm.to_mesh(mesh)
+    bm.free()
+    for name, side in (("SKEL_Spine3", 0), ("SKEL_L_UpperArm", 1), ("SKEL_R_UpperArm", -1)):
+        group = shirt.vertex_groups.new(name=name)
+        chosen = [v.index for v in mesh.vertices if (side == 0 and abs(v.co.x) <= 0.17)
+                  or (side and v.co.x * side > 0.17)]
+        group.add(chosen, 1.0, "REPLACE")
+    for obj in bpy.context.view_layer.objects:
+        obj.select_set(obj == shirt)
+    bpy.context.view_layer.objects.active = shirt
+    bpy.ops.dct_link.fit_use_garment()
+    check("choosing another garment starts its add afresh", props.item_name == "smoke_shirt" and not props.variations)
+    props.slot, props.gender, props.item_name = "jbib", "female", "Smoke Shirt"
+    props.lod_medium, props.lod_low = 300, 100
+    check("Generate LODs runs on the one-material shirt", "FINISHED" in bpy.ops.dct_link.fit_lods())
+    adds = len(dct.item_adds)
+    dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING_SHIRT), "findings": []}
+    check("the one-material shirt is added", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
+         what="the shirt's add")
+    pump(addon, lambda: len(dct.item_adds) > adds and not ctrl.item_add.adding, timeout=30, what="the shirt's answer")
+    levels = [m for _, m in gh.lod_meshes(shirt)]
+    names = [layer.name for layer in mesh.uv_layers]
+
+    def spread(lod):
+        values = np.empty(len(lod.loops) * 2, dtype=np.float32)
+        lod.uv_layers[names[0]].data.foreach_get("uv", values)
+        return float(np.ptp(values)) if len(values) else 0.0
+
+    check("every level of detail names its UV maps as High does and keeps its UVs",
+          len(levels) == 2 and names[0] == "UVMap 0"
+          and all([layer.name for layer in lod.uv_layers][:1] == names[:1] and spread(lod) > 0.1 for lod in levels),
+          (names, [[layer.name for layer in lod.uv_layers] for lod in levels]))
+    model = bytes(dct.item_adds[-1][1][0][1])
+    if real:
+        check("the real Sollumz exported the shirt's levels of detail", b"<DrawableModelsMedium>" in model
+              and b"<DrawableModelsLow>" in model)
+    return {"check": "add one-material garment with LODs (" + ("real Sollumz" if real else "stand-in") + ")",
+            "ok": True, "detail": f"High UV maps {names}, levels {[[l.name for l in lod.uv_layers] for lod in levels]}"}
+
+
+ADDED_BINDING_SHIRT = {"clothId": "7a8b9c0d-1e2f-4a3b-8c4d-5e6f7a8b9c0d", "textureId": "8b9c0d1e-2f3a-4b4c-9d5e-6f7a8b9c0d1e"}
 
 
 def png_size(data):
@@ -436,7 +568,9 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
 
     scene = bpy.context.scene
     props = scene.dct_garment
-    dct.skeleton_files = {gender: [(synthetic.skeleton_template_file(gender), synthetic.skeleton_template_xml(gender))]
+    bones_128 = synthetic.skeleton_bones_128()
+    dct.skeleton_files = {gender: [(synthetic.skeleton_template_file(gender),
+                                    synthetic.skeleton_template_xml(gender, bones_128))]
                           for gender in ("male", "female")}
     ctrl.skeletons.forget()
     props.gender = "female"
@@ -444,8 +578,25 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     props.item_name = "Smoke Coat"
     old_rig = coat.parent
 
+    # The bakes above kept Blender busy for longer than the link's keepalive: like the panel's timer in a real
+    # session, let the link notice and connect again before the next request.
+    import time
+
+    end = time.monotonic() + 1.0
+    while time.monotonic() < end:
+        addon.tick()
+        time.sleep(0.01)
+    pump(addon, lambda: ctrl.ready and ctrl.project is not None, timeout=60, what="the link after the long steps")
+
     def finish_job(what):
-        pump(addon, lambda: ui_garment.job_tick() is None, timeout=30, what=what)
+        pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
+             what=what)
+
+    def add(what):
+        """Add to Durty Cloth Tool Project, and the add's own job until it has sent the add or stopped."""
+        result = bpy.ops.dct_link.fit_add_to_dct()
+        finish_job(what)
+        return result
 
     log = draw_everything(package, state, "garment ready to add")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
@@ -471,8 +622,8 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     skeleton = gdct.skeleton_of(coat)
     bones = [b.name for b in skeleton.armature.data.bones] if skeleton else []
     modifiers = [m for m in coat.modifiers if m.type == "ARMATURE"]
-    check("the coat sits on the female Durty Cloth Tool skeleton, its bones in the game's order",
-          skeleton is not None and skeleton.gender == "female" and bones == synthetic.skeleton_names()
+    check("the coat sits on the female Durty Cloth Tool skeleton, all 128 bones in the game's order",
+          skeleton is not None and skeleton.gender == "female" and bones == [n for n, _, _ in bones_128]
           and coat.parent == skeleton.armature and modifiers and modifiers[0].object == skeleton.armature
           and coat.sollum_type == "sollumz_drawable_model"
           and sorted(g.name for g in coat.vertex_groups) == groups_before
@@ -502,14 +653,22 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     # Sollumz reports success for an empty dictionary: the add-on reads what it wrote and refuses it.
     if not real:
         STUB["mode"] = "empty"
-        check("an empty export is refused", refused(bpy.ops.dct_link.fit_add_to_dct, "without the garment"))
+        old_material = coat.data.materials[0]
+        check("an add whose export fails runs", "FINISHED" in add("the failing add"))
+        notice = ui_garment.RUNTIME.notice
+        check("an empty export is refused after the garment changed, and Ctrl+Z is named",
+              notice is not None and notice.message.key == "add.failed-undo"
+              and notice.message.fields["problem"].key == "add.export.empty" and not dct.item_adds
+              and ui_garment.RUNTIME.add_job is None, notice)
+        check("the garment's old material stays in the file with it",
+              coat.get(gdct.SOURCE_MATERIAL) == old_material and old_material.users > 0)
         STUB["mode"] = "ydd"
         check("nothing is sent for an empty export", not dct.item_adds)
 
     # The add: Durty Cloth Tool adds the cloth and answers with its binding and findings.
     dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING),
                       "findings": [{"code": "non-power-of-two", "severity": "warning"}]}
-    check("Add to Durty Cloth Tool Project runs", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    check("Add to Durty Cloth Tool Project runs", "FINISHED" in add("the add"))
     pump(addon, lambda: not ctrl.item_add.adding, timeout=30, what="the add")
     header, files = dct.item_adds[-1]
     names = [name for name, _ in files]
@@ -539,6 +698,7 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     check("the added cloth is linked to the Drawable Dictionary for Push Model and Save Model to Cloth",
           status is not None and status.message.key == "add.result.added"
           and host.stored_binding(skeleton.root) == ADDED_BINDING and coat.get(gdct.ADDED) == "Smoke Coat", status)
+    check("the backups go once the cloth is in the project", not gh.backups(coat))
     work = pathlib.Path(ctrl.data_dir) / gdct.WORK_FOLDER
     check("the add leaves no files behind", not any(work.iterdir()) if work.is_dir() else True)
     log = draw_everything(package, state, "garment added")
@@ -550,7 +710,7 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     # Cancel while Durty Cloth Tool's dialog is open withdraws the add.
     dct.hold_adds = True
     adds = len(dct.item_adds)
-    check("another add runs", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    check("another add runs", "FINISHED" in add("another add"))
     pump(addon, lambda: len(dct.item_adds) > adds, what="the waiting add")
     log = draw_everything(package, state, "add waiting in DCT")
     check("the waiting add shows its progress and Cancel", ("operator", "dct_link.fit_cancel_add") in log
@@ -563,7 +723,7 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
 
     # Durty Cloth Tool's free limit: Durty Cloth Tool decides, the panel says it plainly.
     dct.fail["item.add"] = "item-limit"
-    check("an add over the limit runs", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    check("an add over the limit runs", "FINISHED" in add("the add over the limit"))
     pump(addon, lambda: not ctrl.item_add.adding, what="the refused add")
     check("the free limit is explained", ctrl.item_add.status.message.key == "add.result.item-limit")
     del dct.fail["item.add"]

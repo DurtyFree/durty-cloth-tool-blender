@@ -557,7 +557,6 @@ EN: Dict[str, str] = {
     "garment.next.import": "Import a garment, or select yours and choose Use Selected Garment.",
     "garment.next.body": "Next: add the freemode body under Setup.",
     "garment.next.markers": "Next: place the markers with Auto Markers under Fit, then check where they are.",
-    "garment.next.tpose": "Next: bring the T-pose into an A-pose under Fit.",
     "garment.next.check": "Next: run the fit check under Fix.",
     "garment.next.push": "Next: parts of the garment are inside the body. Use Push Out of Body under Fix.",
     "garment.next.prepare": "Next: Prepare Garment under Game Ready.",
@@ -628,7 +627,10 @@ EN: Dict[str, str] = {
     "garment.prop.marker-size": "Marker Size",
     "garment.prop.marker-size.desc": "How large the marker spheres are drawn",
     "garment.prop.arm-angle": "Arm Angle",
-    "garment.prop.arm-angle.desc": "How far below the horizontal T-pose to A-pose lowers the arms",
+    "garment.prop.arm-angle.desc": (
+        "How far below the horizontal T-pose to A-pose lowers the arms when the body's joints are not known (with "
+        "them, the arms go to the body's)"
+    ),
     "garment.prop.gap": "Gap (mm)",
     "garment.prop.push-gap.desc": "How far outside the body Push Out of Body moves the garment, in millimetres",
     "garment.prop.snug-gap.desc": "How far off the body Snug to Body leaves the region, in millimetres",
@@ -668,7 +670,10 @@ EN: Dict[str, str] = {
     ),
     "garment.prop.lod-medium": "Medium Triangles",
     "garment.prop.lod-low": "Low Triangles",
-    "garment.prop.lod.desc": "The most triangles this level of detail keeps",
+    "garment.prop.lod.desc": (
+        "The most triangles this level of detail keeps. 0: a share of High, at most what Durty Cloth Tool advises "
+        "(15,000 for Medium, 7,500 for Low)"
+    ),
     "garment.prop.ground": "Avatar Stood on the Ground",
     "garment.prop.ground.desc": (
         "The garment was made on an avatar standing at height 0, as in Marvelous Designer: move it down to the ped, "
@@ -707,8 +712,8 @@ EN: Dict[str, str] = {
     "garment.op.body-file.desc": "Add a body from a GLB, glTF, FBX or OBJ file instead, in metres and in the game's pose",
     "garment.op.auto-markers": "Auto Markers",
     "garment.op.auto-markers.desc": (
-        "Place the joint markers (neck, chest, pelvis, shoulders, elbows, wrists, hips) from the garment's shape. Move "
-        "any marker that is off"
+        "Place the joint markers from the garment's shape (neck, chest, pelvis, shoulders, elbows, wrists and hips; "
+        "for trousers the hips, knees and ankles). Move any marker that is off"
     ),
     "garment.op.mirror": "Mirror L to R",
     "garment.op.mirror.desc": "Copy the markers of the ped's left side to its right side",
@@ -747,7 +752,10 @@ EN: Dict[str, str] = {
         "Join the panel seams, remove loose parts, triangulate, shade smooth and add the ped vertex colours"
     ),
     "garment.op.combine": "Combine Materials",
-    "garment.op.combine.desc": "Pack all UV islands into one layout and bake the colour of every material into one texture",
+    "garment.op.combine.desc": (
+        "Pack all UV islands into one layout and bake every material into one: the colour with its transparency, and "
+        "normal, specular and emission maps where there are any"
+    ),
     "garment.op.lods": "Generate LODs",
     "garment.op.lods.desc": (
         "Make the Medium and Low levels of detail in Sollumz's LOD slots, with the weights of the High level"
@@ -811,9 +819,6 @@ EN: Dict[str, str] = {
     "garment.finding.colour-missing": "Color 1 is missing. Prepare Garment adds it.",
     "garment.finding.colour-format": (
         "Color 1 is not a face corner byte colour, as Sollumz needs it. Prepare Garment replaces it."
-    ),
-    "garment.finding.vertices": (
-        "The {level} level has {count} game vertices, more than the {budget} the add-on advises."
     ),
     "garment.finding.inside": "{share} % of the garment is inside the body.",
     "garment.finding.materials": "The garment has {count} materials. Combine Materials makes one texture of them.",
@@ -887,7 +892,10 @@ EN: Dict[str, str] = {
     "garment.done.cancel-sculpt": "Sculpting cancelled: the garment is back to its shape from before the session.",
     "garment.done.tears": "{count} seam vertices open up in a test pose. They are in the vertex group DCT Tears.",
     "garment.done.no-tears": "No seam opens in the test poses.",
-    "garment.done.tears-welded": "The garment has no open seams that could tear.",
+    "garment.done.tears-welded": (
+        "The seams are joined, so none can open here. Check the cloth moving on the ped in Durty Cloth Tool's 3D "
+        "Preview."
+    ),
     "garment.done.prepare": (
         "Prepared: joined {welded} seam vertices, removed {removed} loose vertices, {triangles} triangles."
     ),
@@ -896,8 +904,8 @@ EN: Dict[str, str] = {
         "vertices, {triangles} triangles."
     ),
     "garment.done.combine": (
-        "Combined {count} materials into one texture of {size} pixels; the layout uses {used} % of it ({cut} strips "
-        "cut)."
+        "Combined {count} materials into one texture of {size} pixels, {density} pixels per centimetre on the garment "
+        "(the layout uses {used} %, {cut} strips cut)."
     ),
     "garment.done.lods": "Levels of detail: High {high}, Medium {medium}, Low {low} triangles.",
     "garment.done.clean": "Validate: CLEAN.",
@@ -916,25 +924,29 @@ EN: Dict[str, str] = {
         "added to the scene as its own object, and the tools never change it."
     ),
     "garment.info.markers": (
-        "The markers stand for the ped's joints: neck, chest, pelvis, shoulders, elbows, wrists and hips. Auto "
-        "Markers places them from the garment's shape; move any that are off. Mirror L to R copies the left side to "
-        "the right."
+        "The markers stand for the ped's joints: neck, chest, pelvis, shoulders, elbows, wrists and hips (for trousers "
+        "the hips, knees and ankles). Auto Markers places them from the garment's shape, and lines in the 3D view join "
+        "them: orange lines mean something looks wrong. Move any marker that is off; Mirror L to R copies the left "
+        "side to the right."
     ),
     "garment.info.tpose": (
-        "For garments made in T-pose: a temporary armature built from the markers lowers the arms to the arm angle "
-        "and is removed afterwards. The markers follow."
+        "Turns the arms of a garment made in T-pose to the arm angle (or onto the body's arms when its joints are "
+        "known). Each part of the garment follows by where it is, so seams stay closed. Align to Body does this too."
     ),
     "garment.info.backups": (
-        "Before each step that changes the garment, a copy of its mesh is kept in the .blend file (the first one "
-        "and the newest ones). Restore Pre-fit puts the first one back."
+        "Before each step that changes the garment, a copy of its mesh is kept in the .blend file (the first one and "
+        "the newest ones). Back One Step puts the newest back, Restore Pre-fit the first. They go with the garment "
+        "when it is deleted or added to Durty Cloth Tool."
     ),
     "garment.info.push": (
-        "Moves everything inside the body, or closer than the gap, to the gap outside it. The vertices around "
-        "follow, so no crease forms."
+        "Moves everything inside the body, or closer than the gap, to the gap outside it. The vertices around follow, "
+        "so no crease forms, and layers on top (a shell over its lining) move along. Parts more than 3 cm inside, "
+        "vertices in the vertex group DCT Pinned and masked vertices stay."
     ),
     "garment.info.regions": (
-        "Snug to Body pulls a loose region towards the body, down to the gap. Relax Stretched eases stretched parts "
-        "back towards their original size. The edges of the region blend in."
+        "Snug to Body pulls a loose region towards the body, down to the gap; coat tails, skirts and hoods that hang "
+        "free stay as they are. Relax Stretched eases stretched parts back towards their original size. The edges of "
+        "the region blend in."
     ),
     "garment.info.problems": (
         "Colours the garment while you work: red inside the body, yellow too close, purple stretched compared with "
@@ -953,21 +965,24 @@ EN: Dict[str, str] = {
         "forward, legs forward, a twist), and the seams that open are reported."
     ),
     "garment.info.prepare": (
-        "Joins the seams between panels (never a lining onto its shell), removes loose parts, triangulates, shades "
-        "smooth and gives the garment Sollumz's vertex colours Color 1 and Color 2 with the values above."
+        "Joins the seams between panels (never a hem onto itself, and never a lining onto its shell: put a lining that "
+        "is not found in the vertex group DCT Lining), removes loose parts, triangulates, shades smooth and gives the "
+        "garment Sollumz's vertex colours Color 1 and Color 2 with the values under Options."
     ),
     "garment.info.combine": (
-        "Packs all UV islands into one square and bakes the colour of every material into one texture, which "
-        "becomes the garment's only material. The original UV map is kept as DCT Source UV. Transparency is not "
-        "baked."
+        "Packs all UV islands into one square and bakes every material into one: the colour with its transparency, and "
+        "a normal, specular and emission map where a material has one. That becomes the garment's only material. The "
+        "original UV map is kept as DCT Source UV."
     ),
     "garment.info.lods": (
-        "Decimates a copy of the garment to each triangle budget and puts it into Sollumz's Medium and Low LOD "
-        "slots; their weights come from the High level."
+        "Decimates a copy of the garment to each triangle budget and puts it into Sollumz's Medium and Low LOD slots, "
+        "keeping open edges and UV seams as far as it can. Each level takes over High's weights (four bones per "
+        "vertex) and is pushed out of the body."
     ),
     "garment.info.validate": (
-        "Quick local checks: weights, more than four bones per vertex, broken coordinates, the UV layout, vertex "
-        "colours, the vertices of each level of detail and how much is inside the body."
+        "Quick local checks: weights, more than four bones per vertex, broken coordinates, where the garment sits, "
+        "flipped normals, the UV layout, vertex colours, the triangles of each level of detail and how much is inside "
+        "the body."
     ),
     # ---- garment fitting: adding to Durty Cloth Tool --------------------------------------------------------
     "garment.next.validate-problems": "Next: fix what Validate lists under Game Ready, then validate again.",
@@ -1175,9 +1190,123 @@ EN: Dict[str, str] = {
         "A colour variation is larger than Durty Cloth Tool advises (2048 pixels on a side; it takes at most 4096)."
     ),
     "add.finding.picture.too-small": "A colour variation is smaller than 16 pixels on a side.",
+    "garment.next.align": "Next: Align to Body under Fit, so the garment sits on the freemode body.",
+    "garment.next.weights": (
+        "Next: weight the garment to the freemode skeleton's bones (vertex groups named after them, such as "
+        "SKEL_Spine3). Then generate the LODs, which take the weights over."
+    ),
+    "garment.region.forearms": "Forearms",
+    "garment.region.cuffs": "Cuffs",
+    "garment.unit.auto": "Automatic",
+    "garment.unit.m": "Metres",
+    "garment.unit.cm": "Centimetres",
+    "garment.unit.mm": "Millimetres",
+    "garment.unit.in": "Inches",
+    "garment.unit.desc": "The unit the file was saved in",
+    "garment.prop.unit": "Unit",
+    "garment.prop.unit.desc": (
+        "The unit the file was saved in. Automatic picks the unit that gives the garment a believable size"
+    ),
+    "garment.prop.orient": "Turn Upright",
+    "garment.prop.orient.desc": "Turn a garment that lies on its back or faces backwards so it stands as the ped does",
+    "garment.prop.keep-size": "Keep Size",
+    "garment.prop.keep-size.desc": "Align to Body only moves and turns the garment, without scaling it to the body",
+    "garment.heading.align": "Align to Body",
+    "garment.heading.options": "Options",
+    "garment.op.align": "Align to Body",
+    "garment.op.align.desc": (
+        "Move, turn and scale the garment so its markers sit on the body's joints, then turn its arms or legs onto the "
+        "body's"
+    ),
+    "garment.op.back": "Back One Step",
+    "garment.op.back.desc": "Put back the garment's shape from before the last step that changed it",
+    "garment.op.remove-backups": "Remove Backups",
+    "garment.op.remove-backups.desc": "Remove the garment's backups from the .blend file",
+    "garment.align.source.hosted": "Joints: from the freemode body.",
+    "garment.align.source.dct": "Joints: from your game files, through Durty Cloth Tool.",
+    "garment.align.source.estimate": (
+        "Joints: estimated from the body's shape. With Durty Cloth Tool connected, Align to Body uses exact joints."
+    ),
+    "garment.align.fetching": "Getting the joints of the freemode skeleton from Durty Cloth Tool…",
+    "garment.info.align": (
+        "Moves, turns and scales the garment so its markers sit on the joints of the freemode body, then turns each "
+        "arm (or leg) onto the body's. The tools under Fix measure against the body, so they wait for this step. Run "
+        "Auto Markers first and move any marker that is off."
+    ),
+    "garment.done.align": (
+        "Aligned to the body: moved {shift} cm, turned {turn}°, scaled to {scale} %, {limbs} arms or legs turned. The "
+        "markers are {residual} mm from the joints on average."
+    ),
+    "garment.why.align-first": "Align the garment to the body under Fit first.",
+    "garment.why.region-snug": "Snug to Body leaves the tails of coats and skirts alone: they hang free of the legs.",
+    "garment.why.ped-material": (
+        "The garment already has the ped shader, so its material is ready for the game. Combine Materials would "
+        "replace it."
+    ),
+    "garment.marker-error.align-markers": (
+        "The markers do not fit the body's joints without scaling or turning the garment far. Check them (the lines "
+        "between them show where they are), then align again."
+    ),
+    "garment.marker-note.arms-estimated": (
+        "No sleeves were found, so the arms follow the source pose. Check the elbows and wrists."
+    ),
+    "garment.marker-note.hood": "A hood was found: the neck marker sits under it.",
+    "garment.marker-note.skirt": "No legs were found, so the hips are placed from ordinary proportions (a skirt?).",
+    "garment.marker-note.legs-estimated": (
+        "The legs end early, so the knees and ankles are placed from ordinary proportions."
+    ),
+    "garment.marker-problem.order": (
+        "The markers are not in order from top to bottom. Check the neck, chest and pelvis."
+    ),
+    "garment.marker-problem.span": "The shoulders are too close together or too far apart. Check the shoulder markers.",
+    "garment.marker-problem.symmetry": (
+        "The left and right markers do not mirror each other. Mirror L to R makes them match."
+    ),
+    "garment.marker-problem.arms": (
+        "An arm's markers are too short, too long or bent back. Check the elbows and wrists."
+    ),
+    "garment.marker-problem.legs": "A leg's markers are too short or too long. Check the knees and ankles.",
+    "garment.done.import-turned": "Imported {name} ({count} vertices) and turned it to stand as the ped does.",
+    "garment.done.import-avatar": "Imported {name} ({count} vertices) without the avatar that came with it.",
+    "garment.done.back": "Put back the shape from before the last step.",
+    "garment.done.remove-backups": "Removed {count} backups.",
+    "garment.done.push-deep": (
+        "Moved {moved} vertices. Inside the body: {before} before, {after} now. {deep} lie too deep to move (a sleeve "
+        "through the body?): fix them by hand."
+    ),
+    "garment.done.prepare-thick": (
+        "Prepared a thick export: joined {welded} vertices across panels, removed {walls} inner walls, {triangles} "
+        "triangles."
+    ),
+    "garment.done.cancel-sculpt-lost": (
+        "The sculpt session ended, but its starting shape was lost. Ctrl+Z still has it."
+    ),
+    "garment.done.sculpt-mirror-off": (
+        "Sculpt session started. Mirror X mirrors about the garment's own centre, which is not the ped's: apply the "
+        "garment's transform first to mirror about the ped."
+    ),
+    "garment.sculpt.broken": (
+        "The sculpt session lost its starting shape (Dyntopo or a remesh does that). Accept keeps the shape and ends "
+        "the session."
+    ),
+    "garment.tears.pose-skipped": "{pose}: skipped, the armature has no bone for it",
+    "garment.error.cycles": (
+        "Combine Materials bakes with Cycles. Turn on Cycles under Edit > Preferences > Add-ons, then try again."
+    ),
     "garment.body.compressed": (
         "This Blender cannot read the compressed freemode body. Use Blender 5.2 or later, or a body file, until "
         "gta.clothing offers the uncompressed body."
+    ),
+    "garment.finding.triangles": (
+        "The {level} level has {count} triangles, more than the {budget} Durty Cloth Tool advises."
+    ),
+    "garment.finding.placement": (
+        "The middle of the garment is {distance} cm from the body, so it is not on the body. Check the import (unit, "
+        "avatar on the ground) and Align to Body."
+    ),
+    "garment.finding.normals-inward": (
+        "{share} % of the surface near the body faces into it: the normals look flipped. Recalculate them outside in "
+        "Edit Mode (Mesh > Normals)."
     ),
     "add.result.added-late": (
         "Durty Cloth Tool added {name} after all: Add to project was chosen there before the cancel arrived. It is "

@@ -300,7 +300,17 @@ class SZ_LODLevels(bpy.types.PropertyGroup):
                 "sollumz_low": self.low, "sollumz_verylow": self.very_low}[level]
 
 
+#: Sollumz's shader list as its module ``ydr.shader_materials`` holds it (the ped shader is not the first).
+SHADER_MODULE = "dct_smoke_stand_in.sollumz.ydr.shader_materials"
+
+
 def register():
+    import sys
+    import types
+
+    shaders = types.ModuleType(SHADER_MODULE)
+    shaders.shadermats = [types.SimpleNamespace(value=name) for name in ("default.sps", "ped.sps", "ped_alpha.sps")]
+    sys.modules[SHADER_MODULE] = shaders
     for cls in (SOLLUMZ_OT_export_assets, SOLLUMZ_OT_import_assets, SOLLUMZ_OT_convert_to_drawable_model,
                 SZ_ShaderProperties, SZ_TextureProperties, SOLLUMZ_OT_create_shader_material, SZ_LODLevel, SZ_LODLevels):
         bpy.utils.register_class(cls)

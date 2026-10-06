@@ -371,7 +371,8 @@ class Shots:
         yield from self.wait(lambda: True, 5)
         self.shot("garment-fit-markers")
 
-        # 4. Fix: the fit check and the problem colours.
+        # 4. Fix: aligned to the body, the fit check and the problem colours.
+        self.operator(lambda: bpy.ops.dct_link.fit_align())
         self.operator(lambda: bpy.ops.dct_link.fit_check())
         self.operator(lambda: bpy.ops.dct_link.fit_show_problems())
         self.show_garment(garment_ui, "DCTLINK_PT_garment_fix")

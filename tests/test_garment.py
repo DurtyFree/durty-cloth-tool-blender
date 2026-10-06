@@ -31,12 +31,16 @@ def test_each_slot_offers_its_categories():
 
 
 def test_markers_and_regions_follow_the_category():
-    assert garment.markers_for("tshirt") == garment.MARKERS and len(garment.MARKERS) == 11
-    assert garment.markers_for("pants") == ("pelvis", "hip_l", "hip_r")
+    assert garment.markers_for("tshirt") == garment.UPPER_MARKERS and len(garment.UPPER_MARKERS) == 11
+    assert garment.markers_for("pants") == ("pelvis", "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r")
     assert garment.markers_for("shoes") == ()
+    assert set(garment.MARKERS) == set(garment.UPPER_MARKERS) | set(garment.LOWER_MARKERS) == set(garment.MARKER_JOINTS)
     assert "upper_arms" not in garment.regions_for("vest") and "legs" not in garment.regions_for("tshirt")
+    assert "forearms" not in garment.regions_for("tshirt") and "cuffs" in garment.regions_for("long_sleeve")
     assert garment.regions_for("long_jacket") == garment.REGIONS
     assert garment.regions_for("shorts") == ("waist", "hips", "legs")
+    # Snug never pulls the tails of a coat onto the legs; the legs of trousers are snugged.
+    assert "legs" not in garment.snug_regions_for("long_jacket") and "legs" in garment.snug_regions_for("pants")
 
 
 # ---- markers ----------------------------------------------------------------------------------------------
@@ -48,7 +52,8 @@ def test_markers_and_regions_follow_the_category():
 def test_auto_markers_find_the_joints_of_a_top(sleeves, category, angle, pose):
     top = synthetic.top(sleeves, angle)
     markers = garment.auto_markers(top.positions, category, pose, top.edges)
-    assert set(markers) == set(garment.MARKERS)
+    assert set(markers) == set(garment.UPPER_MARKERS)
+    assert garment.marker_problems(markers, category) == []
     assert distance(markers["neck"], top.joints["neck"]) < 0.02
     for suffix in ("l", "r"):
         assert distance(markers[f"shoulder_{suffix}"], top.joints[f"shoulder_{suffix}"]) < 0.04
@@ -70,9 +75,14 @@ def test_auto_markers_follow_the_garment_where_it_is():
 def test_auto_markers_of_trousers():
     pants = synthetic.pants()
     markers = garment.auto_markers(pants.positions, "pants", "a_pose", pants.edges)
-    assert set(markers) == {"pelvis", "hip_l", "hip_r"}
+    assert set(markers) == set(garment.LOWER_MARKERS)
     for name, joint in pants.joints.items():
         assert distance(markers[name], joint) < 0.04, name
+    # The knees lie between the hips and the ankles, and the ankles sit at the hems.
+    for side in ("l", "r"):
+        assert markers[f"hip_{side}"][2] > markers[f"knee_{side}"][2] > markers[f"ankle_{side}"][2]
+        assert markers[f"ankle_{side}"][2] == pytest.approx(pants.positions[:, 2].min(), abs=0.03)
+    assert garment.marker_problems(markers, "pants") == []
 
 
 def test_auto_markers_refuse_what_they_cannot_place():
@@ -107,7 +117,9 @@ def test_regions_follow_the_markers():
     shoulder = np.asarray(markers["shoulder_l"])
     elbow = np.asarray(markers["elbow_l"])
     assert region_at(markers, shoulder + 0.5 * (elbow - shoulder)) == "upper_arms"
-    assert region_at(markers, markers["wrist_l"]) == "other"  # forearms and hands are no fit region
+    assert region_at(markers, markers["wrist_l"]) == "cuffs"
+    middle = np.asarray(markers["elbow_l"]) * 0.6 + np.asarray(markers["wrist_l"]) * 0.4
+    assert region_at(markers, middle) == "forearms"
     neck = np.asarray(markers["neck"])
     assert region_at(markers, neck + (0.0, 0.0, 0.02)) == "neck"
     chest = np.asarray(markers["chest"])
@@ -138,12 +150,13 @@ def test_regions_need_a_pelvis_or_hips():
 
 
 def test_fit_report_measures_each_region_in_millimetres():
-    regions = np.array([0] * 10 + [2] * 10 + [5] * 3)
-    clearance = np.concatenate([np.linspace(0.010, 0.030, 10), np.linspace(-0.004, 0.005, 10), [0.0, 0.0, 0.0]])
+    regions = np.array([garment.REGIONS.index("shoulders")] * 10 + [garment.REGIONS.index("chest")] * 10
+                       + [garment.REGIONS.index("hips")] * 3)
+    clearance = np.concatenate([np.linspace(0.005, 0.020, 10), np.linspace(-0.004, 0.005, 10), [0.0, 0.0, 0.0]])
     report = garment.fit_report(clearance, regions)
     rows = {row.region: row for row in report.rows}
     assert set(rows) == {"shoulders", "chest"}  # hips have too few vertices to measure
-    assert rows["shoulders"].p50 == pytest.approx(20.0, abs=0.1)
+    assert rows["shoulders"].p50 == pytest.approx(12.5, abs=0.1)
     assert rows["shoulders"].p10 < rows["shoulders"].p50 < rows["shoulders"].p90
     assert rows["chest"].inside == 3 and report.inside == 3 and report.vertices == 23
     assert garment.FitReport.from_json(report.to_json()) == report
@@ -152,7 +165,7 @@ def test_fit_report_measures_each_region_in_millimetres():
 
 
 def test_fit_advice_names_floating_shoulders():
-    report = garment.FitReport((garment.RegionFit("shoulders", 40, 20.0, 30.0, 40.0, 0),), 40, 0)
+    report = garment.FitReport((garment.RegionFit("shoulders", 40, 15.0, 22.0, 30.0, 0),), 40, 0)
     assert garment.fit_advice(report) == [("garment.advice.shoulders", {})]
 
 
@@ -338,22 +351,26 @@ def test_validate_is_clean_for_a_good_garment():
 
 def test_validate_lists_what_the_game_would_show():
     stats = {"non_finite": 2, "uv_layers": 1, "uv_outside": 5, "uv_area": 0.01, "weighted": True,
-             "unweighted": 3, "over_four": 7, "colour1": "missing", "game_vertices_high": 45000,
-             "game_vertices_low": 100, "inside_share": 0.05, "materials": 3}
+             "unweighted": 3, "over_four": 7, "colour1": "missing", "triangles_high": 45000,
+             "triangles_low": 100, "inside_share": 0.05, "materials": 3, "placement": 0.9, "inward_share": 0.8}
     findings = garment.validate(stats)
     codes = {f.code: f for f in findings}
     assert set(codes) == {"non-finite", "uv-outside", "uv-area", "unweighted", "influences", "colour-missing",
-                          "vertices", "inside", "materials"}
-    assert codes["vertices"].fields == {"level": "high", "count": 45000, "budget": 30000}
+                          "triangles", "inside", "materials", "placement", "normals-inward"}
+    # The same triangle budgets as the checks of Durty Cloth Tool.
+    assert codes["triangles"].fields == {"level": "high", "count": 45000, "budget": 30000}
+    assert garment.TRIANGLE_BUDGET == {"high": 30000, "medium": 15000, "low": 7500}
+    assert codes["placement"].severity == "error" and codes["placement"].fields == {"distance": 90}
     assert codes["uv-area"].fields == {"area": 1.0}
     assert not garment.is_clean(findings)
     assert garment.findings_from_json(garment.findings_to_json(findings)) == findings
 
 
-def test_validate_notes_a_garment_that_is_not_rigged_yet():
+def test_validate_never_calls_a_garment_without_weights_clean():
     findings = garment.validate({"uv_layers": 0, "weighted": False, "colour1": "format"})
-    assert [(f.severity, f.code) for f in findings] == [("error", "no-uv"), ("info", "no-weights"),
+    assert [(f.severity, f.code) for f in findings] == [("error", "no-uv"), ("error", "no-weights"),
                                                         ("warning", "colour-format")]
+    assert not garment.is_clean(garment.validate({"uv_layers": 1, "weighted": False, "colour1": "ok"}))
     assert garment.influence_counts([[0.5, 0.5], [], [0.2] * 5, [0.0, 1.0]]) == (1, 1)
 
 
@@ -397,33 +414,371 @@ def test_the_size_ranges_never_fit_two_units():
 def test_the_next_step_walks_through_the_local_flow():
     state = garment.FlowState()
     steps = []
-    for change in ({}, {"garment": True}, {"body": True}, {"markers": 11}, {"checked": True, "inside": 4},
-                   {"prepared": True, "materials": 3}, {"materials": 1}, {"lods": True},
-                   {"findings": "blocking"}, {"validated": True, "findings": "clean"}, {"connected": True},
-                   {"project": True}, {"skeleton": True}, {"adding": True}, {"adding": False, "added": True}):
+    for change in ({}, {"garment": True}, {"body": True}, {"markers": 11}, {"aligned": True},
+                   {"checked": True, "inside": 4}, {"prepared": True, "materials": 3}, {"materials": 1},
+                   {"weighted": True}, {"lods": True}, {"findings": "blocking"},
+                   {"validated": True, "findings": "clean"}, {"connected": True}, {"project": True},
+                   {"skeleton": True}, {"adding": True}, {"adding": False, "added": True}):
         state = state._replace(**change)
         steps.append(garment.next_step(state))
-    assert steps == ["garment.next.import", "garment.next.body", "garment.next.markers", "garment.next.check",
-                     "garment.next.push", "garment.next.combine", "garment.next.lods", "garment.next.validate",
+    # The levels of detail come after the weights, which they take over.
+    assert steps == ["garment.next.import", "garment.next.body", "garment.next.markers", "garment.next.align",
+                     "garment.next.check", "garment.next.push", "garment.next.combine", "garment.next.weights",
+                     "garment.next.lods", "garment.next.validate",
                      "garment.next.validate-problems", "garment.next.connect", "garment.next.project",
                      "garment.next.skeleton", "garment.next.add", "garment.next.adding", "garment.next.done"]
     # Warnings do not hold the add back; without Sollumz there is nothing to export.
     warned = garment.FlowState(garment=True, body=True, markers=11, prepared=True, lods=True, findings="warnings",
-                               connected=True, project=True)
+                               connected=True, project=True, weighted=True)
     assert garment.next_step(warned) == "garment.next.skeleton"
     assert garment.next_step(warned._replace(sollumz=False)) == "garment.next.sollumz"
+    # A T-pose garment is aligned like any other: Align to Body turns its arms to the body.
     tpose = garment.FlowState(garment=True, body=True, markers=11, source_pose="t_pose")
-    assert garment.next_step(tpose) == "garment.next.tpose"
+    assert garment.next_step(tpose) == "garment.next.align"
     assert garment.next_step(tpose._replace(sculpting=True)) == "garment.next.sculpting"
     shoes = garment.FlowState(garment=True, body=True, category="shoes", sollumz=False, prepared=True,
-                              checked=True)
+                              checked=True, weighted=True)
     assert garment.next_step(shoes) == "garment.next.validate"
     # A prepared garment is past the fitting steps: the hint does not send it back to the fit check.
-    prepared = garment.FlowState(garment=True, body=True, markers=11, prepared=True, lods=True)
+    prepared = garment.FlowState(garment=True, body=True, markers=11, prepared=True, lods=True, weighted=True)
     assert garment.next_step(prepared) == "garment.next.validate"
+    # Connected but not weighted yet: the Durty Cloth Tool skeleton gives the bones to weight to.
+    unweighted = garment.FlowState(garment=True, body=True, markers=11, prepared=True, connected=True)
+    assert garment.next_step(unweighted) == "garment.next.skeleton"
+    assert garment.next_step(unweighted._replace(skeleton=True)) == "garment.next.weights"
+    assert garment.next_step(prepared._replace(prepared=False, aligned=True, checked=True)) == "garment.next.prepare"
+    assert set(garment.STEP_OPERATORS) <= set(steps) | {"garment.next.prepare"}
 
 
 def test_pose_angles_are_degrees_below_the_horizontal():
     assert garment.POSE_ARM_ANGLE["t_pose"] == 0.0
     direction = garment._pose_direction(1.0, "a_pose")
     assert math.degrees(math.atan2(-direction[2], direction[0])) == pytest.approx(45.0)
+
+
+# ---- the review cases: seams ---------------------------------------------------------------------------------
+
+
+def ring(count, radius=0.05, z=0.0, centre=(0.0, 0.0)):
+    angles = np.linspace(0, 2 * math.pi, count, endpoint=False)
+    return np.column_stack([centre[0] + radius * np.cos(angles), centre[1] + radius * np.sin(angles),
+                            np.full(count, z)])
+
+
+def loop_edges(count, offset=0):
+    return np.array([[offset + i, offset + (i + 1) % count] for i in range(count)])
+
+
+def test_close_pairs_find_exactly_the_pairs_within_the_distance():
+    points = np.random.default_rng(3).random((400, 3)) * 0.05
+    a, b, d = garment.close_pairs(points, 0.006)
+    brute = {(i, j) for i in range(400) for j in range(i + 1, 400) if distance(points[i], points[j]) <= 0.006}
+    assert set(zip(a.tolist(), b.tolist())) == brute and np.allclose(d, np.linalg.norm(points[a] - points[b], axis=1))
+    q, t, _ = garment.grid_pairs(points[:5], points, 0.006, block=7)  # tiny blocks give the same answer
+    assert {(int(x), int(y)) for x, y in zip(q, t)} == {(i, j) for i in range(5) for j in range(400)
+                                                         if distance(points[i], points[j]) <= 0.006}
+
+
+def test_a_dense_hem_is_never_welded_into_a_point():
+    # A 300-vertex open loop with 1.05 mm spacing and the default 2 mm weld collapsed into one vertex before.
+    hem = ring(300)
+    chains = garment.boundary_chains(loop_edges(300), 300, hem)
+    target, merged = garment.weld_targets(hem, 0.002, chains=chains)
+    assert len(np.unique(target)) == 300
+    # Even without the open-edge rule no joined group is wider than the weld distance.
+    target, merged = garment.weld_targets(hem, 0.002)
+    assert len(np.unique(target)) >= 150
+    for root in np.unique(target):
+        group = hem[target == root]
+        assert np.linalg.norm(group[:, None] - group[None], axis=2).max() <= 0.002 + 1e-9
+
+
+def test_two_panels_sewn_along_their_edges_are_welded_pairwise():
+    left, right = ring(120, z=0.0), ring(120, z=0.0005)  # two panels whose edges meet 0.5 mm apart
+    points = np.concatenate([left, right])
+    edges = np.concatenate([loop_edges(120), loop_edges(120, 120)])
+    chains = garment.boundary_chains(edges, 240, points)
+    target, merged = garment.weld_targets(points, 0.002, chains=chains)
+    assert len(np.unique(target)) == 120
+    assert all(target[i] == target[i + 120] for i in range(120))
+
+
+def test_a_seam_between_different_fabrics_welds_unless_they_are_lining_and_shell():
+    a = np.column_stack([np.linspace(0, 0.1, 21), np.zeros(21), np.zeros(21)])
+    points = np.vstack([a, a + [0, 0, 0.0003]])
+    fabrics = np.array([0] * 21 + [1] * 21)
+    joined, _ = garment.weld_targets(points, 0.002, fabrics=fabrics, apart=[(2, 3)])
+    assert len(np.unique(joined)) <= 22  # a pocket or a lining elsewhere no longer keeps this seam open
+    kept, _ = garment.weld_targets(points, 0.002, fabrics=fabrics, apart=[(0, 1)])
+    assert np.all(kept == np.arange(42))
+
+
+def test_surfaces_facing_apart_and_corners_of_one_face_are_never_welded():
+    points = np.array([[0.0, 0, 0], [0.0, 0.0005, 0], [0.001, 0, 0]])
+    normals = np.array([[0.0, -1, 0], [0.0, 1, 0], [0.0, -1, 0]])
+    target, _ = garment.weld_targets(points, 0.002, normals=normals, face_pairs=np.array([[0, 2]]))
+    assert np.all(target == np.arange(3))
+
+
+def test_a_thick_export_welds_across_panels_only():
+    slab = np.array([[0.0, 0, 0], [0.0, 0.002, 0], [0.1, 0, 0], [0.1, 0.002, 0]])
+    points = np.vstack([slab, slab + [0.1005, 0, 0]])  # two slabs whose side walls touch at x = 0.1
+    edges = np.array([[0, 1], [0, 2], [1, 3], [2, 3], [4, 5], [4, 6], [5, 7], [6, 7]])
+    parts = garment.components(8, edges)
+    assert len(set(parts.tolist())) == 2
+    target, _ = garment.weld_targets(points, 0.002, components=parts, cross_components_only=True,
+                                     face_pairs=edges)
+    assert sorted(int(i) for i in np.nonzero(target != np.arange(8))[0]) == [4, 5]
+
+
+def sheet(z_offset, width, height, fabric, step=0.01):
+    xs, zs = np.meshgrid(np.arange(0, width, step), np.arange(0, height, step))
+    return np.column_stack([xs.ravel(), np.full(xs.size, z_offset), zs.ravel()]), np.full(xs.size, fabric)
+
+
+def test_a_pocket_or_a_collar_is_no_lining_but_a_lining_is():
+    shell, shell_fabric = sheet(0.0, 0.4, 0.5, 0)
+    lining, lining_fabric = sheet(0.006, 0.38, 0.48, 1)
+    pocket, pocket_fabric = sheet(-0.004, 0.15, 0.15, 2)
+    points = np.concatenate([shell, lining, pocket + [0.1, 0, 0.1]])
+    fabrics = np.concatenate([shell_fabric, lining_fabric, pocket_fabric])
+    normals = np.tile([0.0, -1.0, 0.0], (len(points), 1))
+    assert garment.lining_pairs(points, normals, fabrics) == [(0, 1)]
+    beside = np.concatenate([shell, shell + [0.4 + 0.001, 0, 0]])  # a second fabric sewn on beside the first
+    assert garment.lining_pairs(beside, np.tile([0.0, -1.0, 0.0], (len(beside), 1)),
+                                np.concatenate([shell_fabric, shell_fabric + 1])) == []
+
+
+# ---- the review cases: markers -----------------------------------------------------------------------------------
+
+
+def hoodie():
+    tee = synthetic.top("short", 45.0)
+    hood = []
+    for z in np.linspace(0.55, 0.85, 12):
+        r = 0.10 * math.sqrt(max(0.0, 1 - ((z - 0.70) / 0.17) ** 2)) + 0.02
+        hood.append(ring(32, r, z, (0.0, 0.02)))
+    return tee, np.vstack([tee.positions] + hood)
+
+
+def test_the_neck_of_a_hoodie_is_under_its_hood():
+    tee, points = hoodie()
+    result = garment.place_markers(points, "tshirt", "a_pose", tee.edges)
+    assert "hood" in result.notes
+    assert abs(result.markers["neck"][2] - tee.joints["neck"][2]) < 0.03
+    assert distance(result.markers["shoulder_l"], tee.joints["shoulder_l"]) < 0.04
+
+
+def test_a_flared_coat_measures_its_torso_below_the_armholes():
+    coat = synthetic.top("long", 45.0, hem_z=-0.75)
+    points = coat.positions.copy()
+    low = points[:, 2] < -0.05
+    flare = 1.0 + np.clip((-0.05 - points[:, 2]) / 0.7, 0, 1) * 0.8  # the hem 1.8 times as wide
+    points[low, 0] *= flare[low]
+    points[low, 1] *= flare[low]
+    markers = garment.auto_markers(points, "long_jacket", "a_pose", coat.edges)
+    assert abs(markers["shoulder_l"][0] - coat.joints["shoulder_l"][0]) < 0.03
+
+
+def test_an_asymmetric_top_keeps_its_centre_on_the_torso():
+    top = synthetic.top("short", 45.0)
+    strap = ring(24, 0.03, 0.0, (0.0, 0.0))[:, [2, 1, 0]] * [1, 1, 1] + [0.45, 0.0, 0.2]  # a bag strap on one side
+    markers = garment.auto_markers(np.vstack([top.positions, strap]), "tshirt", "a_pose", top.edges)
+    assert abs(garment.centre_x(markers)) < 0.02
+
+
+def test_cap_sleeves_place_the_arms_from_the_pose():
+    vest = synthetic.top("none", 45.0)
+    result = garment.place_markers(vest.positions, "tshirt", "a_pose", vest.edges)
+    assert "arms-estimated" in result.notes and set(result.markers) == set(garment.UPPER_MARKERS)
+
+
+def test_overalls_and_skirts_put_the_pelvis_at_the_hips():
+    pants = synthetic.pants()
+    bib = np.array([[x, -0.13, z] for x in np.linspace(-0.12, 0.12, 9) for z in np.linspace(0.05, 0.4, 15)])
+    markers = garment.auto_markers(np.vstack([pants.positions, bib]), "pants")
+    assert abs(markers["pelvis"][2] - pants.joints["pelvis"][2]) < 0.05
+    skirt = synthetic.top("none", 45.0, hem_z=-0.6).positions
+    skirt = skirt[skirt[:, 2] < 0.05]
+    result = garment.place_markers(skirt, "shorts")
+    assert "skirt" in result.notes and result.markers["pelvis"][2] < 0.05
+
+
+def test_implausible_markers_are_named():
+    top = synthetic.top("long", 45.0)
+    good = garment.auto_markers(top.positions, "long_sleeve", "a_pose", top.edges)
+    assert garment.marker_problems(good, "long_sleeve") == []
+    lopsided = dict(good, shoulder_r=(-0.4, 0.0, 0.44))
+    assert "symmetry" in garment.marker_problems(lopsided, "long_sleeve")
+    upside_down = dict(good, neck=(0.0, 0.0, -0.5))
+    assert "order" in garment.marker_problems(upside_down, "long_sleeve")
+    bent = dict(good, wrist_l=good["shoulder_l"])
+    assert "arms" in garment.marker_problems(bent, "long_sleeve")
+    assert len(garment.stick_figure(good)) == 10  # spine, arms and hips
+
+
+# ---- the review cases: regions ---------------------------------------------------------------------------------
+
+
+def skeleton_joints():
+    heads = {name: head for name, _, head in synthetic.SKELETON_BONES}
+    return {name: heads[name] for name in garment.JOINTS if name in heads}
+
+
+def test_the_sides_of_an_a_pose_torso_are_no_upper_arms():
+    tee = synthetic.top("short", 45.0)
+    markers = garment.auto_markers(tee.positions, "tshirt", "a_pose", tee.edges)
+    torso = np.arange(len(tee.positions)) < 48 * 40
+    upper_arms = garment.REGIONS.index("upper_arms")
+    by_markers = garment.classify_regions(tee.positions, markers)
+    shoulder_z = markers["shoulder_l"][2]
+    for labels in (by_markers, garment.body_regions(tee.positions, skeleton_joints())):
+        wrong = torso & (labels == upper_arms)
+        # 152 of 1,920 before, down to 25 cm below the shoulders; only the armhole itself may go either way now.
+        assert int(wrong.sum()) < 76 and (not wrong.any() or tee.positions[wrong, 2].min() > shoulder_z - 0.12)
+    arms = np.isin(by_markers[~torso], [upper_arms, garment.REGIONS.index("forearms"), garment.REGIONS.index("cuffs")])
+    assert arms.mean() > 0.8
+
+
+def test_body_regions_name_each_part():
+    joints = skeleton_joints()
+    regions = {name: garment.REGIONS.index(name) for name in garment.REGIONS}
+    points = {"chest": (0.05, -0.12, 0.25), "back": (0.05, 0.12, 0.25), "waist": (0.0, -0.12, 0.1),
+              "hips": (0.0, -0.12, -0.02), "neck": (0.0, -0.05, 0.57), "legs": (0.1, -0.07, -0.5),
+              "shoulders": (0.1, 0.0, 0.45), "cuffs": joints["SKEL_L_Hand"]}
+    labels = garment.body_regions(np.array(list(points.values())), joints)
+    assert [garment.REGIONS[i] for i in labels] == list(points)
+    assert garment.body_regions(np.array([[0.0, 0.0, 0.75]]), joints)[0] == garment.OTHER  # the head (a hood)
+    assert set(regions) == set(garment.REGIONS)
+
+
+# ---- the review cases: Align to Body ------------------------------------------------------------------------
+
+
+def on_joints(joints):
+    """Markers exactly on the joints they stand for."""
+    return {name: joints[bone] for name, bone in garment.MARKER_JOINTS.items() if bone in joints}
+
+
+def test_align_brings_a_garment_made_on_another_avatar_onto_the_joints():
+    joints = skeleton_joints()
+    tee = synthetic.top("short", 45.0)
+    markers = {name: value for name, value in on_joints(joints).items() if name in garment.UPPER_MARKERS}
+    turn = math.radians(6.0)
+    rotation = np.array([[math.cos(turn), -math.sin(turn), 0], [math.sin(turn), math.cos(turn), 0], [0, 0, 1]])
+    moved = garment.Similarity(1.1, rotation, np.array([0.02, -0.03, 0.04]))
+    elsewhere = moved.apply(tee.positions)
+    their = {name: tuple(moved.apply([value])[0]) for name, value in markers.items()}
+    plan = garment.align_plan(their, joints, "tshirt")
+    back, placed = garment.apply_align(elsewhere, their, plan)
+    assert np.abs(back - tee.positions).max() < 0.001 and plan.residual < 1.0 and not plan.limbs
+    assert distance(placed["neck"], markers["neck"]) < 0.001
+    kept = garment.align_plan(their, joints, "tshirt", scale=False)
+    assert kept.similarity.scale == 1.0 and kept.similarity.turn == pytest.approx(6.0, abs=0.1)
+    # With markers from Auto Markers (on the surface, not on the joints) the fit stays close.
+    auto = garment.auto_markers(elsewhere, "tshirt", "a_pose", tee.edges)
+    back, _ = garment.apply_align(elsewhere, auto, garment.align_plan(auto, joints, "tshirt"))
+    assert np.abs(back - tee.positions).max() < 0.05
+
+
+def test_align_lowers_t_pose_arms_without_tearing_a_seam():
+    joints = skeleton_joints()
+    tpose = synthetic.top("long", 0.0)
+    markers = dict(on_joints(joints), **tpose.joints)  # its own arms, out to the sides
+    markers = {name: value for name, value in markers.items() if name in garment.UPPER_MARKERS}
+    plan = garment.align_plan(markers, joints, "long_sleeve")
+    assert {side for side, *_ in plan.limbs} == {"l", "r"}
+    assert all(abs(limb[4] - 45.0) < 1.0 for limb in plan.limbs)
+    # An unwelded seam: every vertex has a twin on top of it, as two panels have. They must stay together.
+    doubled = np.vstack([tpose.positions, tpose.positions + 1e-5])
+    moved, placed = garment.apply_align(doubled, markers, plan)
+    count = len(tpose.positions)
+    assert np.linalg.norm(moved[:count] - moved[count:], axis=1).max() < 1e-4
+    assert abs(garment.arm_angle(placed, "l") - 45.0) < 1.0 and abs(garment.arm_angle(placed, "r") - 45.0) < 1.0
+    torso = np.arange(count) < 48 * 40
+    assert np.abs(moved[:count][torso & (tpose.positions[:, 2] < 0.3)] - tpose.positions[torso & (
+        tpose.positions[:, 2] < 0.3)]).max() < 0.01  # the torso below the arms stays where it is
+
+
+def test_align_refuses_markers_that_would_need_a_wild_fit():
+    joints = skeleton_joints()
+    tee = synthetic.top("short", 45.0)
+    markers = garment.auto_markers(tee.positions, "tshirt", "a_pose", tee.edges)
+    shrunk = {name: tuple(np.asarray(value) * 0.5) for name, value in markers.items()}
+    with pytest.raises(garment.MarkerError) as refused:
+        garment.align_plan(shrunk, joints, "tshirt")
+    assert refused.value.code == "align-markers"
+
+
+def test_joints_files_are_read_strictly():
+    joints = skeleton_joints()
+    text = garment.joints_json(joints, "male")
+    parsed = garment.parse_joints(text, "male")
+    assert set(parsed) == set(joints) and all(distance(parsed[n], joints[n]) < 1e-5 for n in joints)
+    assert garment.parse_joints(text, "female") is None
+    data = json.loads(text)
+    data["male"]["SKEL_Pelvis"] = [0, 0, 99]
+    assert garment.parse_joints(json.dumps(data), "male") is None
+    assert garment.parse_joints("not json", "male") is None
+
+
+def test_joints_can_be_estimated_from_the_body_shape():
+    body = synthetic.body(45.0)
+    joints = garment.estimate_body_joints(body.positions, body.edges)
+    assert abs(joints["SKEL_L_UpperArm"][0] - synthetic.SHOULDER) < 0.04
+    assert joints["SKEL_Neck_1"][2] > joints["SKEL_Pelvis"][2] > joints["SKEL_L_Calf"][2]
+
+
+# ---- the review cases: moves, checks and units --------------------------------------------------------------------
+
+
+def test_push_out_leaves_what_runs_deep_through_the_body_and_what_is_pinned():
+    positions = np.array([[0.0, 0.0, -0.002], [0.0, 0.0, -0.05], [0.0, 0.0, 0.001]])
+    normals = np.tile([0.0, 0.0, 1.0], (3, 1))
+    offsets = garment.push_out_offsets(positions, np.zeros((3, 3)), normals, positions[:, 2], 0.004,
+                                       locked=[False, False, True])
+    assert offsets[0, 2] == pytest.approx(0.006) and not offsets[1:].any()
+
+
+def test_a_shell_follows_its_pushed_lining():
+    positions = np.array([[0.0, 0.0, 0.001], [0.0, 0.0, 0.007]])  # the lining, and the shell 6 mm outside it
+    offsets = np.array([[0.0, 0.0, 0.003], [0.0, 0.0, 0.0]])
+    followed = garment.layer_follow(positions, offsets, positions[:, 2])
+    assert followed[1] == pytest.approx([0.0, 0.0, 0.003])
+
+
+def test_snug_leaves_a_hanging_hood_alone():
+    positions = np.array([[0.0, 0.0, 0.03], [0.0, 0.0, 0.2]])
+    normals = np.tile([0.0, 0.0, 1.0], (2, 1))
+    offsets = garment.snug_offsets(positions, np.zeros((2, 3)), normals, positions[:, 2], 0.005, 1.0, np.ones(2))
+    assert offsets[0, 2] < 0 and offsets[1, 2] == 0.0
+
+
+def test_inches_and_a_chosen_unit():
+    assert garment.import_scale(27.5, "tshirt") == pytest.approx(0.0254)
+    assert garment.import_scale(70.0, "tshirt", "in") == pytest.approx(0.0254)
+    assert garment.import_scale(70.0, "tshirt", "mm") == pytest.approx(0.001)
+
+
+def test_a_garment_facing_backwards_or_lying_down_is_turned():
+    tee = synthetic.top("short", 45.0).positions.copy()
+    front = (tee[:, 1] < 0) & (tee[:, 2] > 0.45)
+    tee[front, 2] -= np.clip(0.08 - np.abs(tee[front, 0]), 0, None)  # the front of the neckline dips
+    assert garment.upright_turn(tee, "tshirt") is None
+    backwards = tee * [-1, -1, 1]
+    assert garment.upright_turn(backwards, "tshirt") == ("z", 180.0)
+    lying = tee[:, [0, 2, 1]] * [1, 1, -1]  # its height along +Y
+    assert garment.upright_turn(lying, "tshirt") == ("x", 90.0)
+
+
+def test_weights_keep_four_bones_and_lod_budgets_follow_high():
+    table = garment.limit_influences([[0.1, 0.2, 0.3, 0.15, 0.25], [0, 0, 0, 0, 0]])
+    assert (table[0] > 0).sum() == 4 and table[0].sum() == pytest.approx(1.0) and not table[1].any()
+    assert garment.lod_budget("medium", 12000) == 6000 and garment.lod_budget("low", 100000) == 7500
+    assert garment.lod_budget("medium", 12000, 900) == 900
+
+
+def test_texel_density_in_pixels_per_centimetre():
+    triangles = np.array([[[0, 0, 0], [0.1, 0, 0], [0, 0.1, 0]]])  # 50 square centimetres
+    uv = np.array([[[0, 0], [0.5, 0], [0, 0.5]]])  # an eighth of the texture
+    assert garment.texel_density(uv, triangles, 2048) == pytest.approx(2048 * math.sqrt(0.125 / 50), abs=0.1)

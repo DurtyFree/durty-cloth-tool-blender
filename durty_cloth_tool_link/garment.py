@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""The garment fitting tools without Blender: slots and categories, the next-step hint, marker placement, body
-regions, the fit check, the problem colours, mesh moves, seam welding, strip cutting, the local checks and pose
-presets.
+"""The garment fitting tools without Blender: slots and categories, the next-step hint, marker placement and its
+plausibility, aligning the garment to the body's joints, body regions, the fit check, the problem colours, mesh moves,
+seam welding, strip cutting, the local checks and pose presets.
 
 Positions are in ped space, in metres: Z up, the ped facing -Y and its left side at +X. That is the space of the
 freemode body and of a garment imported from Marvelous Designer. Nothing here imports Blender; numpy does the
@@ -37,15 +37,31 @@ SLEEVES = {"vest": "none", "tshirt": "short", "long_sleeve": "long", "long_jacke
 LOWER = frozenset({"pants", "shorts"})
 SOURCE_POSES = ("a_pose", "t_pose", "custom")
 
-MARKERS = ("chest", "neck", "pelvis", "shoulder_l", "elbow_l", "wrist_l", "hip_l",
-           "shoulder_r", "elbow_r", "wrist_r", "hip_r")
-_LEFT = ("shoulder_l", "elbow_l", "wrist_l", "hip_l")
-MIRRORED = {name: name[:-1] + "r" for name in _LEFT}
+#: The markers of a top.
+UPPER_MARKERS = ("chest", "neck", "pelvis", "shoulder_l", "elbow_l", "wrist_l", "hip_l",
+                 "shoulder_r", "elbow_r", "wrist_r", "hip_r")
 #: The markers of the lower categories (legs); shoes need none.
-LOWER_MARKERS = ("pelvis", "hip_l", "hip_r")
+LOWER_MARKERS = ("pelvis", "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r")
+#: Every marker name.
+MARKERS = UPPER_MARKERS + ("knee_l", "ankle_l", "knee_r", "ankle_r")
+_LEFT = ("shoulder_l", "elbow_l", "wrist_l", "hip_l", "knee_l", "ankle_l")
+MIRRORED = {name: name[:-1] + "r" for name in _LEFT}
+#: The freemode bone each marker stands for (Align to Body moves the markers onto these joints).
+MARKER_JOINTS = {
+    "neck": "SKEL_Neck_1", "chest": "SKEL_Spine3", "pelvis": "SKEL_Pelvis",
+    "shoulder_l": "SKEL_L_UpperArm", "elbow_l": "SKEL_L_Forearm", "wrist_l": "SKEL_L_Hand",
+    "hip_l": "SKEL_L_Thigh", "knee_l": "SKEL_L_Calf", "ankle_l": "SKEL_L_Foot",
+    "shoulder_r": "SKEL_R_UpperArm", "elbow_r": "SKEL_R_Forearm", "wrist_r": "SKEL_R_Hand",
+    "hip_r": "SKEL_R_Thigh", "knee_r": "SKEL_R_Calf", "ankle_r": "SKEL_R_Foot",
+}
+#: The joints the add-on reads (from the hosted body, Durty Cloth Tool's skeleton or the body's shape).
+JOINTS = ("SKEL_Pelvis", "SKEL_Spine0", "SKEL_Spine1", "SKEL_Spine2", "SKEL_Spine3", "SKEL_Neck_1", "SKEL_Head",
+          "SKEL_L_Clavicle", "SKEL_L_UpperArm", "SKEL_L_Forearm", "SKEL_L_Hand",
+          "SKEL_R_Clavicle", "SKEL_R_UpperArm", "SKEL_R_Forearm", "SKEL_R_Hand",
+          "SKEL_L_Thigh", "SKEL_L_Calf", "SKEL_L_Foot", "SKEL_R_Thigh", "SKEL_R_Calf", "SKEL_R_Foot")
 
 #: Body regions, in the order the panels list them.
-REGIONS = ("shoulders", "upper_arms", "chest", "back", "waist", "hips", "neck", "legs")
+REGIONS = ("shoulders", "upper_arms", "forearms", "cuffs", "chest", "back", "waist", "hips", "neck", "legs")
 OTHER = -1
 
 #: The arm angle below the horizontal that each source pose starts from (degrees).
@@ -62,6 +78,9 @@ HIP_OFFSET_PER_SPAN = 0.25
 DEFAULT_SPAN = 0.36
 #: The neck-to-pelvis height assumed for the legs' regions when the garment has no upper markers.
 DEFAULT_TORSO = 0.52
+#: Thigh and shin lengths assumed when a garment does not reach the knee or the ankle (metres).
+THIGH = 0.45
+SHIN = 0.42
 
 
 def categories_for(slot: str) -> Tuple[str, ...]:
@@ -74,7 +93,7 @@ def markers_for(category: str) -> Tuple[str, ...]:
         return ()
     if category in LOWER:
         return LOWER_MARKERS
-    return MARKERS
+    return UPPER_MARKERS
 
 
 def regions_for(category: str) -> Tuple[str, ...]:
@@ -86,7 +105,18 @@ def regions_for(category: str) -> Tuple[str, ...]:
     if category == "long_jacket":
         return REGIONS
     covered = tuple(region for region in REGIONS if region != "legs")
-    return covered if SLEEVES.get(category) != "none" else tuple(r for r in covered if r != "upper_arms")
+    sleeves = SLEEVES.get(category)
+    if sleeves == "none":
+        return tuple(r for r in covered if r not in ("upper_arms", "forearms", "cuffs"))
+    if sleeves == "short":
+        return tuple(r for r in covered if r not in ("forearms", "cuffs"))
+    return covered
+
+
+def snug_regions_for(category: str) -> Tuple[str, ...]:
+    """The regions Snug to Body works on: never the coat tails or skirt of a top, which hang free of the legs."""
+    regions = regions_for(category)
+    return regions if category in LOWER or category == "shoes" else tuple(r for r in regions if r != "legs")
 
 
 # --------------------------------------------------------------------------------------------------
@@ -102,12 +132,14 @@ class FlowState(NamedTuple):
     category: str = "tshirt"
     source_pose: str = "a_pose"
     markers: int = 0
-    converted: bool = False
+    aligned: bool = False
     sculpting: bool = False
     checked: bool = False
     inside: int = 0
     prepared: bool = False
     materials: int = 1
+    #: The garment has bone weights; the levels of detail take them over, so they come after the weights.
+    weighted: bool = False
     lods: bool = False
     sollumz: bool = True
     validated: bool = False
@@ -122,6 +154,23 @@ class FlowState(NamedTuple):
     added: bool = False
 
 
+#: The operator each step's hint points at (the panel draws that button as the one to press next).
+STEP_OPERATORS = {
+    "garment.next.import": "dct_link.fit_import_garment",
+    "garment.next.body": "dct_link.fit_add_body",
+    "garment.next.markers": "dct_link.fit_auto_markers",
+    "garment.next.align": "dct_link.fit_align",
+    "garment.next.check": "dct_link.fit_check",
+    "garment.next.push": "dct_link.fit_push_out",
+    "garment.next.prepare": "dct_link.fit_prepare",
+    "garment.next.combine": "dct_link.fit_combine_materials",
+    "garment.next.lods": "dct_link.fit_lods",
+    "garment.next.validate": "dct_link.fit_validate",
+    "garment.next.skeleton": "dct_link.fit_use_skeleton",
+    "garment.next.add": "dct_link.fit_add_to_dct",
+}
+
+
 def next_step(state: FlowState) -> str:
     """The text key of what to do next."""
     if state.sculpting:
@@ -130,18 +179,22 @@ def next_step(state: FlowState) -> str:
         return "garment.next.import"
     if not state.body:
         return "garment.next.body"
-    if state.markers < len(markers_for(state.category)):
-        return "garment.next.markers"
-    if state.source_pose == "t_pose" and not state.converted:
-        return "garment.next.tpose"
-    if not state.checked and not state.prepared:
-        return "garment.next.check"
-    if state.inside > 0 and not state.prepared:
-        return "garment.next.push"
     if not state.prepared:
+        if state.markers < len(markers_for(state.category)):
+            return "garment.next.markers"
+        if markers_for(state.category) and not state.aligned:
+            return "garment.next.align"
+        if not state.checked:
+            return "garment.next.check"
+        if state.inside > 0:
+            return "garment.next.push"
         return "garment.next.prepare"
     if state.materials > 1:
         return "garment.next.combine"
+    if not state.weighted:
+        if state.sollumz and state.connected and not state.skeleton:
+            return "garment.next.skeleton"
+        return "garment.next.weights"
     if state.sollumz and not state.lods:
         return "garment.next.lods"
     if not state.validated:
@@ -252,6 +305,120 @@ def vertex_stretch(edges: np.ndarray, rest: np.ndarray, current: np.ndarray) -> 
     return stretch
 
 
+def _smoothstep(values: Any) -> np.ndarray:
+    t = np.clip(np.asarray(values, dtype=np.float64), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+#: How many candidate pairs one block of the neighbour search compares at most (bounds its memory).
+PAIR_BLOCK = 1_000_000
+
+
+def grid_pairs(query: Any, target: Any, distance: float,
+               block: int = PAIR_BLOCK) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Every pair of a ``query`` point and a ``target`` point at most ``distance`` apart: ``(query index, target
+    index, distance)``. A grid of ``distance`` cells sorted by cell, searched with ``np.searchsorted`` in blocks, so
+    it stays fast and bounded in memory on garments of 100,000 vertices."""
+    query, target = as_points(query), as_points(target)
+    empty = (np.zeros(0, np.int64), np.zeros(0, np.int64), np.zeros(0))
+    if distance <= 0 or not len(query) or not len(target):
+        return empty
+    origin = np.minimum(query.min(axis=0), target.min(axis=0))
+    query_cells = np.floor((query - origin) / distance).astype(np.int64) + 1
+    target_cells = np.floor((target - origin) / distance).astype(np.int64) + 1
+    dims = np.maximum(query_cells.max(axis=0), target_cells.max(axis=0)) + 2
+
+    def keys(cells: np.ndarray) -> np.ndarray:
+        return (cells[:, 0] * dims[1] + cells[:, 1]) * dims[2] + cells[:, 2]
+
+    # Queries in cell order too: every shifted search then runs over sorted keys, which keeps it fast.
+    query_order = np.argsort(keys(query_cells), kind="stable")
+    query_keys = keys(query_cells)[query_order]
+    order = np.argsort(keys(target_cells), kind="stable")
+    sorted_keys = keys(target_cells)[order]
+    limit = distance * distance
+    found_q, found_t, found_d = [], [], []
+    for da in (-1, 0, 1):
+        for db in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                shifted = query_keys + (da * dims[1] + db) * dims[2] + dc
+                low = np.searchsorted(sorted_keys, shifted, "left")
+                counts = np.searchsorted(sorted_keys, shifted, "right") - low
+                totals = np.cumsum(counts)
+                start, count = 0, len(query)
+                while start < count:
+                    base = totals[start - 1] if start else 0
+                    end = min(count, max(start + 1, int(np.searchsorted(totals, base + block, "right"))))
+                    chunk = counts[start:end]
+                    total = int(chunk.sum())
+                    if total:
+                        q = query_order[np.repeat(np.arange(start, end), chunk)]
+                        steps = np.arange(total) - np.repeat(np.cumsum(chunk) - chunk, chunk)
+                        t = order[np.repeat(low[start:end], chunk) + steps]
+                        diff = query[q] - target[t]
+                        squared = np.einsum("ij,ij->i", diff, diff)
+                        near = squared <= limit
+                        found_q.append(q[near])
+                        found_t.append(t[near])
+                        found_d.append(np.sqrt(squared[near]))
+                    start = end
+    if not found_q:
+        return empty
+    return np.concatenate(found_q), np.concatenate(found_t), np.concatenate(found_d)
+
+
+def close_pairs(positions: Any, distance: float, indices: Optional[Any] = None) -> Tuple[np.ndarray, np.ndarray,
+                                                                                          np.ndarray]:
+    """Pairs of separate vertices (of ``indices``, all by default) at most ``distance`` apart, each pair once with
+    the lower vertex first: ``(first, second, distance)``."""
+    points = as_points(positions)
+    chosen = np.arange(len(points)) if indices is None else np.asarray(indices, dtype=np.int64).reshape(-1)
+    if len(chosen) < 2:
+        return np.zeros(0, np.int64), np.zeros(0, np.int64), np.zeros(0)
+    q, t, d = grid_pairs(points[chosen], points[chosen], distance)
+    a, b = chosen[q], chosen[t]
+    keep = a < b
+    return a[keep], b[keep], d[keep]
+
+
+def boundary_chains(edges: Any, count: int, positions: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Walks the open edges (``edges``: the boundary edges) into chains. Returns each vertex's chain (-1 off the
+    boundary), its distance along the chain (metres) and each chain's length (the full loop for a closed chain, a
+    negative length for an open one)."""
+    points = as_points(positions)
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    chain = np.full(count, -1, dtype=np.int64)
+    arc = np.zeros(count)
+    lengths: List[float] = []
+    if not len(edges):
+        return chain, arc, np.zeros(0)
+    order, starts = neighbour_lists(count, edges)
+    degree = np.diff(starts)
+    candidates = list(np.nonzero(degree == 1)[0]) + list(np.nonzero(degree >= 2)[0])
+    for start in candidates:
+        start = int(start)
+        if chain[start] >= 0:
+            continue
+        index = len(lengths)
+        previous, current, travelled = -1, start, 0.0
+        while True:
+            chain[current] = index
+            arc[current] = travelled
+            following = -1
+            for neighbour in order[starts[current]:starts[current + 1]]:
+                neighbour = int(neighbour)
+                if neighbour != previous and chain[neighbour] < 0:
+                    following = neighbour
+                    break
+            if following < 0:
+                break
+            travelled += float(np.linalg.norm(points[following] - points[current]))
+            previous, current = current, following
+        closes = current != start and start in set(int(n) for n in order[starts[current]:starts[current + 1]])
+        lengths.append(travelled + float(np.linalg.norm(points[start] - points[current])) if closes else -travelled)
+    return chain, arc, np.asarray(lengths)
+
+
 # --------------------------------------------------------------------------------------------------
 # Markers
 # --------------------------------------------------------------------------------------------------
@@ -323,10 +490,25 @@ def _pose_direction(side: float, source_pose: str) -> np.ndarray:
     return np.array([side * math.cos(angle), 0.0, -math.sin(angle)])
 
 
+#: Notes Auto Markers leaves for the panel when it had to guess (text keys ``garment.marker-note.<code>``).
+MARKER_NOTES = ("arms-estimated", "hood", "skirt", "legs-estimated")
+
+
+class MarkerResult(NamedTuple):
+    markers: Dict[str, Vector]
+    notes: Tuple[str, ...]
+
+
 def auto_markers(positions: Any, category: str, source_pose: str = "a_pose",
                  edges: Optional[np.ndarray] = None) -> Dict[str, Vector]:
     """Joint markers for a garment from cross-sections of its mesh. Raises :class:`MarkerError` when the mesh
     does not look like the category."""
+    return place_markers(positions, category, source_pose, edges).markers
+
+
+def place_markers(positions: Any, category: str, source_pose: str = "a_pose",
+                  edges: Optional[np.ndarray] = None) -> MarkerResult:
+    """:func:`auto_markers` with the notes on what was guessed rather than found (``MARKER_NOTES``)."""
     points = as_points(positions)
     if category == "shoes":
         raise MarkerError("no-markers")
@@ -342,42 +524,94 @@ def auto_markers(positions: Any, category: str, source_pose: str = "a_pose",
     return _upper_markers(points, category, source_pose, gap)
 
 
-def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: float) -> Dict[str, Vector]:
+def _side_extents(points: np.ndarray, cx: float, z: float, half: float, gap: float) -> Tuple[float, float]:
+    """How far the part of the garment around the centre reaches to the left and to the right at height ``z``
+    (sleeves that hang apart from it are left out)."""
+    band = points[np.abs(points[:, 2] - z) <= half]
+    dx = band[:, 0] - cx
+    extents = []
+    for values in (dx[dx >= 0], -dx[dx < 0]):
+        # A slice that misses the torso (coarse rings) would measure a sleeve: the torso starts at the centre.
+        extents.append(_gap_extent(values, gap) if values.size and values.min() <= gap else 0.0)
+    return extents[0], extents[1]
+
+
+def _neck(points: np.ndarray, cx: float, torso: float, gap: float) -> Tuple[np.ndarray, bool]:
+    """The centre of the neck opening, and whether a hood sits on it. Going up the centre of the garment, the neck is
+    where it is narrowest above the shoulders; a hood (or the body's head) widens again above it."""
+    low, high = points[:, 2].min(), points[:, 2].max()
+    levels = np.arange(high, low, -0.01)
+    widths = []
+    for level in levels:
+        left, right = _side_extents(points, cx, level, 0.006, gap)
+        widths.append(max(left, right) if left or right else 0.0)
+    widths = np.asarray(widths)
+    narrow = (widths > 0) & (widths < 0.8 * torso)
+    run = 0
+    while run < len(levels) and (narrow[run] or widths[run] == 0):
+        run += 1
+    top = float(points[:, 2].max())
+    shoulder_line = float(levels[run - 1]) if run else top
+    hood = top - shoulder_line > 0.15
+    if hood:
+        # The narrowest level in the lower part of the narrow run is where the hood (or head) meets the garment.
+        window = [i for i in range(run) if levels[i] <= shoulder_line + 0.18 and widths[i] > 0]
+        choice = min(window, key=lambda i: widths[i]) if window else run - 1
+        level = float(levels[choice])
+        ring = points[np.abs(points[:, 2] - level) <= 0.012]
+        ring = ring[np.abs(ring[:, 0] - cx) <= widths[choice] + 0.01]
+        return np.array([cx, _y_centre(ring, float(points[:, 1].mean())), level - 0.01]), True
+    near_centre = np.abs(points[:, 0] - cx) < 0.45 * torso
+    if not np.any(near_centre):
+        raise MarkerError("not-a-top")
+    z = points[:, 2]
+    highest = float(z[near_centre].max())
+    ring = points[near_centre & (z > highest - 0.03)]
+    return np.array([cx, float(ring[:, 1].mean()), float(ring[:, 2].mean()) - 0.01]), False
+
+
+def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: float) -> MarkerResult:
     low, high = points.min(axis=0), points.max(axis=0)
     height = high[2] - low[2]
-    cx = float((low[0] + high[0]) / 2)
-    dx = points[:, 0] - cx
-    lateral = np.abs(dx)
     z = points[:, 2]
+    notes: List[str] = []
 
-    # The torso's half-width: the lower part of a top, where sleeves (if they hang down) stand apart.
+    # A first centre and torso width from the lower part, then the neck, then both again just below the armholes,
+    # where neither a flared skirt nor a hood nor a one-sided strap can pull them.
+    band = (z >= low[2] + 0.12 * height) & (z <= low[2] + 0.5 * height)
+    cx = float(np.median(points[band, 0])) if np.any(band) else float((low[0] + high[0]) / 2)
     widths = []
     for level in np.linspace(low[2] + 0.12 * height, low[2] + 0.5 * height, 9):
-        band = np.abs(z - level) <= max(0.01, height / 60)
-        for side in (1.0, -1.0):
-            values = lateral[band & (np.sign(dx) == side)]
-            if values.size >= 4:
-                widths.append(_gap_extent(values, gap))
+        left, right = _side_extents(points, cx, level, max(0.01, height / 60), gap)
+        widths += [w for w in (left, right) if w > 0]
     if not widths:
         raise MarkerError("not-a-top")
     torso = float(np.median(widths))
     if torso < 0.05:
         raise MarkerError("not-a-top")
-
-    # The neck opening: the highest vertices near the centre.
-    near_centre = lateral < 0.45 * torso
-    if not np.any(near_centre):
-        raise MarkerError("not-a-top")
-    top = float(z[near_centre].max())
-    ring = points[near_centre & (z > top - 0.03)]
-    neck = np.array([cx, float(ring[:, 1].mean()), float(ring[:, 2].mean()) - 0.01])
+    neck, hood = _neck(points, cx, torso, gap)
+    if hood:
+        notes.append("hood")
+    upper = np.arange(neck[2] - 0.18, max(low[2] + 0.01, neck[2] - 0.42), -0.02)
+    sides, centres = [], []
+    for level in upper:
+        left, right = _side_extents(points, cx, level, 0.01, gap)
+        if left > 0.04 and right > 0.04:
+            sides += [left, right]
+            centres.append(cx + (left - right) / 2)
+    if len(sides) >= 4:
+        torso = float(np.median(sides))
+        cx = float(np.median(centres))
+    neck[0] = cx
+    dx = points[:, 0] - cx
+    lateral = np.abs(dx)
 
     # Shoulders: where the top's upper outline reaches the torso's width.
     sleeves = SLEEVES.get(category, "short")
     result: Dict[str, Vector] = {}
     shoulders: Dict[float, np.ndarray] = {}
     for side in (1.0, -1.0):
-        outer = (np.sign(dx) == side) & (np.abs(lateral - torso) < max(0.03, gap))
+        outer = (np.sign(dx) == side) & (np.abs(lateral - torso) < max(0.03, gap)) & (z < neck[2] + 0.02)
         if not np.any(outer):
             raise MarkerError("not-a-top")
         upper_edge = float(z[outer].max())
@@ -389,22 +623,22 @@ def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: flo
 
     # Sleeves: what stands apart from the torso in its cross-section, or reaches well beyond it higher up.
     torso_extent = np.zeros(len(points))
-    levels = np.linspace(low[2], high[2], 61)
+    levels = np.linspace(low[2], min(high[2], neck[2] + 0.05), 61)
     half = (levels[1] - levels[0]) / 2 + 1e-9
     for level in levels:
-        band = np.abs(z - level) <= half
+        in_band = np.abs(z - level) <= half
         for side in (1.0, -1.0):
-            selected = band & (np.sign(dx) == side)
+            selected = in_band & (np.sign(dx) == side)
             torso_extent[selected] = _gap_extent(lateral[selected], gap)
-    apart = lateral > torso_extent + 1e-9
-    wide = (lateral > 1.35 * torso + 0.01) & (z > low[2] + 0.45 * height)
+    apart = (lateral > torso_extent + 1e-9) & (z < neck[2] + 0.05)
+    wide = (lateral > 1.35 * torso + 0.01) & (z > low[2] + 0.45 * height) & (z < neck[2] + 0.05)
     sleeve_mask = apart | wide
 
-    arms: Dict[float, Tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
+    arms: Dict[float, Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]] = {}
     for side in (1.0, -1.0):
         shoulder = shoulders[side]
         own = sleeve_mask & (np.sign(dx) == side)
-        enough = int(own.sum()) >= max(12, int(0.004 * len(points)))
+        enough = int(own.sum()) >= max(8, int(0.002 * len(points)))
         direction = _pose_direction(side, source_pose)
         if sleeves != "none" and enough:
             sleeve = points[own]
@@ -415,22 +649,27 @@ def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: flo
             down = math.degrees(math.atan2(-candidate[2], abs(candidate[0]) + 1e-12))
             if candidate[0] * side > 0 and -15.0 <= down <= 85.0:
                 direction = candidate
-            if sleeves == "long":
+            if sleeves == "long" and float(np.linalg.norm(cuff_centre - shoulder)) > 0.3:
                 wrist = cuff_centre - direction * 0.02
                 elbow = shoulder + 0.53 * (wrist - shoulder)
                 arms[side] = (shoulder, elbow, wrist)
                 continue
         elif sleeves != "none":
-            arms[side] = None  # type: ignore[assignment]
+            arms[side] = None
             continue
         elbow = shoulder + direction * UPPER_ARM_PER_SPAN * span
         wrist = elbow + direction * FOREARM_PER_SPAN * span
         arms[side] = (shoulder, elbow, wrist)
     if arms.get(1.0) is None and arms.get(-1.0) is None:
-        raise MarkerError("no-sleeves")
+        # Cap sleeves or sleeves too short to see: the arms follow the source pose from the shoulders.
+        notes.append("arms-estimated")
+        for side in (1.0, -1.0):
+            direction = _pose_direction(side, source_pose)
+            elbow = shoulders[side] + direction * UPPER_ARM_PER_SPAN * span
+            arms[side] = (shoulders[side], elbow, elbow + direction * FOREARM_PER_SPAN * span)
     for side, other in ((1.0, -1.0), (-1.0, 1.0)):
         if arms.get(side) is None:  # a sleeve was not found on one side: mirror the other one
-            arms[side] = tuple(np.array([2 * cx - p[0], p[1], p[2]]) for p in arms[other])  # type: ignore[index]
+            arms[side] = tuple(np.array([2 * cx - p[0], p[1], p[2]]) for p in arms[other])  # type: ignore[union-attr]
 
     shoulder_z = (shoulders[1.0][2] + shoulders[-1.0][2]) / 2
     chest_z = shoulder_z - CHEST_BELOW_SHOULDERS_PER_SPAN * span
@@ -449,51 +688,495 @@ def _upper_markers(points: np.ndarray, category: str, source_pose: str, gap: flo
         result[f"elbow_{suffix}"] = _tuple(elbow)
         result[f"wrist_{suffix}"] = _tuple(wrist)
         result[f"hip_{suffix}"] = (cx + side * HIP_OFFSET_PER_SPAN * span, float(pelvis[1]), hip_z)
-    return result
+    return MarkerResult(result, tuple(notes))
 
 
-def _lower_markers(points: np.ndarray, gap: float) -> Dict[str, Vector]:
+def _lower_markers(points: np.ndarray, gap: float) -> MarkerResult:
     low, high = points.min(axis=0), points.max(axis=0)
-    cx = float((low[0] + high[0]) / 2)
-    dx = points[:, 0] - cx
     z = points[:, 2]
-    waist = float(high[2])
-    pelvis_z = waist - 0.05
-    top = _slice(points, waist - 0.01, 0.015)
-    pelvis_y = _y_centre(top, float(points[:, 1].mean()))
+    notes: List[str] = []
+    top_band = points[z > high[2] - 0.04]
+    cx = float((top_band[:, 0].min() + top_band[:, 0].max()) / 2) if len(top_band) else float((low[0] + high[0]) / 2)
+    dx = points[:, 0] - cx
+    top = float(high[2])
     middle = np.abs(dx) < 0.015
-    crotch = float(z[middle].min()) if np.any(middle) else waist - 0.25
-    if crotch >= pelvis_z - 0.03:
-        crotch = pelvis_z - 0.15  # no inseam found near the centre: assume an ordinary rise
+    crotch = float(z[middle].min()) if np.any(middle) else top - 0.25
+    skirt = crotch <= low[2] + 0.03  # the centre reaches the hem: no inseam
+    if skirt:
+        notes.append("skirt")
+    if skirt or crotch >= top - 0.08:
+        crotch = top - 0.2  # no inseam found: assume an ordinary rise
+    # Bib trousers and overalls reach far above the waist; the pelvis sits a rise above the crotch.
+    pelvis_z = min(top - 0.05, crotch + 0.13)
+    top_y = _slice(points, min(top, pelvis_z + 0.05), 0.02)
+    pelvis_y = _y_centre(top_y, float(points[:, 1].mean()))
     legs = points[np.abs(z - (crotch - 0.08)) <= 0.02]
     offsets = []
     for side in (1.0, -1.0):
         own = legs[np.sign(legs[:, 0] - cx) == side]
-        offsets.append(abs(float(own[:, 0].mean()) - cx) if len(own) else 0.09)
+        offsets.append(abs(float(own[:, 0].mean()) - cx) if len(own) and not skirt else 0.09)
     offset = 0.9 * float(np.mean(offsets))
     if not 0.03 <= offset <= 0.3:
         raise MarkerError("not-legs")
     hip_z = crotch + 0.7 * (pelvis_z - crotch)
-    return {
-        "pelvis": (cx, pelvis_y, pelvis_z),
-        "hip_l": (cx + offset, pelvis_y, hip_z),
-        "hip_r": (cx - offset, pelvis_y, hip_z),
-    }
+    result: Dict[str, Vector] = {"pelvis": (cx, pelvis_y, pelvis_z)}
+    estimated = skirt
+    for side, suffix in ((1.0, "l"), (-1.0, "r")):
+        hip = np.array([cx + side * offset, pelvis_y, hip_z])
+        result[f"hip_{suffix}"] = _tuple(hip)
+        own = points[(np.sign(dx) == side) & (z < crotch - 0.05)] if not skirt else points[:0]
+        bottom = float(own[:, 2].min()) if len(own) else hip_z
+        if len(own) and hip_z - bottom > THIGH + 0.25:  # the leg reaches the ankle
+            cuff = own[own[:, 2] < bottom + 0.02]
+            ankle = cuff.mean(axis=0)
+            knee = hip + (THIGH / (THIGH + SHIN)) * (ankle - hip)
+        else:
+            estimated = True
+            knee = hip + np.array([0.0, 0.0, -THIGH])
+            ankle = knee + np.array([0.0, 0.0, -SHIN])
+        result[f"knee_{suffix}"] = _tuple(knee)
+        result[f"ankle_{suffix}"] = _tuple(ankle)
+    if estimated and not skirt:
+        notes.append("legs-estimated")
+    return MarkerResult(result, tuple(notes))
 
 
 def _tuple(vector: np.ndarray) -> Vector:
     return (float(vector[0]), float(vector[1]), float(vector[2]))
 
 
+#: What makes a set of markers implausible (text keys ``garment.marker-problem.<code>``).
+MARKER_PROBLEMS = ("order", "span", "symmetry", "arms", "legs")
+
+
+def marker_problems(markers: Mapping[str, Any], category: str) -> List[str]:
+    """What looks wrong with the markers before anything is fitted to them: the joints out of order from top to
+    bottom, a shoulder span no person has, the two sides not mirror images of each other, arm or leg segments of
+    impossible lengths or bent back on themselves. Empty when they look plausible."""
+    found = {name: _vec(value) for name, value in markers.items() if name in MARKERS}
+    problems: List[str] = []
+    expected = markers_for(category)
+    if not expected or any(name not in found for name in expected):
+        return problems
+
+    def length(a: str, b: str) -> float:
+        return float(np.linalg.norm(found[a] - found[b]))
+
+    if category in LOWER:
+        if not found["pelvis"][2] > max(found["hip_l"][2], found["hip_r"][2]) - 0.02:
+            problems.append("order")
+        for side in ("l", "r"):
+            thigh, shin = length(f"hip_{side}", f"knee_{side}"), length(f"knee_{side}", f"ankle_{side}")
+            if not (0.25 <= thigh <= 0.65 and 0.25 <= shin <= 0.65):
+                problems.append("legs")
+                break
+    else:
+        neck, chest, pelvis = found["neck"][2], found["chest"][2], found["pelvis"][2]
+        shoulders = (found["shoulder_l"][2] + found["shoulder_r"][2]) / 2
+        if not (neck > shoulders > chest > pelvis) or neck - pelvis > 1.0:
+            problems.append("order")
+        span = abs(found["shoulder_l"][0] - found["shoulder_r"][0])
+        if not 0.22 <= span <= 0.6:
+            problems.append("span")
+        for side in ("l", "r"):
+            upper, fore = length(f"shoulder_{side}", f"elbow_{side}"), length(f"elbow_{side}", f"wrist_{side}")
+            bend = _vec(found[f"wrist_{side}"]) - found[f"elbow_{side}"]
+            back = found[f"shoulder_{side}"] - found[f"elbow_{side}"]
+            angle = math.degrees(math.acos(float(np.clip(_unit(bend) @ _unit(back), -1.0, 1.0))))
+            if not (0.12 <= upper <= 0.5 and 0.1 <= fore <= 0.45) or angle < 100.0:
+                problems.append("arms")
+                break
+    cx = centre_x(found)
+    for left, right in MIRRORED.items():
+        if left in found and right in found and left in expected:
+            mirrored = np.array([2 * cx - found[left][0], found[left][1], found[left][2]])
+            if float(np.linalg.norm(mirrored - found[right])) > 0.06:
+                problems.append("symmetry")
+                break
+    return problems
+
+
+#: The lines the stick figure draws between markers.
+STICK_FIGURE = (("neck", "chest"), ("chest", "pelvis"), ("neck", "shoulder_l"), ("shoulder_l", "elbow_l"),
+                ("elbow_l", "wrist_l"), ("neck", "shoulder_r"), ("shoulder_r", "elbow_r"), ("elbow_r", "wrist_r"),
+                ("pelvis", "hip_l"), ("hip_l", "knee_l"), ("knee_l", "ankle_l"), ("pelvis", "hip_r"),
+                ("hip_r", "knee_r"), ("knee_r", "ankle_r"))
+
+
+def stick_figure(markers: Mapping[str, Any]) -> List[Tuple[Vector, Vector]]:
+    """The line segments between the markers that are there."""
+    return [(_tuple(_vec(markers[a])), _tuple(_vec(markers[b]))) for a, b in STICK_FIGURE
+            if a in markers and b in markers]
+
+
+# --------------------------------------------------------------------------------------------------
+# Joints and Align to Body
+# --------------------------------------------------------------------------------------------------
+
+
+def parse_joints(text: str, gender: str) -> Optional[Dict[str, Vector]]:
+    """The joints of one gender from a hosted body's joints file (``{"schema": 1, "space": "ped", "units": "m",
+    "<gender>": {bone: [x, y, z]}}``), or ``None`` for anything else. Bones the add-on does not read are left out;
+    a coordinate outside 3 m refuses the whole file."""
+    try:
+        data = json.loads(text)
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(data, dict) or data.get("schema") != 1 or data.get("space") != "ped" or data.get("units") != "m":
+        return None
+    raw = data.get(gender)
+    if not isinstance(raw, dict):
+        return None
+    joints: Dict[str, Vector] = {}
+    for name in JOINTS:
+        value = raw.get(name)
+        if value is None:
+            continue
+        if not isinstance(value, list) or len(value) != 3 or not all(
+                isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) and abs(v) <= 3.0
+                for v in value):
+            return None
+        joints[name] = (float(value[0]), float(value[1]), float(value[2]))
+    return joints if {"SKEL_Pelvis", "SKEL_Neck_1", "SKEL_L_UpperArm", "SKEL_R_UpperArm"} <= set(joints) else None
+
+
+def joints_json(joints: Mapping[str, Any], gender: str) -> str:
+    """Joints written as :func:`parse_joints` reads them (kept on the body object)."""
+    return json.dumps({"schema": 1, "space": "ped", "units": "m",
+                       gender: {name: [round(float(v), 5) for v in _vec(joints[name])] for name in JOINTS
+                                if name in joints}}, separators=(",", ":"))
+
+
+def complete_joints(joints: Mapping[str, Any]) -> Dict[str, np.ndarray]:
+    """The joints with what is missing filled in from the others: the spine between the pelvis and the chest, the
+    clavicles between the neck and the shoulders, the head above the neck."""
+    found = {name: _vec(value) for name, value in joints.items()}
+    pelvis, neck = found.get("SKEL_Pelvis"), found.get("SKEL_Neck_1")
+    if pelvis is not None and neck is not None:
+        chest = found.get("SKEL_Spine3", pelvis + 0.75 * (neck - pelvis))
+        found.setdefault("SKEL_Spine3", chest)
+        for index, share in ((0, 0.2), (1, 0.45), (2, 0.7)):
+            found.setdefault(f"SKEL_Spine{index}", pelvis + share * (chest - pelvis))
+        found.setdefault("SKEL_Head", neck + np.array([0.0, 0.0, 0.1]))
+    for side in ("L", "R"):
+        shoulder = found.get(f"SKEL_{side}_UpperArm")
+        if shoulder is not None and neck is not None:
+            found.setdefault(f"SKEL_{side}_Clavicle", neck + 0.3 * (shoulder - neck) - np.array([0.0, 0.0, 0.04]))
+    return found
+
+
+def joints_from_markers(markers: Mapping[str, Any]) -> Dict[str, Vector]:
+    """Joints named after the freemode bones from markers (what Align to Body falls back to: the body's own shape)."""
+    return {MARKER_JOINTS[name]: _tuple(_vec(value)) for name, value in markers.items() if name in MARKER_JOINTS}
+
+
+def estimate_body_joints(positions: Any, edges: Optional[np.ndarray] = None) -> Dict[str, Vector]:
+    """Joints read from the shape of a body mesh in the game's pose, when neither the hosted body nor Durty Cloth Tool
+    gives them: the markers a long-sleeved top would get (the head counts as a hood), and the legs below the pelvis.
+    An estimate: Align to Body says so."""
+    points = as_points(positions)
+    upper = _upper_markers(points, "long_sleeve", "a_pose", 0.025).markers
+    below = points[points[:, 2] < upper["pelvis"][2] + 0.12]
+    joints = joints_from_markers(upper)
+    if len(below) >= 30:
+        try:
+            lower = _lower_markers(below, 0.025).markers
+        except MarkerError:
+            lower = {}
+        for name in ("hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ankle_r"):
+            if name in lower:
+                joints[MARKER_JOINTS[name]] = lower[name]
+        if "ankle_l" in lower:  # the soles are the bottom of the body; the ankle joint sits above them
+            for side in ("L", "R"):
+                x, y, z = joints[f"SKEL_{side}_Foot"]
+                joints[f"SKEL_{side}_Foot"] = (x, y, z + 0.08)
+    return joints
+
+
+#: How much each marker pulls when the garment is fitted to the joints: the neck and shoulders (or pelvis and hips)
+#: are what a garment hangs from; markers placed from proportions count less.
+ALIGN_WEIGHTS = {
+    "upper": {"neck": 1.0, "shoulder_l": 1.0, "shoulder_r": 1.0, "pelvis": 0.3, "hip_l": 0.15, "hip_r": 0.15},
+    "lower": {"pelvis": 1.0, "hip_l": 1.0, "hip_r": 1.0, "knee_l": 0.4, "knee_r": 0.4, "ankle_l": 0.2,
+              "ankle_r": 0.2},
+}
+#: The most Align to Body scales (either way) and turns the garment before it says the markers look wrong. Markers
+#: sit on the garment's surface, not on the joints inside the body, so a larger scale means misplaced markers.
+ALIGN_MAX_SCALE = 1.15
+ALIGN_MAX_TURN = 20.0
+#: An arm or leg closer than this to its target direction (degrees) is left as it is.
+LIMB_TOLERANCE = 2.0
+
+
+class Similarity(NamedTuple):
+    scale: float
+    rotation: np.ndarray  # 3x3
+    translation: np.ndarray
+
+    def apply(self, points: Any) -> np.ndarray:
+        return self.scale * as_points(points) @ self.rotation.T + self.translation
+
+    @property
+    def turn(self) -> float:
+        """The rotation's angle, in degrees."""
+        return math.degrees(math.acos(float(np.clip((np.trace(self.rotation) - 1.0) / 2.0, -1.0, 1.0))))
+
+
+def similarity_fit(source: Any, target: Any, weights: Any) -> Similarity:
+    """The scale, rotation and translation that best bring ``source`` points onto ``target`` points (weighted least
+    squares, Umeyama's method)."""
+    src, dst = as_points(source), as_points(target)
+    w = np.asarray(weights, dtype=np.float64)
+    w = w / w.sum()
+    mean_src, mean_dst = w @ src, w @ dst
+    a, b = src - mean_src, dst - mean_dst
+    covariance = (b * w[:, None]).T @ a
+    u, singular, vt = np.linalg.svd(covariance)
+    d = np.diag([1.0, 1.0, float(np.sign(np.linalg.det(u @ vt)) or 1.0)])
+    rotation = u @ d @ vt
+    variance = float((w * np.einsum("ij,ij->i", a, a)).sum())
+    scale = float(np.trace(np.diag(singular) @ d) / variance) if variance > 1e-12 else 1.0
+    return Similarity(scale, rotation, mean_dst - scale * rotation @ mean_src)
+
+
+class AlignPlan(NamedTuple):
+    """What Align to Body does: the garment as a whole onto the joints, then each arm (or leg) turned about its
+    shoulder (or hip) onto the body's. ``limbs`` holds ``(side, kind, pivot, axis, degrees)``."""
+
+    similarity: Similarity
+    limbs: Tuple[Tuple[str, str, Vector, Vector, float], ...]
+    residual: float  # millimetres, the weighted mean distance of the markers from their joints after the fit
+
+
+def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: str,
+               scale: bool = True) -> AlignPlan:
+    """How to align a garment with these markers to a body with these joints. Raises :class:`MarkerError`
+    (``align-markers``) when the fit would scale or turn the garment more than a garment ever needs, which means
+    the markers are not on the garment's joints."""
+    kind = "lower" if category in LOWER else "upper"
+    weights = ALIGN_WEIGHTS[kind]
+    full = complete_joints(joints)
+    names = [n for n in weights if n in markers and MARKER_JOINTS[n] in full]
+    if len(names) < 3:
+        raise MarkerError("align-markers")
+    source = np.array([_vec(markers[n]) for n in names])
+    target = np.array([full[MARKER_JOINTS[n]] for n in names])
+    fit = similarity_fit(source, target, [weights[n] for n in names])
+    if not (1.0 / ALIGN_MAX_SCALE <= fit.scale <= ALIGN_MAX_SCALE) or fit.turn > ALIGN_MAX_TURN:
+        raise MarkerError("align-markers")
+    if not scale:  # keep the garment's size: the best rotation and translation alone
+        w = np.array([weights[n] for n in names]) / sum(weights[n] for n in names)
+        fit = Similarity(1.0, fit.rotation, w @ target - fit.rotation @ (w @ source))
+    moved = fit.apply(source)
+    w = np.array([weights[n] for n in names])
+    residual = float((w * np.linalg.norm(moved - target, axis=1)).sum() / w.sum() * 1000.0)
+    limbs = []
+    chains = (("shoulder", "wrist", "elbow", "UpperArm", "Hand", "Forearm", "arm"),
+              ("hip", "ankle", "knee", "Thigh", "Foot", "Calf", "leg"))
+    for root, end, middle, root_joint, end_joint, middle_joint, limb in chains:
+        if (limb == "arm") != (kind == "upper"):
+            continue
+        for side, bone_side in (("l", "L"), ("r", "R")):
+            start_marker = markers.get(f"{root}_{side}")
+            end_marker = markers.get(f"{end}_{side}", markers.get(f"{middle}_{side}"))
+            start_joint = full.get(f"SKEL_{bone_side}_{root_joint}")
+            end_target = full.get(f"SKEL_{bone_side}_{end_joint}", full.get(f"SKEL_{bone_side}_{middle_joint}"))
+            if start_marker is None or end_marker is None or start_joint is None or end_target is None:
+                continue
+            pivot, tip = fit.apply([start_marker, end_marker])
+            current, wanted = _unit(tip - pivot), _unit(end_target - start_joint)
+            axis = np.cross(current, wanted)
+            angle = math.degrees(math.atan2(float(np.linalg.norm(axis)), float(current @ wanted)))
+            if angle < LIMB_TOLERANCE or float(np.linalg.norm(axis)) < 1e-9:
+                continue
+            limbs.append((side, limb, _tuple(pivot), _tuple(_unit(axis)), angle))
+    return AlignPlan(fit, tuple(limbs), residual)
+
+
+def limb_weights(points: Any, markers: Mapping[str, Any], side: str, limb: str) -> np.ndarray:
+    """How much each point follows a turned arm or leg (0 to 1). A smooth function of the position only, so the two
+    sides of an open seam (which lie on top of each other) always move together and the seam cannot tear: points
+    closer to the limb than to the torso, from just before the shoulder (or hip) on."""
+    pts = as_points(points)
+    if limb == "arm":
+        root, middle, end = (_vec(markers[f"{n}_{side}"]) for n in ("shoulder", "elbow", "wrist"))
+        cx = centre_x(markers)
+        span = abs(_vec(markers["shoulder_l"])[0] - _vec(markers["shoulder_r"])[0]) if (
+            "shoulder_l" in markers and "shoulder_r" in markers) else DEFAULT_SPAN
+        torso_radius, limb_radius = max(0.5 * span, 0.08), max(0.25 * span, 0.05)
+        torso_distance = np.abs(pts[:, 0] - cx) / torso_radius
+    else:
+        root, middle, end = (_vec(markers[f"{n}_{side}"]) for n in ("hip", "knee", "ankle"))
+        other = _vec(markers[f"hip_{'r' if side == 'l' else 'l'}"])
+        limb_radius = torso_radius = max(0.5 * float(np.linalg.norm(root - other)), 0.06)
+        torso_distance = np.linalg.norm(pts - other, axis=1) / torso_radius  # closer to the other leg
+    segment = end - root
+    length = max(float(np.linalg.norm(segment)), 1e-6)
+    along = (pts - root) @ segment / (length * length)
+    closest = root + np.clip(along, 0.0, 1.0)[:, None] * segment
+    limb_distance = np.linalg.norm(pts - closest, axis=1) / limb_radius
+    membership = _smoothstep((torso_distance - limb_distance) / 0.8 + 0.5)
+    lead = 0.06 / length  # the blend starts a few centimetres before the joint
+    return membership * _smoothstep((along + lead) / (2 * lead))
+
+
+def rotate_weighted(points: Any, pivot: Any, axis: Any, degrees: float, weights: Any) -> np.ndarray:
+    """Points turned about ``axis`` through ``pivot`` by ``degrees`` times each point's weight."""
+    pts = as_points(points)
+    k = _unit(_vec(axis))
+    angle = np.radians(degrees) * np.asarray(weights, dtype=np.float64)
+    local = pts - _vec(pivot)
+    cos, sin = np.cos(angle)[:, None], np.sin(angle)[:, None]
+    rotated = local * cos + np.cross(k, local) * sin + np.outer(local @ k, k) * (1.0 - cos)
+    return rotated + _vec(pivot)
+
+
+def apply_align(points: Any, markers: Mapping[str, Any], plan: AlignPlan) -> Tuple[np.ndarray, Dict[str, Vector]]:
+    """The garment's points and its markers moved by an :class:`AlignPlan`."""
+    moved = plan.similarity.apply(points)
+    names = list(markers)
+    placed = plan.similarity.apply([markers[n] for n in names]) if names else np.zeros((0, 3))
+    new_markers = {name: _tuple(placed[i]) for i, name in enumerate(names)}
+    for side, limb, pivot, axis, degrees in plan.limbs:
+        weights = limb_weights(moved, new_markers, side, limb)
+        moved = rotate_weighted(moved, pivot, axis, degrees, weights)
+        chain = ("elbow", "wrist") if limb == "arm" else ("knee", "ankle")
+        for joint in chain:
+            name = f"{joint}_{side}"
+            if name in new_markers:
+                new_markers[name] = _tuple(rotate_weighted([new_markers[name]], pivot, axis, degrees, [1.0])[0])
+    return moved, new_markers
+
+
+def arm_turn(markers: Mapping[str, Any], target: float, joints: Optional[Mapping[str, Any]] = None
+             ) -> List[Tuple[str, Vector, Vector, float]]:
+    """``(side, pivot, axis, degrees)`` that turn each arm to the body's arms (``joints``, also forward and back) or,
+    without joints, to ``target`` degrees below the horizontal."""
+    turns = []
+    full = complete_joints(joints) if joints else {}
+    for side, bone_side, sign in (("l", "L", 1.0), ("r", "R", -1.0)):
+        shoulder = markers.get(f"shoulder_{side}")
+        end = markers.get(f"wrist_{side}", markers.get(f"elbow_{side}"))
+        if shoulder is None or end is None:
+            continue
+        current = _unit(_vec(end) - _vec(shoulder))
+        if f"SKEL_{bone_side}_UpperArm" in full and f"SKEL_{bone_side}_Hand" in full:
+            wanted = _unit(full[f"SKEL_{bone_side}_Hand"] - full[f"SKEL_{bone_side}_UpperArm"])
+        else:
+            angle = math.radians(target)
+            sideways = math.hypot(current[0], current[1]) or 1.0
+            wanted = np.array([current[0] / sideways * math.cos(angle), current[1] / sideways * math.cos(angle),
+                               -math.sin(angle)])
+            if abs(current[0]) < 1e-6 and abs(current[1]) < 1e-6:
+                wanted = np.array([sign * math.cos(angle), 0.0, -math.sin(angle)])
+        axis = np.cross(current, wanted)
+        degrees = math.degrees(math.atan2(float(np.linalg.norm(axis)), float(current @ wanted)))
+        if degrees >= 0.5 and float(np.linalg.norm(axis)) > 1e-9:
+            turns.append((side, _tuple(_vec(shoulder)), _tuple(_unit(axis)), degrees))
+    return turns
+
+
 # --------------------------------------------------------------------------------------------------
 # Regions
 # --------------------------------------------------------------------------------------------------
 
+#: The body's parts by bone: (from joint, to joint, radius in metres, part). A point belongs to the part whose bone
+#: is nearest relative to the part's thickness, so the thin arm never claims the side of the wide torso. Generic
+#: human proportions, nothing measured from the game.
+BODY_SEGMENTS = (
+    ("SKEL_Pelvis", "SKEL_Spine0", 0.15, "torso"), ("SKEL_Spine0", "SKEL_Spine1", 0.15, "torso"),
+    ("SKEL_Spine1", "SKEL_Spine2", 0.15, "torso"), ("SKEL_Spine2", "SKEL_Spine3", 0.15, "torso"),
+    ("SKEL_Spine3", "SKEL_Neck_1", 0.14, "torso"), ("SKEL_Neck_1", "SKEL_Head", 0.06, "neck"),
+    ("SKEL_Head", "head-top", 0.1, "head"),
+    ("SKEL_L_Clavicle", "SKEL_L_UpperArm", 0.07, "clavicle"), ("SKEL_R_Clavicle", "SKEL_R_UpperArm", 0.07, "clavicle"),
+    ("SKEL_L_UpperArm", "SKEL_L_Forearm", 0.055, "upper_arm"), ("SKEL_R_UpperArm", "SKEL_R_Forearm", 0.055, "upper_arm"),
+    ("SKEL_L_Forearm", "SKEL_L_Hand", 0.045, "forearm"), ("SKEL_R_Forearm", "SKEL_R_Hand", 0.045, "forearm"),
+    ("SKEL_L_Hand", "L-fingers", 0.04, "hand"), ("SKEL_R_Hand", "R-fingers", 0.04, "hand"),
+    ("SKEL_L_Thigh", "SKEL_L_Calf", 0.085, "leg"), ("SKEL_R_Thigh", "SKEL_R_Calf", 0.085, "leg"),
+    ("SKEL_L_Calf", "SKEL_L_Foot", 0.06, "leg"), ("SKEL_R_Calf", "SKEL_R_Foot", 0.06, "leg"),
+    ("SKEL_L_Foot", "L-toes", 0.05, "leg"), ("SKEL_R_Foot", "R-toes", 0.05, "leg"),
+)
+#: How far below the shoulder joints the shoulders region reaches on the torso, and how far before the wrist a
+#: sleeve counts as its cuff (metres).
+SHOULDER_DEPTH = 0.07
+CUFF_LENGTH = 0.07
+
+
+def _segment_end(name: str, joints: Mapping[str, np.ndarray]) -> Optional[np.ndarray]:
+    if name in joints:
+        return joints[name]
+    if name == "head-top" and "SKEL_Head" in joints:
+        return joints["SKEL_Head"] + np.array([0.0, 0.0, 0.16])
+    if name.endswith("-fingers"):
+        side = name[0]
+        hand, fore = joints.get(f"SKEL_{side}_Hand"), joints.get(f"SKEL_{side}_Forearm")
+        if hand is not None and fore is not None:
+            return hand + 0.4 * (hand - fore)
+    if name.endswith("-toes"):
+        foot = joints.get(f"SKEL_{name[0]}_Foot")
+        if foot is not None:
+            return foot + np.array([0.0, -0.15, -0.05])
+    return None
+
+
+def body_regions(points: Any, joints: Mapping[str, Any]) -> np.ndarray:
+    """The region of each point on or near the body (an index into :data:`REGIONS`, or :data:`OTHER` for the head
+    and the hands' fingers), from the body's joints: the nearest bone relative to its part's thickness, the torso
+    then split by height and front to back. A garment vertex takes the region of the body point nearest to it."""
+    pts = as_points(points)
+    full = complete_joints(joints)
+    segments = []
+    for start, end, radius, part in BODY_SEGMENTS:
+        a, b = full.get(start), _segment_end(end, full)
+        if a is not None and b is not None:
+            segments.append((a, b, radius, part))
+    region = np.full(len(pts), OTHER, dtype=np.int64)
+    if not segments or not len(pts):
+        return region
+    best = np.full(len(pts), np.inf)
+    part_of = np.zeros(len(pts), dtype=np.int64)
+    parts = [part for _, _, _, part in segments]
+    for index, (a, b, radius, _part) in enumerate(segments):
+        segment = b - a
+        length = max(float(segment @ segment), 1e-12)
+        t = np.clip((pts - a) @ segment / length, 0.0, 1.0)
+        distance = np.linalg.norm(pts - (a + t[:, None] * segment), axis=1) / radius
+        closer = distance < best
+        best[closer] = distance[closer]
+        part_of[closer] = index
+    named = np.array(parts)[part_of]
+    pelvis, neck = full["SKEL_Pelvis"], full["SKEL_Neck_1"]
+    shoulder_z = float(np.mean([full[n][2] for n in ("SKEL_L_UpperArm", "SKEL_R_UpperArm") if n in full]
+                               or [neck[2] - 0.1]))
+    height = max(float(neck[2] - pelvis[2]), 0.1)
+    z = pts[:, 2]
+    t = (z - pelvis[2]) / height
+    spine = sorted((full[n] for n in ("SKEL_Pelvis", "SKEL_Spine0", "SKEL_Spine1", "SKEL_Spine2", "SKEL_Spine3",
+                                      "SKEL_Neck_1") if n in full), key=lambda p: p[2])
+    spine_y = np.interp(z, [p[2] for p in spine], [p[1] for p in spine])
+    torso = named == "torso"
+    region[(named == "clavicle") | (torso & (z >= shoulder_z - SHOULDER_DEPTH))] = REGIONS.index("shoulders")
+    trunk = torso & (z < shoulder_z - SHOULDER_DEPTH)
+    region[trunk & (t > 0.45) & (pts[:, 1] < spine_y)] = REGIONS.index("chest")  # the ped faces -Y
+    region[trunk & (t > 0.45) & (pts[:, 1] >= spine_y)] = REGIONS.index("back")
+    region[trunk & (t > 0.12) & (t <= 0.45)] = REGIONS.index("waist")
+    region[trunk & (t <= 0.12)] = REGIONS.index("hips")
+    region[(named == "neck") | (torso & (z > neck[2]))] = REGIONS.index("neck")
+    region[named == "upper_arm"] = REGIONS.index("upper_arms")
+    region[named == "forearm"] = REGIONS.index("forearms")
+    region[named == "leg"] = REGIONS.index("legs")
+    for side in ("L", "R"):
+        hand = full.get(f"SKEL_{side}_Hand")
+        if hand is not None:
+            near_wrist = np.isin(named, ("forearm", "hand")) & (np.linalg.norm(pts - hand, axis=1) < CUFF_LENGTH)
+            region[near_wrist] = REGIONS.index("cuffs")
+    return region
+
 
 def classify_regions(positions: Any, markers: Mapping[str, Any]) -> np.ndarray:
-    """The region of each point (an index into :data:`REGIONS`, or :data:`OTHER` for forearms and hands).
-
-    Needs the pelvis (or both hips); missing upper markers are filled in from ordinary proportions."""
+    """The region of each point (an index into :data:`REGIONS`, or :data:`OTHER` for hands) from the markers alone,
+    for when there is no body to measure against. Needs the pelvis (or both hips); missing upper markers are filled in
+    from ordinary proportions."""
     points = as_points(positions)
     found = {name: _vec(value) for name, value in markers.items() if name in MARKERS}
     if "pelvis" not in found:
@@ -518,23 +1201,32 @@ def classify_regions(positions: Any, markers: Mapping[str, Any]) -> np.ndarray:
     region = np.full(len(points), OTHER, dtype=np.int64)
     x, y, z = points[:, 0], points[:, 1], points[:, 2]
     lateral = np.abs(x - cx)
+    # A point belongs to an arm when it is nearer the arm's bone than the torso's centre line, relative to how
+    # thick each is: the side of the torso under the armpit of an A-pose stays torso.
+    torso_radius, arm_radius = 0.5 * span, 0.2 * span
     arm = np.zeros(len(points), dtype=bool)
     for side, suffix in ((1.0, "l"), (-1.0, "r")):
         shoulder, elbow = found.get(f"shoulder_{suffix}"), found.get(f"elbow_{suffix}")
         if shoulder is None or elbow is None:
             continue
-        upper = elbow - shoulder
-        length = float(np.linalg.norm(upper))
+        wrist = found.get(f"wrist_{suffix}", elbow + (elbow - shoulder))
+        upper, fore = elbow - shoulder, wrist - elbow
+        length, fore_length = float(np.linalg.norm(upper)), float(np.linalg.norm(fore))
         if length < 1e-6:
             continue
         along = (points - shoulder) @ upper / (length * length)
-        closest = shoulder + np.clip(along, 0.0, 1.0)[:, None] * upper
-        distance = np.linalg.norm(points - closest, axis=1)
-        reach = abs(float(shoulder[0]) - cx)
-        mine = (np.sign(x - cx) == side) & (lateral > 0.9 * reach) & (along > 0.08)
-        upper_arm = mine & (along <= 1.0) & (distance < 0.6 * length)
-        forearm = mine & (along > 1.0)
+        to_upper = np.linalg.norm(points - (shoulder + np.clip(along, 0.0, 1.0)[:, None] * upper), axis=1)
+        along_fore = (points - elbow) @ fore / max(fore_length * fore_length, 1e-12)
+        to_fore = np.linalg.norm(points - (elbow + np.clip(along_fore, 0.0, 1.0)[:, None] * fore), axis=1)
+        mine = (np.sign(x - cx) == side) & (along > 0.0)
+        nearer = np.minimum(to_upper, to_fore) / arm_radius < lateral / torso_radius
+        upper_arm = mine & nearer & (along <= 1.0)
+        forearm = mine & nearer & (along > 1.0)
+        cuff = forearm & (np.linalg.norm(points - wrist, axis=1) < CUFF_LENGTH)
         region[upper_arm] = REGIONS.index("upper_arms")
+        region[forearm] = REGIONS.index("forearms")
+        region[cuff] = REGIONS.index("cuffs")
+        region[forearm & (along_fore > 1.15)] = OTHER  # the hand
         arm |= upper_arm | forearm
 
     t = (z - pelvis[2]) / height
@@ -562,7 +1254,7 @@ INSIDE_MM = 1.0
 #: Closer to the body than this (millimetres) counts as too close.
 CLOSE_MM = 3.0
 #: A shoulder further off the body than this (millimetres) floats.
-FLOATING_MM = 25.0
+FLOATING_MM = 18.0
 #: Edges longer than this share of their length before the changes count as stretched.
 STRETCH_LIMIT = 1.15
 
@@ -665,26 +1357,63 @@ def problem_counts(classes: np.ndarray) -> Dict[str, int]:
 # Moving the garment against the body
 # --------------------------------------------------------------------------------------------------
 
+#: The furthest Push Out of Body moves a vertex (metres). Deeper than this the garment does not just touch the body:
+#: a sleeve runs through the torso, or the garment sits in the wrong place, and moving it out would pull it onto the
+#: wrong surface. Those vertices stay and are reported.
+MAX_PUSH = 0.03
+#: Snug to Body leaves alone what hangs further than this from the body (metres): hoods, skirts, coat tails.
+SNUG_REACH = 0.08
+#: How far outside a pushed vertex another layer still counts as lying on it and moves with it (metres).
+LAYER_REACH = 0.012
 
-def push_out_offsets(positions: Any, nearest: Any, normals: Any, clearance: Any, gap: float) -> np.ndarray:
+
+def push_out_offsets(positions: Any, nearest: Any, normals: Any, clearance: Any, gap: float,
+                     max_push: float = MAX_PUSH, locked: Optional[Any] = None) -> np.ndarray:
     """Offsets that move every vertex closer to the body than ``gap`` (metres, also those inside) to ``gap``
-    outside it, along the body's surface normal."""
+    outside it, along the body's surface normal. Vertices deeper inside than ``max_push`` and ``locked`` ones stay."""
     points = as_points(positions)
     clearance = np.asarray(clearance, dtype=np.float64)
     target = as_points(nearest) + as_points(normals) * gap
     offsets = np.zeros_like(points)
-    needs = clearance < gap
+    needs = (clearance < gap) & (clearance > -max_push)
+    if locked is not None:
+        needs &= ~np.asarray(locked, dtype=bool)
     offsets[needs] = target[needs] - points[needs]
     return offsets
 
 
+def layer_follow(positions: Any, offsets: Any, clearance: Any, reach: float = LAYER_REACH) -> np.ndarray:
+    """Offsets with the layers that lie over a pushed vertex (a shell over its lining, a pocket over the front) moved
+    along by at least as much, so the layers keep their order and their distance."""
+    points = as_points(positions)
+    offsets = as_points(offsets).copy()
+    clearance = np.asarray(clearance, dtype=np.float64)
+    moved = np.nonzero(np.linalg.norm(offsets, axis=1) > 1e-6)[0]
+    if not len(moved):
+        return offsets
+    q, t, _d = grid_pairs(points[moved], points, reach)
+    source, other = moved[q], t
+    outer = (clearance[other] > clearance[source] + 1e-4) & (np.linalg.norm(offsets[other], axis=1) < 1e-6)
+    source, other = source[outer], other[outer]
+    if not len(other):
+        return offsets
+    lengths = np.linalg.norm(offsets[source], axis=1)
+    order = np.lexsort((-lengths, other))  # the largest push behind each outer vertex first
+    other, source = other[order], source[order]
+    first = np.ones(len(other), dtype=bool)
+    first[1:] = other[1:] != other[:-1]
+    offsets[other[first]] = offsets[source[first]]
+    return offsets
+
+
 def snug_offsets(positions: Any, nearest: Any, normals: Any, clearance: Any, gap: float, amount: float,
-                 weights: Any, max_move: float = 0.15) -> np.ndarray:
+                 weights: Any, max_move: float = 0.15, reach: float = SNUG_REACH) -> np.ndarray:
     """Offsets that bring vertices further off the body than ``gap`` towards it, by ``amount`` (0 to 1) of the
-    way and each vertex's weight; no vertex moves more than ``max_move`` metres."""
+    way and each vertex's weight; no vertex moves more than ``max_move`` metres, and what hangs further than ``reach``
+    from the body (a hood, a skirt) is left alone."""
     points = as_points(positions)
     clearance = np.asarray(clearance, dtype=np.float64)
-    weights = np.asarray(weights, dtype=np.float64)
+    weights = np.asarray(weights, dtype=np.float64) * (1.0 - _smoothstep((clearance - reach) / 0.02 + 0.5))
     target = as_points(nearest) + as_points(normals) * gap
     offsets = (target - points) * (np.clip(amount, 0.0, 1.0) * weights)[:, None]
     offsets[clearance <= gap] = 0.0
@@ -761,60 +1490,120 @@ def arm_rotations(markers: Mapping[str, Any], target: float) -> Dict[str, float]
 # Seams: welding and tears
 # --------------------------------------------------------------------------------------------------
 
+#: Two vertices of the same open edge closer along that edge than this many weld distances (and never less than a
+#: centimetre) are neighbours on one hem or cuff, not two sides of a seam: they are never joined.
+CHAIN_GAP_FACTOR = 10.0
+#: Surfaces facing more than this far apart (degrees) are two sides of a fold or slab, never a seam.
+FACING_LIMIT = 120.0
 
-def _close_pairs(points: np.ndarray, distance: float, indices: np.ndarray) -> List[Tuple[int, int]]:
-    """Pairs of ``indices`` whose points are at most ``distance`` apart (a grid of ``distance`` cells)."""
-    if distance <= 0 or len(indices) < 2:
-        return []
-    cells = np.floor(points[indices] / distance).astype(np.int64)
-    buckets: Dict[Tuple[int, int, int], List[int]] = {}
-    for position, cell in enumerate(map(tuple, cells)):
-        buckets.setdefault(cell, []).append(position)  # type: ignore[arg-type]
-    offsets = [(a, b, c) for a in (-1, 0, 1) for b in (-1, 0, 1) for c in (-1, 0, 1)]
-    limit = distance * distance
+
+def _pair_keys(a: np.ndarray, b: np.ndarray, count: int) -> np.ndarray:
+    return np.minimum(a, b).astype(np.int64) * count + np.maximum(a, b)
+
+
+def face_vertex_pairs(loop_vertex: Any, face_start: Any, face_total: Any) -> np.ndarray:
+    """Every pair of vertices that share a face (the corners of each polygon), as ``(N, 2)``."""
+    loop_vertex = np.asarray(loop_vertex, dtype=np.int64)
+    start = np.asarray(face_start, dtype=np.int64)
+    total = np.asarray(face_total, dtype=np.int64)
+    if not len(total):
+        return np.zeros((0, 2), dtype=np.int64)
+    position = np.arange(len(loop_vertex)) - np.repeat(start, total)
+    size = np.repeat(total, total)
     pairs = []
-    for position, cell in enumerate(map(tuple, cells)):
-        i = int(indices[position])
-        p = points[i]
-        for da, db, dc in offsets:
-            for other in buckets.get((cell[0] + da, cell[1] + db, cell[2] + dc), ()):
-                if other <= position:
-                    continue
-                j = int(indices[other])
-                d = points[j] - p
-                if float(d @ d) <= limit:
-                    pairs.append((i, j))
-    return pairs
+    for step in range(1, int(total.max())):
+        valid = position + step < size
+        first = np.nonzero(valid)[0]
+        pairs.append(np.column_stack([loop_vertex[first], loop_vertex[first + step]]))
+    return np.concatenate(pairs) if pairs else np.zeros((0, 2), dtype=np.int64)
+
+
+def seam_candidates(positions: Any, distance: float, candidates: Optional[Any] = None, *,
+                    chains: Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]] = None,
+                    face_pairs: Optional[Any] = None, normals: Optional[Any] = None,
+                    components: Optional[Any] = None, cross_components_only: bool = False,
+                    fabrics: Optional[Any] = None, apart: Iterable[Tuple[Any, Any]] = (),
+                    groups: Optional[Any] = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Pairs of vertices that may be two sides of one seam: closer than ``distance``, never two vertices of one face,
+    never neighbours along the same open edge, never surfaces facing apart, never across a pair of ``fabrics`` named
+    in ``apart`` (a lining and its shell), and with ``groups`` only within one group. ``(first, second, distance)``."""
+    points = as_points(positions)
+    count = len(points)
+    indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else np.arange(count)
+    a, b, d = close_pairs(points, distance, indices)
+    keep = np.ones(len(a), dtype=bool)
+    if face_pairs is not None and len(a):
+        shared = np.asarray(face_pairs, dtype=np.int64).reshape(-1, 2)
+        keep &= ~np.isin(_pair_keys(a, b, count), _pair_keys(shared[:, 0], shared[:, 1], count))
+    if chains is not None and len(a):
+        chain, arc, lengths = chains
+        same = (chain[a] >= 0) & (chain[a] == chain[b])
+        along = np.abs(arc[a] - arc[b])
+        loop = lengths[np.maximum(chain[a], 0)] if len(lengths) else np.zeros(len(a))
+        along = np.where(same & (loop > 0), np.minimum(along, np.abs(loop) - along), along)
+        keep &= ~(same & (along < max(CHAIN_GAP_FACTOR * distance, 0.01)))
+    if normals is not None and len(a):
+        n = as_points(normals)
+        keep &= np.einsum("ij,ij->i", n[a], n[b]) > math.cos(math.radians(FACING_LIMIT))
+    if cross_components_only and components is not None:
+        comp = np.asarray(components)
+        keep &= comp[a] != comp[b]
+    if fabrics is not None:
+        labels = np.asarray(fabrics)
+        for first, second in apart:
+            keep &= ~(((labels[a] == first) & (labels[b] == second)) | ((labels[a] == second) & (labels[b] == first)))
+    if groups is not None:
+        labels = np.asarray(groups)
+        keep &= labels[a] == labels[b]
+    return a[keep], b[keep], d[keep]
 
 
 def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = None,
-                 groups: Optional[Any] = None) -> Tuple[np.ndarray, np.ndarray]:
+                 groups: Optional[Any] = None, **rules: Any) -> Tuple[np.ndarray, np.ndarray]:
     """Which vertex each vertex merges into (itself when it stays) and where the merged vertices go (the mean of
-    their group). Only ``candidates`` (for example the open edges of panels) are welded, and with ``groups`` only
-    vertices of the same group."""
+    their group). Pairs come from :func:`seam_candidates` (``rules`` are its keyword arguments) and are joined
+    greedily from the closest, and a group is never wider than ``distance``: a dense hem cannot collapse into a
+    point."""
     points = as_points(positions)
     count = len(points)
     target = np.arange(count)
     merged = points.copy()
-    indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else np.arange(count)
-    parent = {int(i): int(i) for i in indices}
+    a, b, d = seam_candidates(points, distance, candidates, groups=groups, **rules)
+    if not len(a):
+        return target, merged
+    # A pair whose two vertices pair with nothing else is a group of its own (most seam vertices are): joined at
+    # once, without the greedy walk below.
+    uses = np.bincount(np.concatenate([a, b]), minlength=count)
+    alone = (uses[a] == 1) & (uses[b] == 1)
+    low, high = np.minimum(a[alone], b[alone]), np.maximum(a[alone], b[alone])
+    target[high] = low
+    merged[low] = merged[high] = (points[low] + points[high]) / 2
+    a, b, d = a[~alone], b[~alone], d[~alone]
+    parent: Dict[int, int] = {}
+    members: Dict[int, List[int]] = {}
 
     def find(i: int) -> int:
-        while parent[i] != i:
-            parent[i] = parent[parent[i]]
-            i = parent[i]
-        return i
+        root = i
+        while parent.get(root, root) != root:
+            root = parent[root]
+        while parent.get(i, i) != root:
+            parent[i], i = root, parent[i]
+        return root
 
-    group_of = np.asarray(groups) if groups is not None else None
-    for i, j in _close_pairs(points, distance, indices):
-        if group_of is not None and group_of[i] != group_of[j]:
+    limit = distance * distance + 1e-18
+    for index in np.argsort(d, kind="stable"):
+        i, j = int(a[index]), int(b[index])
+        ri, rj = find(i), find(j)
+        if ri == rj:
             continue
-        a, b = find(i), find(j)
-        if a != b:
-            parent[max(a, b)] = min(a, b)
-    members: Dict[int, List[int]] = {}
-    for i in parent:
-        members.setdefault(find(i), []).append(i)
+        group_i, group_j = members.get(ri, [ri]), members.get(rj, [rj])
+        diff = points[group_i][:, None, :] - points[group_j][None, :, :]
+        if float(np.einsum("ijk,ijk->ij", diff, diff).max()) > limit:
+            continue  # the joined group would be wider than the weld distance
+        root, other = min(ri, rj), max(ri, rj)
+        parent[other] = root
+        members[root] = group_i + group_j
+        members.pop(other, None)
     for root, group in members.items():
         if len(group) > 1:
             target[group] = root
@@ -823,57 +1612,64 @@ def weld_targets(positions: Any, distance: float, candidates: Optional[Any] = No
 
 
 def lining_pairs(positions: Any, normals: Any, groups: Any, *, weld: float = 0.002, near: float = 0.03,
-                 share: float = 0.4, sample: int = 3000) -> List[Tuple[int, int]]:
-    """Groups (materials) that lie as a layer over another group: most of a group's vertices have a vertex of
-    another group a few millimetres away along the surface normal. A seam between two fabrics only touches along
-    its edge, so it is not a lining."""
+                 share: float = 0.4, sample: int = 3000, areas: Optional[Any] = None,
+                 cover: float = 0.25) -> List[Tuple[int, int]]:
+    """Groups (fabrics) that lie as a lining under another: most of the group lies a few millimetres from the other
+    along the surface normal, and the group is big compared with it (a quarter of its area by default). A seam
+    between two fabrics only touches along its edge, and a patch pocket, a turned-down collar, a placket or an elbow
+    patch is small next to the fabric it lies on: none of them is a lining. ``areas`` is each vertex's share of the
+    surface (vertex counts otherwise)."""
     points = as_points(positions)
     normals = as_points(normals)
     groups = np.asarray(groups)
+    weights = np.ones(len(points)) if areas is None else np.asarray(areas, dtype=np.float64)
     found: List[Tuple[int, int]] = []
     names = [g for g in np.unique(groups) if (groups == g).sum() >= 30]
     if len(names) < 2:
         return found
-    cells = np.floor(points / near).astype(np.int64)
-    buckets: Dict[Tuple[int, int, int], List[int]] = {}
-    for index, cell in enumerate(map(tuple, cells)):
-        buckets.setdefault(cell, []).append(index)  # type: ignore[arg-type]
-    offsets = [(a, b, c) for a in (-1, 0, 1) for b in (-1, 0, 1) for c in (-1, 0, 1)]
+    size = {g: float(weights[groups == g].sum()) for g in names}
     rng = np.random.default_rng(7)
+    queries, owners = [], []
     for group in names:
         own = np.nonzero(groups == group)[0]
         if len(own) > sample:
             own = rng.choice(own, sample, replace=False)
-        layered: Dict[Any, int] = {}
-        for i in own:
-            cell = cells[i]
-            best, best_j = near, -1
-            for da, db, dc in offsets:
-                for j in buckets.get((cell[0] + da, cell[1] + db, cell[2] + dc), ()):
-                    if groups[j] == group:
-                        continue
-                    d = float(np.linalg.norm(points[j] - points[i]))
-                    if d < best:
-                        best, best_j = d, j
-            if best_j < 0 or best <= weld:
-                continue
-            offset = (points[best_j] - points[i]) / best
-            if abs(float(offset @ normals[i])) > 0.7 and abs(float(normals[i] @ normals[best_j])) > 0.7:
-                layered[groups[best_j]] = layered.get(groups[best_j], 0) + 1
-        for other, hits in layered.items():
-            if hits >= share * len(own):
-                pair = (min(int(group), int(other)), max(int(group), int(other)))
+        queries.append(own)
+        owners.append(np.full(len(own), group))
+    query = np.concatenate(queries)
+    owner = np.concatenate(owners)
+    q, t, d = grid_pairs(points[query], points, near)
+    other = (groups[t] != owner[q]) & (d > weld)
+    q, t, d = q[other], t[other], d[other]
+    if not len(q):
+        return found
+    order = np.lexsort((d, q))
+    q, t, d = q[order], t[order], d[order]
+    first = np.ones(len(q), dtype=bool)
+    first[1:] = q[1:] != q[:-1]
+    q, t, d = q[first], t[first], d[first]
+    i = query[q]
+    direction = (points[t] - points[i]) / d[:, None]
+    layered = (np.abs(np.einsum("ij,ij->i", direction, normals[i])) > 0.7) & (
+        np.abs(np.einsum("ij,ij->i", normals[i], normals[t])) > 0.7)
+    for group, own in zip(names, queries):
+        mine = owner[q] == group
+        hits: Dict[Any, int] = {}
+        for other_group in groups[t[mine & layered]]:
+            hits[other_group] = hits.get(other_group, 0) + 1
+        for other_group, count in hits.items():
+            if count >= share * len(own) and other_group in size and size[group] >= cover * size[other_group]:
+                pair = (min(int(group), int(other_group)), max(int(group), int(other_group)))
                 if pair not in found:
                     found.append(pair)
     return found
 
 
-def seam_pairs(positions: Any, distance: float, candidates: Optional[Any] = None) -> np.ndarray:
-    """Pairs of separate vertices that sit on top of each other (the open seams of unwelded panels)."""
-    points = as_points(positions)
-    indices = np.nonzero(np.asarray(candidates, dtype=bool))[0] if candidates is not None else np.arange(len(points))
-    pairs = _close_pairs(points, distance, indices)
-    return np.asarray(pairs, dtype=np.int64).reshape(-1, 2)
+def seam_pairs(positions: Any, distance: float, candidates: Optional[Any] = None, **rules: Any) -> np.ndarray:
+    """Pairs of separate vertices that sit on top of each other (the open seams of unwelded panels), by the rules of
+    :func:`seam_candidates`."""
+    a, b, _d = seam_candidates(positions, distance, candidates, **rules)
+    return np.column_stack([a, b]).astype(np.int64).reshape(-1, 2)
 
 
 def tears(pairs: np.ndarray, posed: Any, threshold: float) -> Tuple[np.ndarray, np.ndarray]:
@@ -884,6 +1680,24 @@ def tears(pairs: np.ndarray, posed: Any, threshold: float) -> Tuple[np.ndarray, 
         return np.zeros(0, dtype=bool), np.zeros(0)
     separation = np.linalg.norm(points[pairs[:, 0]] - points[pairs[:, 1]], axis=1)
     return separation > threshold, separation
+
+
+def components(count: int, edges: Any) -> np.ndarray:
+    """The connected part (panel) each vertex belongs to."""
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    label = np.arange(count)
+    if not len(edges):
+        return label
+    changed = True
+    while changed:  # label propagation; each round halves the remaining distance on long panels
+        low = np.minimum(label[edges[:, 0]], label[edges[:, 1]])
+        before = label.copy()
+        np.minimum.at(label, edges[:, 0], low)
+        np.minimum.at(label, edges[:, 1], low)
+        label = label[label]
+        changed = bool(np.any(label != before))
+    _, compact = np.unique(label, return_inverse=True)
+    return compact
 
 
 # --------------------------------------------------------------------------------------------------
@@ -988,17 +1802,44 @@ def game_vertex_count(loop_vertex: Any, loop_uv: Optional[Any] = None, loop_mate
     return int(len(np.unique(np.column_stack(columns), axis=0)))
 
 
+def texel_density(triangle_uv: Any, triangle_positions: Any, size: int) -> float:
+    """Texture pixels per centimetre on the garment: the texture's area the UV layout uses against the surface it
+    covers. 0 for a garment without surface."""
+    uv = np.asarray(triangle_uv, dtype=np.float64).reshape(-1, 3, 2)
+    tri = np.asarray(triangle_positions, dtype=np.float64).reshape(-1, 3, 3)
+    if not len(tri):
+        return 0.0
+    surface = float(np.linalg.norm(np.cross(tri[:, 1] - tri[:, 0], tri[:, 2] - tri[:, 0]), axis=1).sum() / 2)
+    if surface <= 1e-12:
+        return 0.0
+    return round(math.sqrt(uv_area(uv) * size * size / (surface * 1e4)), 1)
+
+
 # --------------------------------------------------------------------------------------------------
 # Local checks
 # --------------------------------------------------------------------------------------------------
 
-#: Game vertices per level of detail above which the add-on advises reducing the model. This is rounded guidance
-#: for performance, not a format limit: Sollumz splits larger geometries.
-GAME_VERTEX_BUDGET = {"high": 30000, "medium": 10000, "low": 4000}
+#: Triangles per level of detail above which Durty Cloth Tool's own checks advise reducing the model (its default
+#: triangle budgets); the add-on uses the same numbers so it never says clean where Durty Cloth Tool would not.
+TRIANGLE_BUDGET = {"high": 30000, "medium": 15000, "low": 7500}
+#: The share of High each lower level keeps when its triangle budget is left at 0 (automatic).
+LOD_SHARE = {"medium": 0.5, "low": 0.25}
 #: The game skins each vertex with at most this many bones.
 MAX_INFLUENCES = 4
 #: More of the garment inside the body than this share is worth fixing before the game shows it.
 INSIDE_SHARE_LIMIT = 0.02
+#: A garment whose middle stands further than this from the body (metres) is not on the body at all.
+PLACEMENT_LIMIT = 0.15
+#: More vertices near the body facing into it than this share means the normals are flipped.
+INWARD_LIMIT = 0.5
+
+
+def lod_budget(level: str, high_triangles: int, chosen: int = 0) -> int:
+    """The triangle budget of a lower level of detail: the chosen number, or (0) its share of High, at most the
+    budget the checks advise."""
+    if chosen > 0:
+        return int(chosen)
+    return max(4, min(TRIANGLE_BUDGET[level], int(round(LOD_SHARE[level] * high_triangles))))
 
 
 class Finding(NamedTuple):
@@ -1017,6 +1858,8 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
 
     if stats.get("non_finite"):
         add("error", "non-finite", count=int(stats["non_finite"]))
+    if stats.get("placement") is not None and stats["placement"] > PLACEMENT_LIMIT:
+        add("error", "placement", distance=int(round(float(stats["placement"]) * 100)))
     if stats.get("uv_layers") == 0:
         add("error", "no-uv")
     else:
@@ -1026,7 +1869,7 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
         if area is not None and area < 0.05:
             add("warning", "uv-area", area=round(100.0 * float(area), 1))
     if stats.get("weighted") is False:
-        add("info", "no-weights")
+        add("error", "no-weights")  # the garment would stay in its rest pose in the game: never clean
     else:
         if stats.get("unweighted", 0) > 0:
             add("error", "unweighted", count=int(stats["unweighted"]))
@@ -1037,13 +1880,16 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
         add("warning", "colour-missing")
     elif colour == "format":
         add("warning", "colour-format")
-    for level, budget in GAME_VERTEX_BUDGET.items():
-        count = stats.get(f"game_vertices_{level}")
+    for level, budget in TRIANGLE_BUDGET.items():
+        count = stats.get(f"triangles_{level}")
         if count is not None and count > budget:
-            add("warning", "vertices", level=level, count=int(count), budget=budget)
+            add("warning", "triangles", level=level, count=int(count), budget=budget)
     share = stats.get("inside_share")
     if share is not None and share > INSIDE_SHARE_LIMIT:
         add("warning", "inside", share=round(100.0 * float(share), 1))
+    inward = stats.get("inward_share")
+    if inward is not None and inward > INWARD_LIMIT:
+        add("warning", "normals-inward", share=int(round(100.0 * float(inward))))
     if stats.get("materials", 1) > 1:
         add("info", "materials", count=int(stats["materials"]))
     return findings
@@ -1077,6 +1923,20 @@ def influence_counts(weights_per_vertex: Sequence[Sequence[float]]) -> Tuple[int
         elif used > MAX_INFLUENCES:
             over += 1
     return unweighted, over
+
+
+def limit_influences(weights: Any, limit: int = MAX_INFLUENCES) -> np.ndarray:
+    """A vertices-by-groups weight table with only each vertex's ``limit`` strongest weights kept and those summing to
+    1 (rows without weight stay empty)."""
+    table = np.asarray(weights, dtype=np.float64).copy()
+    if table.ndim != 2 or not table.size:
+        return table
+    if table.shape[1] > limit:
+        smallest = np.argsort(table, axis=1)[:, : table.shape[1] - limit]
+        np.put_along_axis(table, smallest, 0.0, axis=1)
+    table[table < 1e-6] = 0.0
+    total = table.sum(axis=1, keepdims=True)
+    return np.divide(table, total, out=np.zeros_like(table), where=total > 0)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1132,22 +1992,68 @@ def parse_preset(text: str) -> Tuple[Dict[str, Vector], Optional[str], Optional[
 
 
 # --------------------------------------------------------------------------------------------------
-# Units
+# Units and orientation
 # --------------------------------------------------------------------------------------------------
 
 
 #: The largest dimension, in metres, a garment of each kind has (with the arms of an A-pose or a T-pose). Each range
-#: spans less than a factor of 10, the step from centimetres to millimetres, so at most one unit fits.
+#: spans less than a factor of 10, the step from centimetres to millimetres, so at most one of those units fits.
 SIZE_RANGES = {"shoes": (0.08, 0.5), "pants": (0.25, 1.6), "shorts": (0.25, 1.6), "long_jacket": (0.4, 2.2)}
 TOP_SIZE_RANGE = (0.3, 1.8)
+#: The units Import Garment knows, with their factor to metres. Inches are tried last: a size that fits both
+#: centimetres and inches is far more often centimetres (Marvelous Designer's default).
+UNITS = {"m": 1.0, "cm": 0.01, "mm": 0.001, "in": 0.0254}
 
 
-def import_scale(size: float, category: str = "tshirt") -> float:
-    """The factor that brings an imported garment whose largest dimension is ``size`` (Blender units) to metres:
-    Marvelous Designer files are often in centimetres or millimetres. The unit whose size fits the category wins;
-    a size that fits none is kept as it is."""
+def import_scale(size: float, category: str = "tshirt", unit: str = "auto") -> float:
+    """The factor that brings an imported garment whose largest dimension is ``size`` (Blender units) to metres.
+    With ``unit`` ``auto``, the unit whose size fits the category wins (Marvelous Designer files are often in
+    centimetres or millimetres, other tools' in inches); a size that fits none is kept as it is."""
+    if unit in UNITS:
+        return UNITS[unit]
     low, high = SIZE_RANGES.get(category, TOP_SIZE_RANGE)
-    for factor in (1.0, 0.01, 0.001):
+    for factor in UNITS.values():
         if low <= size * factor <= high:
             return factor
     return 1.0
+
+
+def upright_turn(positions: Any, category: str) -> Optional[Tuple[str, float]]:
+    """How to turn an imported garment that does not stand in ped space: ``("x", ±90)`` for one lying on its back or
+    front (its height along Y, from a Y-up export read as Z-up), ``("z", 180)`` for a top facing +Y (its front, where
+    the neckline dips lower, at the back). ``None`` when it stands as the ped does, or nothing tells."""
+    points = as_points(positions)
+    if len(points) < 30 or category == "shoes":
+        return None
+    low, high = points.min(axis=0), points.max(axis=0)
+    extent = high - low
+    if extent[1] > 1.5 * extent[2] and extent[1] > 0.5 * extent[0]:
+        # Lying: which end of Y is the top? Trousers fill their middle at the waist only; a top carries its
+        # shoulders, sleeves and collar in its upper half, else (a vest) it is narrower at the neck.
+        cx = float(np.median(points[:, 0]))
+        middle = (low[1] + high[1]) / 2
+        if category in LOWER:
+            centre = points[np.abs(points[:, 0] - cx) < 0.02]
+            top_is_high_y = bool(len(centre)) and float(centre[:, 1].mean()) > middle
+        else:
+            lean = (float(points[:, 1].mean()) - middle) / extent[1]
+            if abs(lean) > 0.015:
+                top_is_high_y = lean > 0
+            else:
+                widths = []
+                for end in (low[1], high[1]):
+                    band = points[np.abs(points[:, 1] - end) < 0.15 * extent[1]]
+                    widths.append(float(band[:, 0].max() - band[:, 0].min()) if len(band) else 0.0)
+                top_is_high_y = widths[1] < widths[0]
+        return ("x", 90.0 if top_is_high_y else -90.0)
+    if category in LOWER:
+        return None
+    cx = float(np.median(points[:, 0]))
+    cy = float((low[1] + high[1]) / 2)
+    column = points[(np.abs(points[:, 0] - cx) < 0.03) & (points[:, 2] > high[2] - 0.35)]
+    front, back = column[column[:, 1] < cy], column[column[:, 1] >= cy]
+    if len(front) < 3 or len(back) < 3:
+        return None
+    if float(front[:, 2].max()) > float(back[:, 2].max()) + 0.02:
+        return ("z", 180.0)  # the side towards -Y reaches higher: that is the back of the neckline
+    return None

@@ -14,6 +14,7 @@ import pathlib
 import re
 import secrets
 import shutil
+import sys
 import time
 from typing import Any, Dict, List, NamedTuple, Optional, Sequence, Tuple
 
@@ -30,6 +31,9 @@ from .strings import Msg, UserError, msg
 SKELETON_TAG = "dct_skeleton"
 #: On the garment once Durty Cloth Tool added it: the name it was added under.
 ADDED = "dct_added"
+#: On the garment: the material it had before the add gave it the ped shader (kept in the file through this reference,
+#: never lost on save, and back with Ctrl+Z).
+SOURCE_MATERIAL = "dct_source_material"
 #: The add-on's folder (inside its data folder) for the skeleton template and the export of an add, one folder per
 #: use, removed right after.
 WORK_FOLDER = "garment-add"
@@ -328,15 +332,33 @@ def is_dds(image: Optional[Any]) -> bool:
 
 
 def ped_shader_index() -> int:
-    module = host.sollumz_module("ydr.shader_materials")
+    """The ped shader's place in Sollumz's shader list. Raises :class:`UserError` when Sollumz has none: any other
+    shader would put the garment into the game with the wrong material."""
+    module = host.sollumz_module("ydr.shader_materials") or next(
+        (m for name, m in list(sys.modules.items()) if name.endswith("sollumz.ydr.shader_materials")), None)
     names = [getattr(s, "value", s) for s in getattr(module, "shadermats", ())] if module is not None else []
-    return names.index(PED_SHADER) if PED_SHADER in names else 0
+    if PED_SHADER not in names:
+        raise fail("add.why.no-ped-shader")
+    return names.index(PED_SHADER)
 
 
 def _used_layer_names(mesh: Any) -> Tuple[List[str], List[str]]:
     uv = [layer.name for layer in mesh.uv_layers if re.fullmatch(r"UVMap \d+", layer.name)]
     colours = [c.name for c in mesh.color_attributes if re.fullmatch(r"Color \d+", c.name)]
     return uv, colours
+
+
+def match_uv_names(mesh: Any, names: Sequence[str]) -> None:
+    """Names a level of detail's UV maps as High's are named, in High's order: Sollumz renames only the mesh whose
+    material it creates, and a level of detail whose first map kept another name would export without UVs."""
+    layers = list(mesh.uv_layers)
+    wanted = list(names)[: len(layers)]
+    if [layer.name for layer in layers[: len(wanted)]] == wanted:
+        return
+    for index, layer in enumerate(layers[: len(wanted)]):
+        layer.name = f"dct_uv_{index}_{id(mesh)}"  # out of the way first, so no rename collides with another map
+    for layer, name in zip(list(mesh.uv_layers)[: len(wanted)], wanted):
+        layer.name = name
 
 
 def _add_layers(mesh: Any, uv_names: Sequence[str], colour_names: Sequence[str]) -> None:
@@ -399,6 +421,9 @@ def setup_material(context: Any, obj: Any, images: Dict[str, Optional[Any]]) -> 
             raise fail("add.why.material", detail=", ".join(sorted(result)))
         material = mesh.materials[count]
         if count:
+            old = mesh.materials[0]
+            if old is not None and obj.get(SOURCE_MATERIAL) is None:
+                obj[SOURCE_MATERIAL] = old  # the old material stays in the file with the garment
             mesh.materials[0] = material
             mesh.materials.pop(index=count)
         placeholders = [image for image in bpy.data.images[:] if image not in images_before]
@@ -421,7 +446,9 @@ def setup_material(context: Any, obj: Any, images: Dict[str, Optional[Any]]) -> 
         if image.users == 0:
             bpy.data.images.remove(image)
     uv_names, colour_names = _used_layer_names(mesh)
+    high_names = [layer.name for layer in mesh.uv_layers]
     for lod_mesh in lod_meshes(obj):
+        match_uv_names(lod_mesh, high_names)
         if len(lod_mesh.materials):
             lod_mesh.materials[0] = material
             for index in range(len(lod_mesh.materials) - 1, 0, -1):
@@ -440,6 +467,7 @@ def prepare_garment(context: Any, obj: Any, skeleton: Skeleton) -> Dict[str, Any
     if images["diffuse"] is None:
         raise fail("add.why.no-diffuse")
     convert_to_model(context, obj)
+    gh.retransfer_lod_weights(context, obj)  # levels of detail made before the weights get them now
     setup_material(context, obj, images)
     for mesh in [obj.data, *lod_meshes(obj)]:
         shade_smooth(mesh)
@@ -478,8 +506,9 @@ def export_garment(skeleton: Skeleton, folder: pathlib.Path) -> Export:
     return Export(files[0], files[1:], bool(result.warnings), summary)
 
 
-def picture(image: Any) -> Tuple[int, int, bytes]:
-    """A colour variation's image as a PNG (sRGB colour, 8 bits per channel), with its size."""
+def read_picture(image: Any) -> Tuple[np.ndarray, int, int, Any]:
+    """A colour variation's pixels as Blender holds them and how to turn them into sRGB colour, 8 bits per channel:
+    the part that reads Blender data (main thread only); :func:`encode_picture` does the rest anywhere."""
     problem = host.image_problem(image)
     if problem is not None:
         raise UserError(msg("add.picture.unusable", name=image.name if image is not None else "", problem=problem))
@@ -491,9 +520,20 @@ def picture(image: Any) -> Tuple[int, int, bytes]:
     plan = pixels.colour_plan("diffuse", channels, bool(image.is_float), colour.name,
                               bool(getattr(colour, "is_data", colour.name == "Non-Color")),
                               str(getattr(image, "alpha_mode", "STRAIGHT")))
+    return source, width, height, plan.conversion
+
+
+def encode_picture(source: np.ndarray, width: int, height: int, conversion: Any) -> bytes:
+    """What :func:`read_picture` read, as a PNG. Touches no Blender data, so it runs on a worker thread."""
     rgba = np.empty(width * height * 4, np.uint8)
-    pixels.to_rgba8(source, rgba, width, height, plan.conversion)
-    return width, height, garment_add.png_bytes(rgba, width, height)
+    pixels.to_rgba8(source, rgba, width, height, conversion)
+    return garment_add.png_bytes(rgba, width, height)
+
+
+def picture(image: Any) -> Tuple[int, int, bytes]:
+    """A colour variation's image as a PNG (sRGB colour, 8 bits per channel), with its size."""
+    source, width, height, conversion = read_picture(image)
+    return width, height, encode_picture(source, width, height, conversion)
 
 
 def store_added(root: Any, obj: Any, binding: Dict[str, str], name: str) -> None:
@@ -515,7 +555,10 @@ __all__ = [
     "garment_images",
     "import_skeleton",
     "picture",
+    "encode_picture",
+    "match_uv_names",
     "prepare_garment",
+    "read_picture",
     "remove_stale_work",
     "skeleton_of",
     "skeleton_problem",

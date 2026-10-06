@@ -11,7 +11,6 @@ TEXT = {
     "garment.next.import": "导入一件服装，或选择你的服装并点击使用所选服装。",
     "garment.next.body": "下一步：在初始设置面板中添加 freemode 身体。",
     "garment.next.markers": "下一步：在适配面板中用自动标记放置标记，然后检查它们的位置。",
-    "garment.next.tpose": "下一步：在适配面板中点击 T 字姿势转 A 字姿势。",
     "garment.next.check": "下一步：在修正面板中运行适配检查。",
     "garment.next.push": "下一步：服装有部分在身体内。请在修正面板中点击推出身体。",
     "garment.next.prepare": "下一步：在游戏就绪面板中点击准备服装。",
@@ -76,7 +75,7 @@ TEXT = {
     "garment.prop.marker-size": "标记大小",
     "garment.prop.marker-size.desc": "标记球体的显示大小",
     "garment.prop.arm-angle": "手臂角度",
-    "garment.prop.arm-angle.desc": "T 字姿势转 A 字姿势把手臂降到水平线以下的角度",
+    "garment.prop.arm-angle.desc": "身体关节未知时，T 字姿势转 A 字姿势把手臂降到水平线以下多少度（已知关节时，手臂会转到身体的手臂上）",
     "garment.prop.gap": "间隙（mm）",
     "garment.prop.push-gap.desc": "推出身体把服装移到身体外多远，单位为毫米",
     "garment.prop.snug-gap.desc": "贴合身体让区域与身体保持多远的距离，单位为毫米",
@@ -113,7 +112,7 @@ TEXT = {
     ),
     "garment.prop.lod-medium": "中级别三角面数",
     "garment.prop.lod-low": "低级别三角面数",
-    "garment.prop.lod.desc": "此细节级别最多保留的三角面数",
+    "garment.prop.lod.desc": "此细节级别最多保留的三角面数。0：取 High 的一部分，最多为 Durty Cloth Tool 建议的数量（Medium 为 15,000，Low 为 7,500）",
     "garment.prop.ground": "虚拟模特站在地面上",
     "garment.prop.ground.desc": (
         "服装是在站于高度 0 处的虚拟模特上制作的（如 Marvelous Designer 中）：把它下移到 ped 上，"
@@ -150,9 +149,7 @@ TEXT = {
         "改为从 GLB、glTF、FBX 或 OBJ 文件添加身体，以米为单位，并采用游戏中的姿势"
     ),
     "garment.op.auto-markers": "自动标记",
-    "garment.op.auto-markers.desc": (
-        "根据服装的形状放置关节标记（颈部、胸部、骨盆、肩部、肘部、手腕、髋部）。请移动位置不对的标记"
-    ),
+    "garment.op.auto-markers.desc": "根据服装形状放置关节标记（颈部、胸部、骨盆、肩部、肘部、手腕和髋部；裤子为髋部、膝盖和脚踝）。请移动位置不对的标记",
     "garment.op.mirror": "左侧镜像到右侧",
     "garment.op.mirror.desc": "把 ped 左侧的标记复制到右侧",
     "garment.op.save-preset": "保存姿势预设",
@@ -187,7 +184,7 @@ TEXT = {
     "garment.op.prepare": "准备服装",
     "garment.op.prepare.desc": "合并版片接缝，移除松散部分，三角化，平滑着色，并添加 ped 顶点色",
     "garment.op.combine": "合并材质",
-    "garment.op.combine.desc": "把所有 UV 岛打包到一个布局中，并把每个材质的颜色烘焙到一张贴图中",
+    "garment.op.combine.desc": "把所有 UV 岛打包进一个布局，并把所有材质烘焙为一个：带透明度的颜色，以及在有的情况下的法线、高光和自发光贴图",
     "garment.op.lods": "生成 LOD",
     "garment.op.lods.desc": "在 Sollumz 的 LOD 槽中生成中、低细节级别，并使用高细节级别的权重",
     "garment.op.validate": "验证",
@@ -245,7 +242,6 @@ TEXT = {
     "garment.finding.colour-format": (
         "Color 1 不是 Sollumz 所需的面拐（Face Corner）字节颜色（Byte Color）。准备服装会替换它。"
     ),
-    "garment.finding.vertices": "{level}细节级别有 {count} 个游戏顶点，超过了插件建议的 {budget} 个。",
     "garment.finding.inside": "服装有 {share}% 在身体内。",
     "garment.finding.materials": "服装有 {count} 个材质。合并材质会把它们合成一张贴图。",
     "garment.why.no-garment": "请先导入服装，或在初始设置面板中选择一件服装。",
@@ -312,7 +308,7 @@ TEXT = {
     "garment.done.cancel-sculpt": "已取消雕刻：服装已恢复到会话之前的形状。",
     "garment.done.tears": "{count} 个接缝顶点在测试姿势中裂开。它们位于顶点组 DCT Tears 中。",
     "garment.done.no-tears": "在测试姿势中没有接缝裂开。",
-    "garment.done.tears-welded": "服装没有可能撕裂的开放接缝。",
+    "garment.done.tears-welded": "接缝已经合并，因此这里不会有接缝裂开。请在 Durty Cloth Tool 的 3D 预览中查看服装在 ped 上运动时的效果。",
     "garment.done.prepare": (
         "已准备：合并了 {welded} 个接缝顶点，移除了 {removed} 个松散顶点，共 {triangles} 个三角面。"
     ),
@@ -320,10 +316,7 @@ TEXT = {
         "已准备：合并了 {welded} 个接缝顶点（发现里衬并使其保持分离），移除了 {removed} 个松散顶点，"
         "共 {triangles} 个三角面。"
     ),
-    "garment.done.combine": (
-        "已把 {count} 个材质合并为一张 {size} 像素的贴图；布局使用了其中的 {used}%"
-        "（切开了 {cut} 个长条）。"
-    ),
+    "garment.done.combine": "已把 {count} 个材质合并为一张 {size} 像素的贴图，服装上每厘米 {density} 像素（布局使用了 {used}%，切开了 {cut} 个长条）。",
     "garment.done.lods": "细节级别：高 {high}，中 {medium}，低 {low} 个三角面。",
     "garment.done.clean": "验证：CLEAN。",
     "garment.done.findings": "验证发现了 {count} 处需要查看的地方。",
@@ -339,24 +332,18 @@ TEXT = {
         "它作为独立的对象添加到场景中，工具永远不会更改它。"
     ),
     "garment.info.markers": (
-        "标记代表 ped 的关节：颈部、胸部、骨盆、肩部、肘部、手腕和髋部。自动标记会根据服装的形状放置它们；"
-        "请移动位置不对的标记。左侧镜像到右侧会把左侧复制到右侧。"
+        "标记代表 ped 的关节：颈部、胸部、骨盆、肩部、肘部、手腕和髋部（裤子为髋部、膝盖和脚踝）。自动标记会根据服装的形状放置它们，3D "
+        "视图中的连线把它们连起来：橙色连线表示有地方看起来不对。请移动位置不对的标记；左侧镜像到右侧会把左侧复制到右侧。"
     ),
-    "garment.info.tpose": (
-        "用于以 T 字姿势制作的服装：根据标记构建的临时骨架会把手臂降到手臂角度，之后会被移除。"
-        "标记会随之移动。"
-    ),
+    "garment.info.tpose": "把以 T 字姿势制作的服装的手臂转到手臂角度（已知身体关节时，转到身体的手臂上）。服装的每个部分按其位置跟随移动，因此接缝保持闭合。对齐到身体也会做这一步。",
     "garment.info.backups": (
-        "在每个会更改服装的步骤之前，其网格的副本会保存在 .blend 文件中（第一份和最新的几份）。"
-        "恢复适配前状态会恢复第一份。"
+        "在每个会更改服装的步骤之前，其网格的副本会保存在 .blend 文件中（第一份和最新的几份）。后退一步恢复最新的一份，恢复适配前状态恢复第一份。服装被删除或添加到 Durty Cloth Tool 时，备份会随之移除。"
     ),
     "garment.info.push": (
-        "把身体内或比间隙更靠近身体的所有部分移到身体外的间隙处。周围的顶点会跟随移动，因此不会形成折痕。"
+        "把身体内或比间隙更靠近身体的所有部分移到身体外的间隙处。周围的顶点会跟随移动，因此不会形成折痕，上面的层（衬里上的面料）也会一起移动。陷入身体超过 3 厘米的部分、顶点组 DCT Pinned "
+        "中的顶点以及被遮罩的顶点保持不动。"
     ),
-    "garment.info.regions": (
-        "贴合身体会把松垮的区域拉向身体，最近到间隙处。放松拉伸会让被拉伸的部分向原始大小恢复。"
-        "区域的边缘会平滑过渡。"
-    ),
+    "garment.info.regions": "贴合身体把松散的区域拉近身体，直到间隙为止；自由下垂的大衣下摆、裙子和兜帽保持原样。放松拉伸让被拉伸的部分恢复到接近原来的大小。区域边缘会平滑过渡。",
     "garment.info.problems": (
         "在你工作时为服装着色：红色表示在身体内，黄色表示太近，紫色表示与原始形状相比被拉伸，"
         "蓝色表示肩部悬空、离开了身体。"
@@ -370,20 +357,16 @@ TEXT = {
     ),
     "garment.info.tears": "需要服装带有骨架和权重。服装会依次摆出几个测试姿势（手臂上举、手臂前伸、腿部前伸、扭转），并报告裂开的接缝。",
     "garment.info.prepare": (
-        "合并版片之间的接缝（绝不会把里衬合并到外层上），移除松散部分，三角化，平滑着色，"
-        "并用上面的值为服装添加 Sollumz 的顶点色 Color 1 和 Color 2。"
+        "合并部件之间的接缝（绝不会把下摆与自身合并，也不会把衬里与外层面料合并：未被识别的衬里请放进顶点组 DCT Lining），移除零散部分，三角化，平滑着色，并使用选项中的值为服装添加 Sollumz 的顶点颜色 "
+        "Color 1 和 Color 2。"
     ),
     "garment.info.combine": (
-        "把所有 UV 岛打包到一个方形中，并把每个材质的颜色烘焙到一张贴图中，这张贴图会成为服装唯一的材质。"
-        "原始 UV 贴图会保留为 DCT Source UV。透明度不会被烘焙。"
+        "把所有 UV 岛打包进一个正方形，并把所有材质烘焙为一个：带透明度的颜色，以及材质具有的法线、高光和自发光贴图。它将成为服装唯一的材质。原始 UV 贴图保留为 DCT Source UV。"
     ),
     "garment.info.lods": (
-        "把服装的副本精简到各自的三角面预算，并放入 Sollumz 的中、低 LOD 槽中；它们的权重来自高细节级别。"
+        "把服装的副本减面到各个三角面预算，放入 Sollumz 的 Medium 和 Low LOD 槽位，并尽量保留开放边和 UV 接缝。每个级别都沿用 High 的权重（每个顶点四根骨骼），并被推出身体。"
     ),
-    "garment.info.validate": (
-        "快速的本地检查：权重、每个顶点超过四根骨骼、损坏的坐标、UV 布局、顶点色、每个细节级别的顶点数，"
-        "以及有多少部分在身体内。"
-    ),
+    "garment.info.validate": "快速本地检查：权重、每个顶点超过四根骨骼、损坏的坐标、服装的位置、反转的法线、UV 布局、顶点颜色、每个细节级别的三角面数，以及有多少部分在身体内。",
     # ---- adding to Durty Cloth Tool ----
     "error.item-limit": "项目中的服装数量已达到 Durty Cloth Tool 免费版允许的上限。",
     "garment.next.done": (
@@ -557,7 +540,66 @@ TEXT = {
         "某个颜色变体大于 Durty Cloth Tool 的建议尺寸（边长 2048 像素；最多接受 4096）。"
     ),
     "add.finding.picture.too-small": "某个颜色变体的边长小于 16 像素。",
+    "garment.next.align": "下一步：在适配面板中使用对齐到身体，让服装套在 freemode 身体上。",
+    "garment.next.weights": "下一步：把服装的权重绑定到 freemode 骨架的骨骼上（以骨骼名命名的顶点组，例如 SKEL_Spine3）。然后再生成 LOD，它们会沿用这些权重。",
+    "garment.region.forearms": "前臂",
+    "garment.region.cuffs": "袖口",
+    "garment.unit.auto": "自动",
+    "garment.unit.m": "米",
+    "garment.unit.cm": "厘米",
+    "garment.unit.mm": "毫米",
+    "garment.unit.in": "英寸",
+    "garment.unit.desc": "文件保存时使用的单位",
+    "garment.prop.unit": "单位",
+    "garment.prop.unit.desc": "文件保存时使用的单位。自动会选择能让服装尺寸合理的单位",
+    "garment.prop.orient": "自动摆正",
+    "garment.prop.orient.desc": "把仰面躺着或朝向后方的服装转过来，让它像 ped 一样站立",
+    "garment.prop.keep-size": "保持尺寸",
+    "garment.prop.keep-size.desc": "对齐到身体只移动和旋转服装，不按身体缩放",
+    "garment.heading.align": "对齐到身体",
+    "garment.heading.options": "选项",
+    "garment.op.align": "对齐到身体",
+    "garment.op.align.desc": "移动、旋转并缩放服装，让它的标记落在身体的关节上，然后把它的手臂或腿转到身体的手臂或腿上",
+    "garment.op.back": "后退一步",
+    "garment.op.back.desc": "恢复服装在上一次更改它的步骤之前的形状",
+    "garment.op.remove-backups": "移除备份",
+    "garment.op.remove-backups.desc": "从 .blend 文件中移除服装的备份",
+    "garment.align.source.hosted": "关节：来自 freemode 身体。",
+    "garment.align.source.dct": "关节：来自你的游戏文件，经由 Durty Cloth Tool。",
+    "garment.align.source.estimate": "关节：根据身体形状估算。连接 Durty Cloth Tool 后，对齐到身体会使用精确的关节。",
+    "garment.align.fetching": "正在从 Durty Cloth Tool 获取 freemode 骨架的关节…",
+    "garment.info.align": (
+        "移动、旋转并缩放服装，让它的标记落在 freemode 身体的关节上，然后把每条手臂（或腿）转到身体的对应部位上。修正面板中的工具以身体为参照进行测量，因此要等这一步完成。请先运行自动标记，并移动位置不对的标记。"
+    ),
+    "garment.done.align": "已对齐到身体：移动 {shift} 厘米，旋转 {turn}°，缩放到 {scale}%，转动了 {limbs} 条手臂或腿。标记平均距离关节 {residual} 毫米。",
+    "garment.why.align-first": "请先在适配面板中把服装对齐到身体。",
+    "garment.why.region-snug": "贴合身体不会处理大衣下摆和裙子：它们自由地垂在腿的周围。",
+    "garment.why.ped-material": "服装已经使用 ped 着色器，它的材质已经可以用于游戏。合并材质会替换它。",
+    "garment.marker-error.align-markers": "不大幅缩放或旋转服装，标记就无法对上身体的关节。请检查标记（标记之间的连线显示了它们的位置），然后重新对齐。",
+    "garment.marker-note.arms-estimated": "没有找到袖子，因此手臂按原始姿势放置。请检查手肘和手腕。",
+    "garment.marker-note.hood": "找到了兜帽：颈部标记放在兜帽下方。",
+    "garment.marker-note.skirt": "没有找到裤腿，因此髋部按常见比例放置（是裙子吗？）。",
+    "garment.marker-note.legs-estimated": "裤腿较短，因此膝盖和脚踝按常见比例放置。",
+    "garment.marker-problem.order": "标记从上到下的顺序不对。请检查颈部、胸部和骨盆。",
+    "garment.marker-problem.span": "两肩之间太近或太远。请检查肩部标记。",
+    "garment.marker-problem.symmetry": "左右两侧的标记不对称。左侧镜像到右侧可以让它们一致。",
+    "garment.marker-problem.arms": "某条手臂的标记太短、太长或向后弯折。请检查手肘和手腕。",
+    "garment.marker-problem.legs": "某条腿的标记太短或太长。请检查膝盖和脚踝。",
+    "garment.done.import-turned": "已导入 {name}（{count} 个顶点），并将其转为像 ped 一样站立。",
+    "garment.done.import-avatar": "已导入 {name}（{count} 个顶点），未包含随附的虚拟模特。",
+    "garment.done.back": "已恢复上一步之前的形状。",
+    "garment.done.remove-backups": "已移除 {count} 个备份。",
+    "garment.done.push-deep": "已移动 {moved} 个顶点。在身体内：之前 {before} 个，现在 {after} 个。有 {deep} 个陷得太深无法移动（袖子穿过了身体？）：请手动修正。",
+    "garment.done.prepare-thick": "已准备加厚导出：跨部件合并了 {welded} 个顶点，移除了 {walls} 面内壁，共 {triangles} 个三角面。",
+    "garment.done.cancel-sculpt-lost": "雕刻会话已结束，但其起始形状已丢失。Ctrl+Z 仍然保留着它。",
+    "garment.done.sculpt-mirror-off": "雕刻会话已开始。镜像 X 以服装自身的中心为镜像中心，而不是 ped 的中心：请先应用服装的变换，才能以 ped 为中心镜像。",
+    "garment.sculpt.broken": "雕刻会话丢失了起始形状（Dyntopo 或重建网格会这样）。接受会保留形状并结束会话。",
+    "garment.tears.pose-skipped": "{pose}：已跳过，骨架中没有对应的骨骼",
+    "garment.error.cycles": "合并材质使用 Cycles 烘焙。请在 编辑 > 偏好设置 > 插件 中启用 Cycles，然后重试。",
     "garment.body.compressed": "此 Blender 无法读取压缩的 freemode 身体。请使用 Blender 5.2 或更新版本，或使用身体文件，直到 gta.clothing 提供未压缩的身体。",
+    "garment.finding.triangles": "{level}细节级别有 {count} 个三角面，超过了 Durty Cloth Tool 建议的 {budget} 个。",
+    "garment.finding.placement": "服装中部距离身体 {distance} 厘米，说明它没有套在身体上。请检查导入设置（单位、模特站在地面上）并使用对齐到身体。",
+    "garment.finding.normals-inward": "靠近身体的表面有 {share}% 朝向身体内部：法线看起来是反的。请在编辑模式中把法线重新计算为朝外（网格 > 法向）。",
     "add.result.added-late": "Durty Cloth Tool 最终还是添加了 {name}：在取消请求到达之前，那边已经选择了添加到项目。现在它已在这里关联。",
     "add.warning.normal-not-embedded": "法线贴图 {name} 不是 DDS 文件，因此不会随模型一起发送。请在添加之后于 Durty Cloth Tool 中添加它。",
     "add.warning.specular-not-embedded": "高光贴图 {name} 不是 DDS 文件，因此不会随模型一起发送。请在添加之后于 Durty Cloth Tool 中添加它。",

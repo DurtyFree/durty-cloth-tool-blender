@@ -13,7 +13,6 @@ TEXT = {
     "garment.next.markers": (
         "A seguir: posicione os marcadores com Marcadores automáticos em Ajuste e depois confira onde eles ficaram."
     ),
-    "garment.next.tpose": "A seguir: passe a roupa da T-pose para a A-pose em Ajuste.",
     "garment.next.check": "A seguir: execute a verificação de ajuste em Correção.",
     "garment.next.push": (
         "A seguir: partes da roupa estão dentro do corpo. Use Empurrar para fora do corpo em Correção."
@@ -86,7 +85,10 @@ TEXT = {
     "garment.prop.marker-size": "Tamanho dos marcadores",
     "garment.prop.marker-size.desc": "O tamanho com que as esferas dos marcadores são desenhadas",
     "garment.prop.arm-angle": "Ângulo dos braços",
-    "garment.prop.arm-angle.desc": "Quanto abaixo da horizontal T-pose para A-pose abaixa os braços",
+    "garment.prop.arm-angle.desc": (
+        "Quanto T-pose para A-pose abaixa os braços abaixo da horizontal quando as articulações do corpo não são "
+        "conhecidas (com elas, os braços vão até os do corpo)"
+    ),
     "garment.prop.gap": "Folga (mm)",
     "garment.prop.push-gap.desc": (
         "A que distância fora do corpo Empurrar para fora do corpo move a roupa, em milímetros"
@@ -136,7 +138,10 @@ TEXT = {
     ),
     "garment.prop.lod-medium": "Triângulos (Médio)",
     "garment.prop.lod-low": "Triângulos (Baixo)",
-    "garment.prop.lod.desc": "O máximo de triângulos que este nível de detalhe mantém",
+    "garment.prop.lod.desc": (
+        "O máximo de triângulos que este nível de detalhe mantém. 0: uma parte de High, no máximo o que o Durty Cloth "
+        "Tool recomenda (15.000 para Medium, 7.500 para Low)"
+    ),
     "garment.prop.ground": "Avatar em pé no chão",
     "garment.prop.ground.desc": (
         "A roupa foi feita num avatar em pé na altura 0, como no Marvelous Designer: movê-la para baixo até o ped, "
@@ -175,8 +180,8 @@ TEXT = {
     ),
     "garment.op.auto-markers": "Marcadores automáticos",
     "garment.op.auto-markers.desc": (
-        "Posicionar os marcadores das articulações (pescoço, peito, pélvis, ombros, cotovelos, pulsos, quadris) a "
-        "partir da forma da roupa. Mova qualquer marcador que estiver fora do lugar"
+        "Posicionar os marcadores de articulação a partir da forma da roupa (pescoço, peito, pélvis, ombros, "
+        "cotovelos, pulsos e quadris; em calças os quadris, joelhos e tornozelos). Mova os que estiverem fora do lugar"
     ),
     "garment.op.mirror": "Espelhar E para D",
     "garment.op.mirror.desc": "Copiar os marcadores do lado esquerdo do ped para o lado direito",
@@ -227,7 +232,8 @@ TEXT = {
     ),
     "garment.op.combine": "Combinar materiais",
     "garment.op.combine.desc": (
-        "Empacotar todas as ilhas UV em um único layout e fazer o bake da cor de cada material em uma única textura"
+        "Agrupar todas as ilhas UV em um layout e fazer o bake de todos os materiais em um: a cor com a transparência, "
+        "e normal, specular e emission maps onde houver"
     ),
     "garment.op.lods": "Gerar LODs",
     "garment.op.lods.desc": (
@@ -301,9 +307,6 @@ TEXT = {
     "garment.finding.colour-missing": "Color 1 está faltando. Preparar roupa o adiciona.",
     "garment.finding.colour-format": (
         "Color 1 não está no formato que o Sollumz precisa (Byte Color em Face Corner). Preparar roupa o substitui."
-    ),
-    "garment.finding.vertices": (
-        "O nível {level} tem {count} vértices de jogo, mais do que os {budget} que o add-on recomenda."
     ),
     "garment.finding.inside": "{share} % da roupa está dentro do corpo.",
     "garment.finding.materials": (
@@ -396,7 +399,10 @@ TEXT = {
         "{count} vértices de costura se abrem numa pose de teste. Eles estão no grupo de vértices DCT Tears."
     ),
     "garment.done.no-tears": "Nenhuma costura se abre nas poses de teste.",
-    "garment.done.tears-welded": "A roupa não tem costuras abertas que possam rasgar.",
+    "garment.done.tears-welded": (
+        "As costuras estão unidas, então nenhuma pode abrir aqui. Confira a roupa em movimento no ped na "
+        "pré-visualização 3D do Durty Cloth Tool."
+    ),
     "garment.done.prepare": (
         "Preparada: {welded} vértices de costura unidos, {removed} vértices soltos removidos, {triangles} "
         "triângulos."
@@ -406,8 +412,8 @@ TEXT = {
         "vértices soltos removidos, {triangles} triângulos."
     ),
     "garment.done.combine": (
-        "{count} materiais combinados em uma textura de {size} pixels; o layout usa {used} % dela ({cut} faixas "
-        "cortadas)."
+        "{count} materiais combinados em uma textura de {size} pixels, {density} pixels por centímetro na roupa (o "
+        "layout usa {used} %, {cut} faixas cortadas)."
     ),
     "garment.done.lods": "Níveis de detalhe: Alto {high}, Médio {medium}, Baixo {low} triângulos.",
     "garment.done.clean": "Validar: CLEAN.",
@@ -426,25 +432,31 @@ TEXT = {
         "adicionado à cena como um objeto próprio, e as ferramentas nunca o alteram."
     ),
     "garment.info.markers": (
-        "Os marcadores representam as articulações do ped: pescoço, peito, pélvis, ombros, cotovelos, pulsos e "
-        "quadris. Marcadores automáticos os posiciona a partir da forma da roupa; mova os que estiverem fora do "
-        "lugar. Espelhar E para D copia o lado esquerdo para o direito."
+        "Os marcadores representam as articulações do ped: pescoço, peito, pélvis, ombros, cotovelos, pulsos e quadris "
+        "(em calças os quadris, joelhos e tornozelos). Marcadores automáticos os posiciona a partir da forma da roupa, "
+        "e linhas na vista 3D os ligam: linhas laranja indicam que algo parece errado. Mova os marcadores fora do "
+        "lugar; Espelhar E para D copia o lado esquerdo para o direito."
     ),
     "garment.info.tpose": (
-        "Para roupas feitas em T-pose: uma armature temporária criada a partir dos marcadores abaixa os braços até o "
-        "ângulo dos braços e depois é removida. Os marcadores acompanham."
+        "Gira os braços de uma roupa feita em T-pose até o ângulo dos braços (ou até os braços do corpo quando as "
+        "articulações dele são conhecidas). Cada parte da roupa acompanha conforme onde está, então as costuras "
+        "continuam fechadas. Alinhar ao corpo também faz isso."
     ),
     "garment.info.backups": (
-        "Antes de cada etapa que altera a roupa, uma cópia da malha dela é guardada no arquivo .blend (a primeira e "
-        "as mais recentes). Restaurar pré-ajuste coloca a primeira de volta."
+        "Antes de cada etapa que altera a roupa, uma cópia da malha dela é guardada no arquivo .blend (a primeira e as "
+        "mais recentes). Voltar um passo coloca a mais recente de volta; Restaurar pré-ajuste, a primeira. Elas vão "
+        "embora com a roupa quando ela é apagada ou adicionada ao Durty Cloth Tool."
     ),
     "garment.info.push": (
-        "Move tudo o que está dentro do corpo, ou mais perto que a folga, até a folga do lado de fora. Os vértices "
-        "ao redor acompanham, então não se forma nenhum vinco."
+        "Move tudo o que está dentro do corpo, ou mais perto que a folga, até a folga do lado de fora. Os vértices ao "
+        "redor acompanham, então não se forma nenhum vinco, e as camadas por cima (um tecido externo sobre o forro) "
+        "vão junto. Partes a mais de 3 cm para dentro, vértices do grupo DCT Pinned e vértices mascarados ficam no "
+        "lugar."
     ),
     "garment.info.regions": (
-        "Aproximar do corpo puxa uma região solta em direção ao corpo, até a folga. Relaxar áreas esticadas traz as "
-        "partes esticadas de volta para perto do tamanho original. As bordas da região se misturam suavemente."
+        "Aproximar do corpo puxa uma região solta para perto do corpo, até a folga; abas de casaco, saias e capuzes "
+        "que ficam soltos permanecem como estão. Relaxar áreas esticadas traz as partes esticadas de volta para o "
+        "tamanho original. As bordas da região se misturam."
     ),
     "garment.info.problems": (
         "Colore a roupa enquanto você trabalha: vermelho dentro do corpo, amarelo perto demais, roxo esticado em "
@@ -463,21 +475,24 @@ TEXT = {
         "braços para a frente, pernas para a frente, uma torção), e as costuras que se abrem são informadas."
     ),
     "garment.info.prepare": (
-        "Une as costuras entre os moldes (nunca um forro à camada externa), remove partes soltas, triangula, suaviza "
-        "o sombreamento e dá à roupa as cores de vértice Color 1 e Color 2 do Sollumz com os valores acima."
+        "Une as costuras entre as peças (nunca uma barra a ela mesma, nem um forro ao tecido externo: coloque um forro "
+        "que não for encontrado no grupo de vértices DCT Lining), remove partes soltas, triangula, suaviza o "
+        "sombreamento e dá à roupa as cores de vértice Color 1 e Color 2 do Sollumz com os valores em Opções."
     ),
     "garment.info.combine": (
-        "Empacota todas as ilhas UV em um único quadrado e faz o bake da cor de cada material em uma única textura, "
-        "que vira o único material da roupa. O mapa UV original é mantido como DCT Source UV. A transparência não "
-        "entra no bake."
+        "Agrupa todas as ilhas UV em um quadrado e faz o bake de todos os materiais em um: a cor com a transparência, "
+        "e um normal, specular e emission map onde um material tiver. Esse passa a ser o único material da roupa. O "
+        "mapa UV original é mantido como DCT Source UV."
     ),
     "garment.info.lods": (
-        "Reduz uma cópia da roupa a cada limite de triângulos e a coloca nos slots de LOD Médio e Baixo do Sollumz; "
-        "os pesos deles vêm do nível Alto."
+        "Reduz uma cópia da roupa a cada limite de triângulos e a coloca nos slots de LOD Medium e Low do Sollumz, "
+        "mantendo bordas abertas e costuras UV o máximo possível. Cada nível assume os pesos de High (quatro ossos por "
+        "vértice) e é empurrado para fora do corpo."
     ),
     "garment.info.validate": (
-        "Verificações locais rápidas: pesos, mais de quatro ossos por vértice, coordenadas inválidas, o layout UV, "
-        "cores de vértice, os vértices de cada nível de detalhe e quanto está dentro do corpo."
+        "Verificações locais rápidas: pesos, mais de quatro ossos por vértice, coordenadas quebradas, onde a roupa "
+        "está, normais invertidas, o layout UV, cores de vértice, os triângulos de cada nível de detalhe e quanto está "
+        "dentro do corpo."
     ),
     # ---- adding to Durty Cloth Tool ----
     "error.item-limit": "O projeto tem o máximo de roupas que a versão gratuita do Durty Cloth Tool permite.",
@@ -724,9 +739,133 @@ TEXT = {
         "4096)."
     ),
     "add.finding.picture.too-small": "Uma variação de cor tem menos de 16 pixels de lado.",
+    "garment.next.align": "A seguir: Alinhar ao corpo em Ajuste, para que a roupa fique sobre o corpo freemode.",
+    "garment.next.weights": (
+        "A seguir: dê pesos à roupa nos ossos do esqueleto freemode (grupos de vértices com os nomes deles, por "
+        "exemplo SKEL_Spine3). Depois gere os LODs, que assumem os pesos."
+    ),
+    "garment.region.forearms": "Antebraços",
+    "garment.region.cuffs": "Punhos",
+    "garment.unit.auto": "Automática",
+    "garment.unit.m": "Metros",
+    "garment.unit.cm": "Centímetros",
+    "garment.unit.mm": "Milímetros",
+    "garment.unit.in": "Polegadas",
+    "garment.unit.desc": "A unidade em que o arquivo foi salvo",
+    "garment.prop.unit": "Unidade",
+    "garment.prop.unit.desc": (
+        "A unidade em que o arquivo foi salvo. Automática escolhe a unidade que dá à roupa um tamanho plausível"
+    ),
+    "garment.prop.orient": "Colocar em pé",
+    "garment.prop.orient.desc": "Girar uma roupa deitada de costas ou virada para trás para que fique em pé como o ped",
+    "garment.prop.keep-size": "Manter tamanho",
+    "garment.prop.keep-size.desc": "Alinhar ao corpo apenas move e gira a roupa, sem ajustar o tamanho ao corpo",
+    "garment.heading.align": "Alinhar ao corpo",
+    "garment.heading.options": "Opções",
+    "garment.op.align": "Alinhar ao corpo",
+    "garment.op.align.desc": (
+        "Mover, girar e redimensionar a roupa para que os marcadores fiquem sobre as articulações do corpo, e depois "
+        "girar os braços ou as pernas dela até os do corpo"
+    ),
+    "garment.op.back": "Voltar um passo",
+    "garment.op.back.desc": "Colocar de volta a forma da roupa de antes do último passo que a alterou",
+    "garment.op.remove-backups": "Remover cópias de segurança",
+    "garment.op.remove-backups.desc": "Remover do arquivo .blend as cópias de segurança da roupa",
+    "garment.align.source.hosted": "Articulações: do corpo freemode.",
+    "garment.align.source.dct": "Articulações: dos seus arquivos do jogo, pelo Durty Cloth Tool.",
+    "garment.align.source.estimate": (
+        "Articulações: estimadas pela forma do corpo. Com o Durty Cloth Tool conectado, Alinhar ao corpo usa as "
+        "articulações exatas."
+    ),
+    "garment.align.fetching": "Buscando as articulações do esqueleto freemode no Durty Cloth Tool…",
+    "garment.info.align": (
+        "Move, gira e redimensiona a roupa para que os marcadores fiquem sobre as articulações do corpo freemode, e "
+        "depois gira cada braço (ou perna) até o do corpo. As ferramentas em Correção medem em relação ao corpo, então "
+        "esperam por este passo. Use Marcadores automáticos primeiro e mova os marcadores fora do lugar."
+    ),
+    "garment.done.align": (
+        "Alinhada ao corpo: movida {shift} cm, girada {turn}°, redimensionada para {scale} %, {limbs} braços ou pernas "
+        "girados. Os marcadores ficam em média a {residual} mm das articulações."
+    ),
+    "garment.why.align-first": "Alinhe a roupa ao corpo em Ajuste primeiro.",
+    "garment.why.region-snug": (
+        "Aproximar do corpo não mexe em abas de casaco e saias: elas ficam soltas em volta das pernas."
+    ),
+    "garment.why.ped-material": (
+        "A roupa já tem o shader ped, então o material dela está pronto para o jogo. Combinar materiais o "
+        "substituiria."
+    ),
+    "garment.marker-error.align-markers": (
+        "Os marcadores não se encaixam nas articulações do corpo sem redimensionar ou girar muito a roupa. "
+        "Verifique-os (as linhas entre eles mostram onde estão) e alinhe de novo."
+    ),
+    "garment.marker-note.arms-estimated": (
+        "Nenhuma manga foi encontrada, então os braços seguem a pose de origem. Verifique os cotovelos e os pulsos."
+    ),
+    "garment.marker-note.hood": "Um capuz foi encontrado: o marcador do pescoço fica embaixo dele.",
+    "garment.marker-note.skirt": (
+        "Nenhuma perna foi encontrada, então os quadris são posicionados por proporções comuns (uma saia?)."
+    ),
+    "garment.marker-note.legs-estimated": (
+        "As pernas terminam cedo, então os joelhos e os tornozelos são posicionados por proporções comuns."
+    ),
+    "garment.marker-problem.order": (
+        "Os marcadores não estão em ordem de cima para baixo. Verifique o pescoço, o peito e a pélvis."
+    ),
+    "garment.marker-problem.span": (
+        "Os ombros estão perto demais ou longe demais um do outro. Verifique os marcadores dos ombros."
+    ),
+    "garment.marker-problem.symmetry": (
+        "Os marcadores da esquerda e da direita não se espelham. Espelhar E para D os iguala."
+    ),
+    "garment.marker-problem.arms": (
+        "Os marcadores de um braço estão curtos demais, longos demais ou dobrados para trás. Verifique os cotovelos e "
+        "os pulsos."
+    ),
+    "garment.marker-problem.legs": (
+        "Os marcadores de uma perna estão curtos demais ou longos demais. Verifique os joelhos e os tornozelos."
+    ),
+    "garment.done.import-turned": "Importado: {name} ({count} vértices), girado para ficar em pé como o ped.",
+    "garment.done.import-avatar": "Importado: {name} ({count} vértices), sem o avatar que veio junto.",
+    "garment.done.back": "A forma de antes do último passo foi colocada de volta.",
+    "garment.done.remove-backups": "{count} cópias de segurança removidas.",
+    "garment.done.push-deep": (
+        "{moved} vértices movidos. Dentro do corpo: {before} antes, {after} agora. {deep} estão fundo demais para "
+        "mover (uma manga atravessando o corpo?): corrija-os à mão."
+    ),
+    "garment.done.prepare-thick": (
+        "Exportação grossa preparada: {welded} vértices unidos entre as peças, {walls} paredes internas removidas, "
+        "{triangles} triângulos."
+    ),
+    "garment.done.cancel-sculpt-lost": (
+        "A sessão de escultura terminou, mas a forma inicial dela se perdeu. Ctrl+Z ainda a tem."
+    ),
+    "garment.done.sculpt-mirror-off": (
+        "Sessão de escultura iniciada. Espelhar em X espelha em torno do centro da própria roupa, que não é o do ped: "
+        "aplique antes a transformação da roupa para espelhar em torno do ped."
+    ),
+    "garment.sculpt.broken": (
+        "A sessão de escultura perdeu a forma inicial (Dyntopo ou um remesh fazem isso). Aceitar mantém a forma e "
+        "encerra a sessão."
+    ),
+    "garment.tears.pose-skipped": "{pose}: ignorada, a armature não tem um osso para ela",
+    "garment.error.cycles": (
+        "Combinar materiais faz o bake com o Cycles. Ative o Cycles em Edit > Preferences > Add-ons e tente de novo."
+    ),
     "garment.body.compressed": (
         "Este Blender não consegue ler o corpo freemode comprimido. Use o Blender 5.2 ou mais novo, ou um arquivo de "
         "corpo, até que o gta.clothing ofereça o corpo sem compressão."
+    ),
+    "garment.finding.triangles": (
+        "O nível {level} tem {count} triângulos, mais do que os {budget} que o Durty Cloth Tool recomenda."
+    ),
+    "garment.finding.placement": (
+        "O meio da roupa está a {distance} cm do corpo, então ela não está sobre o corpo. Verifique a importação "
+        "(unidade, avatar no chão) e Alinhar ao corpo."
+    ),
+    "garment.finding.normals-inward": (
+        "{share} % da superfície perto do corpo está virada para dentro dele: as normais parecem invertidas. "
+        "Recalcule-as para fora no Edit Mode (Mesh > Normals)."
     ),
     "add.result.added-late": (
         "O Durty Cloth Tool adicionou {name} afinal: Adicionar ao projeto foi escolhido lá antes de o cancelamento "
