@@ -4,7 +4,8 @@ Thank you for helping! Bug reports, fixes, translations, tests and ideas are all
 repository is laid out, how to set it up on Windows, how to run the checks and what a pull request needs.
 
 Questions are best asked in the [Pleb Masters Community Discord](https://discord.plebmasters.de). Security problems
-never go into a public issue: follow [SECURITY.md](SECURITY.md).
+never go into a public issue: follow [SECURITY.md](SECURITY.md). How the add-on looks to its users is described in
+[the Blender documentation](https://docs.gta.clothing/creator-link/blender); a change to a control or a step there needs a matching change in those pages.
 
 ## 🧭 Before you start
 

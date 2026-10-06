@@ -12,7 +12,7 @@
 [![Blender 4.2 or later](https://img.shields.io/badge/Blender-4.2%2B-E87D0D?logo=blender&logoColor=white)](#-requirements)
 [![Platform: Windows x64](https://img.shields.io/badge/platform-Windows%20x64-0078D4)](#-requirements)
 
-[Install](#-installation) · [Getting started](#-getting-started) · [Documentation](https://docs.gta.clothing/) · [Discord](https://discord.plebmasters.de) · [Releases](https://github.com/DurtyFree/durty-cloth-tool-blender/releases)
+[Install](#-installation) · [Getting started](#-getting-started) · [Documentation](https://docs.gta.clothing/creator-link/blender) · [Discord](https://discord.plebmasters.de) · [Releases](https://github.com/DurtyFree/durty-cloth-tool-blender/releases)
 
 </div>
 
@@ -38,10 +38,11 @@ freemode cloth and add it to your Durty Cloth Tool project.
   already linked to that cloth and showing on the ped.
 - 👕 **Linked Cloth.** See the open project and the selected cloth (variation, type, gender, collection and number),
   with its picture and buttons that open its maps in Blender.
-- 🪡 **Garment Fitting (Experimental).** Import a garment, add the freemode body, place joint markers, bring a T-pose
-  into an A-pose, push the garment out of the body, snug or relax regions, see problem areas in colour, run a fit
-  check, sculpt with the body as a guide and check seams for tears. **Game Ready** joins seams, sets the ped vertex
-  colours, combines all materials into one texture, generates levels of detail and validates the result.
+- 🪡 **Garment Fitting (Experimental).** Import a garment, add the freemode body, place joint markers, align the
+  garment to the body (a T-pose becomes the game's pose on the way), push it out of the body, snug or relax regions,
+  see problem areas in colour, run a fit check, sculpt with the body as a guide and check seams for tears.
+  **Game Ready** joins seams, sets the ped vertex colours, combines all materials into one texture with its
+  transparency and maps, generates levels of detail and validates the result.
 - ➕ **Add to Durty Cloth Tool Project (Experimental).** Put a game-ready garment on the freemode skeleton, export it
   with Sollumz and add it as a new cloth, with its colour variations, to the project open in Durty Cloth Tool.
   Durty Cloth Tool shows the cloth first, and nothing is added until you confirm it there.
@@ -168,16 +169,25 @@ Images can be up to 4096 by 4096 pixels. To start from the cloth's own texture, 
 
 ### Fit a garment (Experimental)
 
-Open **Garment Fitting (Experimental)** in the DCT tab. Its first line always tells you the next step.
+Open **Garment Fitting (Experimental)** in the DCT tab. Its first line always tells you the next step, and the
+button for that step is the large one. Settings you rarely change sit in closed **Options** sections.
 
 1. **Setup:** choose gender, slot, category and the pose the garment was made in, then **Import Garment** and
-   **Add Freemode Body**.
-2. **Fit:** **Auto Markers**, then check the markers and move any that are off. Bring a T-pose into an A-pose here.
-3. **Fix:** **Run Fit Check**, **Push Out of Body**, **Snug to Body** and **Show Problems**, or sculpt by hand.
-4. **Game Ready:** **Prepare Garment**, **Combine Materials**, **Generate LODs** and **Validate**.
+   **Add Freemode Body**. The import converts centimetres, millimetres and inches to metres, and turns a garment
+   that lies down or faces backwards.
+2. **Fit:** **Auto Markers**, then check the markers and move any that are off (lines in the 3D view join them and
+   turn orange when something looks wrong). Then **Align to Body**: it moves and turns the garment so the markers
+   sit on the body's joints, and turns its arms (or legs) onto the body's, so a T-pose becomes the game's pose
+   without opening a seam.
+3. **Fix:** **Run Fit Check**, **Push Out of Body**, **Show Problems**, **Snug to Body** and **Relax Stretched**, or
+   sculpt by hand. These tools wait for **Align to Body**, because they measure against the body.
+4. **Game Ready:** **Prepare Garment** and **Combine Materials** (which keeps transparency and bakes normal,
+   specular and emission maps), then weight the garment to the freemode skeleton, then **Generate LODs** and
+   **Validate**.
 
 Every step that changes the garment can be undone with **Ctrl+Z**, and the garment keeps backups of its shape for
-**Restore Pre-fit**.
+**Back One Step** and **Restore Pre-fit**. The [Garment Fitting guide](https://docs.gta.clothing/creator-link/blender/garment-fitting) and the
+[Game Ready guide](https://docs.gta.clothing/creator-link/blender/game-ready) walk through each step.
 
 ### Add the garment to your project (Experimental)
 
@@ -188,7 +198,8 @@ The last part of **Game Ready** adds the garment as a new cloth to the project o
 - Sollumz.
 - One material with a colour texture (**Combine Materials** makes one).
 - Weights for the freemode skeleton: vertex groups named after its bones, such as `SKEL_Spine3`. Weight the garment
-  yourself, for example with Blender's weight painting.
+  yourself, for example with Blender's weight painting. **Use Durty Cloth Tool Skeleton** gives you the bones to
+  weight to; levels of detail made before the weights get them when the garment is added.
 
 Then:
 
@@ -199,15 +210,20 @@ Then:
    up to 2048 pixels work best.
 3. Select **Add to Durty Cloth Tool Project**. The add-on checks the garment and lists anything that blocks the add
    under the button. It puts the garment on the Durty Cloth Tool skeleton when needed (**Use Durty Cloth Tool
-   Skeleton** does this on its own), exports it with Sollumz and sends it to Durty Cloth Tool.
+   Skeleton** does this on its own), exports it with Sollumz, writes the colour variations and sends it to Durty
+   Cloth Tool, showing its progress; **Cancel** stops it at any point.
 4. Durty Cloth Tool shows the cloth with its checks. Nothing is added until you choose **Add to project** there;
    **Cancel** in Blender withdraws the add while Durty Cloth Tool still asks.
 
 Durty Cloth Tool's plan limits apply to every add, and the panel says when the project is full. Once the cloth is
 added, the garment's model is linked to it, so **Push Model** and **Save Model to Cloth** update that cloth (with
-Durty Cloth Tool Ultimate). Undo in Blender does not remove the cloth from the project; remove it in Durty Cloth Tool.
+Durty Cloth Tool Ultimate), also when Durty Cloth Tool confirms the add only after a cancel. Undo in Blender does not
+remove the cloth from the project; remove it in Durty Cloth Tool. The
+[Add to a Project guide](https://docs.gta.clothing/creator-link/blender/add-to-a-project) has the details.
 
-The [documentation](https://docs.gta.clothing/) explains Durty Cloth Tool and its workflows in detail.
+The [Blender documentation](https://docs.gta.clothing/creator-link/blender) explains the add-on step by step, with
+[live preview and models](https://docs.gta.clothing/creator-link/blender/live-preview-and-models) and [use cases](https://docs.gta.clothing/creator-link/blender/use-cases); the
+[documentation](https://docs.gta.clothing/) covers Durty Cloth Tool itself.
 
 ## 🧭 How it works
 
@@ -230,7 +246,7 @@ The [documentation](https://docs.gta.clothing/) explains Durty Cloth Tool and it
 ## 🔗 Links
 
 - 🌐 **gta.clothing:** [gta.clothing](https://gta.clothing/), Durty Cloth Tool's website and your account
-- 📚 **Documentation:** [docs.gta.clothing](https://docs.gta.clothing/)
+- 📚 **Documentation:** [the Blender add-on](https://docs.gta.clothing/creator-link/blender) on [docs.gta.clothing](https://docs.gta.clothing/)
 - 🔌 **Plugins page:** [the plugins page on gta.clothing](https://gta.clothing/account/plugins/), with the install
   links of every Durty Cloth Tool plugin
 - 💬 **Community and support:** the [Pleb Masters Community Discord](https://discord.plebmasters.de). Use **Copy
