@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""Registration: translations, the logo icon, classes (the link's and the garment fitting tools'), the timer that
-drives the link, and the handlers for file loads, undo and model changes."""
+"""Registration: translations, the logo icon, classes (the link's, the garment fitting tools' and Custom Ped's), the
+timer that drives the link, and the handlers for file loads, undo and model changes."""
 
 from __future__ import annotations
 
@@ -12,7 +12,8 @@ import traceback
 import bpy
 from bpy.app.handlers import persistent
 
-from . import garment_dct, host, link, preferences, settings, state, strings, translations, ui, ui_garment
+from . import garment_dct, host, link, ped_link, preferences, settings, state, strings, translations, ui, ui_garment
+from . import ui_ped
 from .strings import msg
 
 _started = False
@@ -31,6 +32,8 @@ def tick() -> float:
             _started = True
             _start(ctrl)
         interval = ctrl.poll()
+        if ctrl.peds.busy:  # a rig reports its progress, a ped's upload goes out
+            interval = min(interval, 0.05)
     except Exception as exc:  # noqa: BLE001 - keep the timer alive and show the problem
         traceback.print_exc()
         ctrl.notice = link.Notice("ERROR", msg("notice.unexpected", detail=f"{type(exc).__name__}: {exc}"))
@@ -153,6 +156,7 @@ def _remove_translations() -> None:
 @persistent
 def _on_load_pre(*_args) -> None:
     ui_garment.on_load_pre()
+    ui_ped.on_load_pre()
     ctrl = state.controller
     if ctrl is not None:
         ctrl.stream.stop()
@@ -193,6 +197,7 @@ def register() -> None:
     preferences.register()
     ui.register()
     ui_garment.register()
+    ui_ped.register()
     ctrl = link.LinkController(
         lambda: host.data_dir(state.PACKAGE),
         host.host_version(),
@@ -206,6 +211,8 @@ def register() -> None:
     ctrl.linked_binding = state.linked_binding
     ctrl.on_thumbnail = _show_thumbnail
     ctrl.fitting.on_ended = ui_garment.fit_ended
+    ctrl.peds = ped_link.PedLink(ctrl)
+    ctrl.peds.on_created = ui_ped.on_created
     state.controller = ctrl
     state.watcher.clear()
     _started = False
@@ -228,6 +235,7 @@ def unregister() -> None:
         except Exception:  # noqa: BLE001 - disabling must always finish
             traceback.print_exc()
     state.watcher.clear()
+    ui_ped.unregister()
     ui_garment.unregister()
     ui.unregister()
     preferences.unregister()

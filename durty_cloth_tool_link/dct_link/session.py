@@ -42,8 +42,9 @@ import socket
 import struct
 import threading
 import time
-from typing import Any, Callable, Dict, Iterable, List, NamedTuple, Optional, Sequence, Set, Tuple, Union
+from typing import Any, Callable, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
 
+from . import ped as ped_module
 from . import protocol
 from .protocol import ProtocolError
 from .ws import Event, WebSocketClient, WebSocketError
@@ -475,7 +476,7 @@ class Request:
 #: the session queues the rest.
 SERVICE_TYPES = frozenset(
     {"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push", "item.thumbnail",
-     "skeleton.template"}
+     "skeleton.template", "ped.templates", "ped.skeleton"}
 )
 MAX_SERVICE_IN_FLIGHT = 2
 
@@ -497,6 +498,10 @@ _RESPONSES: Dict[str, Tuple[str, ...]] = {
     "item.thumbnail": ("item.thumbnail.data",),
     "skeleton.template": ("skeleton.template.data",),
     "item.add": ("item.addResult",),
+    "ped.templates": ("ped.templates.list",),
+    "ped.skeleton": ("ped.skeleton.data",),
+    "ped.rig": ("ped.rig.result",),
+    "ped.add": ("ped.addResult",),
 }
 
 
@@ -1006,47 +1011,173 @@ def _item_add_answer(answer: Any) -> ItemAddResult:
     )
 
 
+# ---- custom peds ----
+
+
+class PedTemplates(NamedTuple):
+    """The human ped templates DCT lists (``ped.templates.list``): each a dict with ``model``, ``gender`` (absent
+    when DCT cannot tell it), ``pedType``, ``layout``, ``group`` and ``recommended``, recommended entries first.
+    ``truncated`` says more matched than DCT sent."""
+
+    templates: List[Dict[str, Any]]
+    truncated: bool
+    ok: bool = True
+
+
+class PedRefusal(NamedTuple):
+    """Why :meth:`LinkSession.list_ped_templates` or :meth:`LinkSession.request_ped_skeleton` got nothing: DCT's error
+    code (``game-required`` without a GTA V Legacy folder, ``template-not-found``, ``busy`` ...)."""
+
+    code: str
+    ok: bool = False
+
+
+class PedRigRefusal(NamedTuple):
+    """Why a rig produced nothing: DCT's code (``needs-license``, ``needs-ultimate``, ``busy``, ``game-required``,
+    ``template-not-found``, ``mesh-too-large``, ``rig-refused``, ``cancelled`` ...) and, for a refusal, its reasons
+    (dicts with ``code`` from :data:`protocol.PED_RIG_REFUSALS`, optional ``markers`` and an English ``message``).
+    ``job`` names the rig when DCT had accepted it."""
+
+    code: str
+    reasons: List[Dict[str, Any]]
+    job: Optional[str] = None
+    ok: bool = False
+
+
+class PedAddResult(NamedTuple):
+    """DCT's answer to :meth:`LinkSession.add_ped` (``ped.addResult``, or an ``error`` that answered the add).
+
+    ``ok`` true: DCT created and opened the custom ped project; ``project`` holds its ``name``, ``model`` and
+    ``template``. ``ok`` false: ``code`` says why (``request-denied`` when the user chose Cancel or the add was
+    withdrawn, ``needs-license``, ``model-rejected``, ``upload-incomplete``, ``busy``, ``rate-limited``,
+    ``game-required``, ``template-not-found``, ``save-failed``). ``findings`` are DCT's checks of the character."""
+
+    ok: bool
+    code: Optional[str]
+    project: Optional[Dict[str, str]]
+    findings: List[Dict[str, str]]
+
+
+def _ped_templates_answer(answer: Any) -> Union[PedTemplates, PedRefusal]:
+    if isinstance(answer, PedRefusal):
+        return answer
+    return PedTemplates([dict(entry) for entry in answer["templates"]], bool(answer["truncated"]))
+
+
+def _ped_skeleton_answer(model: str) -> Callable[[Any], Union[ped_module.PedSkeleton, PedRefusal]]:
+    def result(answer: Any) -> Union[ped_module.PedSkeleton, PedRefusal]:
+        if isinstance(answer, PedRefusal):
+            return answer
+        if answer.header["model"].lower() != model.lower():
+            raise LinkError("protocol-violation", "DCT answered ped.skeleton with the skeleton of another template")
+        return ped_module.decode_ped_skeleton(answer)
+
+    return result
+
+
+def _ped_rig_answer(template: str, vertices: int) -> Callable[[Any], Union[ped_module.PedRig, PedRigRefusal]]:
+    def result(answer: Any) -> Union[ped_module.PedRig, PedRigRefusal]:
+        if isinstance(answer, PedRigRefusal):
+            return answer
+        header = answer.header
+        if not header["ok"]:
+            reasons = [dict(reason) for reason in header.get("reasons") or []]
+            return PedRigRefusal(header["code"], reasons, header.get("job"))
+        if header["vertices"] != vertices or header["template"].lower() != template.lower():
+            raise LinkError("protocol-violation", "DCT answered ped.rig with a rig of another mesh or template")
+        return ped_module.decode_ped_rig(answer)
+
+    return result
+
+
+def _ped_add_answer(answer: Any) -> PedAddResult:
+    if isinstance(answer, PedAddResult):
+        return answer
+    project = answer.get("project")
+    return PedAddResult(
+        bool(answer["ok"]),
+        answer.get("code"),
+        None if project is None else {"name": project["name"], "model": project["model"], "template": project["template"]},
+        [{"code": finding["code"], "severity": finding["severity"]} for finding in answer["findings"]],
+    )
+
+
 #: Requests whose ``error`` answer is a typed refusal (a result of the request), not a failure of it.
 _REFUSALS: Dict[str, Callable[[str], Any]] = {
     "item.thumbnail": ThumbnailRefusal,
     "skeleton.template": SkeletonTemplateRefusal,
     "item.add": lambda code: ItemAddResult(False, code, None, []),
+    "ped.templates": PedRefusal,
+    "ped.skeleton": PedRefusal,
+    "ped.rig": lambda code: PedRigRefusal(code, []),
+    "ped.add": lambda code: PedAddResult(False, code, None, []),
 }
 
-#: How long a withdrawn ``item.add`` waits for DCT's ``item.addResult`` before it fails on its own.
+#: How long a withdrawn request (``item.add``, ``ped.rig``, ``ped.add``) waits for DCT's answer before it fails.
 _ADD_CANCEL_GRACE_SECONDS = 10.0
 
 
-class ItemAddRequest(Request):
-    """A pending ``item.add`` (:meth:`LinkSession.add_item`). Resolves with an :class:`ItemAddResult`, whatever DCT
-    decided, and fails with :class:`LinkError` only when DCT gave no answer: ``disconnected``, or ``cancelled`` /
-    ``timeout`` when a withdrawn add got no answer in time.
+class WithdrawableRequest(Request):
+    """A request DCT may work on, or ask its user about, for a long time: ``item.add``, ``ped.rig`` and ``ped.add``.
+    It resolves with DCT's answer, whatever it says, and fails with :class:`LinkError` only when DCT gave no answer:
+    ``disconnected``, or ``cancelled`` / ``timeout`` when a withdrawn request got no answer in time.
 
-    When it times out, the session first withdraws the add (``item.addCancel``) and waits a short grace for DCT's
-    answer, exactly as :meth:`cancel` does. When DCT answers a withdrawn add after the grace, on the same
+    When it times out, the session first withdraws it (its cancel message) and waits a short grace for DCT's answer,
+    exactly as :meth:`cancel` does. When DCT answers a withdrawn ``item.add`` after the grace, on the same
     connection, the session emits ``item-add-late(request, ItemAddResult)``: the user may have chosen Add just as
     the withdrawal arrived, so a host keeps listening for that event rather than for the request."""
 
+    #: The message that withdraws this request.
+    cancel_type = "item.addCancel"
+
     def __init__(self, session: "LinkSession", request_id: str, message_type: str, timeout: Optional[float]) -> None:
         super().__init__(session, request_id, message_type, timeout)
-        self._withdrawn: Optional[str] = None  # "cancelled" or "timeout" once item.addCancel was sent
+        self._withdrawn: Optional[str] = None  # "cancelled" or "timeout" once the cancel was sent
 
     @property
     def withdrawn(self) -> bool:
-        """``item.addCancel`` was sent for this add (by :meth:`cancel`, or when it timed out)."""
+        """The cancel was sent for this request (by :meth:`cancel`, or when it timed out)."""
         return self._withdrawn is not None
 
     def cancel(self) -> bool:
-        """Withdraws the add while DCT still asks the user: sends ``item.addCancel`` once and keeps waiting up to 10
-        seconds for DCT's answer, normally ``request-denied`` (an :class:`ItemAddResult` with ``ok`` false). When the
-        user chose Add at that moment the answer is the added cloth; the result says which. Without an answer in time
-        the request fails with ``cancelled``. True when the cancel was sent now; False when the add has finished or
-        was withdrawn already. Callable from any thread."""
+        """Withdraws the request while DCT still works on it or asks its user: sends the cancel once and keeps waiting
+        up to 10 seconds for DCT's answer (``request-denied`` for an add, ``cancelled`` for a rig). When DCT finished at
+        that moment the answer is the finished result; the result says which. Without an answer in time the request
+        fails with ``cancelled``. True when the cancel was sent now; False when the request has finished or was
+        withdrawn already. Callable from any thread."""
         session = self.session
         with session._lock:
-            sent = session._withdraw_add(self, "cancelled")
+            sent = session._withdraw(self, "cancelled")
         session._run_calls()
         return sent
+
+
+class ItemAddRequest(WithdrawableRequest):
+    """A pending ``item.add`` (:meth:`LinkSession.add_item`). Resolves with an :class:`ItemAddResult`, whatever DCT
+    decided; :meth:`cancel` sends ``item.addCancel``."""
+
+    cancel_type = "item.addCancel"
+
+
+class PedRigRequest(WithdrawableRequest):
+    """A pending ``ped.rig`` (:meth:`LinkSession.rig_ped`). Resolves with a :class:`ped.PedRig` or a
+    :class:`PedRigRefusal`; :meth:`cancel` sends ``ped.rig.cancel``. ``job`` is DCT's id for the rig once it
+    accepted it (``ped.rig.accepted``)."""
+
+    cancel_type = "ped.rig.cancel"
+
+    def __init__(self, session: "LinkSession", request_id: str, message_type: str, timeout: Optional[float]) -> None:
+        super().__init__(session, request_id, message_type, timeout)
+        self.job: Optional[str] = None
+        self.on_accepted: Optional[Callable[[str], Any]] = None
+        self.on_progress: Optional[Callable[[str, float], Any]] = None
+
+
+class PedAddRequest(WithdrawableRequest):
+    """A pending ``ped.add`` (:meth:`LinkSession.add_ped`). Resolves with a :class:`PedAddResult`; :meth:`cancel`
+    sends ``ped.addCancel``."""
+
+    cancel_type = "ped.addCancel"
 
 
 def _pairs(values: Any, what: str, shape: str) -> List[Tuple[Any, Any]]:
@@ -2363,18 +2494,19 @@ class LinkSession:
 
     def _expire_requests(self, now: float) -> None:
         for request in [r for r in self._pending.values() if r.deadline is not None and now > r.deadline]:
-            if isinstance(request, ItemAddRequest):
+            if isinstance(request, WithdrawableRequest):
                 if request._withdrawn is None:
-                    # DCT may still be asking the user: withdraw the add and wait a short grace for its answer.
-                    self._withdraw_add(request, "timeout")
+                    # DCT may still be working or asking the user: withdraw it and wait a short grace for its answer.
+                    self._withdraw(request, "timeout")
                 else:
                     self._pending.pop(request.id, None)
                     self._finish_request(request, error=LinkError(
-                        request._withdrawn, "DCT did not answer the withdrawn item.add"))
-                    # DCT may still answer it (the user chose Add as the withdrawal arrived): report that answer.
-                    self._late_adds[request.id] = request
-                    while len(self._late_adds) > _MAX_LATE_ADDS:
-                        self._late_adds.popitem(last=False)
+                        request._withdrawn, f"DCT did not answer the withdrawn {request.type}"))
+                    if isinstance(request, ItemAddRequest):
+                        # DCT may still answer it (the user chose Add as the withdrawal arrived): report that answer.
+                        self._late_adds[request.id] = request
+                        while len(self._late_adds) > _MAX_LATE_ADDS:
+                            self._late_adds.popitem(last=False)
                 continue
             self._pending.pop(request.id, None)
             if request.id in self._service_in_flight:
@@ -2539,20 +2671,159 @@ class LinkSession:
         self._run_calls()
         return request  # type: ignore[return-value]
 
-    def _withdraw_add(self, request: ItemAddRequest, reason: str) -> bool:
-        """Sends ``item.addCancel`` for an add that still waits, once, and gives DCT a short grace to answer it (its
-        answer then resolves the request as usual). Under the lock."""
+    def _withdraw(self, request: WithdrawableRequest, reason: str) -> bool:
+        """Sends the cancel of a request that still waits, once, and gives DCT a short grace to answer it (its answer
+        then resolves the request as usual). Under the lock."""
         if request.done or request._withdrawn is not None or self._pending.get(request.id) is not request:
             return False
         request._withdrawn = reason
         request.deadline = self._clock() + _ADD_CANCEL_GRACE_SECONDS
         try:
-            self._send({"type": "item.addCancel", "id": self._new_id(), "re": request.id})
+            self._send({"type": request.cancel_type, "id": self._new_id(), "re": request.id})
         except LinkError as exc:
             self._pending.pop(request.id, None)
             self._finish_request(request, error=exc)
             return False
         return True
+
+    # ---- custom peds (Blender) ------------------------------------------------------------------------
+
+    def list_ped_templates(self, gender: Optional[str] = None, show_all: bool = False, timeout: Optional[float] = 120.0) -> Request:
+        """``ped.templates``: the human ped templates installed in the GTA V Legacy folder DCT uses, recommended entries
+        first. Without ``show_all`` only ambient peds; ``show_all`` adds freemode, player, cutscene and story templates. ``gender``
+        filters by gender (``ValueError`` for another value). Resolves with :class:`PedTemplates`, or with a
+        :class:`PedRefusal` when DCT refused (``game-required``). A service request (two at a time); DCT reads its
+        game files the first time."""
+        if gender is not None and gender not in protocol.GENDERS:
+            raise ValueError("gender is 'male', 'female' or None")
+        if type(show_all) is not bool:
+            raise ValueError("show_all is True or False")
+        fields: Dict[str, Any] = {"all": show_all}
+        if gender is not None:
+            fields["gender"] = gender
+        return self.request("ped.templates", fields, timeout=timeout, transform=_ped_templates_answer)
+
+    def request_ped_skeleton(self, model: str, timeout: Optional[float] = 120.0) -> Request:
+        """``ped.skeleton``: the rest skeleton of an installed human template (``ValueError`` for a name that is not a
+        ped model name). Resolves with a :class:`ped.PedSkeleton` (every bone with its tag, parent, flags, local rest
+        transform and rest world matrix, in the skeleton's order), or with a :class:`PedRefusal` (``game-required``,
+        ``template-not-found``). Fails with ``protocol-violation`` when DCT answers with another template. A service
+        request."""
+        if not protocol.is_ped_model(model):
+            raise ValueError("model is a ped model name")
+        return self.request("ped.skeleton", {"model": model}, timeout=timeout, transform=_ped_skeleton_answer(model))
+
+    def rig_ped(
+        self,
+        template: str,
+        markers: Mapping[str, Sequence[float]],
+        positions: Any,
+        triangles: Any,
+        *,
+        rights_confirmed: bool,
+        parts: Optional[Sequence[str]] = None,
+        part_ids: Any = None,
+        options: Optional[Mapping[str, Any]] = None,
+        on_accepted: Optional[Callable[[str], Any]] = None,
+        on_progress: Optional[Callable[[str, float], Any]] = None,
+        timeout: Optional[float] = 600.0,
+    ) -> PedRigRequest:
+        """``ped.rig`` (Ultimate): DCT fits the template's skeleton to the character's markers and computes weights and
+        the rest pose from the user's own game files. ``positions`` holds x, y, z per vertex and ``triangles`` three
+        vertex indices each (sequences, or buffers such as NumPy ``float32`` and ``uint32`` arrays, sent without a
+        copy: do not change them until the request finishes); with ``parts`` (part roles) ``part_ids`` names each
+        vertex's part. ``rights_confirmed`` must be True: the user confirmed the rights notice for this character.
+        A broken rule raises ``ValueError`` before anything is sent.
+
+        Resolves with a :class:`ped.PedRig`, or with a :class:`PedRigRefusal` whatever DCT refused with.
+        ``on_accepted(job)`` runs once DCT started the rig, ``on_progress(stage, fraction)`` at most four times a second
+        while it runs. It takes no service slot; :meth:`PedRigRequest.cancel` (or a timeout) sends ``ped.rig.cancel``.
+        Callable from any thread."""
+        prepared = ped_module.prepare_ped_rig(template, markers, positions, triangles, rights_confirmed=rights_confirmed,
+                                             parts=parts, part_ids=part_ids, options=options)
+        vertices = prepared.header["mesh"]["vertices"]
+        with self._lock:
+            request = self._register("ped.rig", timeout, PedRigRequest)
+            request.transform = _ped_rig_answer(template, vertices)
+            request.on_accepted, request.on_progress = on_accepted, on_progress
+            header = dict(prepared.header, id=request.id)
+            ws = self._ws
+            try:
+                prefix = protocol.encode_binary_header(header, prepared.size)
+                if ws is None or not ws.is_open:
+                    raise LinkError("disconnected", "not connected to DCT")
+                ws.send_binary(prefix, *prepared.parts)
+            except (LinkError, ProtocolError, WebSocketError) as exc:
+                self._pending.pop(request.id, None)
+                self._finish_request(request, error=_link_error(exc))
+        self._run_calls()
+        return request  # type: ignore[return-value]
+
+    def add_ped(
+        self,
+        template: str,
+        name: str,
+        model: str,
+        glb: Any,
+        *,
+        rights_confirmed: bool,
+        rig: Optional[str] = None,
+        ragdoll: Optional[str] = None,
+        parts: Optional[Sequence[Tuple[str, str]]] = None,
+        timeout: Optional[float] = 900.0,
+    ) -> PedAddRequest:
+        """``ped.add`` (Advanced or Ultimate): uploads the rigged character as a GLB in chunks; DCT builds the ped, shows
+        it to its user and asks where to create the project, so the answer can take minutes. ``name`` is the name the
+        user sees, ``model`` the new ped's model name, ``rig`` the job of the rig the GLB carries, ``ragdoll`` another
+        shared ragdoll body (``fred``, ``wilma``, ``fred-large``, ``wilma-large``), ``parts`` ``(mesh name, role)``
+        pairs (a mesh not listed is ``body``). ``rights_confirmed`` must be True. A broken rule raises ``ValueError``
+        before anything is sent; the GLB is sent without a copy.
+
+        Resolves with a :class:`PedAddResult`, whatever DCT decided. It takes no service slot;
+        :meth:`PedAddRequest.cancel` (or a timeout) sends ``ped.addCancel``. Callable from any thread."""
+        if rights_confirmed is not True:
+            raise ValueError("the user has not confirmed the rights notice for this character; DCT refuses an add without it")
+        sha256, chunks = ped_module.plan_ped_add_upload(glb)
+        message: Dict[str, Any] = {"type": "ped.add", "template": template, "name": name, "model": model, "rights": True,
+                                   "glbLength": sum(chunk.nbytes for chunk in chunks), "chunks": len(chunks), "sha256": sha256}
+        if rig is not None:
+            message["rig"] = rig
+        if ragdoll is not None:
+            message["ragdoll"] = ragdoll
+        if parts is not None:
+            message["parts"] = [{"mesh": mesh, "role": role} for mesh, role in _pairs(parts, "parts", "(mesh, role)")]
+        problem = protocol.ped_add_problem(message)
+        if problem is not None:
+            raise ValueError(problem)
+        with self._lock:
+            request = self._register("ped.add", timeout, PedAddRequest)
+            request.transform = _ped_add_answer
+            message["id"] = request.id
+            ws = self._ws
+            try:
+                self._send(message)
+                if ws is None or not ws.is_open:
+                    raise LinkError("disconnected", "not connected to DCT")
+                for index, chunk in enumerate(chunks):
+                    prefix = protocol.encode_binary_header({"type": "ped.add.chunk", "re": request.id, "index": index}, chunk.nbytes)
+                    ws.send_binary(prefix, chunk)
+            except (LinkError, ProtocolError, WebSocketError) as exc:
+                self._pending.pop(request.id, None)
+                self._finish_request(request, error=_link_error(exc))
+        self._run_calls()
+        return request  # type: ignore[return-value]
+
+    def _on_ped_rig_accepted(self, message: Dict[str, Any]) -> None:
+        request = self._pending.get(message["re"])
+        if isinstance(request, PedRigRequest):
+            request.job = message["job"]
+            if request.on_accepted is not None:
+                self._calls.append((request.on_accepted, (message["job"],)))
+
+    def _on_ped_rig_progress(self, message: Dict[str, Any]) -> None:
+        for request in list(self._pending.values()):
+            if isinstance(request, PedRigRequest) and request.job == message["job"] and request.on_progress is not None:
+                self._calls.append((request.on_progress, (message["stage"], float(message["fraction"]))))
 
     # ---- live textures -------------------------------------------------------------------------------
 
@@ -2830,4 +3101,15 @@ _EVENT_HANDLERS: Dict[str, Callable[[LinkSession, Dict[str, Any]], None]] = {
     "live.closed": LinkSession._on_live_closed,
     "model.applied": LinkSession._on_model_applied,
     "model.closed": LinkSession._on_model_closed,
+    "ped.rig.accepted": LinkSession._on_ped_rig_accepted,
+    "ped.rig.progress": LinkSession._on_ped_rig_progress,
 }
+
+
+def _link_error(exc: BaseException) -> LinkError:
+    """A send that failed, as the error that ends its request."""
+    if isinstance(exc, LinkError):
+        return exc
+    if isinstance(exc, ProtocolError):
+        return LinkError(exc.code, str(exc))
+    return LinkError("disconnected", str(exc))

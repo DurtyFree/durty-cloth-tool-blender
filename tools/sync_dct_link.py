@@ -92,13 +92,14 @@ def sibling_package() -> Optional[pathlib.Path]:
 
 
 def imported_modules(source: str) -> List[str]:
-    """The dct_link modules a module imports with relative imports (``from . import x``, ``from .x import y``)."""
+    """The dct_link modules a module imports with relative imports (``from . import x``, ``from . import x as y``,
+    ``from .x import y``)."""
     names = []
     for module, imported in _RELATIVE_IMPORT.findall(source):
         if module:
             names.append(module)
         else:
-            names.extend(n.strip() for n in imported.replace("(", "").replace(")", "").split(",") if n.strip())
+            names.extend(n.split()[0] for n in imported.replace("(", "").replace(")", "").split(",") if n.strip())
     return names
 
 

@@ -10,7 +10,10 @@ smoke (which uses the add-on's vendored copy). A ``glb`` model push is answered 
 asked for; ``open_texture`` and ``open_model`` send ``host.openTexture`` and ``host.openModel`` ("Edit in connected
 app"); ``skeleton.template`` answers with a synthetic skeleton template (or ``skeleton_files``), and ``item.add``
 with ``add_result`` (``hold_adds`` keeps it waiting, ``item.addCancel`` answers it as refused unless
-``ignore_cancels``). Like DCT, a request the fake cannot decode, or whose type is in ``unknown_types`` (a DCT older than
+``ignore_cancels``). The custom ped messages: ``ped.templates`` lists ``ped_templates``, ``ped.skeleton`` and
+``ped.rig`` use a made-up skeleton (:func:`ped_skeleton`), the rig reports its progress over ``ped_rig_seconds`` and
+stops at ``ped.rig.cancel``, and ``ped.add`` collects the chunks, checks the SHA-256 and answers with
+``ped_add_result`` (``hold_ped_adds`` keeps it waiting). Like DCT, a request the fake cannot decode, or whose type is in ``unknown_types`` (a DCT older than
 the add-on), gets an error answered by its id when the id can be read, and the connection stays once signed in.
 Standard library only.
 """
@@ -55,10 +58,11 @@ ADDED_BINDING = {"clothId": "5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b", "textureId":
 SKELETON_XML = b'<?xml version="1.0" encoding="UTF-8"?>\n<DrawableDictionary><Item><Skeleton /></Item></DrawableDictionary>\n'
 #: The feature states the fake reports in welcome and event.entitlement (the features the add-on reads).
 DCT_FEATURES = ("dct.link.connect", "dct.link.context", "dct.link.liveTexture", "dct.link.save", "dct.link.model",
-                "dct.link.services", "dct.link.addItem")
+                "dct.link.services", "dct.link.addItem", "dct.link.pedTemplates", "dct.link.pedRig", "dct.link.pedAdd")
 #: The requests the fake refuses while their feature is not entitled (the ones the tests exercise).
 GATED_REQUESTS = {"texture.read": "dct.link.services", "texture.validate": "dct.link.services",
-                  "item.thumbnail": "dct.link.services"}
+                  "item.thumbnail": "dct.link.services", "ped.templates": "dct.link.pedTemplates",
+                  "ped.skeleton": "dct.link.pedTemplates"}
 REFUSALS = {"needsLicense": "needs-license", "needsUltimate": "needs-ultimate"}
 
 
@@ -81,6 +85,151 @@ class ClientGone(Exception):
     pass
 
 
+# ---- custom peds: a made-up template skeleton (nothing of the game: names as every human ped skeleton uses them,
+# positions of a person 1.8 m tall standing with the root between the hips, turned rest rotations) ----
+
+#: (name, tag, parent index, rest position in ped space) in the skeleton's order, parents first.
+PED_BONES = (
+    ("SKEL_ROOT", 0, -1, (0.0, 0.0, 0.0)),
+    ("SKEL_Pelvis", 11816, 0, (0.0, 0.0, -0.02)),
+    ("SKEL_L_Thigh", 58271, 1, (0.09, 0.0, -0.06)),
+    ("SKEL_L_Calf", 63931, 2, (0.1, 0.0, -0.5)),
+    ("SKEL_L_Foot", 14201, 3, (0.11, 0.0, -0.92)),
+    ("SKEL_L_Toe0", 2108, 4, (0.11, -0.12, -0.98)),
+    ("SKEL_R_Thigh", 51826, 1, (-0.09, 0.0, -0.06)),
+    ("SKEL_R_Calf", 36864, 6, (-0.1, 0.0, -0.5)),
+    ("SKEL_R_Foot", 52301, 7, (-0.11, 0.0, -0.92)),
+    ("SKEL_R_Toe0", 20781, 8, (-0.11, -0.12, -0.98)),
+    ("SKEL_Spine_Root", 57597, 0, (0.0, 0.0, 0.0)),
+    ("SKEL_Spine0", 23553, 10, (0.0, 0.0, 0.08)),
+    ("SKEL_Spine1", 24816, 11, (0.0, 0.0, 0.17)),
+    ("SKEL_Spine2", 24817, 12, (0.0, 0.0, 0.26)),
+    ("SKEL_Spine3", 24818, 13, (0.0, 0.0, 0.35)),
+    ("SKEL_L_Clavicle", 64729, 14, (0.03, 0.0, 0.47)),
+    ("SKEL_L_UpperArm", 45509, 15, (0.18, 0.0, 0.49)),
+    ("SKEL_L_Forearm", 61163, 16, (0.41, 0.0, 0.26)),
+    ("SKEL_L_Hand", 18905, 17, (0.6, 0.0, 0.07)),
+    ("PH_L_Hand", 60309, 18, (0.66, -0.02, 0.02)),
+    ("SKEL_R_Clavicle", 10706, 14, (-0.03, 0.0, 0.47)),
+    ("SKEL_R_UpperArm", 40269, 20, (-0.18, 0.0, 0.49)),
+    ("SKEL_R_Forearm", 28252, 21, (-0.41, 0.0, 0.26)),
+    ("SKEL_R_Hand", 57005, 22, (-0.6, 0.0, 0.07)),
+    ("PH_R_Hand", 28422, 23, (-0.66, -0.02, 0.02)),
+    ("SKEL_Neck_1", 39317, 14, (0.0, 0.0, 0.53)),
+    ("SKEL_Head", 31086, 25, (0.0, 0.0, 0.62)),
+    ("IK_Head", 12844, 26, (0.0, 0.0, 0.62)),
+)
+#: The bones that never move the mesh (no weight goes on them).
+PED_NON_DEFORMING = frozenset(name for name, _, _, _ in PED_BONES if name == "SKEL_ROOT" or name[:3] in ("IK_", "PH_"))
+_RECORD = struct.Struct("<HhI4f3f16f")
+_MATRIX = struct.Struct("<16f")
+
+
+def _quaternion(index: int) -> tuple:
+    """A made-up local rest rotation for bone ``index`` (x, y, z, w): every bone is turned, as in a real skeleton."""
+    import math
+
+    axis = (math.sin(index * 1.7), math.cos(index * 1.3), 0.5 + 0.3 * math.sin(index))
+    length = math.sqrt(sum(c * c for c in axis))
+    half = 0.15 * ((index * 37) % 11 - 5)
+    s = math.sin(half) / length
+    return (axis[0] * s, axis[1] * s, axis[2] * s, math.cos(half))
+
+
+def _rotation_of(q: tuple) -> list:
+    x, y, z, w = q
+    return [[1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w)],
+            [2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w)],
+            [2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)]]
+
+
+def _mul(a: list, b: list) -> list:
+    return [[sum(a[i][k] * b[k][j] for k in range(3)) for j in range(3)] for i in range(3)]
+
+
+def _row_major(rotation: list, position: tuple) -> list:
+    """A world matrix in the protocol's form: row major, row vectors (rows 1 to 3 the bone's axes, row 4 its
+    position), from a rotation that takes the bone's local axes to the armature's (column vectors)."""
+    return [rotation[0][0], rotation[1][0], rotation[2][0], 0.0,
+            rotation[0][1], rotation[1][1], rotation[2][1], 0.0,
+            rotation[0][2], rotation[1][2], rotation[2][2], 0.0,
+            position[0], position[1], position[2], 1.0]
+
+
+def ped_skeleton(offset: tuple = (0.0, 0.0, 0.0)) -> List[Dict[str, Any]]:
+    """The made-up template skeleton: per bone its name, tag, parent, flags, local rest rotation (x, y, z, w) and
+    translation, and rest world matrix (protocol form), moved by ``offset``."""
+    bones: List[Dict[str, Any]] = []
+    worlds: List[list] = []
+    for index, (name, tag, parent, position) in enumerate(PED_BONES):
+        local = _quaternion(index)
+        turn = _rotation_of(local)
+        if parent < 0:
+            world, translation = turn, tuple(position[i] + offset[i] for i in range(3))
+        else:
+            world = _mul(worlds[parent], turn)
+            delta = [position[i] - PED_BONES[parent][3][i] for i in range(3)]
+            axes = worlds[parent]  # the parent's axes as columns; the translation is in its frame
+            translation = tuple(sum(axes[k][i] * delta[k] for k in range(3)) for i in range(3))
+        worlds.append(world)
+        bones.append({"name": name, "tag": tag, "parent": parent, "flags": 0x1F, "rotation": local,
+                      "translation": translation,
+                      "world": _row_major(world, tuple(position[i] + offset[i] for i in range(3)))})
+    return bones
+
+
+def ped_bone_records(bones: List[Dict[str, Any]]) -> bytes:
+    return b"".join(_RECORD.pack(b["tag"], b["parent"], b["flags"], *b["rotation"], *b["translation"], *b["world"])
+                    for b in bones)
+
+
+def fake_ped_rig(header: Dict[str, Any], payload: bytes, warnings: List[Dict[str, Any]], outcome: str,
+                 suggested: Optional[str]) -> tuple:
+    """A stand-in for DCT's rig: the template's rest skeleton is the rest pose G, the pose P is G moved so the
+    template's pelvis sits on the pelvis marker, the rest positions are the character moved back by the same, and
+    each vertex is weighted to its two nearest bones (200 and 55 of 255). The elbow markers come back refined by 2 cm.
+    Returns ``(result header, payload)``."""
+    mesh = header["mesh"]
+    count = mesh["vertices"]
+    positions = struct.unpack_from(f"<{3 * count}f", payload, 0)
+    markers = header["markers"]
+    template = ped_skeleton()
+    pelvis = next(b for b in template if b["name"] == "SKEL_Pelvis")["world"][12:15]
+    shift = tuple(markers["pelvis"][i] - pelvis[i] for i in range(3))
+    heads = [(i, tuple(b["world"][12 + k] + shift[k] for k in range(3))) for i, b in enumerate(template)
+             if b["name"] not in PED_NON_DEFORMING]
+    poses = b""
+    for bone in template:
+        world = list(bone["world"])
+        for k in range(3):
+            world[12 + k] += shift[k]
+        poses += _MATRIX.pack(*world)
+    rest, indices, weights = [], bytearray(), bytearray()
+    for v in range(count):
+        point = positions[3 * v: 3 * v + 3]
+        ranked = sorted(heads, key=lambda h: sum((h[1][k] - point[k]) ** 2 for k in range(3)))
+        indices += bytes((ranked[0][0], ranked[1][0], 0, 0))
+        weights += bytes((200, 55, 0, 0))
+        rest.extend(point[k] - shift[k] for k in range(3))
+    refined = {name: list(point) for name, point in markers.items()}
+    moves = {}
+    for name in ("elbowL", "elbowR"):
+        if name in refined:
+            refined[name][1] += 0.02
+            moves[name] = 20.0
+    report = {"outcome": outcome, "confidence": 0.91 if outcome == "ready" else 0.62, "warnings": warnings,
+              "markers": refined, "markerMoves": moves,
+              "character": {"height": 1.8, "shoulders": 0.37, "hips": 0.18, "arm": 0.6, "leg": 0.84, "torso": 0.55},
+              "template": {"height": 1.8, "shoulders": 0.36, "hips": 0.18, "arm": 0.6, "leg": 0.86, "torso": 0.55}}
+    if suggested:
+        report["suggestedTemplate"] = suggested
+    result = {"type": "ped.rig.result", "re": header["id"], "ok": True, "job": "j1", "template": header["template"],
+              "ragdoll": "fred", "bones": [b["name"] for b in template], "vertices": count, "report": report}
+    body = (ped_bone_records(template) + poses + struct.pack(f"<{3 * count}f", *rest) + bytes(indices)
+            + bytes(weights))
+    return result, body
+
+
 class Connection:
     """One accepted client. Blocking socket I/O on its own thread."""
 
@@ -98,6 +247,9 @@ class Connection:
         self.model_revision = 0
         self.converting: set = set()  # model leases whose push is still converting
         self.waiting_adds: Dict[str, Dict[str, Any]] = {}  # item.add headers by id while "the user" decides
+        self.rig_cancels: set = set()  # ped.rig ids the plugin cancelled
+        self.ped_upload: Optional[Dict[str, Any]] = None  # the ped.add whose chunks arrive
+        self.waiting_ped_adds: Dict[str, Dict[str, Any]] = {}  # ped.add headers by id while "the user" decides
 
     # ---- raw I/O --------------------------------------------------------------------------------------
 
@@ -377,6 +529,37 @@ class Connection:
             self.reply(m, {"type": "context.snapshot", "project": {"name": "Sample Clothing"}, "focused": focused})
         elif kind == "host.result":
             server.host_results.append(m)  # the answer to host.openTexture or host.openModel; nothing goes back
+        elif kind == "ped.templates":
+            server.ped_template_requests.append(m)
+            listed = [t for t in server.ped_templates if (m.get("all") or t["group"] == "ambient")
+                      and (m.get("gender") is None or t.get("gender") == m["gender"])]
+            listed.sort(key=lambda t: not t["recommended"])
+            self.reply(m, {"type": "ped.templates.list", "templates": listed, "truncated": False})
+        elif kind == "ped.skeleton":
+            bones = ped_skeleton()
+            header = {"type": "ped.skeleton.data", "re": m["id"], "model": m["model"], "gender": "male",
+                      "layout": "packed", "ragdoll": "fred", "bones": [b["name"] for b in bones]}
+            self.send_binary(header, ped_bone_records(bones))
+        elif kind == "ped.rig.cancel":
+            server.ped_rig_cancels.append(m["re"])
+            self.rig_cancels.add(m["re"])
+        elif kind == "ped.add":
+            server.ped_add_headers.append(m)
+            code = REFUSALS.get(server.feature_states.get("dct.link.pedAdd", "entitled")) or server.fail.get("ped.add")
+            if code is not None:
+                self.answer_ped_add(m["id"], {"ok": False, "code": code, "findings": []})
+            elif self.ped_upload is not None or self.waiting_ped_adds:
+                self.answer_ped_add(m["id"], {"ok": False, "code": "busy", "findings": []})
+            else:
+                self.ped_upload = {"header": m, "chunks": []}
+        elif kind == "ped.addCancel":
+            server.ped_add_cancels.append(m["re"])
+            upload = self.ped_upload
+            if upload is not None and upload["header"]["id"] == m["re"]:
+                self.ped_upload = None
+                self.answer_ped_add(m["re"], {"ok": False, "code": "request-denied", "findings": []})
+            elif self.waiting_ped_adds.pop(m["re"], None) is not None:
+                self.answer_ped_add(m["re"], {"ok": False, "code": "request-denied", "findings": []})
         elif kind == "skeleton.template":
             # The skeleton template of the gender asked for (skeleton_files: other files, any gender).
             server.templates_sent.append(m["gender"])
@@ -464,6 +647,48 @@ class Connection:
             server.byes += 1
             self.close(1000, "bye")
 
+    def answer_ped_add(self, add_id: str, result: Optional[Dict[str, Any]] = None) -> None:
+        """Answers the ped.add ``add_id`` with ped.addResult (the server's ``ped_add_result`` unless one is given)."""
+        message: Dict[str, Any] = {"type": "ped.addResult", "id": "pr" + secrets.token_hex(3), "re": add_id}
+        if result is None:
+            header = next(h for h in reversed(self.server.ped_add_headers) if h["id"] == add_id)
+            result = dict(self.server.ped_add_result)
+            if result.get("ok"):
+                result.setdefault("project", {"name": header["name"], "model": header["model"],
+                                              "template": header["template"]})
+        message.update(result)
+        self.send(message)
+
+    def rig(self, header: Dict[str, Any], payload: bytes) -> None:
+        """Runs a ped.rig on a thread of its own, as DCT does: accepted, progress, then the result (or ``cancelled``)."""
+        server = self.server
+        try:
+            refusal = server.ped_rig_refusal
+            if refusal is not None:
+                code, reasons = refusal
+                result = {"type": "ped.rig.result", "re": header["id"], "ok": False, "code": code}
+                if reasons:
+                    result["reasons"] = reasons
+                self.send_binary(result, b"")
+                return
+            self.send({"type": "ped.rig.accepted", "id": "ra" + secrets.token_hex(3), "re": header["id"], "job": "j1"})
+            stages = ("template", "markers", "skeleton", "weights", "rest", "report")
+            for index, stage in enumerate(stages):
+                time.sleep(server.ped_rig_seconds / len(stages))
+                if header["id"] in self.rig_cancels:
+                    self.send_binary({"type": "ped.rig.result", "re": header["id"], "ok": False, "code": "cancelled",
+                                      "job": "j1"}, b"")
+                    return
+                self.send({"type": "ped.rig.progress", "id": "rp" + secrets.token_hex(3), "job": "j1", "stage": stage,
+                           "fraction": round((index + 1) / len(stages), 3)})
+            result, body = fake_ped_rig(header, payload, server.ped_rig_warnings, server.ped_rig_outcome,
+                                        server.ped_rig_suggestion)
+            self.send_binary(result, body)
+        except OSError:
+            pass  # the client went away
+        except Exception as exc:  # surface the fake's own failures to the test
+            server.errors.append(exc)
+
     def answer_add(self, add_id: str, result: Optional[Dict[str, Any]] = None) -> None:
         """Answers the item.add ``add_id`` with item.addResult (the server's ``add_result`` unless one is given)."""
         message: Dict[str, Any] = {"type": "item.addResult", "id": "ar" + secrets.token_hex(3), "re": add_id}
@@ -534,6 +759,35 @@ class Connection:
             timer = threading.Timer(server.push_delay, finish)
             timer.daemon = True
             timer.start()
+        elif header["type"] == "ped.rig":
+            server.ped_rigs.append((header, len(payload)))
+            code = REFUSALS.get(server.feature_states.get("dct.link.pedRig", "entitled"))
+            if code is not None:
+                self.send_binary({"type": "ped.rig.result", "re": header["id"], "ok": False, "code": code}, b"")
+                return
+            threading.Thread(target=self.rig, args=(header, payload), daemon=True).start()
+        elif header["type"] == "ped.add.chunk":
+            upload = self.ped_upload
+            if upload is None or upload["header"]["id"] != header["re"]:
+                return  # a chunk of an add that already answered: dropped
+            add = upload["header"]
+            if header["index"] != len(upload["chunks"]):
+                self.ped_upload = None
+                self.answer_ped_add(add["id"], {"ok": False, "code": "upload-incomplete", "findings": []})
+                return
+            upload["chunks"].append(payload)
+            if len(upload["chunks"]) < add["chunks"]:
+                return
+            self.ped_upload = None
+            glb = b"".join(upload["chunks"])
+            if len(glb) != add["glbLength"] or hashlib.sha256(glb).hexdigest() != add["sha256"]:
+                self.answer_ped_add(add["id"], {"ok": False, "code": "upload-incomplete", "findings": []})
+                return
+            server.ped_adds.append((add, glb))
+            if server.hold_ped_adds:
+                self.waiting_ped_adds[add["id"]] = add
+            else:
+                self.answer_ped_add(add["id"])
         elif header["type"] == "item.add":
             files, offset = [], 0
             for entry in header["files"]:
@@ -588,6 +842,34 @@ class FakeDct:
         self.unknown_types: set = set()
         #: Leave item.addCancel unanswered (DCT already adds the cloth); release_adds() answers later.
         self.ignore_cancels = False
+        #: The templates ped.templates lists (made-up models; ``group`` decides whether Show All is needed).
+        self.ped_templates: List[Dict[str, Any]] = [
+            {"model": "a_m_y_tester_01", "gender": "male", "pedType": "CIVMALE", "layout": "packed", "group": "ambient",
+             "recommended": True},
+            {"model": "a_m_m_tester_02", "gender": "male", "pedType": "CIVMALE", "layout": "packed",
+             "group": "ambient", "recommended": False},
+            {"model": "a_f_y_tester_01", "gender": "female", "pedType": "CIVFEMALE", "layout": "packed",
+             "group": "ambient", "recommended": True},
+            {"model": "mp_m_freemode_01", "gender": "male", "pedType": "CIVMALE", "layout": "streamed",
+             "group": "freemode", "recommended": False},
+        ]
+        self.ped_template_requests: List[Dict[str, Any]] = []
+        #: How long a ped.rig takes (it reports its six stages along the way), what its report says, and a refusal
+        #: ``(code, reasons)`` instead of a rig.
+        self.ped_rig_seconds = 0.3
+        self.ped_rig_warnings: List[Dict[str, Any]] = []
+        self.ped_rig_outcome = "ready"
+        self.ped_rig_suggestion: Optional[str] = None
+        self.ped_rig_refusal: Optional[Any] = None
+        self.ped_rigs: List[Any] = []  # (header, payload length) per ped.rig received
+        self.ped_rig_cancels: List[str] = []
+        #: The fields of the ped.addResult that answers a ped.add (default: created, no findings).
+        self.ped_add_result: Dict[str, Any] = {"ok": True, "findings": []}
+        #: Keep every complete ped.add waiting, as DCT does while its dialog is open (release_ped_adds answers).
+        self.hold_ped_adds = False
+        self.ped_add_headers: List[Dict[str, Any]] = []
+        self.ped_adds: List[Any] = []  # (header, GLB bytes) per complete upload
+        self.ped_add_cancels: List[str] = []
         self.refused_frames: List[Any] = []  # (type, error code) of every frame refused undecoded
         self.add_cancels: List[str] = []  # the add ids item.addCancel named
         self.host_results: List[Dict[str, Any]] = []
@@ -704,6 +986,16 @@ class FakeDct:
             waiting, connection.waiting_adds = connection.waiting_adds, {}
             for add_id in waiting:
                 connection.answer_add(add_id, result)
+                count += 1
+        return count
+
+    def release_ped_adds(self, result: Optional[Dict[str, Any]] = None) -> int:
+        """The user chose Create (or, with ``result``, something else) for every waiting ped.add."""
+        count = 0
+        for connection in list(self.all_connections):
+            waiting, connection.waiting_ped_adds = connection.waiting_ped_adds, {}
+            for add_id in waiting:
+                connection.answer_ped_add(add_id, result)
                 count += 1
         return count
 

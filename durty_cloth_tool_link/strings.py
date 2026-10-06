@@ -19,6 +19,8 @@ from __future__ import annotations
 import re
 from typing import Any, Callable, Dict, List, Mapping, NamedTuple, Optional, Union
 
+from . import ped_strings
+
 #: The translation context of every add-on text, so Blender's own translations of common words never apply.
 CONTEXT = "DurtyClothTool"
 
@@ -1742,6 +1744,8 @@ EN: Dict[str, str] = {
     "garment.stage.bake-emission": "Baking the emission map",
     "garment.stage.material": "Making the combined material",
 }
+# Custom Ped's texts live in their own table (translated in the ``ped_<language>`` modules of ``translations``).
+EN.update(ped_strings.EN)
 
 
 class Msg(NamedTuple):

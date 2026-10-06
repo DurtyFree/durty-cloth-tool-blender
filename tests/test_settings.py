@@ -231,5 +231,5 @@ def test_the_checks_notice_foreign_names():
 
 def test_only_the_modules_the_add_on_uses_are_shipped():
     shipped = {p.name for p in VENDORED.iterdir() if p.is_file()}
-    assert shipped == {"__init__.py", "auth.py", "fit.py", "protocol.py", "session.py", "tokens.py", "ws.py", "LICENSE",
-                       "VENDORED.md"}
+    assert shipped == {"__init__.py", "auth.py", "fit.py", "ped.py", "protocol.py", "session.py", "tokens.py", "ws.py",
+                       "LICENSE", "VENDORED.md"}

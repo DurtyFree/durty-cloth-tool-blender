@@ -6,7 +6,8 @@ Panels, in the order every Creator Link plugin uses: Durty Cloth Tool (the logo,
 details in a popover, and the Help menu with Help, Community, Copy Diagnostics and About), Get Connected (only while
 setup is incomplete), Linked Cloth (the cloth's picture and details, and its maps to open), Live Preview (with the
 Texture Checks while it runs), Model and Settings. Garment Fitting (:mod:`ui_garment`) sits between Model and
-Settings. Every text comes from :mod:`strings` in Blender's interface
+Settings. A switch under the status chooses what the tab works on: Clothing (Linked Cloth, Live Preview, Model and
+Garment Fitting) or Custom Ped (:mod:`ui_ped`), so the two never show together. Every text comes from :mod:`strings` in Blender's interface
 language; texts drawn here are translated already, so layouts get ``translate=False``.
 
 Layout rules (the Creator Link spacing intent, in Blender's own means): one enlarged primary action per panel
@@ -847,6 +848,20 @@ class DCTLINK_PG_scene(PropertyGroup):
         description=EN["prop.auto-push.desc"],
         translation_context=CONTEXT,
     )
+    workspace: EnumProperty(
+        name=EN["workspace.prop"],
+        items=(("CLOTHING", EN["workspace.clothing"], EN["workspace.clothing.desc"], "MOD_CLOTH", 0),
+               ("PED", EN["workspace.ped"], EN["workspace.ped.desc"], "OUTLINER_OB_ARMATURE", 1)),
+        default="CLOTHING",
+        description=EN["workspace.prop.desc"],
+        translation_context=CONTEXT,
+    )
+
+
+def workspace(context: Any) -> str:
+    """What the DCT tab works on: ``CLOTHING`` or ``PED``."""
+    settings_ = getattr(getattr(context, "scene", None), "dct_link", None)
+    return getattr(settings_, "workspace", "CLOTHING") if settings_ is not None else "CLOTHING"
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1544,6 +1559,10 @@ class DCTLINK_PT_main(_DCTPanel, Panel):
             self.layout.label(text=t("notice.not-ready"), translate=False)
             return
         draw_status(self.layout, context)
+        settings_ = getattr(context.scene, "dct_link", None)
+        if settings_ is not None:
+            self.layout.separator(factor=GAP_SMALL)
+            self.layout.row(align=True).prop(settings_, "workspace", expand=True)
 
 
 class DCTLINK_PT_details(Panel):
@@ -1582,15 +1601,17 @@ class DCTLINK_PT_linked(_SubPanel, Panel):
 
     @classmethod
     def poll(cls, context):
-        return state.is_ready()
+        return state.is_ready() and workspace(context) == "CLOTHING"
 
     def draw(self, context):
         draw_linked(self.layout, context)
 
 
-def _working_panels_shown() -> bool:
-    """Linked work (live preview, model) is shown once setup is done; until then Get Connected has the focus."""
-    return state.controller is not None and not state.controller.setup_needed
+def _working_panels_shown(context: Any = None) -> bool:
+    """Linked work (live preview, model) is shown once setup is done, while the tab works on clothing; until then Get
+    Connected has the focus."""
+    return (state.controller is not None and not state.controller.setup_needed
+            and workspace(context or bpy.context) == "CLOTHING")
 
 
 class DCTLINK_PT_live(_SubPanel, Panel):
@@ -1598,7 +1619,7 @@ class DCTLINK_PT_live(_SubPanel, Panel):
 
     @classmethod
     def poll(cls, context):
-        return _working_panels_shown()
+        return _working_panels_shown(context)
 
     def draw(self, context):
         draw_live(self.layout, context)
@@ -1609,7 +1630,7 @@ class DCTLINK_PT_model(_SubPanel, Panel):
 
     @classmethod
     def poll(cls, context):
-        return _working_panels_shown()
+        return _working_panels_shown(context)
 
     def draw(self, context):
         draw_model(self.layout, context)
@@ -1618,7 +1639,7 @@ class DCTLINK_PT_model(_SubPanel, Panel):
 class DCTLINK_PT_settings(_SubPanel, Panel):
     bl_label = EN["panel.settings"]
     bl_options = {"DEFAULT_CLOSED"}
-    bl_order = 1  # last, after Garment Fitting (registered later by ui_garment)
+    bl_order = 1  # last, after Garment Fitting and Custom Ped (registered later by ui_garment and ui_ped)
 
     @classmethod
     def poll(cls, context):

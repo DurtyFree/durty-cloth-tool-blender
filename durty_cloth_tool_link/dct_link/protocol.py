@@ -21,6 +21,7 @@ The constants are embedded so the package works on its own.
 from __future__ import annotations
 
 import json
+import math
 import re
 from typing import Any, Callable, Dict, Iterable, List, Mapping, NamedTuple, Optional, Tuple, Union
 
@@ -52,6 +53,11 @@ __all__ = [
     "is_access_token",
     "is_feature_id",
     "is_https_url",
+    "is_ped_model",
+    "is_new_ped_model",
+    "is_ped_type",
+    "is_bone_name",
+    "is_sha256_hex",
     "json_depth_exceeds",
 ]
 
@@ -100,6 +106,22 @@ CONSTANTS: Dict[str, Any] = {
         "openTextureAnswerSeconds": 20,
         "openModelAnswerSeconds": 60,
         "maxItemVariations": 26,
+        "maxPedTemplates": 200,
+        "maxPedBones": 255,
+        "maxPedMarkers": 64,
+        "maxPedRigParts": 64,
+        "maxPedRigVertices": 300000,
+        "maxPedRigTriangles": 600000,
+        "maxPedRigReasons": 32,
+        "maxPedRigWarnings": 32,
+        "maxPedRigProgressPerSecond": 4,
+        "pedRigResultMinutes": 30,
+        "maxPedRigResultsPerConnection": 2,
+        "maxPedAddBytes": 268435456,
+        "maxPedAddChunkBytes": 33554432,
+        "maxPedAddChunks": 8,
+        "pedAddChunkSeconds": 30,
+        "maxPedAddParts": 64,
     },
     "values": {
         "pluginKinds": ["photoshop", "photopea", "blender", "gimp", "krita", "substance"],
@@ -128,6 +150,10 @@ CONSTANTS: Dict[str, Any] = {
             "rig-unchecked",
             "single-bone-rig",
             "hair-tint-unsupported",
+            "rig-mismatch",
+            "ped-budget",
+            "ped-ragdoll-mismatch",
+            "ped-rest-strain",
         ],
         "modelCloseReasons": ["closed", "replaced", "itemRemoved", "projectClosed", "entitlementLost", "signedOut"],
         "hostResultCodes": ["open-failed", "not-supported", "dependency-missing", "busy"],
@@ -157,6 +183,131 @@ CONSTANTS: Dict[str, Any] = {
             "p_rfoot",
             "p_unk1",
             "p_unk2",
+        ],
+        "pedBodyMarkers": [
+            "headTop",
+            "chin",
+            "neck",
+            "chest",
+            "pelvis",
+            "shoulderL",
+            "shoulderR",
+            "elbowL",
+            "elbowR",
+            "wristL",
+            "wristR",
+            "hipL",
+            "hipR",
+            "kneeL",
+            "kneeR",
+            "ankleL",
+            "ankleR",
+            "toeL",
+            "toeR",
+        ],
+        "pedOptionalMarkers": [
+            "thumbBaseL",
+            "thumbBaseR",
+            "thumbTipL",
+            "thumbTipR",
+            "indexBaseL",
+            "indexBaseR",
+            "indexTipL",
+            "indexTipR",
+            "middleBaseL",
+            "middleBaseR",
+            "middleTipL",
+            "middleTipR",
+            "ringBaseL",
+            "ringBaseR",
+            "ringTipL",
+            "ringTipR",
+            "pinkyBaseL",
+            "pinkyBaseR",
+            "pinkyTipL",
+            "pinkyTipR",
+            "eyeL",
+            "eyeR",
+            "mouthL",
+            "mouthR",
+            "chinTip",
+        ],
+        "pedPartRoles": [
+            "body",
+            "head",
+            "hair",
+            "eyes",
+            "teeth",
+            "accessory",
+        ],
+        "pedDetailModes": [
+            "off",
+            "auto",
+        ],
+        "pedRestModels": [
+            "volume",
+            "linear",
+        ],
+        "pedRigStages": [
+            "template",
+            "markers",
+            "skeleton",
+            "weights",
+            "rest",
+            "report",
+        ],
+        "pedRigRefusals": [
+            "marker_missing",
+            "marker_invalid",
+            "marker_degenerate",
+            "marker_side",
+            "not_upright",
+            "limb_length",
+            "asymmetric",
+            "pose_unsupported",
+            "marker_outside_body",
+            "mesh_invalid",
+            "mesh_too_large",
+            "options_invalid",
+            "template_invalid",
+            "template_not_found",
+            "game_required",
+            "fit_invalid",
+        ],
+        "pedRigWarnings": [
+            "marker_offset",
+            "asymmetric_markers",
+            "proportion_out_of_range",
+            "ragdoll_mismatch",
+            "low_coverage",
+            "inpainted_large",
+            "non_deforming_moved",
+            "empty_rows_refilled",
+            "floating_parts",
+            "rest_strain",
+            "fingers_fallback",
+        ],
+        "pedRigOutcomes": [
+            "ready",
+            "needsReview",
+        ],
+        "pedLayouts": [
+            "packed",
+            "streamed",
+        ],
+        "pedRagdolls": [
+            "fred",
+            "wilma",
+            "fred-large",
+            "wilma-large",
+            "alien",
+        ],
+        "pedTemplateGroups": [
+            "ambient",
+            "freemode",
+            "player",
+            "cutscene",
+            "story",
         ],
     },
     "errorCodes": [
@@ -197,6 +348,11 @@ CONSTANTS: Dict[str, Any] = {
         "model-rejected",
         "internal-error",
         "item-limit",
+        "cancelled",
+        "template-not-found",
+        "mesh-too-large",
+        "rig-refused",
+        "upload-incomplete",
     ],
     "closeCodes": {
         "normal": 1000,
@@ -254,6 +410,28 @@ OPEN_TEXTURE_ANSWER_SECONDS: int = _L["openTextureAnswerSeconds"]
 OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
 #: The colour variations one ``item.add`` may carry (the game's variation limit per drawable).
 MAX_ITEM_VARIATIONS: int = _L["maxItemVariations"]
+#: Custom peds (README "Custom peds"): the template list, the skeleton, the rig request and its result, the upload.
+MAX_PED_TEMPLATES: int = _L["maxPedTemplates"]
+MAX_PED_BONES: int = _L["maxPedBones"]
+MAX_PED_MARKERS: int = _L["maxPedMarkers"]
+MAX_PED_RIG_PARTS: int = _L["maxPedRigParts"]
+MAX_PED_RIG_VERTICES: int = _L["maxPedRigVertices"]
+MAX_PED_RIG_TRIANGLES: int = _L["maxPedRigTriangles"]
+MAX_PED_RIG_REASONS: int = _L["maxPedRigReasons"]
+MAX_PED_RIG_WARNINGS: int = _L["maxPedRigWarnings"]
+MAX_PED_RIG_PROGRESS_PER_SECOND: int = _L["maxPedRigProgressPerSecond"]
+PED_RIG_RESULT_MINUTES: int = _L["pedRigResultMinutes"]
+MAX_PED_RIG_RESULTS_PER_CONNECTION: int = _L["maxPedRigResultsPerConnection"]
+MAX_PED_ADD_BYTES: int = _L["maxPedAddBytes"]
+MAX_PED_ADD_CHUNK_BYTES: int = _L["maxPedAddChunkBytes"]
+MAX_PED_ADD_CHUNKS: int = _L["maxPedAddChunks"]
+PED_ADD_CHUNK_SECONDS: int = _L["pedAddChunkSeconds"]
+MAX_PED_ADD_PARTS: int = _L["maxPedAddParts"]
+#: The fixed record sizes of the custom ped payloads: one bone record, one bone of a rig result (its record and its
+#: pose matrix), one vertex of a rig result (rest position, four bone indices, four weights).
+PED_BONE_RECORD_BYTES: int = 100
+PED_RIG_BONE_BYTES: int = 164
+PED_RIG_VERTEX_BYTES: int = 20
 
 # Further wire limits.
 MAX_REVISION: int = 9007199254740991  # JavaScript's largest safe integer
@@ -281,6 +459,20 @@ MODEL_CLOSE_REASONS: Tuple[str, ...] = tuple(_V["modelCloseReasons"])
 HOST_RESULT_CODES: Tuple[str, ...] = tuple(_V["hostResultCodes"])
 #: The game's tokens for components and props (``focused.drawableType``).
 DRAWABLE_TYPES: Tuple[str, ...] = tuple(_V["drawableTypes"])
+PED_BODY_MARKERS: Tuple[str, ...] = tuple(_V["pedBodyMarkers"])
+PED_OPTIONAL_MARKERS: Tuple[str, ...] = tuple(_V["pedOptionalMarkers"])
+#: Every marker name a ``ped.rig`` may carry: the required body markers, then the optional finger and face markers.
+PED_MARKERS: Tuple[str, ...] = PED_BODY_MARKERS + PED_OPTIONAL_MARKERS
+PED_PART_ROLES: Tuple[str, ...] = tuple(_V["pedPartRoles"])
+PED_DETAIL_MODES: Tuple[str, ...] = tuple(_V["pedDetailModes"])
+PED_REST_MODELS: Tuple[str, ...] = tuple(_V["pedRestModels"])
+PED_RIG_STAGES: Tuple[str, ...] = tuple(_V["pedRigStages"])
+PED_RIG_REFUSALS: Tuple[str, ...] = tuple(_V["pedRigRefusals"])
+PED_RIG_WARNINGS: Tuple[str, ...] = tuple(_V["pedRigWarnings"])
+PED_RIG_OUTCOMES: Tuple[str, ...] = tuple(_V["pedRigOutcomes"])
+PED_LAYOUTS: Tuple[str, ...] = tuple(_V["pedLayouts"])
+PED_RAGDOLLS: Tuple[str, ...] = tuple(_V["pedRagdolls"])
+PED_TEMPLATE_GROUPS: Tuple[str, ...] = tuple(_V["pedTemplateGroups"])
 ERROR_CODES: Tuple[str, ...] = tuple(CONSTANTS["errorCodes"])
 CLOSE_CODES: Dict[str, int] = dict(CONSTANTS["closeCodes"])
 
@@ -343,6 +535,11 @@ _FEATURE_ID_RE = re.compile(r"[a-z]+(?:\.[A-Za-z]+)+")
 _NOT_PRINTABLE_RE = re.compile("[\u0000-\u001f\u007f-\u009f\ud800-\udfff]")
 _SURROGATE_RE = re.compile("[\ud800-\udfff]")
 _HTTPS_URL_RE = re.compile(r"https://[!-~]+")
+_PED_MODEL_RE = re.compile(r"[A-Za-z0-9_]{1,63}")
+_NEW_PED_MODEL_RE = re.compile(r"[a-z][a-z0-9_]{2,31}")
+_PED_TYPE_RE = re.compile(r"[A-Za-z0-9_]{1,32}")
+_BONE_NAME_RE = re.compile(r"[!-~]{1,64}")
+_SHA256_RE = re.compile(r"[0-9a-f]{64}")
 
 
 def is_id(value: Any) -> bool:
@@ -418,6 +615,31 @@ def is_access_token(value: Any) -> bool:
 
 def is_feature_id(value: Any) -> bool:
     return isinstance(value, str) and len(value) <= MAX_ID_LENGTH and _FEATURE_ID_RE.fullmatch(value) is not None
+
+
+def is_ped_model(value: Any) -> bool:
+    """A ped model name as the game names it: 1 to 63 letters, digits and underscores."""
+    return isinstance(value, str) and _PED_MODEL_RE.fullmatch(value) is not None
+
+
+def is_new_ped_model(value: Any) -> bool:
+    """The model name of a new custom ped: a lowercase letter, then 2 to 31 lowercase letters, digits or underscores."""
+    return isinstance(value, str) and _NEW_PED_MODEL_RE.fullmatch(value) is not None
+
+
+def is_ped_type(value: Any) -> bool:
+    """A ped type as ``peds.meta`` names it (CIVMALE, GANG_1)."""
+    return isinstance(value, str) and _PED_TYPE_RE.fullmatch(value) is not None
+
+
+def is_bone_name(value: Any) -> bool:
+    """A bone name: 1 to 64 printable ASCII characters without spaces."""
+    return isinstance(value, str) and _BONE_NAME_RE.fullmatch(value) is not None
+
+
+def is_sha256_hex(value: Any) -> bool:
+    """A SHA-256 as 64 lowercase hex digits."""
+    return isinstance(value, str) and _SHA256_RE.fullmatch(value) is not None
 
 
 def is_https_url(value: Any) -> bool:
@@ -565,6 +787,8 @@ _INT32 = "int32"
 _INT64 = "int64"
 _INT32_REQUIRED = "int32!"
 _BOOL = "bool"
+#: Any finite JSON number (coordinates, fractions, measures); never a bool.
+_NUMBER = "number"
 
 _INT32_MIN, _INT32_MAX = -(2**31), 2**31 - 1
 _INT64_MIN, _INT64_MAX = -(2**63), 2**63 - 1
@@ -578,6 +802,11 @@ def _obj(spec: Dict[str, Kind]) -> Tuple[str, Dict[str, Kind]]:
 
 def _list(item: Kind) -> Tuple[str, Kind]:
     return ("list", item)
+
+
+def _map(value: Kind) -> Tuple[str, Kind]:
+    """An object whose keys are data (marker names) and whose values all have one kind."""
+    return ("map", value)
 
 
 def _is_integer(value: Any) -> bool:
@@ -596,11 +825,20 @@ def _kind_ok(value: Any, kind: Kind) -> bool:
         return _is_integer(value) and _INT64_MIN <= value <= _INT64_MAX
     if kind == _BOOL:
         return isinstance(value, bool)
+    if kind == _NUMBER:
+        return type(value) in (int, float) and math.isfinite(value)
     tag, inner = kind  # type: ignore[misc]
     if tag == "obj":
         return isinstance(value, dict) and _kinds_ok(value, inner)
     if tag == "list":
         return isinstance(value, list) and all(_kind_ok(item, inner) for item in value)
+    if tag == "map":
+        if not isinstance(value, dict):
+            return False
+        earlier = getattr(value, "earlier", None) or {}
+        return all(_kind_ok(item, inner) for item in value.values()) and all(
+            _kind_ok(item, inner) for items in earlier.values() for item in items
+        )
     raise AssertionError(f"unknown kind {kind!r}")
 
 
@@ -636,6 +874,21 @@ _FOCUSED = _obj(
     }
 )
 _MODEL_FILES = _list(_obj({"name": _STR, "length": _INT64}))
+_PED_MARKERS_KIND = _map(_list(_NUMBER))
+_PED_PROPORTIONS = _obj({"height": _NUMBER, "shoulders": _NUMBER, "hips": _NUMBER, "arm": _NUMBER, "leg": _NUMBER, "torso": _NUMBER})
+_PED_REPORT = _obj(
+    {
+        "outcome": _STR,
+        "confidence": _NUMBER,
+        "warnings": _list(_obj({"code": _STR, "count": _INT32, "value": _NUMBER, "markers": _list(_STR), "template": _STR})),
+        "markers": _PED_MARKERS_KIND,
+        "markerMoves": _map(_NUMBER),
+        "character": _PED_PROPORTIONS,
+        "template": _PED_PROPORTIONS,
+        "suggestedTemplate": _STR,
+        "proxy": _BOOL,
+    }
+)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1031,6 +1284,253 @@ def _welcome(m: Mapping[str, Any]) -> Optional[str]:
     )
 
 
+# ---- custom peds ----
+
+
+def _bounded(value: Any, limit: float) -> bool:
+    return type(value) in (int, float) and math.isfinite(value) and abs(value) <= limit
+
+
+def _marker_names_ok(markers: Any) -> bool:
+    """Known marker names, at most ``MAX_PED_MARKERS``."""
+    return markers is not None and len(markers) <= MAX_PED_MARKERS and all(_one_of(name, PED_MARKERS) for name in markers)
+
+
+def ped_markers_problem(markers: Any) -> Optional[str]:
+    """Why ``markers`` (name to ``[x, y, z]``) break the rules of ``ped.rig``, as an English sentence, or ``None``:
+    known names (:data:`PED_MARKERS`), at most :data:`MAX_PED_MARKERS`, each three finite numbers within 3 m."""
+    if not isinstance(markers, Mapping) or len(markers) > MAX_PED_MARKERS:
+        return f"markers maps up to {MAX_PED_MARKERS} marker names to points"
+    for name, point in markers.items():
+        if name not in PED_MARKERS:
+            return f"{name!r} is not a marker name"
+        if not isinstance(point, (list, tuple)) or len(point) != 3 or not all(_bounded(c, 3) for c in point):
+            return f"the marker {name} is not three finite numbers within 3 m of the ped's origin"
+    return None
+
+
+def _bone_names_ok(bones: Any) -> bool:
+    if bones is None or not 1 <= len(bones) <= MAX_PED_BONES:
+        return False
+    return all(is_bone_name(bone) for bone in bones) and len(set(bones)) == len(bones)
+
+
+def _ped_template_ok(entry: Any) -> bool:
+    return (
+        entry is not None
+        and is_ped_model(entry.get("model"))
+        and (entry.get("gender") is None or _one_of(entry.get("gender"), GENDERS))
+        and is_ped_type(entry.get("pedType"))
+        and _one_of(entry.get("layout"), PED_LAYOUTS)
+        and _one_of(entry.get("group"), PED_TEMPLATE_GROUPS)
+        and entry.get("recommended") is not None
+    )
+
+
+def _ped_templates_list(m: Mapping[str, Any]) -> Optional[str]:
+    templates = m.get("templates")
+    if not is_id(m.get("re")) or m.get("truncated") is None or templates is None or len(templates) > MAX_PED_TEMPLATES:
+        return INVALID_MESSAGE
+    models = set()
+    for entry in templates:
+        if not _ped_template_ok(entry) or entry["model"].lower() in models:
+            return INVALID_MESSAGE
+        models.add(entry["model"].lower())
+    return None
+
+
+def _ped_skeleton_data(m: Mapping[str, Any]) -> Optional[str]:
+    bones = m.get("bones")
+    if (
+        not is_id(m.get("re"))
+        or not is_ped_model(m.get("model"))
+        or (m.get("gender") is not None and not _one_of(m.get("gender"), GENDERS))
+        or not _one_of(m.get("layout"), PED_LAYOUTS)
+        or not _one_of(m.get("ragdoll"), PED_RAGDOLLS)
+        or not _bone_names_ok(bones)
+        or m.get("payloadLength") is None
+    ):
+        return INVALID_MESSAGE
+    return None if m.get("payloadLength") == PED_BONE_RECORD_BYTES * len(bones) else FRAME_SIZE_MISMATCH
+
+
+def _ped_rig_options_ok(options: Any) -> bool:
+    if options is None:
+        return True
+    return (
+        (options.get("fingers") is None or _one_of(options.get("fingers"), PED_DETAIL_MODES))
+        and (options.get("face") is None or _one_of(options.get("face"), PED_DETAIL_MODES))
+        and (options.get("restModel") is None or _one_of(options.get("restModel"), PED_REST_MODELS))
+    )
+
+
+def ped_rig_payload_length(vertices: int, triangles: int, has_parts: bool) -> int:
+    """The payload a ``ped.rig`` header describes: positions, triangles and one part id per vertex with parts."""
+    return 12 * vertices + 12 * triangles + (vertices if has_parts else 0)
+
+
+def _ped_rig(m: Mapping[str, Any]) -> Optional[str]:
+    markers, mesh = m.get("markers"), m.get("mesh")
+    if (
+        not is_id(m.get("id"))
+        or not is_ped_model(m.get("template"))
+        or m.get("rights") is not True
+        or not markers
+        or ped_markers_problem(markers) is not None
+        or not _ped_rig_options_ok(m.get("options"))
+        or mesh is None
+    ):
+        return INVALID_MESSAGE
+    vertices, triangles, parts = mesh.get("vertices"), mesh.get("triangles"), mesh.get("parts")
+    if (
+        not _in_range(vertices, 0, 16777216)
+        or not _in_range(triangles, 0, 16777216)
+        or parts is None
+        or len(parts) > MAX_PED_RIG_PARTS
+        or not all(_one_of(role, PED_PART_ROLES) for role in parts)
+        or m.get("payloadLength") is None
+    ):
+        return INVALID_MESSAGE
+    expected = ped_rig_payload_length(vertices, triangles, len(parts) > 0)
+    return None if m.get("payloadLength") == expected else FRAME_SIZE_MISMATCH
+
+
+def _proportions_ok(value: Any) -> bool:
+    if value is None:
+        return True
+    return all(
+        type(value.get(key)) in (int, float) and math.isfinite(value.get(key)) and 0 <= value.get(key) <= 10
+        for key in ("height", "shoulders", "hips", "arm", "leg", "torso")
+    )
+
+
+def _ped_rig_report_ok(report: Any) -> bool:
+    if report is None:
+        return False
+    confidence, warnings, moves = report.get("confidence"), report.get("warnings"), report.get("markerMoves")
+    if (
+        not _one_of(report.get("outcome"), PED_RIG_OUTCOMES)
+        or type(confidence) not in (int, float)
+        or not math.isfinite(confidence)
+        or not 0 <= confidence <= 1
+        or warnings is None
+        or len(warnings) > MAX_PED_RIG_WARNINGS
+        or (report.get("markers") is not None and ped_markers_problem(report.get("markers")) is not None)
+        or not _proportions_ok(report.get("character"))
+        or not _proportions_ok(report.get("template"))
+        or (report.get("suggestedTemplate") is not None and not is_ped_model(report.get("suggestedTemplate")))
+    ):
+        return False
+    for warning in warnings:
+        if (
+            warning is None
+            or not _one_of(warning.get("code"), PED_RIG_WARNINGS)
+            or (warning.get("count") is not None and not _in_range(warning.get("count"), 0, 16777216))
+            or (warning.get("value") is not None and not _bounded(warning.get("value"), 1000000))
+            or (warning.get("markers") is not None and not _marker_names_ok(warning.get("markers")))
+            or (warning.get("template") is not None and not is_ped_model(warning.get("template")))
+        ):
+            return False
+    if moves is not None:
+        if len(moves) > MAX_PED_MARKERS:
+            return False
+        for name, move in moves.items():
+            if name not in PED_MARKERS or type(move) not in (int, float) or not math.isfinite(move) or not 0 <= move <= 10000:
+                return False
+    return True
+
+
+def _ped_rig_result(m: Mapping[str, Any]) -> Optional[str]:
+    ok, job = m.get("ok"), m.get("job")
+    if not is_id(m.get("re")) or ok is None or m.get("payloadLength") is None or (job is not None and not is_id(job)):
+        return INVALID_MESSAGE
+    if ok:
+        bones, vertices = m.get("bones"), m.get("vertices")
+        if (
+            m.get("code") is not None
+            or m.get("reasons") is not None
+            or job is None
+            or not is_ped_model(m.get("template"))
+            or not _one_of(m.get("ragdoll"), PED_RAGDOLLS)
+            or not _bone_names_ok(bones)
+            or not _in_range(vertices, 3, MAX_PED_RIG_VERTICES)
+            or not _ped_rig_report_ok(m.get("report"))
+        ):
+            return INVALID_MESSAGE
+        expected = PED_RIG_BONE_BYTES * len(bones) + PED_RIG_VERTEX_BYTES * vertices
+        return None if m.get("payloadLength") == expected else FRAME_SIZE_MISMATCH
+    if not _one_of(m.get("code"), _ERROR_CODE_SET) or any(
+        m.get(key) is not None for key in ("template", "ragdoll", "bones", "vertices", "report")
+    ):
+        return INVALID_MESSAGE
+    reasons = m.get("reasons")
+    if reasons is not None:
+        if len(reasons) > MAX_PED_RIG_REASONS:
+            return INVALID_MESSAGE
+        for reason in reasons:
+            if (
+                reason is None
+                or not _one_of(reason.get("code"), PED_RIG_REFUSALS)
+                or (reason.get("markers") is not None and not _marker_names_ok(reason.get("markers")))
+                or (reason.get("message") is not None and not is_diagnostic(reason.get("message")))
+            ):
+                return INVALID_MESSAGE
+    return None if m.get("payloadLength") == 0 else FRAME_SIZE_MISMATCH
+
+
+def ped_add_problem(m: Mapping[str, Any]) -> Optional[str]:
+    """Why the fields of a ``ped.add`` break the rules, as an English sentence, or ``None``."""
+    if not is_ped_model(m.get("template")):
+        return "template is a ped model name"
+    if not is_text(m.get("name")):
+        return "the name is 1 to 128 characters of display text"
+    if not is_new_ped_model(m.get("model")):
+        return "the model name is a lowercase letter, then 2 to 31 lowercase letters, digits or underscores"
+    if m.get("rights") is not True:
+        return "the user did not confirm the rights notice for this character"
+    if m.get("rig") is not None and not is_id(m.get("rig")):
+        return "rig names the job of a ped.rig.result"
+    ragdoll = m.get("ragdoll")
+    if ragdoll is not None and (not _one_of(ragdoll, PED_RAGDOLLS) or ragdoll == "alien"):
+        return "ragdoll is fred, wilma, fred-large or wilma-large"
+    glb_length, chunks = m.get("glbLength"), m.get("chunks")
+    if not _in_range(glb_length, 20, MAX_PED_ADD_BYTES):
+        return f"a GLB is 20 bytes to {MAX_PED_ADD_BYTES // (1024 * 1024)} MiB"
+    if not _in_range(chunks, 1, MAX_PED_ADD_CHUNKS) or chunks < -(-glb_length // MAX_PED_ADD_CHUNK_BYTES):
+        return f"a GLB travels in 1 to {MAX_PED_ADD_CHUNKS} chunks of at most {MAX_PED_ADD_CHUNK_BYTES // (1024 * 1024)} MiB"
+    if not is_sha256_hex(m.get("sha256")):
+        return "sha256 is 64 lowercase hex digits"
+    parts = m.get("parts")
+    if parts is not None:
+        if len(parts) > MAX_PED_ADD_PARTS:
+            return f"at most {MAX_PED_ADD_PARTS} parts"
+        meshes = set()
+        for part in parts:
+            if part is None or not is_text(part.get("mesh")) or not _one_of(part.get("role"), PED_PART_ROLES):
+                return "each part names a mesh and a part role"
+            if part["mesh"] in meshes:
+                return f"two parts name the mesh {part['mesh']}"
+            meshes.add(part["mesh"])
+    return None
+
+
+def _ped_add_result(m: Mapping[str, Any]) -> Optional[str]:
+    ok, project = m.get("ok"), m.get("project")
+    if ok is None or not is_id(m.get("re")):
+        return INVALID_MESSAGE
+    if ok:
+        paired = (
+            m.get("code") is None
+            and project is not None
+            and is_text(project.get("name"))
+            and is_new_ped_model(project.get("model"))
+            and is_ped_model(project.get("template"))
+        )
+    else:
+        paired = _one_of(m.get("code"), _ERROR_CODE_SET) and project is None
+    return _check(paired and _findings_ok(m.get("findings")))
+
+
 class MessageDef(NamedTuple):
     type: str
     direction: str
@@ -1143,6 +1643,52 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
     # The cancel names the add it withdraws; it has no reply of its own.
     "item.addCancel": _text(TO_DCT, {}, lambda m: _check(is_id(m.get("re")))),
+    "ped.templates": _text(
+        TO_DCT,
+        {"gender": _STR, "all": _BOOL},
+        lambda m: _check(m.get("gender") is None or _one_of(m.get("gender"), GENDERS)),
+    ),
+    "ped.skeleton": _text(TO_DCT, {"model": _STR}, lambda m: _check(is_ped_model(m.get("model")))),
+    "ped.rig": _binary(
+        TO_DCT,
+        {
+            "template": _STR,
+            "rights": _BOOL,
+            "markers": _PED_MARKERS_KIND,
+            "options": _obj(
+                {"fingers": _STR, "face": _STR, "rollBones": _BOOL, "helperBones": _BOOL, "refineMarkers": _BOOL, "restModel": _STR}
+            ),
+            "mesh": _obj({"vertices": _INT32, "triangles": _INT32, "parts": _list(_STR)}),
+        },
+        _ped_rig,
+    ),
+    "ped.rig.cancel": _text(TO_DCT, {}, lambda m: _check(is_id(m.get("re")))),
+    "ped.add": _text(
+        TO_DCT,
+        {
+            "template": _STR,
+            "name": _STR,
+            "model": _STR,
+            "rights": _BOOL,
+            "rig": _STR,
+            "ragdoll": _STR,
+            "parts": _list(_obj({"mesh": _STR, "role": _STR})),
+            "glbLength": _INT64,
+            "chunks": _INT32,
+            "sha256": _STR,
+        },
+        lambda m: _check(ped_add_problem(m) is None),
+    ),
+    "ped.add.chunk": _binary(
+        TO_DCT,
+        {"index": _INT32},
+        lambda m: _check(
+            is_id(m.get("re"))
+            and _in_range(m.get("index"), 0, MAX_PED_ADD_CHUNKS - 1)
+            and _in_range(m.get("payloadLength"), 1, MAX_PED_ADD_CHUNK_BYTES)
+        ),
+    ),
+    "ped.addCancel": _text(TO_DCT, {}, lambda m: _check(is_id(m.get("re")))),
     "bye": _text(TO_DCT, {}, lambda m: None),
     # DCT to plugin
     "challenge": _text(TO_CLIENT, {"serverNonce": _STR}, lambda m: _check(is_bytes32(m.get("serverNonce")))),
@@ -1279,6 +1825,52 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
         TO_CLIENT,
         {"ok": _BOOL, "code": _STR, "binding": _BINDING, "findings": _FINDINGS},
         _item_add_result,
+    ),
+    "ped.templates.list": _text(
+        TO_CLIENT,
+        {
+            "templates": _list(
+                _obj({"model": _STR, "gender": _STR, "pedType": _STR, "layout": _STR, "group": _STR, "recommended": _BOOL})
+            ),
+            "truncated": _BOOL,
+        },
+        _ped_templates_list,
+    ),
+    "ped.skeleton.data": _binary(
+        TO_CLIENT,
+        {"model": _STR, "gender": _STR, "layout": _STR, "ragdoll": _STR, "bones": _list(_STR)},
+        _ped_skeleton_data,
+    ),
+    "ped.rig.accepted": _text(TO_CLIENT, {"job": _STR}, lambda m: _check(is_id(m.get("re")) and is_id(m.get("job")))),
+    "ped.rig.progress": _text(
+        TO_CLIENT,
+        {"job": _STR, "stage": _STR, "fraction": _NUMBER},
+        lambda m: _check(
+            is_id(m.get("job"))
+            and _one_of(m.get("stage"), PED_RIG_STAGES)
+            and m.get("fraction") is not None
+            and 0 <= m.get("fraction") <= 1
+        ),
+    ),
+    "ped.rig.result": _binary(
+        TO_CLIENT,
+        {
+            "ok": _BOOL,
+            "code": _STR,
+            "reasons": _list(_obj({"code": _STR, "markers": _list(_STR), "message": _STR})),
+            "job": _STR,
+            "template": _STR,
+            "ragdoll": _STR,
+            "bones": _list(_STR),
+            "vertices": _INT32,
+            "report": _PED_REPORT,
+        },
+        _ped_rig_result,
+    ),
+    "ped.addResult": _text(
+        TO_CLIENT,
+        {"ok": _BOOL, "code": _STR, "project": _obj({"name": _STR, "model": _STR, "template": _STR}), "findings": _FINDINGS},
+        _ped_add_result,
     ),
     "error": _text(
         TO_CLIENT,

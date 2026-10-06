@@ -5,7 +5,7 @@
 
     python tools/blender_shots.py --blender <path to blender> --out <folder>
         [--source <add-on source folder>] [--prefix after] [--expanded] [--language de_DE] [--theme light]
-        [--scenario garment]
+        [--scenario garment|ped]
 
 Builds the extension from ``--source`` (default: this repository's ``durty_cloth_tool_link``), starts a Blender
 window with a throw-away user folder (``BLENDER_USER_RESOURCES``), installs the build, and walks the add-on through
@@ -16,7 +16,9 @@ garment`` walks Garment Fitting (Experimental) instead, on a synthetic garment a
 garment and the hosted body are added, Fit with markers, Fix with the fit check and the problem colours, a sculpt
 session, the tear check, Game Ready after the local steps, and Add to Durty Cloth Tool (the skeleton missing and
 in place, what blocks an add, Durty Cloth Tool asking, the cloth added, the free limit, no project open, not
-connected). Each state is saved as
+connected). ``--scenario ped`` walks Custom Ped (Experimental) on a synthetic mannequin: no character, the character's
+checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting to be applied, the rigged
+character with its checks, and the project Durty Cloth Tool created. Each state is saved as
 ``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run. Blender
 quits by itself at the end (and is ended after ``--timeout`` seconds otherwise). Your Blender settings and
@@ -61,7 +63,8 @@ def launch(argv=None) -> int:
     parser.add_argument("--language", help="Blender's interface language for the run, for example de_DE")
     parser.add_argument("--theme", choices=("dark", "light"), default="dark")
     parser.add_argument("--size", default="1280x1600", help="the window size, WIDTHxHEIGHT")
-    parser.add_argument("--scenario", choices=("link", "garment"), default="link", help="which states to walk")
+    parser.add_argument("--scenario", choices=("link", "garment", "ped"), default="link",
+                        help="which states to walk")
     parser.add_argument("--timeout", type=float, default=420.0)
     args = parser.parse_args(argv)
     args.out.mkdir(parents=True, exist_ok=True)
@@ -153,7 +156,8 @@ class Shots:
                 for region in area.regions:
                     region.tag_redraw()
 
-    def shot(self, name: str):
+    def shot(self, name: str, whole: bool = False):
+        """Saves the sidebar (``whole``: the whole 3D view with its sidebar) as a numbered picture."""
         import numpy as np
 
         window, area, region = self.view()
@@ -167,9 +171,10 @@ class Shots:
             pixels = np.empty(width * height * 4, np.float32)
             image.pixels.foreach_get(pixels)
             rows = pixels.reshape(height, width, 4)
-            x0 = max(0, region.x - area.x)
-            y0 = max(0, region.y - area.y)
-            crop = np.ascontiguousarray(rows[y0:y0 + region.height, x0:x0 + region.width])
+            x0 = 0 if whole else max(0, region.x - area.x)
+            y0 = 0 if whole else max(0, region.y - area.y)
+            w, h = (area.width, area.height) if whole else (region.width, region.height)
+            crop = np.ascontiguousarray(rows[y0:y0 + h, x0:x0 + w])
             out = bpy.data.images.new(f"shot_{self.count}", crop.shape[1], crop.shape[0], alpha=True)
             out.pixels.foreach_set(crop.reshape(-1))
             path = self.out / f"{self.args.prefix}-{self.count:02d}-{name}.png"
@@ -233,6 +238,8 @@ class Shots:
         try:
             if args.scenario == "garment":
                 yield from self.garment_states(package, ctrl, dct, api, ui, sollumz_stub)
+            elif args.scenario == "ped":
+                yield from self.ped_states(package, ctrl, dct, api)
             else:
                 yield from self.states(ctrl, dct, api, ui, link, sollumz_stub, new, dead_port)
         finally:
@@ -516,6 +523,85 @@ class Shots:
         ctrl.disconnect()
         yield from self.wait(lambda: not ctrl.ready, 10, "the disconnect")
         yield from show("garment-add-not-connected", pages=-20)
+
+    # ---- the custom ped states (--scenario ped) -----------------------------------------------------------
+
+    def ped_states(self, package, ctrl, dct, api):
+        from tests.blender import ped_smoke
+
+        ph = sys.modules[package + ".ped_host"]
+        ui_ped = sys.modules[package + ".ui_ped"]
+        ctrl.shutdown()
+        ctrl.port_override = dct.port
+        dct.on_assist = api.approve
+        ctrl.connect()
+        yield from self.wait(lambda: ctrl.state == "signing-in" or ctrl.ready, 30, "the sign-in")
+        if not ctrl.ready:
+            ctrl.sign_in()
+        yield from self.wait(lambda: ctrl.ready, 30, "the connection")
+        scene = bpy.context.scene
+        scene.dct_link.workspace = "PED"
+        for obj in list(bpy.data.objects):
+            bpy.data.objects.remove(obj)
+        yield from self.wait(lambda: True, 5, "the empty scene")
+        self.shot("ped-start")
+
+        holder = bpy.data.collections.new("Hero")
+        scene.collection.children.link(holder)
+        _, objects, _ = ped_smoke.build_character(holder)
+        ped_smoke.select_only(objects)
+        self.operator(lambda: bpy.ops.dct_link.ped_use_selected())
+        self.frame_all()
+        yield from self.wait(lambda: True, 5, "the character")
+        self.shot("ped-checks")
+
+        for call in (lambda: bpy.ops.dct_link.ped_apply_transforms(), lambda: bpy.ops.dct_link.ped_remove_old_rig(),
+                     lambda: bpy.ops.dct_link.ped_scale(factor=0.01),
+                     lambda: bpy.ops.dct_link.ped_turn(axis="Z", degrees=-90.0),
+                     lambda: bpy.ops.dct_link.ped_confirm_facing(), lambda: bpy.ops.dct_link.ped_auto_markers()):
+            self.operator(call)
+        self.frame_all()
+        yield from self.wait(lambda: True, 5, "the markers")
+        self.shot("ped-markers", whole=True)
+
+        window, area, region = self.view()
+        main = next(r for r in area.regions if r.type == "WINDOW")
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=main):
+            bpy.ops.dct_link.ped_guide("INVOKE_DEFAULT")
+        guide = ui_ped.RUNTIME.guide
+        if guide is not None:
+            markers = ph.read_markers(scene.dct_ped.character)
+            for name in ("headTop", "chin", "shoulderL"):
+                guide.points[name] = markers[name]
+            guide.preview = markers["shoulderR"]
+        yield from self.wait(lambda: True, 5, "the click guide")
+        self.shot("ped-guide", whole=True)
+        if guide is not None:
+            ui_ped.RUNTIME.guide = None
+            ui_ped._guide_handlers(False)
+            try:
+                bpy.context.workspace.status_text_set(None)
+            except (AttributeError, TypeError):
+                pass
+
+        self.operator(lambda: bpy.ops.dct_link.ped_refresh_templates())
+        yield from self.wait(lambda: ctrl.peds.templates is not None, 30, "the templates")
+        self.operator(lambda: bpy.ops.dct_link.ped_use_template(model="a_m_y_tester_01"))
+        dct.ped_rig_warnings = [{"code": "marker_offset", "count": 2, "value": 31.0, "markers": ["elbowL", "elbowR"]}]
+        dct.ped_rig_suggestion = "a_m_m_tester_02"
+        dct.ped_rig_outcome = "needsReview"
+        self.operator(lambda: bpy.ops.dct_link.ped_rig(agree=True))
+        yield from self.wait(lambda: ctrl.peds.rig is not None, 30, "the rig")
+        self.shot("ped-rig-waiting", whole=True)
+
+        self.operator(lambda: bpy.ops.dct_link.ped_apply_rig())
+        self.operator(lambda: bpy.ops.dct_link.ped_run_checks())
+        yield from self.wait(lambda: True, 5, "the rigged character")
+        self.shot("ped-checked", whole=True)
+
+        self.operator(lambda: bpy.ops.dct_link.ped_send())
+        yield from self.wait(lambda: ctrl.peds.created is not None, 60, "the created project")
+        self.shot("ped-created")
 
     def states(self, ctrl, dct, api, ui, link, stub, new, dead_port):
         # 1. Durty Cloth Tool is not running: the add-on keeps looking.

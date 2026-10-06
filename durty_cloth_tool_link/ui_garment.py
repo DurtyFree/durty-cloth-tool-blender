@@ -3253,7 +3253,8 @@ class DCTLINK_PT_garment(ui._SubPanel, Panel):
 
     @classmethod
     def poll(cls, context):
-        return state.controller is not None and getattr(context.scene, "dct_garment", None) is not None
+        return (state.controller is not None and getattr(context.scene, "dct_garment", None) is not None
+                and ui.workspace(context) == "CLOTHING")
 
     def draw_header(self, context):
         self.layout.label(text="", icon="MOD_CLOTH")
