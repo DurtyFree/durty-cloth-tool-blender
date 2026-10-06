@@ -3114,7 +3114,8 @@ def draw_ready(layout: Any, context: Any) -> None:
         body.prop(settings_, "lod_low", text=t("garment.prop.lod-low"), translate=False)
 
     layout.separator(factor=GAP)
-    tool(layout, context, DCTLINK_OT_fit_validate.bl_idname, "garment.op.validate", "CHECKMARK",
+    # Its own icon is the magnifier of the fit check: a tick on this row means only that Validate ran.
+    tool(layout, context, DCTLINK_OT_fit_validate.bl_idname, "garment.op.validate", "VIEWZOOM",
          info="garment.info.validate", done=flow.validated)
     draw_findings(layout, context)
 

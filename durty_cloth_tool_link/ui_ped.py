@@ -1576,7 +1576,7 @@ def draw_check(layout: Any, context: Any) -> None:
     for pose in ped.POSES:
         operator(grid, DCTLINK_OT_ped_pose.bl_idname, f"ped.pose.{pose}", POSE_ICONS[pose], pose=pose)
     layout.separator(factor=GAP)
-    step(layout, context, DCTLINK_OT_ped_run_checks.bl_idname, "ped.op.run-checks", "CHECKMARK")
+    step(layout, context, DCTLINK_OT_ped_run_checks.bl_idname, "ped.op.run-checks", "VIEWZOOM")
     findings = RUNTIME.findings.get(ident(collection))
     if findings is None:
         return
