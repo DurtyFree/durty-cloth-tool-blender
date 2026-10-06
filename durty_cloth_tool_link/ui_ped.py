@@ -976,7 +976,7 @@ def _templates_reason() -> Optional[Msg]:
 
 
 class DCTLINK_OT_ped_choose_template(_Op):
-    """Choose Template: a search over every listed template (Blender's search popup filters as you type)."""
+    """Search Templates: Blender's search popup over every listed template, filtered as the user types."""
 
     bl_idname = "dct_link.ped_choose_template"
     bl_label = EN["ped.op.choose-template"]
@@ -1000,7 +1000,6 @@ class DCTLINK_OT_ped_choose_template(_Op):
         props(context).template = self.model
         advance(context)
         return {"FINISHED"}
-
 
 
 def template_line(entry: Dict[str, Any]) -> str:

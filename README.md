@@ -293,13 +293,13 @@ always names the next step, and its button is the large one. Five sections follo
    goes back one); the neck, chest, pelvis, elbows and knees are placed from them. **Auto Markers** places all 19 from
    the character's shape, and **From Old Rig** uses the joints of the rig the character came with. Left markers are
    blue, right ones orange; move any that are off, and the elbow or knee follows its limb.
-3. **Rig:** choose a template (an installed ped like your character: the template button opens a search over every
-   installed ped, so type part of its name; **Any**, **Male**, **Female** and **Show All** (which adds freemode, player,
-   cutscene and story peds) set what it lists; the list loads by itself while Durty Cloth Tool is connected, and
-   **Refresh** reads it again), confirm your rights to the character once, then **Rig in Durty Cloth Tool**. It shows
-   its progress, and **Cancel** stops it. Check where Durty Cloth Tool moved the markers (yellow), then **Apply Rig**:
-   an armature with the template's bones moves the character, which keeps its look. The report says what to look at, and
-   names a closer template when the proportions are far from the template's. **Rig Again** keeps the rig before it under
+3. **Rig:** choose a template, an installed ped like your character: the template button opens a search over the listed
+   peds, so type part of a name. **Any**, **Male** and **Female** filter the list, and **Show All** adds freemode,
+   player, cutscene and story peds. The list loads by itself while Durty Cloth Tool is connected, and **Refresh** reads
+   it again. Confirm your rights to the character once, then choose **Rig in Durty Cloth Tool**. It shows its progress,
+   and **Cancel** stops it. Check where Durty Cloth Tool moved the markers (yellow), then **Apply Rig**: an armature
+   with the template's bones moves the character, which keeps its look. The report says what to look at, and names a
+   closer template when the proportions are far from the template's. **Rig Again** keeps the rig before it under
    **Previous Rig**, and **Remove Rig** gives back the character from before rigging.
 4. **Check:** test poses (Arms Up, Squat, Walk Step and more, simple bends by bone name, not game animations) and
    **Run Checks**, which lists what Durty Cloth Tool would refuse (a vertex without weight, a bone moved after the

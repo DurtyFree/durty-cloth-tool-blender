@@ -413,6 +413,8 @@ class Request:
         self._result: Any = None
         self._error: Optional[LinkError] = None
         self._callbacks: List[Callable[["Request"], Any]] = []
+        #: The session's own next steps once the request finished (:meth:`LinkSession._then`), never dispatched.
+        self._continuations: List[Callable[["Request"], Any]] = []
         self.transform: Optional[Callable[[Any], Any]] = None
 
     @property
@@ -1086,11 +1088,21 @@ class _PedTemplatePages:
         try:
             page = self.session.request("ped.templates", fields, timeout=self.timeout)
         except LinkError as exc:
-            self.finish(error=exc)
+            # The link was ready when the list started: not ready now means the connection ended between pages.
+            self.finish(error=LinkError("disconnected", str(exc)) if exc.code == "not-authenticated" else exc)
             return
-        page.add_done_callback(self.on_page)
+        # The session's own path, not dispatch: a host that waits for the list on the thread dispatch runs on would
+        # otherwise never see the next page asked for.
+        self.session._then(page, self.on_page)
 
     def on_page(self, page: Request) -> None:
+        try:
+            self._on_page(page)
+        except Exception as exc:  # nothing else would end the list, which has no deadline of its own
+            self.session._log.exception("the ped template list failed")
+            self.finish(error=LinkError("protocol-violation", f"{type(exc).__name__}: {exc}"))
+
+    def _on_page(self, page: Request) -> None:
         if page.error is not None:
             self.finish(error=page.error)
             return
@@ -1423,6 +1435,8 @@ class LinkSession:
         self._lock = threading.RLock()
         self._handlers: Dict[str, List[Handler]] = collections.defaultdict(list)
         self._calls: List[Tuple[Callable[..., Any], Tuple[Any, ...]]] = []
+        #: The session's own steps after a finished request (:meth:`_then`), run where the session runs, never dispatched.
+        self._steps: List[Tuple[Callable[[Request], Any], Request]] = []
         self._thread: Optional[threading.Thread] = None
         self._stop_thread = threading.Event()
         self._pump: Optional[threading.Thread] = None
@@ -1525,8 +1539,11 @@ class LinkSession:
                 self._wake()  # callbacks run on the session thread (or wherever dispatch sends them)
                 return
             with self._lock:
+                steps, self._steps = self._steps, []
                 calls, self._calls = self._calls, []
-            if not calls:
+            for step, request in steps:
+                step(request)
+            if not calls and not steps:
                 return
             for fn, args in calls:
                 self._dispatch(fn, *args)
@@ -2531,6 +2548,17 @@ class LinkSession:
     def _finish_request(self, request: Request, result: Any = None, error: Optional[LinkError] = None) -> None:
         for callback in request._finish(result, error):
             self._calls.append((callback, (request,)))
+        steps, request._continuations = request._continuations, []
+        self._steps.extend((step, request) for step in steps)
+
+    def _then(self, request: Request, step: Callable[[Request], Any]) -> None:
+        """Runs ``step(request)`` once ``request`` finished, on the session's own path (its thread, or whoever polls
+        it) rather than through ``dispatch``; ``step`` must not raise."""
+        with self._lock:
+            if not request.done:
+                request._continuations.append(step)
+                return
+        step(request)
 
     def _release_slot(self, request_id: str) -> None:
         """DCT answered ``request_id`` (or it never got there): its service slot is free again."""
