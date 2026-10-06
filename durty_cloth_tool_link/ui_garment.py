@@ -179,15 +179,21 @@ def _slot_items(self: Any, context: Any) -> list:
 
 
 def _keep_on_garment(settings_: Any) -> None:
-    """Each garment keeps its own type, slot and avatar, so they come back when it is chosen again."""
+    """Each garment keeps its own type, slot, avatar, skin and front, so they come back when it is chosen again."""
     obj = settings_.garment
     try:
         if obj is not None and obj.type == "MESH":
             obj[gh.TYPE_TAG] = settings_.category
             obj[gh.SLOT_TAG] = settings_.slot
             obj[AVATAR_TAG] = settings_.avatar
+            obj[SKIN_TAG] = bool(settings_.skin)
+            obj[OPEN_FRONT_TAG] = bool(settings_.open_front)
     except (ReferenceError, AttributeError, TypeError):
         pass  # the garment is gone, or this property is set while Blender reads a file
+
+
+def _choice_changed(self: Any, context: Any) -> None:
+    _keep_on_garment(self)
 
 
 def _category_changed(self: Any, context: Any) -> None:
@@ -200,10 +206,6 @@ def _category_changed(self: Any, context: Any) -> None:
     _keep_on_garment(self)
 
 
-def _slot_changed(self: Any, context: Any) -> None:
-    _keep_on_garment(self)
-
-
 def _avatar_changed(self: Any, context: Any) -> None:
     stock = garment_avatars.avatar(self.avatar)
     if stock is not None:
@@ -211,8 +213,10 @@ def _avatar_changed(self: Any, context: Any) -> None:
     _keep_on_garment(self)
 
 
-#: On the garment: the avatar chosen for it.
+#: On the garment: the avatar chosen for it, whether it shows skin and whether its front is worn open.
 AVATAR_TAG = "dct_avatar"
+SKIN_TAG = "dct_skin"
+OPEN_FRONT_TAG = "dct_open_front"
 
 
 def _marker_size_changed(self: Any, context: Any) -> None:
@@ -235,14 +239,17 @@ def _garment_changed(self: Any, context: Any) -> None:
     self.variations.clear()
     if obj is not None:
         category, slot, avatar = obj.get(gh.TYPE_TAG), obj.get(gh.SLOT_TAG), obj.get(AVATAR_TAG)
-        if category in garment.CATEGORIES:
-            self.category = category  # its slot, skin and front follow
-            if slot in garment.slots_for(category):
-                self.slot = slot
-        if avatar in AVATAR_IDS:
-            self.avatar = avatar
-        elif obj.get(gh.AVATAR_MARKERS):
-            self.avatar = "file"
+        skin, open_front = obj.get(SKIN_TAG), obj.get(OPEN_FRONT_TAG)
+        # The type sets its usual slot, skin and front; what the garment kept wins over them.
+        self.category = category if category in garment.CATEGORIES else self.category
+        if slot in garment.slots_for(self.category):
+            self.slot = slot
+        if skin is not None:
+            self.skin = bool(skin)
+        if open_front is not None:
+            self.open_front = bool(open_front)
+        # A garment without an avatar of its own never takes the last one's: its markers would come from elsewhere.
+        self.avatar = avatar if avatar in AVATAR_IDS else ("file" if obj.get(gh.AVATAR_MARKERS) else "detect")
         _keep_on_garment(self)
     RUNTIME.add_problems, RUNTIME.add_warnings, RUNTIME.add_of = [], [], None
     layer = getattr(context, "view_layer", None)
@@ -273,13 +280,13 @@ class DCTLINK_PG_garment(PropertyGroup):
     gender: EnumProperty(name=EN["garment.prop.gender"], items=GENDER_ITEMS, default="male",
                          description=EN["garment.prop.gender.desc"], translation_context=CONTEXT)
     slot: EnumProperty(name=EN["garment.prop.slot"], items=_slot_items, default=garment.SLOTS.index("jbib"),
-                       update=_slot_changed, description=EN["garment.prop.slot.desc"], translation_context=CONTEXT)
+                       update=_choice_changed, description=EN["garment.prop.slot.desc"], translation_context=CONTEXT)
     category: EnumProperty(name=EN["garment.prop.category"], items=_category_items,
                            default=garment.CATEGORIES.index("tshirt"), update=_category_changed,
                            description=EN["garment.prop.category.desc"], translation_context=CONTEXT)
     avatar: EnumProperty(name=EN["garment.prop.avatar"], items=AVATAR_ITEMS, default="detect", update=_avatar_changed,
                          description=EN["garment.prop.avatar.desc"], translation_context=CONTEXT)
-    open_front: BoolProperty(name=EN["garment.prop.open-front"], default=False,
+    open_front: BoolProperty(name=EN["garment.prop.open-front"], default=False, update=_choice_changed,
                              description=EN["garment.prop.open-front.desc"], translation_context=CONTEXT)
     source_pose: EnumProperty(name=EN["garment.prop.pose"], items=POSE_ITEMS, default="a_pose",
                               description=EN["garment.prop.pose.desc"], translation_context=CONTEXT)
@@ -338,8 +345,8 @@ class DCTLINK_PG_garment(PropertyGroup):
                          description=EN["garment.prop.lod.desc"], translation_context=CONTEXT)
     item_name: StringProperty(name=EN["add.prop.name"], maxlen=protocol.MAX_TEXT_LENGTH,
                               description=EN["add.prop.name.desc"], translation_context=CONTEXT)
-    skin: BoolProperty(name=EN["add.prop.skin"], default=False, description=EN["add.prop.skin.desc"],
-                       translation_context=CONTEXT)
+    skin: BoolProperty(name=EN["add.prop.skin"], default=False, update=_choice_changed,
+                       description=EN["add.prop.skin.desc"], translation_context=CONTEXT)
     first_title: StringProperty(name=EN["add.prop.variation-name"], maxlen=protocol.MAX_TEXT_LENGTH,
                                 description=EN["add.prop.first-name.desc"], translation_context=CONTEXT)
     variations: CollectionProperty(type=DCTLINK_PG_variation)
@@ -377,7 +384,7 @@ def _aligned(context: Any) -> bool:
     obj = current_garment(context)
     category = props(context).category
     if garment.is_prop(category):
-        return gh.aligned(obj, context.scene)
+        return gh.flag(obj, "dct_aligned")  # markers do not count: a prop has none
     return not garment.markers_for(category) or gh.aligned(obj, context.scene)
 
 
@@ -882,7 +889,7 @@ class DCTLINK_OT_fit_auto_markers(_MeshOp):
 
     @classmethod
     def poll(cls, context):
-        return _refuse(cls, _markers_reason(context))
+        return _refuse(cls, _markers_reason(context) or _avatar_moved_reason(context))
 
     def execute(self, context):
         def place() -> Msg:
@@ -900,9 +907,20 @@ class DCTLINK_OT_fit_auto_markers(_MeshOp):
         return self.run(context, place, backup=False)
 
 
+def _avatar_moved_reason(context: Any) -> Optional[Msg]:
+    """An avatar's markers stand where the garment was imported: once Align to Body, the A-pose turn or a fit moved
+    it, they no longer fit it."""
+    if props(context).avatar == "detect":
+        return None
+    obj = current_garment(context)
+    if any(gh.flag(obj, name) for name in ("dct_aligned", "dct_converted", "dct_fitted")):
+        return msg("garment.why.avatar-moved")
+    return None
+
+
 def place_markers(context: Any, obj: Any, names: Tuple[str, ...]) -> Tuple[Dict[str, Any], Tuple[str, ...], str]:
     """The markers of the garment, their notes and where they came from: the avatar it was made on when one is chosen
-    (exactly, in the pose it was draped in), else read from its shape (tops and legs), else the body's own joints as a
+    (in the pose it was draped in), else read from its shape (tops and legs), else the body's own joints as a
     starting point to move them from."""
     settings_ = props(context)
     if settings_.avatar != "detect":
@@ -1121,8 +1139,9 @@ class DCTLINK_OT_fit_snap_anchor(_MeshOp):
             if not found:
                 raise UserError(msg("garment.why.no-body"))
             kind = garment.garment_type(settings_.category).snap
-            result = gh.snap_to_anchor(current_garment(context), valid_body(context), found, kind,
-                                       anchor_side(context))
+            obj = current_garment(context)
+            gh.drop_markers(context.scene, obj, ())  # a prop has none; another type's would only confuse
+            result = gh.snap_to_anchor(obj, valid_body(context), found, kind, anchor_side(context))
             _after_change(context)
             return msg("garment.done.snap", anchor=msg(f"garment.slot.{settings_.slot}"), **result)
 
@@ -1610,13 +1629,14 @@ class DCTLINK_OT_fit_check_tears(_MeshOp):
 OPEN_SEAMS_WARN = (10, 0.02)
 
 
-def front_centre(context: Any) -> Tuple[float, float]:
+def front_centre(context: Any) -> Tuple[float, float, Optional[float]]:
     """The centre of an open front: X between the markers' sides (else the garment's middle), Y the garment's middle
-    from front to back."""
+    from front to back, and the neck marker's height (the opening ends there; ``None`` without it)."""
     positions = gh.world_positions(current_garment(context))
     markers = gh.read_markers(context.scene)
     cx = garment.centre_x(markers) if markers else float(np.median(positions[:, 0]))
-    return cx, float((positions[:, 1].min() + positions[:, 1].max()) / 2)
+    top = float(markers["neck"][2]) if "neck" in markers else None
+    return cx, float((positions[:, 1].min() + positions[:, 1].max()) / 2), top
 
 
 class DCTLINK_OT_fit_prepare(_SteppedOp):
@@ -2552,7 +2572,7 @@ def flow_state(context: Any) -> garment.FlowState:
         category=settings_.category,
         source_pose=settings_.source_pose,
         markers=len([name for name in expected if name in placed]),
-        aligned=gh.aligned(obj, context.scene) if obj is not None else False,
+        aligned=obj is not None and (gh.flag(obj, "dct_aligned") if prop else gh.aligned(obj, context.scene)),
         fitted=gh.flag(obj, "dct_fitted"),
         sculpting=gh.sculpting(obj) or gh.session_broken(obj),
         checked=gh.flag(obj, "dct_checked"),

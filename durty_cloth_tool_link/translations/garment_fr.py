@@ -37,7 +37,7 @@ TEXT = {
     "garment.slot.lowr": "Jambes (lowr)",
     "garment.slot.lowr.desc": "Pantalons, shorts et jupes",
     "garment.slot.feet": "Chaussures (feet)",
-    "garment.slot.feet.desc": "Chaussures et bottes",
+    "garment.slot.feet.desc": "Chaussures, bottes et sandales",
     "garment.category.vest": "Débardeur",
     "garment.category.vest.desc": "Un haut sans manches",
     "garment.category.tshirt": "T-shirt",
@@ -352,7 +352,7 @@ TEXT = {
         "Il n'y a pas encore de sauvegarde. Une sauvegarde est conservée avant chaque étape qui modifie le "
         "vêtement."
     ),
-    "garment.why.region-category": "Cette zone ne fait pas partie de la catégorie choisie.",
+    "garment.why.region-category": "Cette zone ne fait pas partie du type de vêtement choisi.",
     "garment.why.region-empty": "Le vêtement n'a rien dans la zone {region}.",
     "garment.why.no-session": "Aucune session de sculpture n'est en cours.",
     "garment.why.no-armature": "Vérifier les déchirures nécessite une armature et des poids sur le vêtement.",
@@ -370,18 +370,18 @@ TEXT = {
     "garment.error.no-mesh": "Le fichier ne contient aucun maillage.",
     "garment.error.mode": "Le Mode Sculpture n'a pas pu être lancé : {detail}",
     "garment.error.bake": "Le baking a échoué : {detail}",
-    "garment.marker-error.no-markers": "Cette catégorie n'a pas besoin de marqueurs.",
+    "garment.marker-error.no-markers": "Ce type de vêtement n'a pas besoin de marqueurs.",
     "garment.marker-error.too-small": (
         "Le vêtement est trop petit ou trop plat pour des marqueurs. Vérifiez qu'il est en mètres."
     ),
     "garment.marker-error.not-a-top": (
-        "Le vêtement ne ressemble pas à un haut. Vérifiez la catégorie, ou placez les marqueurs à la main."
+        "Le vêtement ne ressemble pas à un haut. Vérifiez le type de vêtement, ou placez les marqueurs à la main."
     ),
     "garment.marker-error.no-sleeves": (
         "Aucune manche n'a été trouvée. Choisissez Débardeur, ou placez les marqueurs des bras à la main."
     ),
     "garment.marker-error.not-legs": (
-        "Aucune jambe de pantalon n'a été trouvée. Vérifiez la catégorie, ou placez les marqueurs à la main."
+        "Aucune jambe de pantalon n'a été trouvée. Vérifiez le type de vêtement, ou placez les marqueurs à la main."
     ),
     "garment.done.use": "Vous travaillez maintenant sur {name}.",
     "garment.done.import": "{name} importé ({count} sommets).",
@@ -1201,7 +1201,7 @@ TEXT = {
     ),
     "garment.done.import-size": (
         "{name} importé ({count} sommets), mais avec {size} m il n'a pas la taille de ce genre de vêtement. "
-        "Importez-le à nouveau et choisissez l'unité, ou vérifiez la catégorie."
+        "Importez-le à nouveau et choisissez l'unité, ou vérifiez le type de vêtement."
     ),
     "garment.done.prepare-open": (
         "Préparé, mais {count} sommets de couture n'ont trouvé aucun partenaire sur la pièce voisine ({welded} réunis) "
@@ -1232,8 +1232,8 @@ TEXT = {
     "garment.slot.berd.desc": "Masques et couvre-visages",
     "garment.slot.hand": "Sac (hand)",
     "garment.slot.hand.desc": "Sacs, sacs à dos et parachutes",
-    "garment.slot.task": "Gilet (task)",
-    "garment.slot.task.desc": "Gilets et gilets pare-balles",
+    "garment.slot.task": "Armure (task)",
+    "garment.slot.task.desc": "Gilets pare-balles et autres équipements portés sur le haut",
     "garment.slot.p_head": "Accessoire de tête (p_head)",
     "garment.slot.p_head.desc": "Un accessoire sur la tête : chapeaux, casquettes et casques",
     "garment.slot.p_eyes": "Accessoire des yeux (p_eyes)",
@@ -1262,8 +1262,8 @@ TEXT = {
     "garment.category.sandals.desc": "Des chaussures ouvertes qui laissent les pieds nus",
     "garment.category.mask": "Masque",
     "garment.category.mask.desc": "Un masque ou un couvre-visage",
-    "garment.category.armour": "Gilet ou gilet pare-balles",
-    "garment.category.armour.desc": "Un gilet porté sur le haut, comme un gilet pare-balles",
+    "garment.category.armour": "Gilet pare-balles",
+    "garment.category.armour.desc": "Porté sur le haut, comme un gilet pare-balles ou un porte-plaques",
     "garment.category.bag": "Sac ou parachute",
     "garment.category.bag.desc": "Un sac à dos, un sac ou un parachute porté sur le dos",
     "garment.category.hat": "Chapeau",
@@ -1300,13 +1300,13 @@ TEXT = {
     ),
     "garment.hint.bare-legs": (
         "L'emplacement Jambes remplace les jambes du ped : les jambes nues sous l'ourlet doivent donc faire partie du "
-        "vêtement. L'extension ajoute le vêtement ; les jambes nues viennent des outils de Durty Cloth Tool (leurs "
-        "propres offres s'appliquent). Peau visible est activé."
+        "vêtement. L'extension ajoute le vêtement ; les jambes nues viennent des outils de Durty Cloth Tool, selon ce "
+        "que permet votre offre Durty Cloth Tool. Peau visible est activé."
     ),
     "garment.hint.bare-feet": (
         "L'emplacement Chaussures remplace les pieds du ped : les pieds nus doivent donc faire partie du vêtement. "
-        "L'extension ajoute les sandales ; les pieds nus viennent des outils de Durty Cloth Tool (leurs propres offres "
-        "s'appliquent). Peau visible est activé."
+        "L'extension ajoute les sandales ; les pieds nus viennent des outils de Durty Cloth Tool, selon ce que permet "
+        "votre offre Durty Cloth Tool. Peau visible est activé."
     ),
     "garment.hint.avatar": (
         "Ses marqueurs ne se lisent pas d'après sa forme : choisissez l'avatar sur lequel il a été drapé, ou Marqueurs "
@@ -1336,9 +1336,10 @@ TEXT = {
     ),
     "garment.info.avatar": (
         "Si l'avatar sur lequel le vêtement a été drapé est connu, Marqueurs automatiques place les marqueurs sur ses "
-        "articulations, exactement et dans la pose du drapé. Importer un vêtement les garde depuis un FBX exporté avec "
-        "l'avatar riggé ; sinon choisissez l'avatar standard sur lequel vous avez drapé. Une pose modifiée dans "
-        "Marvelous Designer n'est pas connue : vérifiez alors les marqueurs."
+        "articulations, dans la pose du drapé. Importer un vêtement les garde depuis un FBX exporté avec l'avatar "
+        "riggé ; sinon choisissez l'avatar standard sur lequel vous avez drapé. Les marqueurs d'un avatar standard "
+        "correspondent à sa taille et à sa pose par défaut : vérifiez les marqueurs si vous l'avez redimensionné ou "
+        "changé de pose dans Marvelous Designer."
     ),
     "garment.marker-note.avatar": "Placés sur les articulations de l'avatar sur lequel le vêtement a été drapé.",
     "garment.marker-note.from-body": (
@@ -1350,6 +1351,10 @@ TEXT = {
     ),
     "garment.why.avatar-markers": (
         "Il manque à l'avatar un marqueur dont ce type a besoin. Choisissez Inconnu, ou placez-le à la main."
+    ),
+    "garment.why.avatar-moved": (
+        "Le vêtement a bougé depuis son import, les marqueurs de l'avatar ne lui correspondent donc plus. Choisissez "
+        "Inconnu, ou déplacez les marqueurs à la main."
     ),
     "garment.done.import-rig": (
         "{name} importé ({count} sommets), avec les articulations de l'avatar exporté avec lui gardées pour les "

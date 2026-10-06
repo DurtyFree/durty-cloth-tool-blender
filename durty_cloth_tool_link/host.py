@@ -428,6 +428,8 @@ FORCED_SETTINGS: Dict[str, Any] = {
     "export_ytds": False,
 }
 _NOT_COPIED = {"rna_type", "directory", "direct_export", "use_custom_settings", "custom_settings", "filter_glob"}
+# A Drawable Dictionary that stands where a prop hangs (a ped prop anchor) and whose model is exported relative to it.
+ANCHORED_ROOT = "dct_prop"
 _VERSION_CACHE: Dict[Tuple[str, int], Optional[str]] = {}
 
 
@@ -766,6 +768,19 @@ def _consume_updates(window: Optional[Any]) -> None:
             pass  # the view layer went away meanwhile; nothing of it is left to evaluate
 
 
+def _stand_at_origin(root: Any, layer: Any) -> Optional[Any]:
+    """Moves an anchored prop's Drawable Dictionary to the origin for the export and returns where it stood (``None``
+    when it is not one or already there). Sollumz takes a model relative to its dictionary only when its own Apply
+    Parent Transforms preference is off (it reads the preference, not the export's settings), so at the origin the
+    prop leaves relative to its anchor whatever that preference says."""
+    if not root.get(ANCHORED_ROOT) or root.matrix_world.is_identity:
+        return None
+    placed = root.matrix_world.copy()
+    root.matrix_world = type(placed).Identity(4)
+    layer.update()
+    return placed
+
+
 def export_with_sollumz(root: Any, folder: str, overrides: Optional[Dict[str, Any]] = None) -> ExportResult:
     """Exports ``root`` with Sollumz into ``folder``, in the window whose view layer holds it. Selects only what
     the export needs and restores the selection afterwards. Reports whether Sollumz logged warnings or errors.
@@ -791,6 +806,7 @@ def export_with_sollumz(root: Any, folder: str, overrides: Optional[Dict[str, An
         selected = [obj for obj in layer.objects if obj.select_get()]
         active = layer.objects.active
         chosen = None
+        placed = _stand_at_origin(root, layer)
         try:
             for obj in selected:
                 obj.select_set(False)
@@ -806,6 +822,9 @@ def export_with_sollumz(root: Any, folder: str, overrides: Optional[Dict[str, An
                 raise _export_error("model.export-failed", detail=str(exc)) from exc
         finally:
             _restore_selection(layer, chosen, selected, active)
+            if placed is not None:
+                root.matrix_world = placed
+                layer.update()
             _consume_updates(window)
     if "FINISHED" not in result:
         raise _export_error("model.not-exported")

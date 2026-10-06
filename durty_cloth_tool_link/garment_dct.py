@@ -30,7 +30,7 @@ from .strings import Msg, UserError, msg
 #: On the Drawable Dictionary and the Drawable the skeleton template became: the gender of that template.
 SKELETON_TAG = "dct_skeleton"
 #: On the Drawable Dictionary and the Drawable (an empty at the anchor bone) a prop hangs from: its slot.
-PROP_TAG = "dct_prop"
+PROP_TAG = host.ANCHORED_ROOT
 DICTIONARY = "sollumz_drawable_dictionary"
 DRAWABLE = "sollumz_drawable"
 #: On the garment once Durty Cloth Tool added it: the name it was added under.

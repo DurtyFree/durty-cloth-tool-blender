@@ -35,7 +35,7 @@ TEXT = {
     "garment.slot.lowr": "Beine (lowr)",
     "garment.slot.lowr.desc": "Hosen, Shorts und Röcke",
     "garment.slot.feet": "Schuhe (feet)",
-    "garment.slot.feet.desc": "Schuhe und Stiefel",
+    "garment.slot.feet.desc": "Schuhe, Stiefel und Sandalen",
     "garment.category.vest": "Ärmellos",
     "garment.category.vest.desc": "Ein Oberteil ohne Ärmel",
     "garment.category.tshirt": "T-Shirt",
@@ -352,7 +352,7 @@ TEXT = {
     "garment.why.no-backup": (
         "Es gibt noch keine Sicherung. Vor jedem Schritt, der das Kleidungsstück ändert, wird eine angelegt."
     ),
-    "garment.why.region-category": "Dieser Bereich gehört nicht zur gewählten Kategorie.",
+    "garment.why.region-category": "Dieser Bereich gehört nicht zur gewählten Kleidungsart.",
     "garment.why.region-empty": "Das Kleidungsstück hat nichts im Bereich {region}.",
     "garment.why.no-session": "Es läuft keine Sculpting-Sitzung.",
     "garment.why.no-armature": "Die Rissprüfung braucht eine Armature und Gewichte am Kleidungsstück.",
@@ -370,16 +370,16 @@ TEXT = {
     "garment.error.no-mesh": "Die Datei enthält kein Mesh.",
     "garment.error.mode": "Der Skulpturmodus konnte nicht gestartet werden: {detail}",
     "garment.error.bake": "Das Backen ist fehlgeschlagen: {detail}",
-    "garment.marker-error.no-markers": "Diese Kategorie braucht keine Marker.",
+    "garment.marker-error.no-markers": "Diese Kleidungsart braucht keine Marker.",
     "garment.marker-error.too-small": (
         "Das Kleidungsstück ist zu klein oder zu flach für Marker. Prüfe, ob es in Metern vorliegt."
     ),
     "garment.marker-error.not-a-top": (
-        "Das Kleidungsstück sieht nicht wie ein Oberteil aus. Prüfe die Kategorie oder setze die Marker von Hand."
+        "Das Kleidungsstück sieht nicht wie ein Oberteil aus. Prüfe die Kleidungsart oder setze die Marker von Hand."
     ),
     "garment.marker-error.no-sleeves": "Keine Ärmel gefunden. Wähle Ärmellos oder setze die Armmarker von Hand.",
     "garment.marker-error.not-legs": (
-        "Keine Hosenbeine gefunden. Prüfe die Kategorie oder setze die Marker von Hand."
+        "Keine Hosenbeine gefunden. Prüfe die Kleidungsart oder setze die Marker von Hand."
     ),
     "garment.done.use": "Die Werkzeuge arbeiten jetzt an {name}.",
     "garment.done.import": "{name} importiert ({count} Vertices).",
@@ -1215,7 +1215,7 @@ TEXT = {
     ),
     "garment.done.import-size": (
         "{name} importiert ({count} Vertices), aber mit {size} m hat es nicht die Größe dieser Art Kleidungsstück. "
-        "Importiere es erneut und wähle die Einheit, oder prüfe die Kategorie."
+        "Importiere es erneut und wähle die Einheit, oder prüfe die Kleidungsart."
     ),
     "garment.done.prepare-open": (
         "Vorbereitet, aber {count} Naht-Vertices fanden keinen Partner am Nachbarteil ({welded} verbunden): Die "
@@ -1245,8 +1245,8 @@ TEXT = {
     "garment.slot.berd.desc": "Masken und Gesichtsbedeckungen",
     "garment.slot.hand": "Tasche (hand)",
     "garment.slot.hand.desc": "Taschen, Rucksäcke und Fallschirme",
-    "garment.slot.task": "Weste (task)",
-    "garment.slot.task.desc": "Westen und Schutzwesten",
+    "garment.slot.task": "Panzerung (task)",
+    "garment.slot.task.desc": "Schutzwesten und andere Ausrüstung über dem Oberteil",
     "garment.slot.p_head": "Kopf-Prop (p_head)",
     "garment.slot.p_head.desc": "Ein Prop am Kopf: Hüte, Caps und Helme",
     "garment.slot.p_eyes": "Augen-Prop (p_eyes)",
@@ -1273,8 +1273,8 @@ TEXT = {
     "garment.category.sandals.desc": "Offene Schuhe, die die Füße frei lassen",
     "garment.category.mask": "Maske",
     "garment.category.mask.desc": "Eine Maske oder Gesichtsbedeckung",
-    "garment.category.armour": "Weste oder Schutzweste",
-    "garment.category.armour.desc": "Eine Weste über dem Oberteil, etwa eine Schutzweste",
+    "garment.category.armour": "Schutzweste",
+    "garment.category.armour.desc": "Über dem Oberteil getragen, etwa eine Schutzweste oder ein Plattenträger",
     "garment.category.bag": "Tasche oder Fallschirm",
     "garment.category.bag.desc": "Ein Rucksack, eine Tasche oder ein Fallschirm auf dem Rücken",
     "garment.category.hat": "Hut",
@@ -1313,12 +1313,12 @@ TEXT = {
     "garment.hint.bare-legs": (
         "Der Beine-Slot ersetzt die Beine des Peds, also müssen die nackten Beine unter dem Saum Teil des "
         "Kleidungsstücks sein. Das Add-on fügt das Kleidungsstück hinzu; die nackten Beine kommen aus den eigenen "
-        "Werkzeugen von Durty Cloth Tool (deren eigene Pläne gelten). Haut sichtbar ist an."
+        "Werkzeugen von Durty Cloth Tool, so weit dein Durty Cloth Tool Plan es erlaubt. Haut sichtbar ist an."
     ),
     "garment.hint.bare-feet": (
         "Der Schuhe-Slot ersetzt die Füße des Peds, also müssen die nackten Füße Teil des Kleidungsstücks sein. Das "
-        "Add-on fügt die Sandalen hinzu; die nackten Füße kommen aus den eigenen Werkzeugen von Durty Cloth Tool "
-        "(deren eigene Pläne gelten). Haut sichtbar ist an."
+        "Add-on fügt die Sandalen hinzu; die nackten Füße kommen aus den eigenen Werkzeugen von Durty Cloth Tool, so "
+        "weit dein Durty Cloth Tool Plan es erlaubt. Haut sichtbar ist an."
     ),
     "garment.hint.avatar": (
         "Seine Marker lassen sich nicht aus seiner Form lesen: Wähle den Avatar, auf dem es drapiert wurde, oder "
@@ -1351,9 +1351,10 @@ TEXT = {
     ),
     "garment.info.avatar": (
         "Ist der Avatar bekannt, auf dem das Kleidungsstück drapiert wurde, setzt Auto-Marker die Marker auf seine "
-        "Gelenke, genau und in der Pose, in der drapiert wurde. Kleidungsstück importieren behält sie aus einer FBX, "
-        "die mit dem geriggten Avatar exportiert wurde; sonst wähle den Standard-Avatar, auf dem du drapiert hast. "
-        "Eine Pose, die du in Marvelous Designer geändert hast, ist nicht bekannt: Prüfe dann die Marker."
+        "Gelenke, in der Pose, in der drapiert wurde. Kleidungsstück importieren behält sie aus einer FBX, die mit dem "
+        "geriggten Avatar exportiert wurde; sonst wähle den Standard-Avatar, auf dem du drapiert hast. Die Marker "
+        "eines Standard-Avatars passen zu seiner Standardgröße und -pose: Prüfe die Marker, wenn du ihn in Marvelous "
+        "Designer skaliert oder anders gestellt hast."
     ),
     "garment.marker-note.avatar": "Auf die Gelenke des Avatars gesetzt, auf dem das Kleidungsstück drapiert wurde.",
     "garment.marker-note.from-body": (
@@ -1365,6 +1366,10 @@ TEXT = {
     ),
     "garment.why.avatar-markers": (
         "Dem Avatar fehlt ein Marker, den diese Kleidungsart braucht. Wähle Unbekannt oder setze ihn von Hand."
+    ),
+    "garment.why.avatar-moved": (
+        "Das Kleidungsstück wurde seit dem Import bewegt, daher passen die Marker des Avatars nicht mehr. Wähle "
+        "Unbekannt oder verschiebe die Marker von Hand."
     ),
     "garment.done.import-rig": (
         "{name} importiert ({count} Vertices) und die Gelenke des mitexportierten Avatars für die Marker behalten."

@@ -1607,20 +1607,20 @@ def run_steps(steps: Any) -> Any:
 
 
 def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool,
-            open_front: Optional[Tuple[float, float]] = None) -> Dict[str, Any]:
+            open_front: Optional[Tuple[float, float, Optional[float]]] = None) -> Dict[str, Any]:
     """:func:`prepare_steps` at once."""
     return run_steps(prepare_steps(context, obj, weld, colours, overwrite, open_front))
 
 
 def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool,
-                  open_front: Optional[Tuple[float, float]] = None) -> Any:
+                  open_front: Optional[Tuple[float, float, Optional[float]]] = None) -> Any:
     """Welds the panel seams within ``weld`` metres (never a lining onto its shell, never a hem onto itself, never
-    the two sides of an open front: ``open_front`` is the garment's centre, X and Y), removes
-    loose and degenerate geometry, triangulates, shades smooth and adds the ped vertex colours. A thick export (panels
-    closed into slabs, without open edges) is welded across panels and the walls between them are removed. A
-    generator: it yields ``(stage text key, done, total)`` before each stage and after each round of the weld, so a
-    modal operator can show the progress and stop between them; nothing changes on the garment before the last stage.
-    Returns what it did, with ``open``, the seam vertices that stayed open (they are left selected, for Edit Mode)."""
+    the two sides of an open front: ``open_front`` is the garment's centre, X and Y, and the neck's height or
+    ``None``), removes loose and degenerate geometry, triangulates, shades smooth and adds the ped vertex colours. A
+    thick export (panels closed into slabs, without open edges) is welded across panels and the walls between them
+    are removed. A generator: it yields ``(stage text key, done, total)`` before each stage and after each round of
+    the weld, so a modal operator can show the progress and stop between them; nothing changes on the garment before
+    the last stage. Returns what it did, with ``open``, the seam vertices that stayed open (they are left selected, for Edit Mode)."""
     yield "garment.stage.seams", 0, 3
     mesh = obj.data
     positions = world_positions(obj)
@@ -1642,7 +1642,8 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     rules = seam_rules(obj, positions, normals)
     rules.update(fabrics=fabrics, apart=apart, components=parts)
     if open_front is not None:
-        rules["sides"] = garment.front_sides(positions, edges, open_front)
+        cx, cy, top = open_front
+        rules["sides"] = garment.front_sides(positions, edges, (cx, cy), top)
     yield "garment.stage.weld", 1, 3
     steps = garment.weld_steps(positions, weld, None if thick else boundary, cross_components_only=thick, **rules)
     while True:
@@ -2455,7 +2456,8 @@ def weighted(obj: Optional[Any]) -> bool:
 
 def weight_table(obj: Any) -> Tuple[List[str], np.ndarray]:
     """The garment's bone weights as a table (vertices by bone groups) with the groups' names."""
-    groups = [g for g in obj.vertex_groups if g.index in set(_bone_groups(obj))]
+    bones = set(_bone_groups(obj))
+    groups = [g for g in obj.vertex_groups if g.index in bones]
     column = {g.index: i for i, g in enumerate(groups)}
     table = np.zeros((len(obj.data.vertices), len(groups)))
     for vertex in obj.data.vertices:
@@ -2500,6 +2502,9 @@ def split_at_waist(context: Any, obj: Any, level: float, name: str) -> Any:
     """Cuts the garment at the height ``level`` (world Z) into two: the garment keeps what lies above (the top of a
     dress) and a new garment, ``name``, gets what lies below (its skirt), each with its UVs, weights and materials.
     Returns the new garment, in the garment's collection, with its own id and no backups or markers."""
+    lods = getattr(obj, "sz_lods", None)
+    if lods is not None and getattr(lods, "active_lod_level", "sollumz_high") != "sollumz_high":
+        raise fail("garment.why.show-high")
     lower = obj.copy()
     lower.data = obj.data.copy()
     lower.name = name
@@ -2525,8 +2530,32 @@ def split_at_waist(context: Any, obj: Any, level: float, name: str) -> Any:
         raise fail("garment.why.split-nothing")
     lower[GARMENT_TAG] = 1
     ensure_garment_id(lower)
+    # The skirt stands on its own: off the dress's skeleton (Use Skeleton puts it on one again; its weights stay) and
+    # with its own mesh as High. The levels of detail made from the whole dress fit neither part any more.
+    world = lower.matrix_world.copy()
+    lower.parent = None
+    lower.matrix_world = world
+    for modifier in [m for m in lower.modifiers if m.type == "ARMATURE"]:
+        lower.modifiers.remove(modifier)
+    _forget_lods(lower)
+    _forget_lods(obj)
     clear_flags(obj, *STALE)
     return lower
+
+
+def _forget_lods(obj: Any) -> None:
+    """Empties the garment's level-of-detail slots but High, which shows the garment's own mesh."""
+    lods = getattr(obj, "sz_lods", None)
+    if lods is None:
+        return
+    try:
+        high = lods.get_lod("sollumz_high")
+        if high.mesh is not None:
+            high.mesh = obj.data
+        for level in ("sollumz_veryhigh", "sollumz_medium", "sollumz_low", "sollumz_verylow"):
+            lods.get_lod(level).mesh = None
+    except (AttributeError, KeyError, TypeError, RuntimeError):
+        pass  # a Sollumz without LOD slots
 
 
 def snap_to_anchor(obj: Any, body: Any, joints: Dict[str, Any], kind: str, side: str) -> Dict[str, Any]:
@@ -2567,7 +2596,8 @@ def validate_stats(obj: Any, body: Optional[Any], prop: bool = False,
         stats["colour1"] = "format"
     else:
         stats["colour1"] = "ok"
-    stats["weighted"] = None if prop else weighted(obj)
+    stats["prop"] = prop
+    stats["weighted"] = not prop and weighted(obj)
     stats["unweighted"], stats["over_four"] = _influences(obj, mesh) if stats["weighted"] else (0, 0)
     if anchor is not None and len(positions):
         middle = (positions.min(axis=0) + positions.max(axis=0)) / 2

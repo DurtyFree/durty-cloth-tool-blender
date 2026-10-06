@@ -627,6 +627,7 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
     ui_garment = sys.modules[package + ".ui_garment"]
     gh = sys.modules[package + ".garment_host"]
     gdct = sys.modules[package + ".garment_dct"]
+    host = sys.modules[package + ".host"]
     garment = sys.modules[package + ".garment"]
     scene = bpy.context.scene
     props = scene.dct_garment
@@ -649,8 +650,16 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
     check("a watch is a prop on a wrist, never showing skin", props.slot == "p_rwrist" and not props.skin)
     choose(jacket)
     check("each garment keeps its own type and slot", props.category == "open_jacket" and props.slot == "jbib")
+    # What the user changed on a garment stays with it, and a garment without an avatar never takes another's.
+    props.open_front, props.skin, props.avatar = False, True, "manne"
     choose(watch)
-    check("the watch kept its right wrist", props.category == "watch" and props.slot == "p_rwrist")
+    check("the watch kept its right wrist and its own avatar", props.category == "watch"
+          and props.slot == "p_rwrist" and props.avatar == "detect", (props.category, props.slot, props.avatar))
+    choose(jacket)
+    check("the jacket kept its front, skin and avatar", not props.open_front and props.skin and props.avatar == "manne",
+          (props.open_front, props.skin, props.avatar))
+    props.open_front, props.skin, props.avatar = True, False, "detect"
+    choose(watch)
     bpy.data.objects.remove(watch)
     props.category = "shorts"
     check("shorts show skin", props.skin and props.slot == "lowr")
@@ -808,6 +817,27 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
             local = np.array([float(v) for v in centre.groups()]) if centre else np.full(3, 9.0)
             check("the real Sollumz exported the hat rigid and around its anchor",
                   b"<BlendWeights" not in model and float(np.linalg.norm(local)) < 0.3, local.tolist())
+            # A turned anchor with Sollumz's own Apply Parent Transforms preference on (Sollumz reads the preference,
+            # not the export's settings): the hat still leaves relative to its anchor, and the anchor stays turned.
+            preferences = host._sollumz_addon().preferences.export_settings
+            preference = preferences.apply_transforms
+            stood = rig.root.matrix_world.copy()
+            turned = stood @ Matrix.Rotation(0.6, 4, "X") @ Matrix.Rotation(0.4, 4, "Z")
+            rig.root.matrix_world = turned
+            bpy.context.view_layer.update()
+            try:
+                preferences.apply_transforms = True
+                with tempfile.TemporaryDirectory() as folder:
+                    turned_model = gdct.export_garment(rig, pathlib.Path(folder)).model[1]
+            finally:
+                preferences.apply_transforms = preference
+            kept = np.allclose(np.array(rig.root.matrix_world), np.array(turned), atol=1e-6)
+            rig.root.matrix_world = stood
+            bpy.context.view_layer.update()
+            centre = re.search(rb'<BoundingSphereCenter x="([-\d.e]+)" y="([-\d.e]+)" z="([-\d.e]+)"', turned_model)
+            again = np.array([float(v) for v in centre.groups()]) if centre else np.full(3, 9.0)
+            check("a turned anchor exports the hat the same with Apply Parent Transforms on",
+                  kept and np.allclose(again, local, atol=1e-4), (again.tolist(), local.tolist(), kept))
         detail = f"{header['drawableType']}, {len(model)} bytes of XML"
     return {"check": "garment types (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True, "detail": detail}
 

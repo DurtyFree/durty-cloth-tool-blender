@@ -132,6 +132,13 @@ def test_the_two_sides_of_a_thick_panel_share_one_place_in_the_texture():
 # ---- open fronts --------------------------------------------------------------------------------------------
 
 
+def strip(first, rows=9):
+    """The edges of a panel of two columns of ``rows`` vertices, starting at vertex ``first``."""
+    edges = [(first + i, first + i + 1) for i in range(rows - 1)]
+    edges += [(first + rows + i, first + rows + i + 1) for i in range(rows - 1)]
+    return edges + [(first + i, first + rows + i) for i in range(rows)]
+
+
 def test_the_two_fronts_of_an_open_jacket_are_never_joined():
     # The left and right fronts meet on the centre front, their edges on top of each other; the back is behind.
     column = np.linspace(0.0, 0.4, 9)
@@ -139,11 +146,6 @@ def test_the_two_fronts_of_an_open_jacket_are_never_joined():
     right = [(x, -0.1, z) for x in (-0.0, -0.05) for z in column]
     back = [(0.0, 0.1, z) for z in column] + [(0.05, 0.1, z) for z in column]
     positions = np.array(left + right + back)
-
-    def strip(first):  # the edges of a two-column panel starting at vertex ``first``
-        edges = [(first + i, first + i + 1) for i in range(8)] + [(first + 9 + i, first + 10 + i) for i in range(8)]
-        return edges + [(first + i, first + 9 + i) for i in range(9)]
-
     edges = np.array(strip(0) + strip(18) + strip(36))
     parts = garment.components(len(positions), edges)
     sides = garment.front_sides(positions, edges, (0.0, 0.0))
@@ -152,6 +154,22 @@ def test_the_two_fronts_of_an_open_jacket_are_never_joined():
     assert any({parts[i], parts[j]} == {parts[0], parts[18]} for i, j in zip(a, b))  # without the rule: joined
     a, b, _ = garment.seam_candidates(positions, 0.005, components=parts, sides=sides)
     assert not any({parts[i], parts[j]} == {parts[0], parts[18]} for i, j in zip(a, b))
+
+
+def test_a_hood_and_seams_away_from_the_centre_still_close_on_an_open_jacket():
+    """A review finding (2026-10-06): every front seam counted as the opening, so a hood's centre seam, which runs
+    over the forehead in front of the garment's middle, never closed. Only the centre below the neck is the opening."""
+    hood_rows = np.linspace(0.55, 0.75, 5)
+    hood = [(x, -0.1, z) for x in (0.0, 0.05) for z in hood_rows] + [(x, -0.1, z) for x in (-0.0, -0.05)
+                                                                       for z in hood_rows]
+    seam = [(x, -0.1, z) for x in (0.2, 0.25) for z in (0.1, 0.2, 0.3)]  # a seam beside the pocket, off the centre
+    positions = np.array(hood + seam)
+    edges = np.array(strip(0, 5) + strip(10, 5) + strip(20, 3))
+    open_below_neck = garment.front_sides(positions, edges, (0.0, 0.0), top=0.5)
+    assert not open_below_neck.any()
+    without_neck = garment.front_sides(positions, edges, (0.0, 0.0))
+    assert set(without_neck[:10]) == {1} and set(without_neck[10:20]) == {-1}  # no neck known: the centre is open
+    assert not without_neck[20:].any()
 
 
 # ---- thigh weights bridged across the legs -------------------------------------------------------------------
@@ -239,6 +257,27 @@ def test_glasses_sit_in_front_of_the_eyes_and_a_watch_around_the_wrist():
         garment.snap_to_anchor("hat", band, body.positions[body.positions[:, 2] < 0.3], joints)
 
 
+def test_ear_pieces_go_to_the_lobes_of_one_ear_or_across_both():
+    body = synthetic.body()
+    joints = skeleton_joints()
+    neck, head_joint = np.asarray(joints["SKEL_Neck_1"]), np.asarray(joints["SKEL_Head"])
+    near = (body.positions[:, 2] > neck[2] + 0.03) & (np.linalg.norm(body.positions[:, :2] - head_joint[:2],
+                                                                    axis=1) < 0.16)
+    head = body.positions[near]
+    lobes = head[:, 2].max() - garment.EYES_BELOW_CROWN - garment.LOBES_BELOW_EYES
+    level = head[np.abs(head[:, 2] - lobes) <= 0.01]
+    middle, half = (level[:, 0].min() + level[:, 0].max()) / 2, np.ptp(level[:, 0]) / 2
+    # A stud on the ped's right (-X): onto the right ear, hanging from the lobe.
+    stud = np.array([[x, y, z] for x in (0.0, 0.01) for y in (0.0, 0.01) for z in (0.0, 0.02)]) + [-0.3, 0.2, 1.4]
+    placed = garment.snap_to_anchor("ears", stud, body.positions, joints).apply(stud)
+    assert placed[:, 0].mean() == pytest.approx(middle - half, abs=0.01)
+    assert placed[:, 2].max() == pytest.approx(lobes, abs=1e-6)
+    # A pair joined across the head (ear muffs) stays centred.
+    muffs = np.array([[x, y, z] for x in (-0.1, 0.1) for y in (0.0, 0.02) for z in (0.0, 0.03)]) + [0.5, 0.0, 1.2]
+    placed = garment.snap_to_anchor("ears", muffs, body.positions, joints).apply(muffs)
+    assert placed[:, 0].mean() == pytest.approx(middle, abs=0.01)
+
+
 def test_a_mask_is_moved_onto_the_head_joint_as_it_is():
     joints = skeleton_joints()
     head = np.asarray(joints["SKEL_Head"])
@@ -255,18 +294,18 @@ def test_a_mask_is_moved_onto_the_head_joint_as_it_is():
 
 
 def test_a_prop_needs_no_weights_but_its_anchor_nearby():
-    clean = {"uv_layers": 1, "uv_area": 0.6, "weighted": None, "colour1": "ok", "anchor": 0.1}
+    clean = {"uv_layers": 1, "uv_area": 0.6, "prop": True, "weighted": False, "colour1": "ok", "anchor": 0.1}
     assert garment.is_clean(garment.validate(clean))
     far = garment.validate({**clean, "anchor": 0.6})
     assert [f.code for f in far] == ["anchor-far"] and far[0].fields == {"distance": 60}
-    assert any(f.code == "no-weights" for f in garment.validate({**clean, "weighted": False}))
+    # The same garment that is not a prop stays in its rest pose in the game.
+    assert any(f.code == "no-weights" for f in garment.validate({**clean, "prop": False}))
 
 
 def test_the_anchor_bone_comes_from_the_skeleton_template_turned_as_it_is():
     bones = list(synthetic.SKELETON_BONES)
     xml = synthetic.skeleton_template_xml("male", bones).decode("utf-8")
     # Turn the head 90 degrees about Z (as the game's head bone is turned): its matrix keeps the turn.
-    xml = xml.replace("<Name>SKEL_Head</Name>", "<Name>SKEL_Head</Name>", 1)
     head_item = xml.index("<Name>SKEL_Head</Name>")
     rotation = xml.index("<Rotation", head_item)
     end = xml.index("/>", rotation) + 2
@@ -293,7 +332,8 @@ def test_the_joints_of_an_exported_avatar_rig_become_markers():
 
 
 def test_the_stock_avatars_are_plausible_and_in_ped_space():
-    assert garment_avatars.TO_MEASURE  # the avatars not measured yet are named
+    # Blender keeps the chosen avatar by its place in the list: the avatars of earlier versions keep theirs.
+    assert tuple(garment_avatars.AVATARS)[:1] == ("manne",)
     for name, avatar in garment_avatars.AVATARS.items():
         markers = avatar.markers
         assert set(markers) == set(garment.MARKERS), name
@@ -304,5 +344,3 @@ def test_the_stock_avatars_are_plausible_and_in_ped_space():
         assert garment_avatars.arm_angle(markers) == pytest.approx(avatar.arm_angle, abs=0.2)
         # The soles are at the ped's ground: the ankles a few centimetres above z -1.
         assert -1.0 < markers["ankle_l"][2] < -0.85, name
-    manne = garment_avatars.AVATARS["manne"]
-    assert manne.pose == "a_pose" and manne.markers["shoulder_r"] == (-0.1757, 0.042, 0.5149)

@@ -580,7 +580,7 @@ EN: Dict[str, str] = {
     "garment.slot.lowr": "Legs (lowr)",
     "garment.slot.lowr.desc": "Trousers, shorts and skirts",
     "garment.slot.feet": "Shoes (feet)",
-    "garment.slot.feet.desc": "Shoes and boots",
+    "garment.slot.feet.desc": "Shoes, boots and sandals",
     "garment.category.vest": "Vest",
     "garment.category.vest.desc": "A top without sleeves",
     "garment.category.tshirt": "T-shirt",
@@ -848,7 +848,7 @@ EN: Dict[str, str] = {
     "garment.why.preset-unreadable": "The preset could not be read: {detail}",
     "garment.why.tops-only": "Only tops have arms to lower.",
     "garment.why.no-backup": "There is no backup yet. One is kept before each step that changes the garment.",
-    "garment.why.region-category": "This region is not part of the chosen category.",
+    "garment.why.region-category": "This region is not part of the chosen garment type.",
     "garment.why.region-empty": "The garment has nothing in the region {region}.",
     "garment.why.no-session": "No sculpt session is running.",
     "garment.why.no-armature": "Checking tears needs an armature and weights on the garment.",
@@ -864,14 +864,14 @@ EN: Dict[str, str] = {
     "garment.error.no-mesh": "The file holds no mesh.",
     "garment.error.mode": "Sculpt Mode could not be started: {detail}",
     "garment.error.bake": "Baking failed: {detail}",
-    "garment.marker-error.no-markers": "This category needs no markers.",
+    "garment.marker-error.no-markers": "This garment type needs no markers.",
     "garment.marker-error.too-small": "The garment is too small or too flat for markers. Check that it is in metres.",
     "garment.marker-error.not-a-top": (
-        "The garment does not look like a top. Check the category, or place the markers by hand."
+        "The garment does not look like a top. Check the Garment Type, or place the markers by hand."
     ),
     "garment.marker-error.no-sleeves": "No sleeves were found. Choose Vest, or place the arm markers by hand.",
     "garment.marker-error.not-legs": (
-        "No trouser legs were found. Check the category, or place the markers by hand."
+        "No trouser legs were found. Check the Garment Type, or place the markers by hand."
     ),
     # ---- garment fitting: results -------------------------------------------------------------------------
     "garment.done.use": "Working on {name}.",
@@ -1006,7 +1006,7 @@ EN: Dict[str, str] = {
     "garment.slot.hand": "Bag (hand)",
     "garment.slot.hand.desc": "Bags, backpacks and parachutes",
     "garment.slot.task": "Armour (task)",
-    "garment.slot.task.desc": "Vests and body armour",
+    "garment.slot.task.desc": "Body armour and other gear worn over the top",
     "garment.slot.p_head": "Head Prop (p_head)",
     "garment.slot.p_head.desc": "A prop on the head: hats, caps and helmets",
     "garment.slot.p_eyes": "Eyes Prop (p_eyes)",
@@ -1031,8 +1031,8 @@ EN: Dict[str, str] = {
     "garment.category.sandals.desc": "Open shoes that leave the feet bare",
     "garment.category.mask": "Mask",
     "garment.category.mask.desc": "A mask or face covering",
-    "garment.category.armour": "Vest or Body Armour",
-    "garment.category.armour.desc": "A vest worn over the top, such as body armour",
+    "garment.category.armour": "Body Armour",
+    "garment.category.armour.desc": "Worn over the top, such as body armour or a plate carrier",
     "garment.category.bag": "Bag or Parachute",
     "garment.category.bag.desc": "A backpack, bag or parachute worn on the back",
     "garment.category.hat": "Hat",
@@ -1066,12 +1066,13 @@ EN: Dict[str, str] = {
     ),
     "garment.hint.bare-legs": (
         "The Legs slot replaces the ped's legs, so the bare legs below the hem must be part of the cloth. The add-on "
-        "adds the cloth; the bare legs come from Durty Cloth Tool's own tools (their own plans apply). Shows Skin is "
-        "on."
+        "adds the cloth; the bare legs come from Durty Cloth Tool's own tools, as your Durty Cloth Tool plan allows. "
+        "Shows Skin is on."
     ),
     "garment.hint.bare-feet": (
         "The Shoes slot replaces the ped's feet, so the bare feet must be part of the cloth. The add-on adds the "
-        "sandals; the bare feet come from Durty Cloth Tool's own tools (their own plans apply). Shows Skin is on."
+        "sandals; the bare feet come from Durty Cloth Tool's own tools, as your Durty Cloth Tool plan allows. Shows "
+        "Skin is on."
     ),
     "garment.hint.avatar": (
         "Its markers cannot be read from its shape: choose the avatar it was draped on, or Auto Markers starts them on "
@@ -1094,10 +1095,10 @@ EN: Dict[str, str] = {
         "MaleTemplate_Manne_01, the male template of Marvelous Designer and CLO, standing in its A-pose"
     ),
     "garment.info.avatar": (
-        "When the avatar the garment was draped on is known, Auto Markers puts the markers on its joints, exactly and "
-        "in the pose the garment was draped in. Import Garment keeps them from an FBX exported with the rigged avatar; "
-        "otherwise choose the stock avatar you draped on. A pose you changed in Marvelous Designer is not known: check "
-        "the markers then."
+        "When the avatar the garment was draped on is known, Auto Markers puts the markers on its joints, in the pose "
+        "the garment was draped in. Import Garment keeps them from an FBX exported with the rigged avatar; otherwise "
+        "choose the stock avatar you draped on. A stock avatar's markers fit it at its default size and pose: check "
+        "the markers if you resized or reposed it in Marvelous Designer."
     ),
     "garment.marker-note.avatar": "Placed on the joints of the avatar the garment was draped on.",
     "garment.marker-note.from-body": "Placed on the body's joints: move each onto the matching point of the garment.",
@@ -1106,6 +1107,10 @@ EN: Dict[str, str] = {
         "or Not Known."
     ),
     "garment.why.avatar-markers": "The avatar lacks a marker this type needs. Choose Not Known, or place it by hand.",
+    "garment.why.avatar-moved": (
+        "The garment has moved since it was imported, so the avatar's markers no longer fit it. Choose Not Known, or "
+        "move the markers by hand."
+    ),
     "garment.done.import-rig": (
         "Imported {name} ({count} vertices) and kept the joints of the avatar exported with it for the markers."
     ),
@@ -1710,7 +1715,7 @@ EN: Dict[str, str] = {
     ),
     "garment.done.import-size": (
         "Imported {name} ({count} vertices), but at {size} m it does not have the size of this kind of garment. Import "
-        "it again and choose the Unit, or check the category."
+        "it again and choose the Unit, or check the Garment Type."
     ),
     "garment.done.prepare-open": (
         "Prepared, but {count} seam vertices found no partner on the panel next to them ({welded} joined): the panels "

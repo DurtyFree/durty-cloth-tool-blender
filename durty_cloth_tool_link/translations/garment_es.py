@@ -35,7 +35,7 @@ TEXT = {
     "garment.slot.lowr": "Piernas (lowr)",
     "garment.slot.lowr.desc": "Pantalones, pantalones cortos y faldas",
     "garment.slot.feet": "Calzado (feet)",
-    "garment.slot.feet.desc": "Zapatos y botas",
+    "garment.slot.feet.desc": "Zapatos, botas y sandalias",
     "garment.category.vest": "Sin mangas",
     "garment.category.vest.desc": "Una prenda superior sin mangas",
     "garment.category.tshirt": "Camiseta",
@@ -335,7 +335,7 @@ TEXT = {
     "garment.why.no-backup": (
         "Aún no hay ninguna copia de seguridad. Se guarda una antes de cada paso que cambia la prenda."
     ),
-    "garment.why.region-category": "Esta región no forma parte de la categoría elegida.",
+    "garment.why.region-category": "Esta región no forma parte del tipo de prenda elegido.",
     "garment.why.region-empty": "La prenda no tiene nada en la región {region}.",
     "garment.why.no-session": "No hay ninguna sesión de esculpido en curso.",
     "garment.why.no-armature": "Comprobar desgarros necesita un esqueleto y pesos en la prenda.",
@@ -353,18 +353,18 @@ TEXT = {
     "garment.error.no-mesh": "El archivo no contiene ninguna malla.",
     "garment.error.mode": "No se pudo iniciar el Modo Esculpido: {detail}",
     "garment.error.bake": "Falló el horneado: {detail}",
-    "garment.marker-error.no-markers": "Esta categoría no necesita marcadores.",
+    "garment.marker-error.no-markers": "Este tipo de prenda no necesita marcadores.",
     "garment.marker-error.too-small": (
         "La prenda es demasiado pequeña o demasiado plana para los marcadores. Comprueba que está en metros."
     ),
     "garment.marker-error.not-a-top": (
-        "La prenda no parece una prenda superior. Revisa la categoría o coloca los marcadores a mano."
+        "La prenda no parece una prenda superior. Revisa el tipo de prenda o coloca los marcadores a mano."
     ),
     "garment.marker-error.no-sleeves": (
         "No se encontraron mangas. Elige Sin mangas o coloca a mano los marcadores de los brazos."
     ),
     "garment.marker-error.not-legs": (
-        "No se encontraron perneras. Revisa la categoría o coloca los marcadores a mano."
+        "No se encontraron perneras. Revisa el tipo de prenda o coloca los marcadores a mano."
     ),
     "garment.done.use": "Trabajando en {name}.",
     "garment.done.import": "Se importó {name} ({count} vértices).",
@@ -1145,7 +1145,7 @@ TEXT = {
     ),
     "garment.done.import-size": (
         "{name} importada ({count} vértices), pero con {size} m no tiene el tamaño de este tipo de prenda. Vuelve a "
-        "importarla y elige la unidad, o revisa la categoría."
+        "importarla y elige la unidad, o revisa el tipo de prenda."
     ),
     "garment.done.prepare-open": (
         "Preparada, pero {count} vértices de costura no encontraron pareja en la pieza vecina ({welded} unidos): las "
@@ -1175,8 +1175,8 @@ TEXT = {
     "garment.slot.berd.desc": "Máscaras y prendas que cubren la cara",
     "garment.slot.hand": "Bolsa (hand)",
     "garment.slot.hand.desc": "Bolsas, mochilas y paracaídas",
-    "garment.slot.task": "Chaleco (task)",
-    "garment.slot.task.desc": "Chalecos y chalecos antibalas",
+    "garment.slot.task": "Armadura (task)",
+    "garment.slot.task.desc": "Chalecos antibalas y otro equipo que se lleva sobre la parte superior",
     "garment.slot.p_head": "Accesorio de cabeza (p_head)",
     "garment.slot.p_head.desc": "Un accesorio en la cabeza: sombreros, gorras y cascos",
     "garment.slot.p_eyes": "Accesorio de ojos (p_eyes)",
@@ -1206,8 +1206,8 @@ TEXT = {
     "garment.category.sandals.desc": "Calzado abierto que deja los pies descalzos",
     "garment.category.mask": "Máscara",
     "garment.category.mask.desc": "Una máscara o prenda que cubre la cara",
-    "garment.category.armour": "Chaleco o chaleco antibalas",
-    "garment.category.armour.desc": "Un chaleco que se lleva sobre la parte superior, como un chaleco antibalas",
+    "garment.category.armour": "Chaleco antibalas",
+    "garment.category.armour.desc": "Se lleva sobre la parte superior, como un chaleco antibalas o un portaplacas",
     "garment.category.bag": "Bolsa o paracaídas",
     "garment.category.bag.desc": "Una mochila, bolsa o paracaídas a la espalda",
     "garment.category.hat": "Sombrero",
@@ -1245,12 +1245,12 @@ TEXT = {
     "garment.hint.bare-legs": (
         "La ranura Piernas sustituye las piernas del ped, así que las piernas desnudas bajo el dobladillo deben formar "
         "parte de la prenda. El complemento añade la prenda; las piernas desnudas vienen de las propias herramientas "
-        "de Durty Cloth Tool (se aplican sus propios planes). Piel visible está activado."
+        "de Durty Cloth Tool, según lo que permita tu plan de Durty Cloth Tool. Piel visible está activado."
     ),
     "garment.hint.bare-feet": (
         "La ranura Calzado sustituye los pies del ped, así que los pies descalzos deben formar parte de la prenda. El "
-        "complemento añade las sandalias; los pies descalzos vienen de las propias herramientas de Durty Cloth Tool "
-        "(se aplican sus propios planes). Piel visible está activado."
+        "complemento añade las sandalias; los pies descalzos vienen de las propias herramientas de Durty Cloth Tool, "
+        "según lo que permita tu plan de Durty Cloth Tool. Piel visible está activado."
     ),
     "garment.hint.avatar": (
         "Sus marcadores no se pueden leer de su forma: elige el avatar sobre el que se drapeó, o Marcadores "
@@ -1278,9 +1278,10 @@ TEXT = {
     ),
     "garment.info.avatar": (
         "Si se conoce el avatar sobre el que se drapeó la prenda, Marcadores automáticos pone los marcadores en sus "
-        "articulaciones, con exactitud y en la pose del drapeado. Importar prenda los guarda de un FBX exportado con "
-        "el avatar con rig; si no, elige el avatar estándar sobre el que drapeaste. Una pose que cambiaste en "
-        "Marvelous Designer no se conoce: en ese caso comprueba los marcadores."
+        "articulaciones, en la pose del drapeado. Importar prenda los guarda de un FBX exportado con el avatar con "
+        "rig; si no, elige el avatar estándar sobre el que drapeaste. Los marcadores de un avatar estándar "
+        "corresponden a su tamaño y pose por defecto: comprueba los marcadores si le cambiaste el tamaño o la pose en "
+        "Marvelous Designer."
     ),
     "garment.marker-note.avatar": "Colocados en las articulaciones del avatar sobre el que se drapeó la prenda.",
     "garment.marker-note.from-body": (
@@ -1292,6 +1293,10 @@ TEXT = {
     ),
     "garment.why.avatar-markers": (
         "Al avatar le falta un marcador que este tipo necesita. Elige Desconocido o colócalo a mano."
+    ),
+    "garment.why.avatar-moved": (
+        "La prenda se ha movido desde que se importó, así que los marcadores del avatar ya no le corresponden. Elige "
+        "Desconocido o mueve los marcadores a mano."
     ),
     "garment.done.import-rig": (
         "Se importó {name} ({count} vértices) y se guardaron para los marcadores las articulaciones del avatar "

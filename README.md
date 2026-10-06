@@ -43,7 +43,7 @@ freemode cloth and add it to your Durty Cloth Tool project.
   body's weights. Push it out of the body, snug or relax regions, see problem areas in colour, compare the fit with
   game clothing, sculpt with the body as a guide and check seams for tears. A garment type sets up each kind of
   clothing: tops, hoodies, open jackets, long coats, dresses, trousers, shorts, skirts, shoes, sandals, masks, bags
-  and parachutes, vests and body armour, and hats, glasses, ear pieces, watches and bracelets as props snapped to
+  and parachutes, body armour, and hats, glasses, ear pieces, watches and bracelets as props snapped to
   their anchor. A garment exported with the rigged Marvelous Designer or CLO avatar brings that avatar's joints as its
   markers.
   **Game Ready** joins seams, sets the ped vertex colours, combines all materials into one texture with its
@@ -186,9 +186,10 @@ button for that step is the large one. Settings you rarely change sit in closed 
    a garment's, and turns a garment that lies down or faces backwards.
 2. **Fit:** **Auto Markers**, then check the markers and move any that are off (lines in the 3D view join them and
    turn orange when something looks wrong). With a known avatar (an FBX exported with the rigged avatar, or a stock
-   avatar such as Manne) the markers sit exactly on its joints; masks and bags without one start on the body's
-   joints. Then **Align to Body**: it moves and turns the garment so the markers sit on the body's joints, and turns
-   its arms (or legs) onto the body's, so a T-pose becomes the game's pose without opening a seam. It keeps the
+   avatar such as Manne at its default size and pose) the markers sit on its joints; masks and bags without one start
+   on the body's joints. Once the garment has moved (Align to Body, a fit), choose Not Known to place them again.
+   Then **Align to Body**: it moves and turns the garment so the markers sit on the body's joints, and turns its arms
+   (or legs) onto the body's, so a T-pose becomes the game's pose without opening a seam. It keeps the
    garment's size unless you turn off **Keep Size** in its options. Then **Fit to Body** (under **Fit on
    gta.clothing**): gta.clothing puts the garment exactly in the game's pose, gives it the freemode body's weights
    and moves it out of the body where it was inside. A progress bar shows how far it is, **Cancel** stops it (a fit

@@ -2412,18 +2412,28 @@ def texel_density(triangle_uv: Any, triangle_positions: Any, size: int) -> float
 # Garment types: open fronts, bridged thigh weights, the waist, props on their anchor
 # --------------------------------------------------------------------------------------------------
 
-def front_sides(positions: Any, edges: Any, centre: Tuple[float, float]) -> np.ndarray:
-    """For an open front: +1 for a vertex in front (towards -Y of ``centre``'s Y) whose neighbours lie on the ped's
-    left of the centre plane (``centre``'s X), -1 for one whose neighbours lie on its right, 0 for every vertex at the
-    back. The two edges of an open front lie on top of each other at the centre, but each has its own panel beside it,
-    so they get opposite sides, and two sides of one open front are never joined (:class:`PairRules` ``sides``)."""
+#: How far from the centre plane (metres) a vertex can be one of an open front's two edges.
+FRONT_BAND = 0.05
+
+
+def front_sides(positions: Any, edges: Any, centre: Tuple[float, float], top: Optional[float] = None,
+                band: float = FRONT_BAND) -> np.ndarray:
+    """For an open front: +1 for a vertex in front (towards -Y of ``centre``'s Y), near the centre plane (within
+    ``band`` of ``centre``'s X) and below ``top`` (the neck, when known) whose neighbours lie on the ped's left of the
+    centre plane, -1 for one whose neighbours lie on its right, 0 for every other vertex. The two edges of an open front
+    lie on top of each other at the centre, but each has its own panel beside it, so they get opposite sides, and two
+    sides of one open front are never joined (:class:`PairRules` ``sides``). Seams above the neck (a hood's centre
+    seam) and away from the centre weld as usual."""
     points = as_points(positions)
     if not len(points):
         return np.zeros(0, dtype=np.int64)
     cx, cy = centre
     beside = neighbour_mean(points[:, 0], edges, len(points)) - cx
     side = np.where(beside > 1e-6, 1, np.where(beside < -1e-6, -1, 0))
-    return np.where(points[:, 1] < cy, side, 0).astype(np.int64)
+    front = (points[:, 1] < cy) & (np.abs(points[:, 0] - cx) <= band)
+    if top is not None:
+        front &= points[:, 2] < top
+    return np.where(front, side, 0).astype(np.int64)
 
 
 #: The words that name the bones of a leg in the freemode skeleton (``SKEL_L_Thigh``, ``RB_R_ThighRoll``,
@@ -2609,10 +2619,9 @@ def snap_to_anchor(kind: str, positions: Any, body: Any, joints: Mapping[str, An
     found = _section(head, lobes, 0.01) or found
     middle, half = found
     reference = np.array([(low[0] + high[0]) / 2, (low[1] + high[1]) / 2, high[2]])
-    across = (low[0] < middle[0] - 0.02) and (high[0] > middle[0] + 0.02)
-    if across:
+    if float(high[0] - low[0]) > half:  # wider than half the head: a pair for both ears, centred on the head
         x = middle[0]
-    else:  # one ear piece: onto the ear on its side
+    else:  # one ear piece: onto the ear on the side it was made on
         x = middle[0] + (half if reference[0] >= middle[0] else -half)
     target = np.array([x, middle[1], lobes])
     return Snap(_tuple(target - reference), _tuple(reference))
@@ -2675,10 +2684,10 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
         area = stats.get("uv_area")
         if area is not None and area < 0.05:
             add("warning", "uv-area", area=round(100.0 * float(area), 1))
-    if stats.get("weighted") is False:
+    if stats.get("prop"):
+        pass  # a prop moves with its anchor and has no weights
+    elif stats.get("weighted") is False:
         add("error", "no-weights")  # the garment would stay in its rest pose in the game: never clean
-    elif stats.get("weighted") is None:
-        pass  # a prop: it moves with its anchor and has no weights
     else:
         if stats.get("unweighted", 0) > 0:
             add("error", "unweighted", count=int(stats["unweighted"]))

@@ -27,7 +27,7 @@ TEXT = {
     "garment.slot.lowr": "下装 (lowr)",
     "garment.slot.lowr.desc": "长裤、短裤和裙子",
     "garment.slot.feet": "鞋子 (feet)",
-    "garment.slot.feet.desc": "鞋子和靴子",
+    "garment.slot.feet.desc": "鞋子、靴子和凉鞋",
     "garment.category.vest": "背心",
     "garment.category.vest.desc": "没有袖子的上衣",
     "garment.category.tshirt": "T 恤",
@@ -149,7 +149,7 @@ TEXT = {
         "改为从 GLB、glTF、FBX 或 OBJ 文件添加身体，以米为单位，并采用游戏中的姿势"
     ),
     "garment.op.auto-markers": "自动标记",
-    "garment.op.auto-markers.desc": "放置关节标记：放到初始设置中所选头像的关节上，根据服装形状放置（上衣和裤子），或先放到身体的关节上。请移动位置不对的标记",
+    "garment.op.auto-markers.desc": "放置关节标记：放到初始设置中所选虚拟模特的关节上，根据服装形状放置（上衣和裤子），或先放到身体的关节上。请移动位置不对的标记",
     "garment.op.mirror": "左侧镜像到右侧",
     "garment.op.mirror.desc": "把 ped 左侧的标记复制到右侧",
     "garment.op.save-preset": "保存姿势预设",
@@ -264,7 +264,7 @@ TEXT = {
     "garment.why.preset-unreadable": "无法读取预设：{detail}",
     "garment.why.tops-only": "只有上衣才有需要放下的手臂。",
     "garment.why.no-backup": "还没有备份。每个会更改服装的步骤之前都会保留一份备份。",
-    "garment.why.region-category": "此区域不属于所选类别。",
+    "garment.why.region-category": "此区域不属于所选服装类型。",
     "garment.why.region-empty": "服装在区域 {region} 中没有任何部分。",
     "garment.why.no-session": "没有正在进行的雕刻会话。",
     "garment.why.no-armature": "检查撕裂需要服装带有骨架和权重。",
@@ -280,11 +280,11 @@ TEXT = {
     "garment.error.no-mesh": "文件中没有网格。",
     "garment.error.mode": "无法启动雕刻模式：{detail}",
     "garment.error.bake": "烘焙失败：{detail}",
-    "garment.marker-error.no-markers": "此类别不需要标记。",
+    "garment.marker-error.no-markers": "这种服装类型不需要标记。",
     "garment.marker-error.too-small": "服装太小或太扁，无法放置标记。请检查它是否以米为单位。",
-    "garment.marker-error.not-a-top": "服装看起来不像上衣。请检查类别，或手动放置标记。",
+    "garment.marker-error.not-a-top": "服装看起来不像上衣。请检查服装类型，或手动放置标记。",
     "garment.marker-error.no-sleeves": "没有找到袖子。请选择背心，或手动放置手臂标记。",
-    "garment.marker-error.not-legs": "没有找到裤腿。请检查类别，或手动放置标记。",
+    "garment.marker-error.not-legs": "没有找到裤腿。请检查服装类型，或手动放置标记。",
     "garment.done.use": "正在处理 {name}。",
     "garment.done.import": "已导入 {name}（{count} 个顶点）。",
     "garment.done.body": "已添加 freemode 身体（{gender}，版本 {version}）。",
@@ -333,7 +333,7 @@ TEXT = {
         "它作为独立的对象添加到场景中，工具永远不会更改它。"
     ),
     "garment.info.markers": (
-        "标记代表 ped 的关节：颈部、胸部、骨盆、肩部、肘部、手腕和髋部（裤子为髋部、膝盖和脚踝，面罩为头部）。自动标记会把它们放到初始设置中所选头像的关节上，否则根据服装的形状读取（上衣和裤子），或先放到身体的关节上。3D "
+        "标记代表 ped 的关节：颈部、胸部、骨盆、肩部、肘部、手腕和髋部（裤子为髋部、膝盖和脚踝，面罩为头部）。自动标记会把它们放到初始设置中所选虚拟模特的关节上，否则根据服装的形状读取（上衣和裤子），或先放到身体的关节上。3D "
         "视图中的连线把它们连起来：橙色连线表示有地方看起来不对。请移动位置不对的标记；左侧镜像到右侧会把左侧复制到右侧。"
     ),
     "garment.info.tpose": "把以 T 字姿势制作的服装的手臂转到手臂角度（已知身体关节时，转到身体的手臂上）。服装的每个部分按其位置跟随移动，因此接缝保持闭合。对齐到身体也会做这一步。",
@@ -736,7 +736,7 @@ TEXT = {
     # ---- garment fitting: units, stepped Prepare and Combine -----------------------------------------------------------
     "garment.unit.dm": "分米",
     "garment.done.import-unit": "已导入 {name}（{count} 个顶点），按{unit}读取尺寸，这是唯一能让它具有服装尺寸的单位。如果看起来不对，请重新导入并选择单位。",
-    "garment.done.import-size": "已导入 {name}（{count} 个顶点），但 {size} m 不是这类服装的尺寸。请重新导入并选择单位，或检查类别。",
+    "garment.done.import-size": "已导入 {name}（{count} 个顶点），但 {size} m 不是这类服装的尺寸。请重新导入并选择单位，或检查服装类型。",
     "garment.done.prepare-open": (
         "已准备，但有 {count} 个接缝顶点在相邻裁片上找不到对应点（已连接 {welded} 个）：那里的裁片没有完全对齐。它们已被选中：按 Tab "
         "即可看到。适配到身体仍会让接缝两侧获得相同的权重；如果游戏中出现缝隙，请在你的服装软件中缝合这些接缝并重新导出，或手动连接它们。"
@@ -760,8 +760,8 @@ TEXT = {
     "garment.slot.berd.desc": "面罩和遮脸物",
     "garment.slot.hand": "包 (hand)",
     "garment.slot.hand.desc": "包、背包和降落伞",
-    "garment.slot.task": "背心 (task)",
-    "garment.slot.task.desc": "背心和防弹衣",
+    "garment.slot.task": "防弹衣 (task)",
+    "garment.slot.task.desc": "防弹衣以及穿在上衣外面的其他装备",
     "garment.slot.p_head": "头部道具 (p_head)",
     "garment.slot.p_head.desc": "头上的道具：帽子、鸭舌帽和头盔",
     "garment.slot.p_eyes": "眼部道具 (p_eyes)",
@@ -786,8 +786,8 @@ TEXT = {
     "garment.category.sandals.desc": "露出双脚的敞口鞋",
     "garment.category.mask": "面罩",
     "garment.category.mask.desc": "面罩或遮脸物",
-    "garment.category.armour": "背心或防弹衣",
-    "garment.category.armour.desc": "穿在上衣外面的背心，例如防弹衣",
+    "garment.category.armour": "防弹衣",
+    "garment.category.armour.desc": "穿在上衣外面，例如防弹衣或战术装备",
     "garment.category.bag": "包或降落伞",
     "garment.category.bag.desc": "背在背上的背包、包或降落伞",
     "garment.category.hat": "帽子",
@@ -809,30 +809,33 @@ TEXT = {
         "一件：连衣裙作为一件服装放进上衣槽位，裙子的权重在两腿之间连接；玩家在下装槽位搭配裸腿。两件：适配面板中的在腰部拆分会把它切成上衣和用于下装槽位的裙子，依次添加，这样每一件都能与其他服装搭配。"
     ),
     "garment.hint.bare-legs": (
-        "下装槽位会替换 ped 的腿，所以下摆以下的裸腿必须是服装的一部分。本插件添加服装；裸腿来自 Durty Cloth Tool 自己的工具（适用其自身的方案）。显示皮肤已开启。"
+        "下装槽位会替换 ped 的腿，所以下摆以下的裸腿必须是服装的一部分。本插件添加服装；裸腿来自 Durty Cloth Tool 自己的工具，以你的 Durty Cloth Tool 方案允许的范围为准。显示皮肤已开启。"
     ),
-    "garment.hint.bare-feet": "鞋子槽位会替换 ped 的脚，所以裸脚必须是服装的一部分。本插件添加凉鞋；裸脚来自 Durty Cloth Tool 自己的工具（适用其自身的方案）。显示皮肤已开启。",
-    "garment.hint.avatar": "无法从它的形状读出标记：请选择它所披挂的头像，或者让自动标记先把标记放到身体的关节上，再由你移动。",
+    "garment.hint.bare-feet": (
+        "鞋子槽位会替换 ped 的脚，所以裸脚必须是服装的一部分。本插件添加凉鞋；裸脚来自 Durty Cloth Tool 自己的工具，以你的 Durty Cloth Tool 方案允许的范围为准。显示皮肤已开启。"
+    ),
+    "garment.hint.avatar": "无法从它的形状读出标记：请选择制作它时所用的虚拟模特，或者让自动标记先把标记放到身体的关节上，再由你移动。",
     "garment.hint.prop": "道具挂在一根骨骼上并保持自身形状：它不会适配到身体，也不需要权重。适配面板中的吸附到锚点会把它放到位置上；之后请手动移动。",
     "garment.prop.open-front": "敞开前襟",
     "garment.prop.open-front.desc": "这件服装敞开穿：准备服装永远不会连接它的两片前襟",
-    "garment.prop.avatar": "头像",
-    "garment.prop.avatar.desc": "披挂这件服装所用的头像（如果已知）：它的关节会成为标记",
+    "garment.prop.avatar": "虚拟模特",
+    "garment.prop.avatar.desc": "制作这件服装时所用的虚拟模特（如果已知）：它的关节会成为标记",
     "garment.avatar.detect": "未知",
     "garment.avatar.detect.desc": "自动标记根据服装的形状读取标记",
     "garment.avatar.file": "随服装导入",
-    "garment.avatar.file.desc": "随服装一起导出的带骨骼头像：导入时保留了它的关节位置",
+    "garment.avatar.file.desc": "随服装一起导出的带骨骼虚拟模特：导入时保留了它的关节位置",
     "garment.avatar.manne": "Manne（男性，A 字姿势）",
     "garment.avatar.manne.desc": "MaleTemplate_Manne_01，Marvelous Designer 和 CLO 的男性模板，处于其 A 字姿势",
     "garment.info.avatar": (
-        "如果已知披挂服装所用的头像，自动标记会把标记准确地放到它的关节上，并保持披挂时的姿势。导入服装会从随带骨骼头像导出的 FBX 中保留这些关节；否则请选择你披挂时使用的标准头像。你在 Marvelous Designer "
-        "中改过的姿势无法得知：这种情况下请检查标记。"
+        "如果已知制作服装时所用的虚拟模特，自动标记会把标记放到它的关节上，并保持制作时的姿势。导入服装会从随带骨骼虚拟模特导出的 FBX "
+        "中保留这些关节；否则请选择你制作时使用的标准虚拟模特。标准虚拟模特的标记对应它的默认尺寸和姿势：如果你在 Marvelous Designer 中改过它的尺寸或姿势，请检查标记。"
     ),
-    "garment.marker-note.avatar": "已放到披挂这件服装所用头像的关节上。",
+    "garment.marker-note.avatar": "已放到制作这件服装时所用虚拟模特的关节上。",
     "garment.marker-note.from-body": "已放到身体的关节上：请把每个标记移到服装上对应的位置。",
-    "garment.why.no-avatar-file": "这件服装没有这个头像：导入时没有带骨骼头像。请选择其他头像或未知。",
-    "garment.why.avatar-markers": "这个头像缺少此类型需要的一个标记。请选择未知，或手动放置。",
-    "garment.done.import-rig": "已导入 {name}（{count} 个顶点），并为标记保留了随它导出的头像的关节。",
+    "garment.why.no-avatar-file": "这件服装没有这个虚拟模特：导入时没有带骨骼虚拟模特。请选择其他虚拟模特或未知。",
+    "garment.why.avatar-markers": "这个虚拟模特缺少此类型需要的一个标记。请选择未知，或手动放置。",
+    "garment.why.avatar-moved": "服装在导入后已被移动，虚拟模特的标记不再与它对应。请选择未知，或手动移动标记。",
+    "garment.done.import-rig": "已导入 {name}（{count} 个顶点），并为标记保留了随它导出的虚拟模特的关节。",
     "garment.heading.snap": "锚点",
     "garment.op.snap": "吸附到锚点",
     "garment.op.snap.desc": "把道具移到身体上的锚点：帽子到头上，眼镜到眼前，耳饰到耳朵，手表或手镯到手腕上",
