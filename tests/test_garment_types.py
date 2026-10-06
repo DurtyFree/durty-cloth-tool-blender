@@ -235,6 +235,52 @@ def test_a_hat_sits_where_the_head_is_as_wide_as_its_crown():
     assert np.ptp(level[:, 0]) / 2 == pytest.approx(0.085, abs=0.012)  # the head there is as wide as the hat
 
 
+def helmet_shell(radius: float) -> np.ndarray:
+    """A closed dome ``radius`` wide at its rim and 10 cm high, away from the body."""
+    helmet = synthetic._Builder()
+    levels = np.linspace(0.0, 0.1, 11)
+    radii = radius * np.sqrt(1.0 - (levels / 0.11) ** 2)
+    helmet.tube(np.column_stack([np.zeros(11), np.zeros(11), levels]), np.column_stack([radii, radii]),
+                np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), closed=True)
+    return helmet.mesh({}).positions + [0.4, 0.3, 1.2]
+
+
+def test_a_chin_strap_is_never_taken_for_the_band_of_a_hat():
+    """The cause of a helmet that snapped a head's height above the head: the narrowest slice of its lowest 40 % was
+    the strap under the chin, so the helmet went where the head is that narrow, at the crown. A strap does not go
+    around the head, so the helmet sits as it would without it."""
+    body = synthetic.body()
+    joints = skeleton_joints()
+    shell = helmet_shell(0.095)
+    strap = synthetic._Builder()
+    for side in (-1.0, 1.0):  # down both cheeks
+        down = np.linspace(0.0, -0.1, 8)
+        strap.tube(np.column_stack([np.full(8, side * 0.09), np.zeros(8), down]), np.full((8, 2), 0.004),
+                   np.array([1.0, 0, 0]), np.array([0, 1.0, 0]), segments=6)
+    across = np.linspace(-0.09, 0.09, 10)  # and under the chin
+    strap.tube(np.column_stack([across, np.full(10, -0.03), np.full(10, -0.1)]), np.full((10, 2), 0.004),
+               np.array([0, 1.0, 0]), np.array([0, 0, 1.0]), segments=6)
+    strapped = np.concatenate([shell, strap.mesh({}).positions + [0.4, 0.3, 1.2]])
+    plain = garment.snap_to_anchor("hat", shell, body.positions, joints)
+    snap = garment.snap_to_anchor("hat", strapped, body.positions, joints)
+    assert np.allclose(snap.offset, plain.offset, atol=0.005)
+    placed = snap.apply(strapped)[:len(shell)]
+    rim = placed[placed[:, 2] < placed[:, 2].min() + 0.005]
+    head = body.positions[body.positions[:, 2] > 0.55]
+    level = head[np.abs(head[:, 2] - rim[:, 2].mean()) < 0.01]
+    assert len(level) and np.ptp(level[:, 0]) / 2 == pytest.approx(0.095, abs=0.012)  # on the head, not above it
+    assert abs(rim[:, 0].mean()) < 0.01 and abs(rim[:, 1].mean()) < 0.01
+
+
+def test_a_loose_helmet_rests_on_the_crown():
+    """A helmet wider than the head nowhere touches its sides: it rests on the crown instead of sinking over the
+    eyes to where the head is widest."""
+    body = synthetic.body()
+    placed = garment.snap_to_anchor("hat", helmet_shell(0.12), body.positions, skeleton_joints()).apply(
+        helmet_shell(0.12))
+    assert placed[:, 2].max() == pytest.approx(body.positions[:, 2].max() + garment.HAT_CLEARANCE, abs=1e-6)
+
+
 def test_glasses_sit_in_front_of_the_eyes_and_a_watch_around_the_wrist():
     body = synthetic.body()
     joints = skeleton_joints()

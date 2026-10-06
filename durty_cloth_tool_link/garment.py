@@ -2631,6 +2631,13 @@ LOBES_BELOW_EYES = 0.045
 GLASSES_AHEAD = 0.012
 WATCH_ABOVE_WRIST = 0.035
 HAT_EASE = 0.06
+#: A slice of a hat goes around the head when its points lie in at least this many of eight directions around the
+#: hat's middle. A band does; a chin strap, a chain or cloth hanging down the back does not.
+BAND_DIRECTIONS = 7
+#: The crown a hat's inside rests on: the top of the head within this distance of its middle seen from above
+#: (metres), and the gap the hat keeps above it.
+CROWN_RADIUS = 0.03
+HAT_CLEARANCE = 0.005
 
 
 class Snap(NamedTuple):
@@ -2666,12 +2673,68 @@ def _section(points: np.ndarray, z: float, half: float = 0.005) -> Optional[Tupl
     return (band[:, :2].min(axis=0) + band[:, :2].max(axis=0)) / 2, float(np.ptp(band[:, 0])) / 2
 
 
+def _middle(points: np.ndarray) -> np.ndarray:
+    """The middle of what ``points`` cover seen from above."""
+    return (points[:, :2].min(axis=0) + points[:, :2].max(axis=0)) / 2
+
+
+def _directions(band: np.ndarray, middle: np.ndarray) -> int:
+    """In how many of eight directions around ``middle`` a slice has points."""
+    angles = np.arctan2(band[:, 1] - middle[1], band[:, 0] - middle[0])
+    return len(np.unique(np.floor((angles + math.pi) / (2 * math.pi) * 8).astype(np.int64).clip(0, 7)))
+
+
+def _hat_band(points: np.ndarray) -> Tuple[float, float, np.ndarray]:
+    """Where a hat sits on the head: its band, the narrowest slice that goes around the head in the lower 40 % of the
+    hat (a brim is wider than the band above it). A chin strap, a chain or cloth hanging below the hat does not go
+    around the head, so it is never taken for the band. Returns the band's level and half width, and the middle of the
+    hat's top (where it covers the crown)."""
+    low, high = points.min(axis=0), points.max(axis=0)
+    middle = _middle(points[points[:, 2] >= high[2] - 0.3 * (high[2] - low[2])])
+    slices = []
+    for z in np.arange(low[2] + 0.005, high[2] + 1e-9, 0.005):
+        band = points[np.abs(points[:, 2] - z) <= 0.005]
+        if len(band) >= 4:
+            slices.append((float(z), float(np.ptp(band[:, 0])) / 2, _directions(band, middle)))
+    if not slices:
+        raise MarkerError("too-small")
+    widest = max(half for _, half, _ in slices)
+    around = [(z, half) for z, half, directions in slices if directions >= BAND_DIRECTIONS and half >= 0.5 * widest]
+    around = around or [(z, half) for z, half, _ in slices]  # nothing goes around the head: the whole prop counts
+    bottom = around[0][0]
+    lower = [entry for entry in around if entry[0] <= bottom + 0.4 * (high[2] - bottom) + 1e-9]
+    level, half = min(lower, key=lambda entry: (entry[1], entry[0]))
+    return level, half, _middle(points[points[:, 2] >= high[2] - 0.3 * (high[2] - bottom)])
+
+
+def _hat_lift(points: np.ndarray, head: np.ndarray, level: float, half: float) -> float:
+    """How far up a hat (already over the middle of the head) moves so that its band at ``level`` sits where the
+    head is as wide as the band, and so that nothing of the hat above its band sinks into the top of the head: a
+    loose helmet rests on the crown, a tall hat on the sides of the head."""
+    crown = float(head[:, 2].max())
+    sections = []
+    for z in np.arange(crown - 0.002, crown - 0.2, -0.005):
+        found = _section(head, float(z))
+        if found is not None:
+            sections.append((float(z), found[1]))
+    if not sections:
+        raise MarkerError("no-head")
+    fitting = [entry for entry in sections if entry[1] >= half * (1.0 - HAT_EASE)]
+    lift = (fitting[0] if fitting else max(sections, key=lambda entry: entry[1]))[0] - level
+    middle = _middle(head[head[:, 2] >= crown - 0.04])
+    over = points[(points[:, 2] >= level) & (np.linalg.norm(points[:, :2] - middle, axis=1) < CROWN_RADIUS)]
+    if len(over):
+        lift = max(lift, crown + HAT_CLEARANCE - float(over[:, 2].min()))
+    return lift
+
+
 def snap_to_anchor(kind: str, positions: Any, body: Any, joints: Mapping[str, Any], side: str = "l") -> Snap:
     """How to put a prop onto its anchor on the body (``body``: the body's points, ``joints``: its joints), by the
-    prop's kind (``hat``, ``glasses``, ``ears`` or ``wrist``; ``side`` of a wrist ``l`` or ``r``). A hat sits where
-    the head is as wide as its crown, glasses in front of the eyes, ear pieces at the lobes, a watch or bracelet around
-    the wrist along the forearm. A starting point to move by hand from. Raises :class:`MarkerError` when the body has
-    no head or arm to snap to."""
+    prop's kind (``hat``, ``glasses``, ``ears`` or ``wrist``; ``side`` of a wrist ``l`` or ``r``). A hat goes over the
+    middle of the head and down until its band sits where the head is as wide as it or its inside rests on the crown
+    (:func:`_hat_band`, :func:`_hat_lift`), glasses in front of the eyes, ear pieces at the lobes, a watch or bracelet
+    around the wrist along the forearm. A starting point to move by hand from. Raises :class:`MarkerError` when the
+    body has no head or arm to snap to."""
     points = as_points(positions)
     body = as_points(body)
     if len(points) < 3:
@@ -2699,26 +2762,11 @@ def snap_to_anchor(kind: str, positions: Any, body: Any, joints: Mapping[str, An
     crown = float(head[:, 2].max())
     eyes = crown - EYES_BELOW_CROWN
     if kind == "hat":
-        height = float(high[2] - low[2])
-        widths = []
-        for z in np.arange(low[2] + 0.005, low[2] + 0.4 * height + 1e-9, 0.005):
-            found = _section(points, float(z))
-            if found is not None:
-                widths.append((found[1], float(z), found[0]))
-        if not widths:
-            raise MarkerError("too-small")
-        crown_width, level, middle = min(widths)
-        sections = []
-        for z in np.arange(crown - 0.002, crown - 0.2, -0.005):
-            found = _section(head, float(z))
-            if found is not None:
-                sections.append((float(z), found))
-        if not sections:
-            raise MarkerError("no-head")
-        fitting = [entry for entry in sections if entry[1][1] >= crown_width * (1.0 - HAT_EASE)]
-        z_target, (centre_target, _width) = fitting[0] if fitting else max(sections, key=lambda e: e[1][1])
-        offset = np.array([centre_target[0] - middle[0], centre_target[1] - middle[1], z_target - level])
-        return Snap(_tuple(offset), _tuple(np.array([middle[0], middle[1], level])))
+        level, half, middle = _hat_band(points)
+        shift = _middle(head[head[:, 2] >= crown - 0.04]) - middle
+        over = points + np.array([shift[0], shift[1], 0.0])
+        lift = _hat_lift(over, head, level, half)
+        return Snap(_tuple(np.array([shift[0], shift[1], lift])), _tuple(np.array([middle[0], middle[1], level])))
     found = _section(head, eyes, 0.01)
     if found is None:
         raise MarkerError("no-head")
