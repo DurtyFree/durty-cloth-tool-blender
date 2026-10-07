@@ -165,16 +165,25 @@ def test_the_rig_stage_lists_the_templates_by_itself_and_tries_again_quietly(tmp
 # ---- the rig ----------------------------------------------------------------------------------------------
 
 
-def test_a_rig_reports_its_progress_and_arrives_whole(tmp_path, dct, api):
-    dct.ped_rig_seconds = 0.6
+def test_a_rig_reports_its_progress_and_arrives_whole(tmp_path, dct, api, monkeypatch):
+    dct.ped_rig_seconds = 0.0
     ctrl = connected(tmp_path, dct, api)
     peds = ctrl.peds
     character, data = character_input()
     options = ped.rig_options(fingers="auto")
+    stages = set()
+    on_progress = peds._on_progress
+
+    def observe_progress(stage, fraction):
+        on_progress(stage, fraction)
+        stages.add(peds.stage)
+
+    # A poll may deliver several stages and completion together. Observe each applied update,
+    # rather than requiring the final transient stage to survive until the poll returns.
+    monkeypatch.setattr(peds, "_on_progress", observe_progress)
     peds.start_rig("a_m_y_tester_01", character.joints, data, options, rights=True, character="c1")
     assert peds.rigging and peds.busy and peds.rig_problem().key == "ped.why.rigging"
-    stages = set()
-    drive(ctrl, lambda: (stages.add(peds.stage) if peds.stage else None) or not peds.rigging)
+    drive(ctrl, lambda: not peds.rigging)
     assert {"template", "weights", "report"} <= stages
     assert peds.rig is not None and peds.rig_status is None and peds.job == "j1"
     header, size = dct.ped_rigs[-1]
