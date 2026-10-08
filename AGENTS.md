@@ -56,9 +56,9 @@ commands and results you ran. Interface changes also need screenshots from `tool
 - Never block Blender's interface: network and long work run on worker threads or in steps that a `bpy.app.timers`
   timer checks. Worker threads never touch Blender.
 - Standard library and numpy only, Python 3.11 compatible (Blender 4.2 to 4.5 bundle 3.11).
-- Every add-on and tool module starts with the SPDX header and the copyright line of the existing modules (tests
-  carry the SPDX header). Docstrings say what and why in plain English; type hints throughout; lines of about 120
-  characters.
+- Every add-on module starts with the SPDX header and the copyright line of the existing modules. Tool scripts start
+  with the `#!/usr/bin/env python3` line and then the same two lines, and tests carry the SPDX header. Docstrings say
+  what and why in plain English; type hints throughout; lines of about 120 characters.
 - Logic never stores, compares or parses displayed text: it passes `strings.Msg` keys. A new or changed English text
   gets all eight translations in the same change, with the same `{fields}`. Labels and buttons in Title Case,
   messages as sentences. Logs and Copy Diagnostics stay English.
@@ -73,14 +73,15 @@ commands and results you ran. Interface changes also need screenshots from `tool
 
 Use the add-on's own interface names exactly, and check `strings.py` when unsure:
 
-- **Durty Cloth Tool** (the **DCT** tab is the only place the short name appears), **Creator Link**, **connected app**,
-  **Edit in connected app**, **gta.clothing** (always lower case).
+- **Durty Cloth Tool**, **Creator Link**, **connected app**, **Edit in connected app**, **gta.clothing** (always lower
+  case). The short name DCT appears only in the **DCT** tab and in the names of what the add-on creates in a scene,
+  such as the vertex groups DCT Tears, DCT Pinned and DCT Lining and the UV map DCT Source UV.
 - **Linked Cloth**, **Live Preview**, **Texture Checks**, **Save to Cloth**, **Save as New Variation**, **Push Model**,
   **Push Automatically**, **Save Model to Cloth**, **Work On**.
 - **Garment Fitting**, **Fit on gta.clothing** (never "Fit to Body"), **Transfer Weights**, **Add to Project**,
   **freemode body**, **Custom Ped**, **Rig in Durty Cloth Tool**, **Create Custom Ped**.
-- In prose, say cloth or clothing. "Garment" appears only inside interface names such as Garment Fitting, Import
-  Garment and Prepare Garment.
+- "Garment" is the interface's word for the object Garment Fitting works on (Import Garment, the Garment field, "the
+  garment" in its messages). Documentation prose, including the README and these documents, says cloth or clothing.
 - British spelling: colour, licence (the noun). Support goes to the **Pleb Masters Community Discord**.
 
 ## The public repository boundary
@@ -101,8 +102,9 @@ repository; `VENDORED.md` in that folder records its version, the Creator Link p
 SHA-256. Never edit it here. It must stay in sync with Durty Cloth Tool: a wire format change is made in Durty Cloth
 Tool's Creator Link protocol package and in `dct_link` together, then copied here with
 `python tools/sync_dct_link.py <Durty Cloth Tool checkout>`, in its own commit ("Sync dct_link with ...").
-`--check` compares with a Durty Cloth Tool checkout beside this repository when one exists; if that checkout is
-behind the synced branch, compare with the branch instead of syncing backwards.
+The copy is synced from Durty Cloth Tool's `dev` branch. `--check` also compares with a Durty Cloth Tool checkout
+beside this repository when one exists; if that checkout is behind `dev`, update it or compare with `dev` instead of
+syncing backwards.
 
 ## Documents
 
@@ -120,5 +122,5 @@ behind the synced branch, compare with the branch instead of syncing backwards.
 
 ## No AI attribution
 
-Never add Claude, Anthropic or other AI attribution anywhere: no `Co-Authored-By` trailers, no "generated with"
-lines, nothing in code comments, documents or commit messages. Write as a human author would.
+Add no AI attribution anywhere: no co-author trailers, no generated-by lines, and no attribution in files, code
+comments, documents or commit messages. Write as a human author would.

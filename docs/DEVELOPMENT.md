@@ -114,9 +114,9 @@ python tools/sync_dct_link.py <path to the Durty Cloth Tool checkout>   # replac
 python tools/sync_dct_link.py --check [<checkout>]                     # verify the hashes, and the checkout when given
 ```
 
-`--check` also compares with a Durty Cloth Tool checkout that sits beside this repository. When that checkout is
-older than the vendored copy, it reports a difference even though the copy is right; compare with the upstream branch
-the copy was synced from instead.
+The copy is synced from Durty Cloth Tool's `dev` branch. `--check` also compares with a Durty Cloth Tool checkout that
+sits beside this repository. When that checkout is older than the vendored copy, it reports a difference even though
+the copy is right; update the checkout or compare with `dev` instead.
 
 ## Network and data
 
