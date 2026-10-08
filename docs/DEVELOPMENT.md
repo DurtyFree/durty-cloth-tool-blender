@@ -3,7 +3,7 @@
 This is the technical reference for the Blender add-on: how the code is organised, how it talks to Durty Cloth Tool
 and gta.clothing, how it is tested on which Blender versions, and how a release is built. The user-facing guide is
 the [README](/README.md) and the public documentation; the contribution workflow (setup, checks, texts, pull
-requests) is in [CONTRIBUTING.md](/CONTRIBUTING.md).
+requests) is in [CONTRIBUTING.md](/CONTRIBUTING.md), and agents start with [AGENTS.md](/AGENTS.md).
 
 This repository is public. Everything here describes the add-on's own open-source code. Durty Cloth Tool's internals,
 gta.clothing's services and the release infrastructure outside this repository are not documented here.
