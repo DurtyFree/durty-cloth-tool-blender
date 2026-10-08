@@ -74,8 +74,8 @@ commands and results you ran. Interface changes also need screenshots from `tool
 Use the add-on's own interface names exactly, and check `strings.py` when unsure:
 
 - **Durty Cloth Tool**, **Creator Link**, **connected app**, **Edit in connected app**, **gta.clothing** (always lower
-  case). The short name DCT appears only in the **DCT** tab and in the names of what the add-on creates in a scene,
-  such as the vertex groups DCT Tears, DCT Pinned and DCT Lining and the UV map DCT Source UV.
+  case). The short name DCT appears only in the **DCT** tab and in the names of what the add-on creates or reads in a
+  scene, such as the vertex groups DCT Tears, DCT Pinned and DCT Lining and the UV map DCT Source UV.
 - **Linked Cloth**, **Live Preview**, **Texture Checks**, **Save to Cloth**, **Save as New Variation**, **Push Model**,
   **Push Automatically**, **Save Model to Cloth**, **Work On**.
 - **Garment Fitting**, **Fit on gta.clothing** (never "Fit to Body"), **Transfer Weights**, **Add to Project**,
