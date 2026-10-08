@@ -1,7 +1,9 @@
 # Contributing to Durty Cloth Tool Link for Blender
 
-Thank you for helping! Bug reports, fixes, translations, tests and ideas are all welcome. This guide explains how the
-repository is laid out, how to set it up on Windows, how to run the checks and what a pull request needs.
+Thank you for helping! Bug reports, fixes, translations, tests and ideas are all welcome. This guide explains how to
+set the repository up on Windows, how to run the checks and what a pull request needs. How the add-on works inside
+(its modules, the connection to Durty Cloth Tool, the supported Blender versions, the tools and the release process)
+is described in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 Questions are best asked in the [Pleb Masters Community Discord](https://discord.plebmasters.de). Security problems
 never go into a public issue: follow [SECURITY.md](SECURITY.md). How the add-on looks to its users is described in
@@ -19,26 +21,9 @@ never go into a public issue: follow [SECURITY.md](SECURITY.md). How the add-on 
 
 ## 🗂️ Repository layout
 
-```
-durty_cloth_tool_link/   the extension: blender_manifest.toml, the add-on modules, the translations and the logo
-durty_cloth_tool_link/dct_link/   the Creator Link client, vendored (read-only here)
-tests/                   pytest tests (no Blender needed), the fakes they use, and the Blender smoke test
-tools/                   manifest check, dct_link check, release checks, Blender smoke and screenshot runners,
-                         avatar measurement
-.github/                 CI and release workflows, issue forms and the pull request template
-```
-
-Only `durty_cloth_tool_link/` goes into the extension archive. Inside it:
-
-- `settings.py` holds constants and public addresses, `strings.py` every English text, `translations/` the eight
-  other languages.
-- `link.py` runs the connection, the sign-in, the live preview and the model pushes. `bundle.py` collects a Sollumz
-  export, `pixels.py` converts Blender's pixels.
-- `garment*.py` are the Garment Fitting tools, and `ui_garment.py` their panel.
-- `ped*.py` are Custom Ped: `ped.py` the markers, checks and rig maths, `ped_link.py` its part of the link,
-  `ped_host.py` its Blender side, `ped_strings.py` its English texts, and `ui_ped.py` its panel.
-- `host.py`, `state.py`, `ui.py`, `ui_garment.py`, `garment_host.py`, `ui_ped.py`, `ped_host.py`, `preferences.py` and
-  `addon.py` are the Blender side.
+The extension is `durty_cloth_tool_link/`, the only folder that goes into the extension archive. `tests/` holds the
+pytest tests and the Blender smoke test, `tools/` the checks and runners, and `docs/` the development document and the
+README images. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#architecture) describes every module.
 
 Modules without a Blender import can be tested with plain Python. Keep it that way: put the logic in a Blender-free
 module and keep the code that touches `bpy` thin.
@@ -82,10 +67,10 @@ For changes to the Blender side, also run the smoke test with at least one Blend
 python tools/blender_smoke.py --blender "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe"
 ```
 
-It validates and builds the extension into `dist/`, then runs `tests/blender/smoke_in_blender.py` in a background
-Blender. Repeat `--blender` to test several versions. Add `--sollumz <Sollumz extension folder> --sollumz-site <folder
-with its szio package>` to push and open models through a real Sollumz. The smoke uses a throw-away Blender user
-folder, so your own Blender settings and extensions are never touched, and nothing is sent to gta.clothing.
+It validates and builds the extension into `dist/`, then runs the smoke in a background Blender with a throw-away user
+folder, so your own Blender settings and extensions are never touched, and nothing is sent to gta.clothing. Repeat
+`--blender` to test several versions; [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#blender-smoke-test) explains how to
+test with a real Sollumz.
 
 ### Screenshots
 
@@ -96,29 +81,8 @@ states against the fakes and saves a cropped screenshot of the sidebar for each:
 python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --out <folder>
 ```
 
-Add `--expanded` to open every collapsed panel, `--language de_DE` or `--theme light` for variants, `--text-size 14`
-for what a narrower sidebar cuts off or wraps, `--scenario garment` for Garment Fitting and `--scenario ped` for
-Custom Ped. Blender opens a window and quits by itself.
-
-### Measuring an avatar
-
-The garment tools know the joints of some Marvelous Designer and CLO stock avatars (`garment_avatars.py`). To add
-one, export a garment from Marvelous Designer or CLO as FBX with the rigged avatar and run:
-
-```powershell
-blender --background --factory-startup --python tools/measure_avatar.py -- <the exported .fbx>
-```
-
-It prints the avatar's joints as markers in ped space and the pose's arm angle. Only these numbers go into the
-repository, with the avatar's template id and where they were measured; never the avatar, its mesh or the file.
-
-### Building the archive by hand
-
-```powershell
-blender --command extension build --source-dir durty_cloth_tool_link --output-dir dist
-```
-
-You can install the result with **Install from Disk** to try it in your own Blender.
+Its options for other scenarios, languages and themes, measuring a new Marvelous Designer or CLO avatar, and building
+the archive by hand are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#tests-and-tools).
 
 ## ✍️ Code style
 
@@ -133,7 +97,7 @@ You can install the result with **Install from Disk** to try it in your own Blen
   its documentation and the Discord server in the browser. A new address needs an issue first; the tests list the
   hosts the repository may name.
 - Never commit files from GTA V or data taken from them (models, textures, skeletons, meta files). The tests build
-  their garments and bodies from scratch in `tests/support/synthetic.py`.
+  their garments, bodies and characters from scratch in `tests/support/synthetic.py` and `tests/support/mannequin.py`.
 
 ## 🌍 Texts and translations
 
@@ -171,16 +135,9 @@ Cloth Tool and sync the new copy here.
 
 ## 🚢 Releases
 
-Releases are made by the maintainers; contributors do not change version numbers.
-
-- The version lives in `durty_cloth_tool_link/blender_manifest.toml` and in `VERSION` in
-  `durty_cloth_tool_link/settings.py`: `X.Y.Z`, or `X.Y.Z-experimental.N` for an Experimental release.
-- Pushing the tag `v<version>` starts `.github/workflows/release.yml`. It runs the tests, builds and validates the
-  archive with a pinned official Blender, makes the archive reproducible byte for byte and publishes it with its
-  SHA-256 as a GitHub release (a pre-release for Experimental).
-- A published release is never replaced. A fix gets a new version.
-- The maintainers then publish the new version on gta.clothing's extension repository, from which Blender updates
-  installed copies on the matching channel.
+Releases are made by the maintainers; contributors do not change version numbers. A published release is never
+replaced: a fix gets a new version. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#versions-and-releases) describes how a
+release is built.
 
 ## 📝 Pull request checklist
 
