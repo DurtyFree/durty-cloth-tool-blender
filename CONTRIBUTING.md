@@ -57,7 +57,7 @@ python tools/sync_dct_link.py --check
 
 The tests cover pixel conversion, colour handling, capture scheduling, Sollumz exports, settings, the nine languages,
 the manifest, the vendored copy and the whole link flow against a fake Durty Cloth Tool and a fake gta.clothing on
-`127.0.0.1`. The Garment Fitting tools are tested on synthetic garments and bodies.
+`127.0.0.1`. The Garment Fitting tools are tested on synthetic clothing and bodies.
 
 ### Blender smoke test
 
@@ -97,7 +97,7 @@ the archive by hand are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#tests-and-t
   its documentation and the Discord server in the browser. A new address needs an issue first; the tests list the
   hosts the repository may name.
 - Never commit files from GTA V or data taken from them (models, textures, skeletons, meta files). The tests build
-  their garments, bodies and characters from scratch in `tests/support/synthetic.py` and `tests/support/mannequin.py`.
+  their clothing, bodies and characters from scratch in `tests/support/synthetic.py` and `tests/support/mannequin.py`.
 
 ## 🌍 Texts and translations
 

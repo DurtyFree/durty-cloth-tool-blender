@@ -70,8 +70,10 @@ sections for rarely changed settings.
 Blender's API is single-threaded. `LinkController.poll` runs on the main thread from a `bpy.app.timers` timer and
 drives the dct_link session with bounded work per call; session callbacks run inside that call. Network calls to
 gta.clothing (sign-in, renewal, assertions, the body download, fitting) run on worker threads that never touch
-Blender, and the timer only checks whether they finished. Never block Blender's interface: new network or disk work
-goes into a background task that a timer checks.
+Blender, and the timer only checks whether they finished. While Blender's thread is busy for a while (a bake, a long
+export), dct_link's keep-alive daemon thread (on by default) answers Durty Cloth Tool's pings on the loopback socket
+so the connection stays up; it never runs a callback, and what it read reaches the add-on with the next poll. Never
+block Blender's interface: new network or disk work goes into a background task that a timer checks.
 
 ### Texts
 
@@ -99,8 +101,8 @@ plugins. Its modules describe themselves in their docstrings; in short:
   settings; Custom Ped asks Durty Cloth Tool for the template list and the rig, then sends the rigged character as a
   GLB. Durty Cloth Tool answers with what the user asked for: cloths to open in Blender, the freemode skeleton built
   from the user's own game files, rig results.
-- **Fitting.** `fit.py` is the client of gta.clothing's garment fitting routes, used by `garment_fit.py`. It uploads
-  only the garment's triangles in ped space, its markers and the chosen options, after checking them against the
+- **Fitting.** `fit.py` is the client of gta.clothing's fitting routes, used by `garment_fit.py`. It uploads only
+  the clothing's triangles in ped space, its markers and the chosen options, after checking them against the
   service's size rules.
 
 `durty_cloth_tool_link/dct_link/VENDORED.md` records the dct_link version, the Creator Link protocol version and the
@@ -125,18 +127,21 @@ any other. A new address needs an issue and an owner decision first.
 
 What reaches gta.clothing: the sign-in (with the computer's name unless the user turns that off), a confirmation for
 each connection, the sign-out, the hosted body download (once per body version), Blender's update checks of the
-extension repository, and, once the user agreed, a garment for Fit on gta.clothing or Transfer Weights with the
+extension repository, and, once the user agreed, clothing for Fit on gta.clothing or Transfer Weights with the
 questions for the fits left today and the usual ranges of game clothing. The add-on collects no usage data.
 
 Files the add-on keeps:
 
-- the add-on's user folder (`bpy.utils.extension_path_user`): the install id, the protected sign-in and the hosted
-  freemode body, one folder per body version;
-- short-lived folders named `dct-<kind>-<random>` in the system's temporary folder for exports and opened models,
-  kept at a short path because Sollumz nests a model's name twice; stale ones from a Blender that closed are removed.
+- the add-on's user folder (`bpy.utils.extension_path_user`): the install id, the protected sign-in, the hosted
+  freemode body (one folder per body version) and Garment Fitting's saved pose presets (`garment-presets`);
+- for a model push, a `dct_link_<random>` folder in the system's temporary folder that holds the Sollumz export only
+  until it is read, and is deleted straight away;
+- folders named `dct-<kind>-<random>` in the system's temporary folder for a model opened from Durty Cloth Tool
+  (`open`), the export of Add to Project (`add`) and the character Create Custom Ped sends (`ped`), kept at a short
+  path because Sollumz nests a model's name twice; stale ones from a Blender that closed are removed.
 
 Never commit files from GTA V or data taken from them (models, textures, skeletons, meta files). The tests build
-their garments, bodies and characters from scratch (`tests/support/synthetic.py`, `tests/support/mannequin.py`).
+their clothing, bodies and characters from scratch (`tests/support/synthetic.py`, `tests/support/mannequin.py`).
 
 ## Supported Blender versions
 
@@ -199,7 +204,7 @@ wraps. The fakes sign in as "Durty", the name the screenshots show.
 
 ### Measuring an avatar
 
-`garment_avatars.py` holds the joints of known Marvelous Designer and CLO stock avatars. To add one, export a garment
+`garment_avatars.py` holds the joints of known Marvelous Designer and CLO stock avatars. To add one, export clothing
 as FBX with the rigged avatar and run:
 
 ```powershell
