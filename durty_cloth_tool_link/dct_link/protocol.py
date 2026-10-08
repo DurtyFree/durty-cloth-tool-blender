@@ -1754,11 +1754,12 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
     "live.saveResult": _text(
         TO_CLIENT,
-        {"lease": _STR, "ok": _BOOL, "code": _STR, "textureId": _STR},
+        {"lease": _STR, "ok": _BOOL, "code": _STR, "textureId": _STR, "clothId": _STR},
         lambda m: _check(
             is_id(m.get("lease"))
             and _ok_code_ok(m)
             and (m.get("textureId") is None or is_guid(m.get("textureId")))
+            and (m.get("clothId") is None or is_guid(m.get("clothId")))
         ),
     ),
     "live.closed": _text(
