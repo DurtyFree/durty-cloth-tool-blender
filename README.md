@@ -51,11 +51,11 @@ freemode ped, and a character you made becomes a custom ped.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/blender-fit-problems.webp" alt="A T-shirt on the freemode body in Blender with Show Problems on: coloured patches mark where it sits inside the body, too close to it or stretched"></td>
+    <td width="50%"><img src="docs/images/blender-fit-problems.webp" alt="A T-shirt on the freemode body coloured by Show Problems: blue where a shoulder floats, purple stretched parts and yellow where it is too close to the body, with the body showing through where the T-shirt is still inside it"></td>
     <td width="50%"><img src="docs/images/blender-custom-ped.webp" alt="A character in shorts in Blender with its 19 joint markers placed, left side blue and right side orange, next to the Custom Ped panel"></td>
   </tr>
   <tr>
-    <td><b>Garment Fitting:</b> Show Problems colours every spot that sits inside the body, too close to it or stretched.</td>
+    <td><b>Garment Fitting:</b> Show Problems colours the cloth: blue where a shoulder floats, purple where it is stretched and yellow where it sits too close to the body.</td>
     <td><b>Custom Ped:</b> your character with its joint markers, ready for Durty Cloth Tool to rig.</td>
   </tr>
 </table>
@@ -71,8 +71,8 @@ freemode ped, and a character you made becomes a custom ped.
   member of the [Pleb Masters Community Discord](https://discord.plebmasters.de).
 - 🧩 **[Sollumz](https://docs.sollumz.org/) 2.8.0 or later** (tested with 2.9.0) to push and open models, generate
   levels of detail and add clothing to a project.
-- 🌐 **Allow Online Access** turned on in Blender (**Edit > Preferences > System > Network**). Your work stays on your
-  computer, but gta.clothing confirms your sign-in for each connection.
+- 🌐 **Allow Online Access** turned on in Blender (**Edit > Preferences > System > Network**). The connection to
+  Durty Cloth Tool stays on your computer, but gta.clothing confirms your sign-in for each connection.
 
 **Which plan do I need?** The add-on is free, and so are the Garment Fitting tools, Custom Ped's checks and markers,
 and adding clothing to your project within your plan's project limits. Live Preview, Push Model, Texture Checks, Edit
@@ -106,7 +106,7 @@ Link** in **Get Extensions**.
    choose **Approve** there. You do this once per Blender installation.
 4. Choose what you work on under **Work On**: **Linked Cloth** for the cloth selected in Durty Cloth Tool (**Start Live
    Preview**, or select your Drawable Dictionary and **Push Model**), **Garment Fitting** for new clothing, or **Custom
-   Ped** for your own character. The first line of each panel always names your next step.
+   Ped** for your own character. Garment Fitting and Custom Ped name your next step on their first line.
 5. Happy with the result? Choose **Save to Cloth**, **Save Model to Cloth** or **Add to Project**. Until then, nothing
    in your project changes.
 
@@ -127,9 +127,11 @@ Link** in **Get Extensions**.
 
 ## 🔒 Privacy
 
-Your textures, models and characters go only to Durty Cloth Tool on your computer. When you use **Fit on gta.clothing**
-or **Transfer Weights**, only the clothing's shape and its markers are sent to gta.clothing, together with the fitting
-options you chose, and none of it is kept longer than ten minutes after the fit. The add-on collects no usage data; the
+Your textures, models and characters go only to Durty Cloth Tool on your computer. The one exception is **Fit on
+gta.clothing** and **Transfer Weights**: once you agree, only the clothing's shape and its markers are sent to
+gta.clothing, together with the fitting options you chose, and none of it is kept longer than ten minutes after the fit.
+Signing in also sends your computer's name, which you can turn off with **Show This Computer's Name When Signing In**
+under **Settings > Privacy**. The add-on collects no usage data; the
 [Creator Link privacy page](https://docs.gta.clothing/creator-link/privacy) has the details.
 
 ## 📚 Learn more
