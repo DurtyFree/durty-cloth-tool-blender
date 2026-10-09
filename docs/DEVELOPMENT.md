@@ -248,3 +248,9 @@ Releases are made by the maintainers. Creating or moving a tag is a release acti
   links. Step-by-step guidance belongs in the public documentation, which a change to a control or a step must follow.
 - Replace a README image only with a real screenshot of the add-on that shows no private data; keep images in
   `docs/images` as WebP, well under 500 KB each, with descriptive alt text.
+
+## Experimental 0.1.0-experimental.4
+
+The vendored Creator Link client accepts progress while a live save is running and keeps waiting for its result.
+Save to Cloth and Save as New Variation still finish only after Durty Cloth Tool confirms them. The source copy
+and its hashes are recorded in the vendoring record; the add-on version matches this Experimental plugin release.
