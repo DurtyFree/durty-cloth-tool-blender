@@ -58,6 +58,7 @@ __all__ = [
     "is_ped_type",
     "is_bone_name",
     "is_sha256_hex",
+    "item_kind",
     "json_depth_exceeds",
 ]
 
@@ -182,6 +183,7 @@ CONSTANTS: Dict[str, Any] = {
             "p_unk1",
             "p_unk2",
         ],
+        "itemKinds": ["cloth", "tattooDesign", "facialOverlay"],
         "pedBodyMarkers": [
             "headTop",
             "chin",
@@ -456,6 +458,10 @@ MODEL_CLOSE_REASONS: Tuple[str, ...] = tuple(_V["modelCloseReasons"])
 HOST_RESULT_CODES: Tuple[str, ...] = tuple(_V["hostResultCodes"])
 #: The game's tokens for components and props (``focused.drawableType``).
 DRAWABLE_TYPES: Tuple[str, ...] = tuple(_V["drawableTypes"])
+#: What an appearance item is (``focused.itemKind``); an item without one is a cloth. A tattoo design or a facial
+#: overlay has one texture (its ``textureId`` is the item's ``clothId``), only a diffuse map and no model.
+ITEM_KINDS: Tuple[str, ...] = tuple(_V["itemKinds"])
+ITEM_KIND_CLOTH = "cloth"
 PED_BODY_MARKERS: Tuple[str, ...] = tuple(_V["pedBodyMarkers"])
 PED_OPTIONAL_MARKERS: Tuple[str, ...] = tuple(_V["pedOptionalMarkers"])
 #: Every marker name a ``ped.rig`` may carry: the required body markers, then the optional finger and face markers.
@@ -860,6 +866,7 @@ _PROJECT = _obj({"name": _STR})
 _FOCUSED = _obj(
     {
         "clothId": _STR,
+        "itemKind": _STR,
         "name": _STR,
         "selectedTextureId": _STR,
         "textures": _list(_obj({"textureId": _STR, "name": _STR, "width": _INT32, "height": _INT32})),
@@ -944,10 +951,11 @@ def _focused_ok(item: Any) -> bool:
     if selected is not None and not is_guid(selected):
         return False
     # Item metadata: each optional, each valid when present.
-    drawable_type, gender = item.get("drawableType"), item.get("gender")
+    item_kind, drawable_type, gender = item.get("itemKind"), item.get("drawableType"), item.get("gender")
     collection, number = item.get("collection"), item.get("number")
     if (
-        (drawable_type is not None and not _one_of(drawable_type, DRAWABLE_TYPES))
+        (item_kind is not None and not _one_of(item_kind, ITEM_KINDS))
+        or (drawable_type is not None and not _one_of(drawable_type, DRAWABLE_TYPES))
         or (gender is not None and not _one_of(gender, GENDERS))
         or (collection is not None and not is_text(collection))
         or (number is not None and not _in_range(number, 0, MAX_DRAWABLE_NUMBER))
@@ -1119,6 +1127,13 @@ def _skeleton_template_data(m: Mapping[str, Any]) -> Optional[str]:
     if problem is not None:
         return problem
     return None if files[0]["length"] == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def item_kind(item: Any) -> str:
+    """The kind of a ``focused`` item (one of :data:`ITEM_KINDS`): its ``itemKind``, ``cloth`` when it has none (a DCT
+    from before 2026-10-08 sends cloths only). Only a cloth has a model."""
+    kind = item.get("itemKind") if isinstance(item, Mapping) else None
+    return kind if isinstance(kind, str) and kind else ITEM_KIND_CLOTH
 
 
 def is_prop_type(drawable_type: Any) -> bool:
