@@ -408,7 +408,8 @@ class Request:
         self.type = message_type
         self.lease: Optional[str] = None
         self.timeout = timeout
-        self.deadline = None if timeout is None else session._clock() + timeout
+        self.started = session._clock()
+        self.deadline = None if timeout is None else self.started + timeout
         self._done = threading.Event()
         self._result: Any = None
         self._error: Optional[LinkError] = None
@@ -416,6 +417,8 @@ class Request:
         #: The session's own next steps once the request finished (:meth:`LinkSession._then`), never dispatched.
         self._continuations: List[Callable[["Request"], Any]] = []
         self.transform: Optional[Callable[[Any], Any]] = None
+        #: For ``live.save``: the stage DCT last reported (``queued``, ``encoding``, ``writing``), None before any.
+        self.stage: Optional[str] = None
 
     @property
     def done(self) -> bool:
@@ -716,10 +719,15 @@ class LiveSurface:
             self._dirty = [(0, 0, self.width, self.height)]
         self.session._wake()
 
-    def save(self, mode: str = "replace", timeout: Optional[float] = 60.0) -> Request:
+    def save(self, mode: str = "replace", timeout: Optional[float] = float(protocol.LIVE_SAVE_IDLE_SECONDS)) -> Request:
         """Saves the surface into the project (``replace`` or ``newVariation``). A frame the session is reading at
         this moment is finished first, then the pending pixels are read on the calling thread and sent, and then
-        the save: it always covers the newest pixels."""
+        the save: it always covers the newest pixels.
+
+        A save can take minutes (several maps, a large BC7 map), so ``timeout`` is how long the request waits for the
+        next word from DCT: every ``live.saveProgress`` DCT sends while it works (``Request.stage``, and the
+        ``live-save-progress`` event) starts the wait again, up to :data:`LIVE_SAVE_LONGEST_SECONDS` in all. A DCT that
+        sends none (``welcome`` minor 0) gets that much at least."""
         if mode not in protocol.SAVE_MODES:
             raise ValueError("mode must be 'replace' or 'newVariation'")
         return self.session._live_save(self, mode, timeout)
@@ -1319,6 +1327,11 @@ _BACKOFF = (0.5, 1.0, 2.0, 4.0, 8.0, 15.0, 30.0)
 _MAX_RETRY_AFTER = 300.0
 #: How long a request that timed out locally keeps its service slot while DCT has not answered it yet.
 _SLOT_HOLD_SECONDS = 120.0
+
+#: The longest a ``live.save`` waits in all, also while DCT keeps reporting progress (a save that never ends must not
+#: keep a plugin on "Saving" forever), and how long it waits for a DCT that reports none (protocol minor 0). Two 4096 BC7
+#: maps of one cloth take about a quarter of an hour.
+LIVE_SAVE_LONGEST_SECONDS = 1800.0
 #: How many answered DCT requests a connection remembers, so a second answer to one of them is not sent.
 _MAX_ANSWERED_HOST_REQUESTS = 256
 #: How many withdrawn adds that got no answer in time a connection remembers, so a late answer is still reported.
@@ -1375,7 +1388,8 @@ class LinkSession:
     Events (``session.on(name, handler)``): ``state(state)``, ``ready(welcome)``, ``sign-in(SignInPrompt)``,
     ``selection(message)``, ``project(message)``, ``entitlement(message)``, ``open-texture(HostOpenTexture)``,
     ``open-model(HostOpenModel)`` (answer both through the :class:`HostRequest`),
-    ``live-status(surface, message)``, ``live-closed(surface, reason)``, ``live-error(surface, LinkError)``,
+    ``live-status(surface, message)``, ``live-save-progress(surface, message)``, ``live-closed(surface, reason)``,
+    ``live-error(surface, LinkError)``,
     ``model-applied(message)``, ``model-closed(message)``, ``incompatible(message)`` (``updateUrl`` only when it
     is a trusted link), ``signed-out()`` (the user signed out; call :meth:`sign_in` when they want to sign in
     again), ``dct-signed-out()`` (DCT itself is signed out; the session keeps trying, waiting 30 seconds and then
@@ -2512,6 +2526,18 @@ class LinkSession:
             surface.state = message["state"]
             self._emit("live-status", surface, message)
 
+    def _on_live_save_progress(self, message: Dict[str, Any]) -> None:
+        """DCT still works on a save: its wait starts again, and the live preview hears the stage."""
+        request = self._pending.get(message["re"])
+        if request is None or request.type != "live.save" or request.lease != message["lease"]:
+            return
+        request.stage = message["stage"]
+        if request.timeout is not None:
+            request.deadline = min(self._clock() + request.timeout, request.started + LIVE_SAVE_LONGEST_SECONDS)
+        surface = self._surfaces.get(message["lease"])
+        if surface is not None:
+            self._emit("live-save-progress", surface, message)
+
     def _on_live_closed(self, message: Dict[str, Any]) -> None:
         surface = self._surfaces.get(message["lease"])
         if surface is not None:
@@ -3034,8 +3060,17 @@ class LinkSession:
             surface.last_error = None
         return None
 
+    def _dct_minor(self) -> int:
+        """The protocol minor DCT welcomed this connection with (0 before ``welcome``)."""
+        welcome = self.welcome
+        minor = welcome.get("protocol", {}).get("minor") if isinstance(welcome, dict) else None
+        return minor if isinstance(minor, int) else 0
+
     def _live_save(self, surface: LiveSurface, mode: str, timeout: Optional[float]) -> Request:
         surface._check_open()
+        if timeout is not None and self._dct_minor() < 1:
+            # This DCT says nothing while it saves: wait as long as its longest save may take.
+            timeout = max(timeout, LIVE_SAVE_LONGEST_SECONDS)
         # Frames and the save travel in order on one connection, so queueing the pending pixels first makes the
         # save cover them. A frame the session thread is reading now is finished first (the producing lock); the
         # rest is read here, on the caller's thread. The save then names the newest revision.
@@ -3210,6 +3245,7 @@ _EVENT_HANDLERS: Dict[str, Callable[[LinkSession, Dict[str, Any]], None]] = {
     "event.project": lambda s, m: s._emit("project", m),
     "event.entitlement": LinkSession._on_entitlement,
     "live.status": LinkSession._on_live_status,
+    "live.saveProgress": LinkSession._on_live_save_progress,
     "live.closed": LinkSession._on_live_closed,
     "model.applied": LinkSession._on_model_applied,
     "model.closed": LinkSession._on_model_closed,

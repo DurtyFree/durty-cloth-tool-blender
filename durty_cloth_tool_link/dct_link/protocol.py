@@ -70,7 +70,7 @@ CONSTANTS: Dict[str, Any] = {
     "protocol": {
         "name": "dct-creator-link",
         "major": 2,
-        "minor": 0,
+        "minor": 1,
         "supportedMajors": {"min": 2, "max": 2},
     },
     "transport": {
@@ -106,6 +106,8 @@ CONSTANTS: Dict[str, Any] = {
         "maxDrawableNumber": 65535,
         "openTextureAnswerSeconds": 20,
         "openModelAnswerSeconds": 60,
+        "liveSaveProgressSeconds": 5,
+        "liveSaveIdleSeconds": 30,
         "maxItemVariations": 26,
         "maxPedTemplates": 4096,
         "pedTemplatesPerPage": 256,
@@ -130,6 +132,7 @@ CONSTANTS: Dict[str, Any] = {
         "saveModes": ["replace", "newVariation"],
         "featureStates": ["entitled", "needsLicense", "needsUltimate"],
         "liveStates": ["attached", "notWorn", "paused"],
+        "liveSaveStages": ["queued", "encoding", "writing"],
         "liveCloseReasons": ["closed", "replaced", "itemRemoved", "projectClosed", "entitlementLost", "signedOut"],
         "incompatibleCodes": ["plugin-too-old", "dct-too-old", "unsupported-protocol"],
         "modelFormats": ["ydd-xml", "glb"],
@@ -408,6 +411,10 @@ MAX_DRAWABLE_NUMBER: int = _L["maxDrawableNumber"]
 #: How long DCT waits for the ``host.result`` that answers a ``host.openTexture`` or a ``host.openModel``.
 OPEN_TEXTURE_ANSWER_SECONDS: int = _L["openTextureAnswerSeconds"]
 OPEN_MODEL_ANSWER_SECONDS: int = _L["openModelAnswerSeconds"]
+#: DCT repeats ``live.saveProgress`` at least this often while a save runs (to a plugin of minor 1 or later); a plugin
+#: waits this long for the next one, or for ``live.saveResult``, before it gives the save up.
+LIVE_SAVE_PROGRESS_SECONDS: int = _L["liveSaveProgressSeconds"]
+LIVE_SAVE_IDLE_SECONDS: int = _L["liveSaveIdleSeconds"]
 #: The colour variations one ``item.add`` may carry (the game's variation limit per drawable).
 MAX_ITEM_VARIATIONS: int = _L["maxItemVariations"]
 #: Custom peds: the template list, the skeleton, the rig request and its result, the upload.
@@ -447,6 +454,7 @@ FRAME_FORMATS: Tuple[str, ...] = tuple(_V["frameFormats"])
 SAVE_MODES: Tuple[str, ...] = tuple(_V["saveModes"])
 FEATURE_STATES: Tuple[str, ...] = tuple(_V["featureStates"])
 LIVE_STATES: Tuple[str, ...] = tuple(_V["liveStates"])
+LIVE_SAVE_STAGES: Tuple[str, ...] = tuple(_V["liveSaveStages"])
 LIVE_CLOSE_REASONS: Tuple[str, ...] = tuple(_V["liveCloseReasons"])
 INCOMPATIBLE_CODES: Tuple[str, ...] = tuple(_V["incompatibleCodes"])
 MODEL_FORMATS: Tuple[str, ...] = tuple(_V["modelFormats"])
@@ -1776,6 +1784,11 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
             and (m.get("textureId") is None or is_guid(m.get("textureId")))
             and (m.get("clothId") is None or is_guid(m.get("clothId")))
         ),
+    ),
+    "live.saveProgress": _text(
+        TO_CLIENT,
+        {"lease": _STR, "stage": _STR},
+        lambda m: _check(is_id(m.get("re")) and is_id(m.get("lease")) and _one_of(m.get("stage"), LIVE_SAVE_STAGES)),
     ),
     "live.closed": _text(
         TO_CLIENT,

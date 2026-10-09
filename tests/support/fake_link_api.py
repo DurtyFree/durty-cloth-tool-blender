@@ -92,7 +92,7 @@ class FakeLinkApi:
         self.logouts = 0
         self.logout_failure: Optional[int] = None  # an HTTP status for every logout, to test a failed sign-out
         #: The link protocol the add-on must report (the interface screenshots of an older version change it).
-        self.protocol = "2.0"
+        self.protocol = "2.1"
         #: The channel manifest the link origin serves (``None``: 404), the hosted body files of its body version,
         #: whether the account may download the body, and the tickets handed out.
         self.manifest: Optional[Dict[str, Any]] = {"schema": 1, "panel": {"version": "1.2.0"},
