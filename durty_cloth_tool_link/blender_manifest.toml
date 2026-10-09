@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 # Every value the gta.clothing extension repository lists (id, name, tagline, maintainer, type, website, tags,
 # license, platforms, permissions) must equal that listing. The version must equal VERSION in settings.py.
 id = "durty_cloth_tool_link"
-version = "0.1.0-experimental.2"
+version = "0.1.0-experimental.3"
 name = "Durty Cloth Tool Link"
 tagline = "Preview and save your models in Durty Cloth Tool"
 maintainer = "DurtyFree (Pleb Masters)"
