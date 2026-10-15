@@ -11,7 +11,7 @@
 - [ ] `python -m pytest`, `python tools/check_manifest.py` and `python tools/sync_dct_link.py --check` pass.
 - [ ] Blender-side changes: `python tools/blender_smoke.py --blender <path>` passes with at least one Blender version.
 - [ ] Interface changes: screenshots are attached.
-- [ ] New or changed texts are in all nine languages (or this description says which are missing).
+- [ ] New or changed texts are in every language in `LOCALES` (`durty_cloth_tool_link/translations/__init__.py`).
 - [ ] Nothing in `durty_cloth_tool_link/dct_link/` changed.
 - [ ] No new dependency, network address or game file.
 

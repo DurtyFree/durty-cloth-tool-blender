@@ -44,8 +44,8 @@ freemode ped, and a character you made becomes a custom ped.
   installed ped of your game, and create a custom ped project from it.
 - ↩️ **Safe to try.** Nothing changes in your project until you save or confirm, and every save can be undone in the
   cloth's History.
-- 🌍 **Nine languages.** The add-on follows Blender's interface language: English, German, French, Russian, Spanish,
-  Brazilian Portuguese, Simplified Chinese, Hindi and Arabic.
+- 🌍 **Fourteen languages.** The add-on follows Blender's interface language: English, German, French, Russian, Spanish,
+  Brazilian Portuguese, Simplified Chinese, Hindi, Arabic, Italian, Polish, Turkish, Indonesian and Thai.
 
 <br clear="right">
 

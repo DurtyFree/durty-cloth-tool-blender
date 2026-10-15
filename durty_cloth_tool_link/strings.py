@@ -4,7 +4,7 @@
 
 Logic never stores or compares displayed text: it passes keys and :class:`Msg` values (a key plus its fields),
 and the interface renders them in Blender's interface language when it draws. The English text is also the
-message id Blender's translation system looks up (``translations`` registers the eight other languages under
+message id Blender's translation system looks up (``translations`` registers every shipped language under
 :data:`CONTEXT`). Texts use ``str.format`` fields (``{name}``); a translation keeps exactly the fields of the
 English text. A text about a number of things has a second form for exactly one, under the same key ending in
 ``.one`` (:func:`form`). Logs, the system console and Copy Diagnostics stay English.

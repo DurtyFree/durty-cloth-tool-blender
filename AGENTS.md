@@ -19,7 +19,7 @@ Read these before you change anything:
 |---|---|
 | `durty_cloth_tool_link/` | The extension, and the only folder that ships. `blender_manifest.toml` and `VERSION` in `settings.py` carry the version. |
 | `durty_cloth_tool_link/dct_link/` | The vendored Creator Link client. Read-only here, see below. |
-| `durty_cloth_tool_link/strings.py`, `ped_strings.py`, `translations/` | Every user-facing text: English plus eight translations. |
+| `durty_cloth_tool_link/strings.py`, `ped_strings.py`, `translations/` | Every user-facing text: English plus every shipped translation. |
 | `tests/` | pytest tests without Blender; `tests/support` holds the fake Durty Cloth Tool, the fake gta.clothing and the synthetic meshes. |
 | `tests/blender/` | The smoke test that runs inside Blender. |
 | `tools/` | Manifest, vendoring and release checks, the Blender smoke and screenshot runners, avatar measurement. |
@@ -60,8 +60,9 @@ commands and results you ran. Interface changes also need screenshots from `tool
   with the `#!/usr/bin/env python3` line and then the same two lines, and tests carry the SPDX header. Docstrings say
   what and why in plain English; type hints throughout; lines of about 120 characters.
 - Logic never stores, compares or parses displayed text: it passes `strings.Msg` keys. A new or changed English text
-  gets all eight translations in the same change, with the same `{fields}`. Labels and buttons in Title Case,
-  messages as sentences. Logs and Copy Diagnostics stay English.
+  gets every shipped translation in the same change, with the same `{fields}`. English labels and buttons use
+  Title Case; translations follow their language's casing and preserve agreed shared labels. Messages are sentences.
+  Logs and Copy Diagnostics stay English.
 - No em dashes anywhere, in code, texts or documents (a test fails on them).
 - The tests also fail on a host that is not on the allowlist in `tests/test_settings.py`, and on any relative path or
   document name in a text file that does not exist in this repository. Do not name files of other repositories.

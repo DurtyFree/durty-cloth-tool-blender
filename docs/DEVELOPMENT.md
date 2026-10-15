@@ -36,7 +36,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 |---|---|
 | `settings.py` | The version, public addresses, the extension repository per channel, limits, and the mapping from codes to texts |
 | `strings.py`, `ped_strings.py` | Every English text (`EN`), the `Msg` type (a key plus fields) and the plural forms |
-| `translations/` | The eight other languages, three modules each (`<locale>`, `garment_<locale>`, `ped_<locale>`), registered in the add-on's own translation context |
+| `translations/` | The other shipped languages, three modules each (`<locale>`, `garment_<locale>`, `ped_<locale>`), registered in the add-on's own translation context |
 | `link.py` | `LinkController`: connecting, sign-in, Live Preview, Texture Checks, model pushes, what Durty Cloth Tool opens in Blender, the linked cloth's picture, temporary folders |
 | `pixels.py` | Reading Blender's float pixels into RGBA8 rows, change detection and dirty rectangles, in small steps per timer tick |
 | `bundle.py` | Collecting a Sollumz export (one `*.ydd.xml` and its `*.dds` files) into a model push |
@@ -169,7 +169,7 @@ python tools/check_manifest.py
 python tools/sync_dct_link.py --check
 ```
 
-The pytest suite needs no Blender. It covers pixel conversion, Sollumz exports, settings and hosts, the nine
+The pytest suite needs no Blender. It covers pixel conversion, Sollumz exports, settings and hosts, the shipped
 languages, the manifest and the vendored copy, the release checks, Garment Fitting and Custom Ped on synthetic meshes,
 and the whole link flow against a fake Durty Cloth Tool (`tests/support/fake_dct.py`) and a fake gta.clothing
 (`tests/support/fake_link_api.py`) on `127.0.0.1`. It also enforces repository rules: no em dashes in texts and

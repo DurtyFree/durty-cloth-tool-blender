@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The nine interface languages: every text in every language, the same fields, the protected names unchanged,
+"""Every shipped interface language: every text in every language, the same fields, the protected names unchanged,
 and the table Blender registers (no Blender needed)."""
 
 from __future__ import annotations
@@ -24,10 +24,10 @@ def fields(text: str) -> set:
     return {name for _, name, _, _ in string.Formatter().parse(text) if name}
 
 
-def test_the_nine_languages_are_registered_for_blender():
-    assert LANGUAGES == ("de", "fr", "ru", "es", "pt_BR", "zh_HANS", "hi", "ar")
+def test_every_shipped_language_is_registered_for_blender():
+    assert LANGUAGES == ("de", "fr", "ru", "es", "pt_BR", "zh_HANS", "hi", "ar", "it", "pl", "tr", "id", "th")
     tables = translations.blender_tables()
-    assert set(tables) == {"de", "fr", "ru", "es", "pt_BR", "pt", "zh_HANS", "hi", "ar"}
+    assert set(tables) == {"de", "fr", "ru", "es", "pt_BR", "pt", "zh_HANS", "hi", "ar", "it", "it_IT", "pl", "pl_PL", "tr", "tr_TR", "id", "id_ID", "th", "th_TH"}
     assert "zh" not in tables and "zh_HANT" not in tables  # Traditional Chinese readers get English
     for locale, entries in tables.items():
         assert len(entries) == len({text for text in EN.values()}), locale
@@ -91,7 +91,7 @@ def test_texts_render_through_the_installed_translator():
 
 
 #: The script each translation is written in; Latin letters are allowed everywhere (product names, Blender terms).
-SCRIPTS = {"ru": "CYRILLIC", "zh_HANS": "CJK", "hi": "DEVANAGARI", "ar": "ARABIC"}
+SCRIPTS = {"ru": "CYRILLIC", "zh_HANS": "CJK", "hi": "DEVANAGARI", "ar": "ARABIC", "th": "THAI"}
 
 
 @pytest.mark.parametrize("language", LANGUAGES)

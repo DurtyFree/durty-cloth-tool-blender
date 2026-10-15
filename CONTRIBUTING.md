@@ -55,7 +55,7 @@ python tools/check_manifest.py
 python tools/sync_dct_link.py --check
 ```
 
-The tests cover pixel conversion, colour handling, capture scheduling, Sollumz exports, settings, the nine languages,
+The tests cover pixel conversion, colour handling, capture scheduling, Sollumz exports, settings, every shipped language,
 the manifest, the vendored copy and the whole link flow against a fake Durty Cloth Tool and a fake gta.clothing on
 `127.0.0.1`. The Garment Fitting tools are tested on synthetic clothing and bodies.
 
@@ -101,23 +101,24 @@ the archive by hand are in [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md#tests-and-t
 
 ## 🌍 Texts and translations
 
-The add-on speaks English, German, French, Russian, Spanish, Brazilian Portuguese, Simplified Chinese, Hindi and
-Arabic.
+The shipped language set is defined by `LOCALES` in `durty_cloth_tool_link/translations/__init__.py`; English is
+the default and fallback. Every shipped language has all three translation tables.
 
 - Every text the add-on shows has a key in `EN` in `durty_cloth_tool_link/strings.py`.
 - Every Custom Ped text has its key in `EN` in `durty_cloth_tool_link/ped_strings.py`, which `strings.py` merges.
-- Each language has three modules in `durty_cloth_tool_link/translations/`, named after Blender's locale (`de`, `fr`,
-  `ru`, `es`, `pt_BR`, `zh_HANS`, `hi`, `ar`): `<locale>.py` for the link, `garment_<locale>.py` for Garment
+- Each language has three modules in `durty_cloth_tool_link/translations/`, named after its registered locale:
+  `<locale>.py` for the link, `garment_<locale>.py` for Garment
   Fitting and `ped_<locale>.py` for Custom Ped. Each holds a `TEXT` dictionary with the same keys.
-- When you add or change an English text, change the key in all eight translations in the same pull request. The
+- When you add or change an English text, change the key in every shipped translation in the same pull request. The
   tests fail when a key is missing, when its `{fields}` differ from the English text, or when a protected name such
   as Durty Cloth Tool, Creator Link, gta.clothing, Blender or Sollumz is translated.
 - If you cannot translate a language, say so in the pull request, and we will fill it in before merging.
 - A text that counts things (`{count} vertex groups ...`) can have a second key ending in `.one` for exactly one
   thing (`{count} vertex group ...`); the add-on shows it when `count` is 1. Translate both. Where your language has
   more plural forms, word the other form so that it reads right with any number (`Groups: {count}`).
-- Labels, buttons and panel titles use Title Case; descriptions, tooltips and messages are sentences. German uses the
-  informal "du". Arabic is translated but not mirrored.
+- English labels, buttons and panel titles use Title Case. Translations follow their language's casing and keep
+  agreed shared labels exact; Polish uses sentence case. Descriptions, tooltips and messages are sentences. German
+  uses the informal "du". Arabic is translated but not mirrored.
 - Logs, the system console and Copy Diagnostics stay English.
 
 Native speakers are very welcome to improve the existing translations.
@@ -144,7 +145,7 @@ release is built.
 - [ ] `python -m pytest`, `python tools/check_manifest.py` and `python tools/sync_dct_link.py --check` pass.
 - [ ] Blender-side changes: `tools/blender_smoke.py` passes with at least one Blender version.
 - [ ] Interface changes: screenshots are attached.
-- [ ] New or changed texts are in all nine languages (or the pull request says which are missing).
+- [ ] New or changed texts are complete in every language listed by `LOCALES` in `durty_cloth_tool_link/translations/__init__.py`.
 - [ ] Nothing in `durty_cloth_tool_link/dct_link/` changed.
 - [ ] No new dependency, network address or game file.
 - [ ] Commit messages have a short subject in the imperative ("Fix the push of hidden models").

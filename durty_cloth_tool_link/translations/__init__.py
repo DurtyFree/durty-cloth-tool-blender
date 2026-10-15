@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
-"""The add-on's eight translations and their registration with Blender.
+"""The add-on's shipped translations and their registration with Blender.
 
 Each language has three modules, ``<language>`` (the link), ``garment_<language>`` (the garment fitting tools) and
 ``ped_<language>`` (Custom Ped), each holding ``TEXT``; together they have the keys of :data:`strings.EN`. Blender looks texts up by their English
@@ -28,6 +28,11 @@ LOCALES: Dict[str, Tuple[str, ...]] = {
     "zh_HANS": ("zh_HANS",),
     "hi": ("hi",),
     "ar": ("ar",),
+    "it": ("it", "it_IT"),
+    "pl": ("pl", "pl_PL"),
+    "tr": ("tr", "tr_TR"),
+    "id": ("id", "id_ID"),
+    "th": ("th", "th_TH"),
 }
 
 
