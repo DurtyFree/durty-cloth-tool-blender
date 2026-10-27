@@ -392,7 +392,13 @@ TEXT = {
     "garment.info.lods": "Mengurangi detail salinan pakaian sesuai setiap batas segitiga dan menempatkannya di slot LOD Medium dan Low Sollumz, sambil mempertahankan tepi terbuka dan jahitan UV sebisa mungkin. Setiap tingkat mengambil bobot High (empat tulang per vertex) dan didorong keluar tubuh.",
     "garment.info.markers": "Penanda mewakili sendi ped: leher, dada, panggul, bahu, siku, pergelangan tangan, dan pinggul (untuk celana: pinggul, lutut, dan pergelangan kaki; untuk masker: kepala). Penanda Otomatis menempatkannya pada sendi avatar yang dipilih di bagian Persiapan, atau membaca bentuk pakaian (atasan dan celana), atau menempatkannya pada sendi tubuh. Garis di tampilan 3D menghubungkannya: garis oranye berarti ada yang tampak keliru. Pindahkan penanda yang tidak tepat; Cerminkan Kiri ke Kanan menyalin sisi kiri ke kanan.",
     "garment.info.pose": "Pilih pose avatar tempat pakaian dibuat. Pakaian yang dibuat dalam pose T dapat diubah ke pose A game di bagian Sesuaikan.",
-    "garment.info.prepare": "Menyambungkan jahitan antarpanel (tidak pernah menyambungkan kelim ke dirinya sendiri atau furing ke lapisan luarnya: tempatkan furing yang tidak terdeteksi dalam grup vertex DCT Lining), menghapus bagian lepas, membuat segitiga, menghaluskan shading, dan memberi pakaian warna vertex Color 1 dan Color 2 Sollumz dengan nilai di bagian Opsi.",
+    "garment.info.prepare": (
+        "Menyambungkan jahitan antarpanel (tidak pernah menyambungkan kelim ke dirinya sendiri atau furing ke lapisan "
+        "luarnya: tempatkan furing yang tidak terdeteksi dalam grup vertex DCT Lining), menghapus bagian lepas, "
+        "membuat segitiga, menghaluskan shading, dan memberi pakaian warna vertex Color 1 dan Color 2 Sollumz dengan "
+        "nilai di bagian Opsi. Jika pakaian berada di tubuh, sisi-sisinya dibalik agar menghadap menjauhi tubuh (sisi "
+        "furing menghadap ke tubuh). Ketebalan di bagian Opsi memberi kain satu lapis sisi belakang."
+    ),
     "garment.info.problems": "Mewarnai pakaian saat Anda bekerja: merah di dalam tubuh, kuning terlalu dekat, ungu teregang dibandingkan bentuk asli, biru untuk bahu yang menggantung jauh dari tubuh.",
     "garment.info.push": (
         "Memindahkan semua bagian di dalam tubuh, atau yang lebih dekat dari celah, ke jarak celah di luar tubuh. "
@@ -808,5 +814,10 @@ TEXT = {
     "garment.push-region.torso_arms": "Badan dan Lengan",
     "garment.push-region.torso_arms.desc": (
         "Dorong badan dan lengan baju; kaki celana dan semua bagian lain tetap seperti semula"
+    ),
+    "garment.prop.thickness": "Ketebalan (mm)",
+    "garment.prop.thickness.desc": (
+        "Memberi kain satu lapis sisi belakang sejauh milimeter ini di belakangnya, agar tidak tembus pandang dari "
+        "belakang. 0 membiarkannya satu lapis"
     ),
 }

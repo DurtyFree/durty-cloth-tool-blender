@@ -521,7 +521,8 @@ TEXT = {
         "Verbindet die Nähte zwischen den Teilen (nie einen Saum mit sich selbst und nie ein Futter mit seiner "
         "Außenhülle: Ein Futter, das nicht erkannt wird, gehört in die Vertexgruppe DCT Lining), entfernt lose Teile, "
         "trianguliert, schattiert weich und gibt dem Kleidungsstück die Vertexfarben Color 1 und Color 2 von Sollumz "
-        "mit den Werten unter Optionen."
+        "mit den Werten unter Optionen. Sitzt das Kleidungsstück auf dem Körper, werden seine Flächen vom Körper weg "
+        "gedreht (die eines Futters zu ihm hin). Dicke unter Optionen gibt einlagigem Stoff eine Rückseite."
     ),
     "garment.info.combine": (
         "Packt alle UV-Inseln in ein Quadrat und backt jedes Material in eines: die Farbe mit ihrer Transparenz und "
@@ -1554,4 +1555,9 @@ TEXT = {
     ),
     "garment.push-region.torso_arms": "Rumpf und Arme",
     "garment.push-region.torso_arms.desc": "Rumpf und Ärmel schieben; Beine und alles andere bleiben, wie sie sind",
+    "garment.prop.thickness": "Dicke (mm)",
+    "garment.prop.thickness.desc": (
+        "Gibt einlagigem Stoff eine Rückseite so viele Millimeter dahinter, damit er von hinten nicht durchsichtig "
+        "ist. 0 lässt ihn einlagig"
+    ),
 }

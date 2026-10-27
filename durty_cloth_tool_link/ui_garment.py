@@ -346,6 +346,8 @@ class DCTLINK_PG_garment(PropertyGroup):
                                   description=EN["garment.prop.keep-out.desc"], translation_context=CONTEXT)
     weld: FloatProperty(name=EN["garment.prop.weld"], default=2.0, min=0.0, max=20.0, precision=1,
                         description=EN["garment.prop.weld.desc"], translation_context=CONTEXT)
+    thickness: FloatProperty(name=EN["garment.prop.thickness"], default=0.0, min=0.0, max=20.0, precision=1,
+                             description=EN["garment.prop.thickness.desc"], translation_context=CONTEXT)
     colour_1: FloatVectorProperty(name=EN["garment.prop.colour-1"], size=4, subtype="COLOR_GAMMA", min=0.0,
                                   max=1.0, default=DEFAULT_COLOUR_1, description=EN["garment.prop.colour-1.desc"],
                                   translation_context=CONTEXT)
@@ -1726,9 +1728,12 @@ class DCTLINK_OT_fit_prepare(_SteppedOp):
 
     def steps(self, context):
         settings_ = props(context)
+        # Faces are turned against the body only when the garment sits on it; a prop keeps its own.
+        body = valid_body(context) if _aligned(context) and not _is_prop(context) else None
         return gh.prepare_steps(context, current_garment(context), settings_.weld / 1000.0,
                                 (tuple(settings_.colour_1), tuple(settings_.colour_2)), settings_.overwrite_colours,
-                                open_front=front_centre(context) if settings_.open_front else None)
+                                open_front=front_centre(context) if settings_.open_front else None, body=body,
+                                thickness=settings_.thickness / 1000.0)
 
     def finished(self, context, result):
         least, share = OPEN_SEAMS_WARN
@@ -3145,6 +3150,7 @@ def draw_ready(layout: Any, context: Any) -> None:
     body = options(layout, context, "prepare")
     if body is not None:
         body.prop(settings_, "weld", text=t("garment.prop.weld"), translate=False)
+        body.prop(settings_, "thickness", text=t("garment.prop.thickness"), translate=False)
         for name, key in (("colour_1", "garment.prop.colour-1"), ("colour_2", "garment.prop.colour-2")):
             labelled(body, context, settings_, name, key)
         ui.checkbox(body, context, settings_, "overwrite_colours", "garment.prop.overwrite")

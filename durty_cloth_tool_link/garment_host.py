@@ -1651,6 +1651,100 @@ def _remove_interior_walls(bm: Any) -> int:
     return len(doomed)
 
 
+def _triangle_arrays(obj: Any, bm: Any) -> Tuple[np.ndarray, np.ndarray]:
+    """A triangulated bmesh's vertex positions in world space and its triangles (by vertex index)."""
+    bm.verts.index_update()
+    bm.faces.index_update()
+    bm.verts.ensure_lookup_table()
+    bm.faces.ensure_lookup_table()
+    matrix = np.array(obj.matrix_world)
+    local = np.array([v.co[:] for v in bm.verts], dtype=np.float64).reshape(-1, 3)
+    triangles = np.array([[v.index for v in f.verts] for f in bm.faces], dtype=np.int64).reshape(-1, 3)
+    return local @ matrix[:3, :3].T + matrix[:3, 3], triangles
+
+
+def _copy_loop(source: Any, target: Any, layers: Sequence[Tuple[str, Any]]) -> None:
+    for kind, layer in layers:
+        if kind == "uv":
+            target[layer].uv = source[layer].uv
+        else:
+            target[layer] = source[layer]
+
+
+def _turn_and_shell(obj: Any, bm: Any, body: Optional[Any], thickness: float, lining_layer: Optional[Any],
+                    lining_pairs: Sequence[Tuple[int, int]]) -> Tuple[int, int]:
+    """Turns the faces of the triangulated garment to face away from the body (a lining towards it), and with
+    ``thickness`` (metres) adds a back shell behind the cloth (:func:`garment.back_shell`): a turned copy of the faces
+    of its open parts, with their UVs, colours and weights, joined to the cloth along the open edges. A lining is the
+    fabric in the vertex group DCT Lining (``lining_layer``), or of each pair of fabrics found lying on each other
+    (``lining_pairs``) the one nearer the body. Returns how many faces it turned and how many it added."""
+    if body is None and thickness <= 0:
+        return 0, 0
+    world, triangles = _triangle_arrays(obj, bm)
+    lining = np.zeros(len(triangles), dtype=bool)
+    if lining_layer is not None:
+        lining = np.array([v[lining_layer] for v in bm.verts], dtype=bool)[triangles].all(axis=1)
+    turned = 0
+    if body is not None and len(triangles):
+        signed, _nearest, normals = clearance(body_tree(body), world[triangles].mean(axis=1))
+        material = np.array([f.material_index for f in bm.faces], dtype=np.int64)
+        for first, second in lining_pairs:
+            ours, theirs = material == first, material == second
+            if ours.any() and theirs.any():
+                lining |= ours if np.median(signed[ours]) < np.median(signed[theirs]) else theirs
+        turn = garment.faces_to_turn(world, triangles, normals, lining=lining,
+                                     near=np.abs(signed) < garment.TURN_REACH)
+        flip = [bm.faces[int(i)] for i in np.nonzero(turn)[0]]
+        if flip:
+            bmesh.ops.reverse_faces(bm, faces=flip, flip_multires=False)
+        turned = len(flip)
+        triangles[turn] = triangles[turn][:, ::-1]
+    if thickness <= 0:
+        return turned, 0
+    chosen = np.nonzero(garment.shell_faces(triangles, lining))[0]
+    if not len(chosen):
+        return turned, 0
+    used, behind = garment.shell_positions(world, triangles[chosen], thickness)
+    inverse = np.linalg.inv(np.array(obj.matrix_world))
+    behind = behind @ inverse[:3, :3].T + inverse[:3, 3]
+    verts = list(bm.verts)
+    faces = [bm.faces[int(i)] for i in chosen]
+    owner = {(loop.vert, loop.link_loop_next.vert): face for face in faces for loop in face.loops}
+    layers = [("uv", layer) for layer in bm.loops.layers.uv.values()]
+    layers += [("colour", layer) for layer in bm.loops.layers.color.values()]
+    layers += [("colour", layer) for layer in bm.loops.layers.float_color.values()]
+    copied = bmesh.ops.duplicate(bm, geom=list({v for f in faces for v in f.verts})
+                                 + list({e for f in faces for e in f.edges}) + faces)
+    face_map = copied["face_map"]  # both ways: each source face to its copy and back
+    copy_of: Dict[Any, Any] = {}
+    back = []
+    for face in faces:
+        twin = face_map[face]
+        back.append(twin)
+        for loop, twin_loop in zip(face.loops, twin.loops):
+            copy_of[loop.vert] = twin_loop.vert
+    for row, index in enumerate(used.tolist()):
+        copy_of[verts[index]].co = Vector(behind[row])
+    bmesh.ops.reverse_faces(bm, faces=back, flip_multires=False)
+    rims = 0
+    for start, end in garment.rim_edges(triangles[chosen]).tolist():
+        a, b = verts[start], verts[end]
+        source = owner[(a, b)]
+        corner = {loop.vert: loop for loop in source.loops}
+        for corners in ((b, a, copy_of[a]), (b, copy_of[a], copy_of[b])):
+            try:
+                rim = bm.faces.new(corners)
+            except ValueError:  # a face on these corners exists already
+                continue
+            rim.material_index = source.material_index
+            rim.smooth = True
+            for loop in rim.loops:
+                original = loop.vert if loop.vert in corner else (a if loop.vert == copy_of[a] else b)
+                _copy_loop(corner[original], loop, layers)
+            rims += 1
+    return turned, len(back) + rims
+
+
 def run_steps(steps: Any) -> Any:
     """Runs a step generator (:func:`prepare_steps`, :func:`combine_steps`) to its end and returns its result."""
     while True:
@@ -1661,17 +1755,20 @@ def run_steps(steps: Any) -> Any:
 
 
 def prepare(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool,
-            open_front: Optional[Tuple[float, float, Optional[float]]] = None) -> Dict[str, Any]:
+            open_front: Optional[Tuple[float, float, Optional[float]]] = None, body: Optional[Any] = None,
+            thickness: float = 0.0) -> Dict[str, Any]:
     """:func:`prepare_steps` at once."""
-    return run_steps(prepare_steps(context, obj, weld, colours, overwrite, open_front))
+    return run_steps(prepare_steps(context, obj, weld, colours, overwrite, open_front, body, thickness))
 
 
 def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequence[float]], overwrite: bool,
-                  open_front: Optional[Tuple[float, float, Optional[float]]] = None) -> Any:
+                  open_front: Optional[Tuple[float, float, Optional[float]]] = None, body: Optional[Any] = None,
+                  thickness: float = 0.0) -> Any:
     """Welds the panel seams within ``weld`` metres (never a lining onto its shell, never a hem onto itself, never
     the two sides of an open front: ``open_front`` is the garment's centre, X and Y, and the neck's height or
-    ``None``), removes loose and degenerate geometry, triangulates, shades smooth and adds the ped vertex colours. A
-    thick export (panels closed into slabs, without open edges) is welded across panels and the walls between them
+    ``None``), removes loose and degenerate geometry, triangulates, shades smooth, turns the faces to face away from
+    ``body`` (given when the garment sits on it), adds a back shell ``thickness`` metres behind single-layer cloth
+    (0: none) and adds the ped vertex colours. A thick export (panels closed into slabs, without open edges) is welded across panels and the walls between them
     are removed. A generator: it yields ``(stage text key, done, total)`` before each stage and after each round of
     the weld, so a modal operator can show the progress and stop between them; nothing changes on the garment before
     the last stage. Returns what it did, with ``open``, the seam vertices that stayed open (they are left selected, for Edit Mode)."""
@@ -1720,6 +1817,11 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     bm = bmesh.new()
     bm.from_mesh(mesh)
     bm.verts.ensure_lookup_table()
+    lining_layer = None
+    if lining_flags.any():  # the vertices of DCT Lining, marked through the weld
+        lining_layer = bm.verts.layers.int.new(TEMP_PREFIX + "lining")
+        for vertex in bm.verts:
+            vertex[lining_layer] = int(lining_flags[vertex.index])
     if len(open_vertices):
         # The seams that stayed open are left selected (the selection lives through the weld and the clean-up below).
         for face in bm.faces:
@@ -1757,6 +1859,10 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
         face.smooth = True
     for edge in bm.edges:
         edge.smooth = True
+    turned, shell = _turn_and_shell(obj, bm, body, thickness, lining_layer,
+                                    [] if lining_layer is not None else list(apart))
+    if lining_layer is not None:
+        bm.verts.layers.int.remove(lining_layer)
     bm.to_mesh(mesh)
     triangles = len(bm.faces)
     bm.free()
@@ -1776,7 +1882,7 @@ def prepare_steps(context: Any, obj: Any, weld: float, colours: Sequence[Sequenc
     clear_flags(obj, *STALE)
     return {"welded": welded, "removed": removed, "triangles": triangles, "lining": lining,
             "colours": colours_written, "applied": applied, "thick": thick, "walls": walls, "open": len(open_vertices),
-            "boundary": int(boundary.sum())}
+            "boundary": int(boundary.sum()), "turned": turned, "shell": shell}
 
 
 def _texture_nodes(material: Any) -> List[Any]:

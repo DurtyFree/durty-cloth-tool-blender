@@ -3137,6 +3137,172 @@ ANCHOR_LIMIT = 0.35
 
 
 # --------------------------------------------------------------------------------------------------
+# Faces turned away from the body, and the back shell
+# --------------------------------------------------------------------------------------------------
+# Exports (AI generated ones especially) often have a share of their faces wound the wrong way, which the game shows
+# as holes, and single-layer cloth has no back side, so it is invisible from behind. Ported from Muto Cloth by muto:
+# faces are turned to face away from the body, and a thin shell is added behind the cloth.
+
+
+def triangle_normals(positions: Any, triangles: Any) -> Tuple[np.ndarray, np.ndarray]:
+    """Each triangle's unit normal (by its winding) and its area."""
+    points = as_points(positions)
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    cross = np.cross(points[triangles[:, 1]] - points[triangles[:, 0]], points[triangles[:, 2]] - points[triangles[:, 0]])
+    double = np.linalg.norm(cross, axis=1)
+    return cross / np.maximum(double, 1e-18)[:, None], 0.5 * double
+
+
+def _winding_patches(triangles: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Triangles joined over edges that exactly two of them share, wound consistently: ``(patch of each triangle,
+    whether it must be turned to agree with its patch, whether the patch is closed)``. The first triangle of a patch
+    keeps its winding; a closed patch has no edge used by one triangle only."""
+    count = len(triangles)
+    starts = triangles.reshape(-1)
+    ends = triangles[:, [1, 2, 0]].reshape(-1)
+    owner = np.repeat(np.arange(count), 3)
+    low, high = np.minimum(starts, ends), np.maximum(starts, ends)
+    order = np.lexsort((high, low))
+    low, high, owner, forward = low[order], high[order], owner[order], (starts < ends)[order]
+    same = np.ones(len(low), dtype=bool)
+    same[1:] = (low[1:] != low[:-1]) | (high[1:] != high[:-1])  # True where a new edge starts
+    group = np.cumsum(same) - 1
+    uses = np.bincount(group)
+    pair = uses[group] == 2
+    first = np.nonzero(pair & same)[0]
+    second = first + 1
+    a, b = owner[first], owner[second]
+    # Two triangles wound alike run their shared edge in opposite directions; the same direction means one is turned.
+    differ = forward[first] == forward[second]
+    neighbours: List[List[Tuple[int, bool]]] = [[] for _ in range(count)]
+    for x, y, flip in zip(a.tolist(), b.tolist(), differ.tolist()):
+        neighbours[x].append((y, flip))
+        neighbours[y].append((x, flip))
+    patch = np.full(count, -1, dtype=np.int64)
+    turned = np.zeros(count, dtype=bool)
+    patches = 0
+    for seed in range(count):
+        if patch[seed] >= 0:
+            continue
+        patch[seed] = patches
+        stack = [seed]
+        while stack:
+            face = stack.pop()
+            for other, flip in neighbours[face]:
+                if patch[other] < 0:
+                    patch[other] = patches
+                    turned[other] = turned[face] ^ flip
+                    stack.append(other)
+        patches += 1
+    single = np.zeros(patches, dtype=bool)
+    lone = uses[group] == 1
+    single[patch[owner[lone]]] = True
+    return patch, turned, ~single[patch]
+
+
+def faces_to_turn(positions: Any, triangles: Any, body_normals: Any, lining: Optional[Any] = None,
+                  near: Optional[Any] = None) -> np.ndarray:
+    """Which triangles to turn so the cloth faces away from the body. The triangles are first wound consistently
+    with their neighbours (over edges two of them share), then each such patch is turned as a whole: a closed part
+    (a buckle, a button) to face out of its own volume, an open one to face away from the body by the area-weighted
+    vote of its triangles against ``body_normals`` (the body's outward normal nearest to each triangle's centre), and
+    a lining (``lining`` triangles, by majority) to face the body, as the inside of a garment is seen from there.
+    Only triangles ``near`` the body vote; a patch without any keeps its winding."""
+    points = as_points(positions)
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    count = len(triangles)
+    if not count:
+        return np.zeros(0, dtype=bool)
+    patch, turned, closed = _winding_patches(triangles)
+    normals, area = triangle_normals(points, triangles)
+    sign = np.where(turned, -1.0, 1.0)  # each triangle's normal once its patch agrees on the winding
+    patches = int(patch.max()) + 1
+    near = np.ones(count, dtype=bool) if near is None else np.asarray(near, dtype=bool)
+    facing = np.einsum("ij,ij->i", normals, as_points(body_normals)) * sign * area * near
+    vote = np.bincount(patch, weights=facing, minlength=patches)
+    if lining is not None:
+        lined = np.bincount(patch, weights=area * np.asarray(lining, dtype=bool), minlength=patches)
+        vote = np.where(lined > 0.5 * np.bincount(patch, weights=area, minlength=patches), -vote, vote)
+    # A closed part faces out of its volume: the signed volume of its triangles, as wound, is positive.
+    a, b, c = points[triangles[:, 0]], points[triangles[:, 1]], points[triangles[:, 2]]
+    volume = np.bincount(patch, weights=np.einsum("ij,ij->i", a, np.cross(b, c)) * sign, minlength=patches)
+    whole = np.zeros(patches, dtype=bool)
+    whole[patch[closed]] = True
+    turn_patch = np.where(whole, volume < 0, vote < 0)
+    return turned ^ turn_patch[patch]
+
+
+#: Faces further from the body than this (metres) do not vote on which way their part of the garment faces.
+TURN_REACH = 0.12
+
+
+def shell_faces(triangles: Any, lining: Optional[Any] = None) -> np.ndarray:
+    """The triangles the back shell covers: those of open parts (a closed part, a buckle, has its back side already)
+    that are no ``lining`` (a lining lies behind its shell already)."""
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    if not len(triangles):
+        return np.zeros(0, dtype=bool)
+    _patch, _turned, closed = _winding_patches(triangles)
+    chosen = ~closed
+    if lining is not None:
+        chosen &= ~np.asarray(lining, dtype=bool)
+    return chosen
+
+
+class Shell(NamedTuple):
+    positions: np.ndarray  # the garment's vertices, then the shell's
+    triangles: np.ndarray  # the garment's triangles, the shell's (turned) and the rim's
+    source: np.ndarray  # the garment vertex each shell vertex copies
+
+
+def shell_positions(positions: Any, triangles: Any, thickness: float) -> Tuple[np.ndarray, np.ndarray]:
+    """The vertices the back shell copies (those of ``triangles``) and where each copy goes: ``thickness`` metres
+    behind it, against the area-weighted normal of the triangles around it. A vertex whose triangles cancel out
+    (a fold) keeps its place."""
+    points = as_points(positions)
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    used = np.unique(triangles)
+    normals, area = triangle_normals(points, triangles)
+    summed = np.zeros_like(points)
+    for corner in range(3):
+        np.add.at(summed, triangles[:, corner], normals * area[:, None])
+    length = np.linalg.norm(summed, axis=1)
+    unit = np.where(length[:, None] > 1e-12, summed / np.maximum(length, 1e-12)[:, None], 0.0)
+    return used, points[used] - unit[used] * thickness
+
+
+def rim_edges(triangles: Any) -> np.ndarray:
+    """The open edges of ``triangles`` (used by one triangle only), each as ``(start, end)`` in its triangle's
+    winding."""
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    starts = triangles.reshape(-1)
+    ends = triangles[:, [1, 2, 0]].reshape(-1)
+    keys = np.column_stack([np.minimum(starts, ends), np.maximum(starts, ends)])
+    _unique, inverse, uses = np.unique(keys, axis=0, return_inverse=True, return_counts=True)
+    lone = uses[np.asarray(inverse).reshape(-1)] == 1
+    return np.column_stack([starts[lone], ends[lone]])
+
+
+def back_shell(positions: Any, triangles: Any, thickness: float, lining: Optional[Any] = None) -> Shell:
+    """The garment with a back shell ``thickness`` metres behind it (0: unchanged): a copy of its triangles
+    (:func:`shell_faces`) moved behind the cloth and turned to face the other way, and a rim along their open edges
+    joining the two layers, so single-layer cloth is seen from behind too."""
+    points = as_points(positions)
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    chosen = triangles[shell_faces(triangles, lining)] if thickness > 0 else triangles[:0]
+    if not len(chosen):
+        return Shell(points, triangles, np.zeros(0, dtype=np.int64))
+    used, behind = shell_positions(points, chosen, thickness)
+    copy = np.full(len(points), -1, dtype=np.int64)
+    copy[used] = len(points) + np.arange(len(used))
+    back = copy[chosen][:, ::-1]
+    edges = rim_edges(chosen)
+    start, end = edges[:, 0], edges[:, 1]
+    rim = np.concatenate([np.column_stack([end, start, copy[start]]), np.column_stack([end, copy[start], copy[end]])])
+    return Shell(np.concatenate([points, behind]), np.concatenate([triangles, back, rim]), used)
+
+
+# --------------------------------------------------------------------------------------------------
 # Local checks
 # --------------------------------------------------------------------------------------------------
 

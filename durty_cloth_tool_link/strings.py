@@ -1005,9 +1005,11 @@ EN: Dict[str, str] = {
         "forward, legs forward, a twist), and the seams that open are reported."
     ),
     "garment.info.prepare": (
-        "Joins the seams between panels (never a hem onto itself, and never a lining onto its shell: put a lining that "
-        "is not found in the vertex group DCT Lining), removes loose parts, triangulates, shades smooth and gives the "
-        "garment Sollumz's vertex colours Color 1 and Color 2 with the values under Options."
+        "Joins the seams between panels (never a hem onto itself, and never a lining onto its shell: put a lining "
+        "that is not found in the vertex group DCT Lining), removes loose parts, triangulates, shades smooth and "
+        "gives the garment Sollumz's vertex colours Color 1 and Color 2 with the values under Options. When the "
+        "garment sits on the body, its faces are turned to face away from the body (a lining's towards it). Thickness "
+        "under Options gives single-layer cloth a back side."
     ),
     "garment.info.combine": (
         "Packs all UV islands into one square and bakes every material into one: the colour with its transparency, and "
@@ -1809,6 +1811,11 @@ EN: Dict[str, str] = {
     "garment.stage.bake-normal": "Baking the normal map",
     "garment.stage.bake-emission": "Baking the emission map",
     "garment.stage.material": "Making the combined material",
+    "garment.prop.thickness": "Thickness (mm)",
+    "garment.prop.thickness.desc": (
+        "Give single-layer cloth a back side this many millimetres behind it, so it is not see-through from behind. 0 "
+        "leaves it single-layer"
+    ),
     "garment.prop.push-region.desc": "The part of the garment Push Out of Body moves; the rest stays as it is",
     "garment.push-region.whole": "Whole Garment",
     "garment.push-region.whole.desc": "Push every part of the garment out of the body",

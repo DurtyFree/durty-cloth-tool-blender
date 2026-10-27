@@ -392,7 +392,13 @@ TEXT = {
     "garment.info.lods": "Upraszcza kopię ubrania do każdego limitu trójkątów i umieszcza ją w slotach LOD Medium i Low w Sollumz, w miarę możliwości zachowując otwarte krawędzie i szwy UV. Każdy poziom przejmuje wagi High (cztery kości na wierzchołek) i zostaje wypchnięty poza ciało.",
     "garment.info.markers": "Znaczniki odpowiadają stawom peda: szyi, klatce piersiowej, miednicy, barkom, łokciom, nadgarstkom i biodrom (dla spodni: biodrom, kolanom i kostkom; dla maski: głowie). Opcja Automatyczne znaczniki umieszcza je na stawach awatara wybranego w sekcji Przygotowanie, odczytuje z kształtu ubrania (górne części i spodnie) lub początkowo ustawia w stawach ciała. Łączą je linie w widoku 3D: pomarańczowe oznaczają, że coś wygląda nieprawidłowo. Popraw niewłaściwie położone znaczniki. Opcja Odbij lewą na prawą kopiuje lewą stronę na prawą.",
     "garment.info.pose": "Wybierz pozę awatara, na którym utworzono ubranie. Ubranie wykonane w pozie T można przestawić do pozy A używanej przez grę w sekcji Dopasuj.",
-    "garment.info.prepare": "Łączy szwy między panelami (nigdy brzegu z nim samym ani podszewki z warstwą zewnętrzną: niewykrytą podszewkę umieść w grupie wierzchołków DCT Lining), usuwa luźne części, trianguluje, wygładza cieniowanie i nadaje ubraniu kolory wierzchołków Sollumz Color 1 i Color 2 z wartościami z sekcji Opcje.",
+    "garment.info.prepare": (
+        "Łączy szwy między panelami (nigdy brzegu z nim samym ani podszewki z warstwą zewnętrzną: niewykrytą "
+        "podszewkę umieść w grupie wierzchołków DCT Lining), usuwa luźne części, trianguluje, wygładza cieniowanie i "
+        "nadaje ubraniu kolory wierzchołków Sollumz Color 1 i Color 2 z wartościami z sekcji Opcje. Gdy ubranie leży "
+        "na ciele, jego ściany są obracane od ciała (ściany podszewki do niego). Grubość w sekcji Opcje daje "
+        "jednowarstwowej tkaninie spód."
+    ),
     "garment.info.problems": "Koloruje ubranie podczas pracy: czerwony wewnątrz ciała, żółty zbyt blisko, fioletowy rozciągnięcie względem pierwotnego kształtu, niebieski bark odstający od ciała.",
     "garment.info.push": (
         "Przesuwa części wewnątrz ciała lub bliżej niż ustawiony odstęp na odległość tego odstępu na zewnątrz. "
@@ -807,4 +813,9 @@ TEXT = {
     ),
     "garment.push-region.torso_arms": "Tułów i ramiona",
     "garment.push-region.torso_arms.desc": "Wypchnij tułów i rękawy; nogawki i cała reszta zostają bez zmian",
+    "garment.prop.thickness": "Grubość (mm)",
+    "garment.prop.thickness.desc": (
+        "Daje jednowarstwowej tkaninie spód tyle milimetrów za nią, by od tyłu nie była przezroczysta. 0 zostawia ją "
+        "jednowarstwową"
+    ),
 }

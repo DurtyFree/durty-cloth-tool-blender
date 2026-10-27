@@ -392,7 +392,13 @@ TEXT = {
     "garment.info.lods": "Decima una copia del capo fino al limite di triangoli di ciascun livello e la inserisce negli slot LOD Medium e Low di Sollumz, conservando per quanto possibile i bordi aperti e le cuciture UV. Ogni livello eredita i pesi di High (quattro ossa per vertice) e viene spinto fuori dal corpo.",
     "garment.info.markers": "I marcatori rappresentano le articolazioni del ped: collo, torace, bacino, spalle, gomiti, polsi e anche (per i pantaloni, anche, ginocchia e caviglie; per una maschera, la testa). Marcatori automatici li posiziona sulle articolazioni dell'avatar scelto in Configurazione; altrimenti li ricava dalla forma del capo (parti superiori e pantaloni) o li posiziona inizialmente sulle articolazioni del corpo. Le linee nella vista 3D li collegano: le linee arancioni indicano un possibile problema. Sposta i marcatori fuori posto; Specchia S su D copia il lato sinistro su quello destro.",
     "garment.info.pose": "Scegli la posa dell'avatar su cui è stato creato il capo. Un capo creato in posa T può essere portato nella posa A del gioco in Adattamento.",
-    "garment.info.prepare": "Unisce le cuciture tra pannelli (mai un orlo con sé stesso, né una fodera con il tessuto esterno: inserisci una fodera non riconosciuta nel gruppo di vertici DCT Lining), rimuove le parti isolate, triangola, applica l'ombreggiatura uniforme e assegna al capo i colori dei vertici Color 1 e Color 2 di Sollumz con i valori in Opzioni.",
+    "garment.info.prepare": (
+        "Unisce le cuciture tra pannelli (mai un orlo con sé stesso, né una fodera con il tessuto esterno: inserisci "
+        "una fodera non riconosciuta nel gruppo di vertici DCT Lining), rimuove le parti isolate, triangola, applica "
+        "l'ombreggiatura uniforme e assegna al capo i colori dei vertici Color 1 e Color 2 di Sollumz con i valori in "
+        "Opzioni. Quando il capo è sul corpo, le sue facce vengono girate verso l'esterno del corpo (quelle di una "
+        "fodera verso di esso). Spessore, in Opzioni, dà un retro al tessuto a strato singolo."
+    ),
     "garment.info.problems": "Colora il capo durante il lavoro: rosso all'interno del corpo, giallo troppo vicino, viola allungato rispetto alla forma originale, blu per una spalla staccata dal corpo.",
     "garment.info.push": (
         "Sposta tutto ciò che si trova all'interno del corpo, o più vicino della distanza impostata, fino a tale "
@@ -800,4 +806,9 @@ TEXT = {
     ),
     "garment.push-region.torso_arms": "Busto e braccia",
     "garment.push-region.torso_arms.desc": "Spinge il busto e le maniche; le gambe e tutto il resto restano come sono",
+    "garment.prop.thickness": "Spessore (mm)",
+    "garment.prop.thickness.desc": (
+        "Dà al tessuto a strato singolo un retro a questi millimetri dietro di esso, così da dietro non è "
+        "trasparente. 0 lo lascia a strato singolo"
+    ),
 }

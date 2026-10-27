@@ -392,7 +392,13 @@ TEXT = {
     "garment.info.lods": "Kıyafetin bir kopyasının çokgen sayısını her üçgen bütçesine göre azaltıp Sollumz içindeki Medium ve Low LOD yuvalarına yerleştirir; açık kenarları ve UV dikişlerini olabildiğince korur. Her düzey High ağırlıklarını devralır (köşe başına dört kemik) ve bedenin dışına çıkarılır.",
     "garment.info.markers": "İşaretler ped'in eklemlerini temsil eder: boyun, göğüs, leğen kemiği, omuzlar, dirsekler, el bilekleri ve kalçalar (pantolonda kalçalar, dizler ve ayak bilekleri; maskede baş). Otomatik işaretler bunları Kurulum altında seçilen avatarın eklemlerine yerleştirir; aksi halde kıyafetin şeklinden okur (üst kıyafetler ve pantolonlar) veya bedenin eklemlerinden başlatır. 3D görünümdeki çizgiler bunları birleştirir: turuncu çizgiler bir şeyin yanlış göründüğünü belirtir. Yanlış yerdeki işaretleri taşıyın; Solu sağa yansıt sol tarafı sağa kopyalar.",
     "garment.info.pose": "Kıyafetin üzerinde yapıldığı avatarın pozunu seçin. T pozunda yapılan kıyafet, Uyarla altında oyunun A pozuna getirilebilir.",
-    "garment.info.prepare": "Kalıplar arasındaki dikişleri birleştirir (bir etek ucunu kendisiyle veya astarı dış katmanıyla asla birleştirmez: bulunmayan astarı DCT Lining köşe grubuna koyun), ayrık parçaları kaldırır, üçgenlere ayırır, yumuşak gölgelendirir ve kıyafete Seçenekler altındaki değerlerle Sollumz köşe renklerini, Color 1 ve Color 2, verir.",
+    "garment.info.prepare": (
+        "Kalıplar arasındaki dikişleri birleştirir (bir etek ucunu kendisiyle veya astarı dış katmanıyla asla "
+        "birleştirmez: bulunmayan astarı DCT Lining köşe grubuna koyun), ayrık parçaları kaldırır, üçgenlere ayırır, "
+        "yumuşak gölgelendirir ve kıyafete Seçenekler altındaki değerlerle Sollumz köşe renklerini, Color 1 ve Color "
+        "2, verir. Kıyafet bedenin üzerindeyse yüzleri bedenden dışarı bakacak şekilde çevrilir (astarınkiler bedene "
+        "doğru). Seçenekler altındaki Kalınlık, tek katlı kumaşa bir arka yüz verir."
+    ),
     "garment.info.problems": "Çalışırken kıyafeti renklendirir: bedenin içi kırmızı, çok yakın yerler sarı, özgün şekle göre gerilenler mor, bedenden uzakta havada duran omuz mavi.",
     "garment.info.push": (
         "Bedenin içindeki veya aralıktan daha yakın her şeyi dışarıdaki aralığa taşır. Çevredeki köşeler de izler; "
@@ -798,5 +804,10 @@ TEXT = {
     "garment.push-region.torso_arms": "Gövde ve kollar",
     "garment.push-region.torso_arms.desc": (
         "Gövdeyi ve kolları çıkarır; paçalar ve geri kalan her şey olduğu gibi kalır"
+    ),
+    "garment.prop.thickness": "Kalınlık (mm)",
+    "garment.prop.thickness.desc": (
+        "Tek katlı kumaşa bu kadar milimetre arkasında bir arka yüz verir, böylece arkadan saydam görünmez. 0 onu tek "
+        "katlı bırakır"
     ),
 }

@@ -503,7 +503,9 @@ TEXT = {
     "garment.info.prepare": (
         "Une las costuras entre piezas (nunca un dobladillo consigo mismo ni un forro con su tela exterior: pon un "
         "forro que no se detecte en el grupo de vértices DCT Lining), quita las partes sueltas, triangula, suaviza el "
-        "sombreado y da a la prenda los colores de vértice Color 1 y Color 2 de Sollumz con los valores de Opciones."
+        "sombreado y da a la prenda los colores de vértice Color 1 y Color 2 de Sollumz con los valores de Opciones. "
+        "Si la prenda está sobre el cuerpo, sus caras se giran para mirar hacia fuera del cuerpo (las de un forro, "
+        "hacia él). Grosor, en Opciones, da a la tela de una sola capa una cara trasera."
     ),
     "garment.info.combine": (
         "Empaqueta todas las islas UV en un cuadrado y hornea todos los materiales en uno: el color con su "
@@ -1466,5 +1468,10 @@ TEXT = {
     "garment.push-region.torso_arms": "Torso y brazos",
     "garment.push-region.torso_arms.desc": (
         "Empuja el torso y las mangas; las piernas y todo lo demás se quedan como están"
+    ),
+    "garment.prop.thickness": "Grosor (mm)",
+    "garment.prop.thickness.desc": (
+        "Da a la tela de una sola capa una cara trasera a estos milímetros por detrás, para que no se vea a través "
+        "desde atrás. 0 la deja en una sola capa"
     ),
 }

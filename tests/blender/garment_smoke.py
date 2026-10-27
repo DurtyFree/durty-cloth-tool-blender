@@ -471,6 +471,42 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Fix Spikes waits for a backup from before fitting with the garment's vertices",
           refused(bpy.ops.dct_link.fit_spikes, "backup from before fitting"))
     gh._store_backups(tee, kept)
+    # Prepare on the body turns the faces away from it; Thickness adds a back shell (on copies of the tee).
+    def prepared_copy(thickness):
+        copy = tee.copy()
+        copy.data = tee.data.copy()
+        scene.collection.objects.link(copy)
+        bm = bmesh.new()
+        bm.from_mesh(copy.data)
+        bmesh.ops.triangulate(bm, faces=bm.faces[:])
+        bm.faces.ensure_lookup_table()
+        bmesh.ops.reverse_faces(bm, faces=bm.faces[:][::4])
+        bm.to_mesh(copy.data)
+        bm.free()
+        return copy, len(copy.data.polygons), gh.prepare(bpy.context, copy, 0.002, ((1, 0.5, 0, 1), (0, 0, 0, 0)),
+                                                         False, body=body, thickness=thickness)
+
+    def facing(obj):
+        mesh = obj.data
+        triangles = gh.mesh_triangles(mesh)
+        points = positions(obj)
+        normals = np.cross(points[triangles[:, 1]] - points[triangles[:, 0]],
+                           points[triangles[:, 2]] - points[triangles[:, 0]])
+        signed, _, body_normals = gh.clearance(gh.body_tree(body), points[triangles].mean(axis=1))
+        near = np.abs(signed) < 0.05
+        return float((np.einsum("ij,ij->i", normals, body_normals)[near] > 0).mean())
+
+    turned_tee, faces, result = prepared_copy(0.0)
+    check("Prepare turns the flipped faces away from the body", result["turned"] > 0.2 * faces
+          and result["shell"] == 0 and facing(turned_tee) > 0.95, (result["turned"], faces, facing(turned_tee)))
+    shelled_tee, faces, result = prepared_copy(0.003)
+    check("Thickness adds a back shell behind the cloth", result["shell"] > len(turned_tee.data.polygons)
+          and len(shelled_tee.data.polygons) == len(turned_tee.data.polygons) + result["shell"],
+          (result["shell"], len(turned_tee.data.polygons), len(shelled_tee.data.polygons)))
+    for copy in (turned_tee, shelled_tee):
+        mesh = copy.data
+        bpy.data.objects.remove(copy)
+        bpy.data.meshes.remove(mesh)
     check("the problem colours follow the change", tee.data.color_attributes.get(gh.PROBLEMS) is not None)
     check("Show Problems hides the colours again", "FINISHED" in bpy.ops.dct_link.fit_show_problems()
           and tee.data.color_attributes.get(gh.PROBLEMS) is None)
@@ -622,6 +658,19 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           and colour is not None and colour.domain == "CORNER" and colour.data_type == "BYTE_COLOR"
           and mesh.color_attributes.get("Color 2") is not None
           and np.allclose(values.reshape(-1, 4)[0], (1.0, 128 / 255, 0.0, 1.0), atol=0.01), notice)
+    # Prepare Garment with Thickness: a back shell more; Back One Step takes it back.
+    welded_faces = len(tpose.data.polygons)
+    check("Back One Step takes Prepare Garment back", "FINISHED" in bpy.ops.dct_link.fit_back_step())
+    check("Thickness is off unless asked", props.thickness == 0.0)
+    props.thickness = 3.0
+    check("Prepare Garment runs with Thickness", "FINISHED" in bpy.ops.dct_link.fit_prepare())
+    check("Thickness adds a back shell", len(tpose.data.polygons) > 2 * welded_faces,
+          (len(tpose.data.polygons), welded_faces))
+    check("Back One Step takes the back shell back", "FINISHED" in bpy.ops.dct_link.fit_back_step())
+    props.thickness = 0.0
+    check("Prepare Garment runs again without Thickness", "FINISHED" in bpy.ops.dct_link.fit_prepare()
+          and len(tpose.data.polygons) == welded_faces, (len(tpose.data.polygons), welded_faces))
+    mesh = tpose.data
     check("Check Tears runs on the welded garment", "FINISHED" in bpy.ops.dct_link.fit_check_tears())
     check("a welded garment has no open seams left", ui_garment.RUNTIME.tears["pairs"] == 0)
     props.texture_size = "2048"

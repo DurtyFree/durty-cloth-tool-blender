@@ -519,7 +519,9 @@ TEXT = {
         "Joint les coutures entre les pièces (jamais un ourlet sur lui-même, et jamais une doublure sur son tissu "
         "extérieur : mettez une doublure non trouvée dans le groupe de sommets DCT Lining), supprime les parties "
         "libres, triangule, lisse l'ombrage et donne au vêtement les couleurs de sommet Color 1 et Color 2 de Sollumz "
-        "avec les valeurs sous Options."
+        "avec les valeurs sous Options. Quand le vêtement est sur le corps, ses faces sont tournées vers l'extérieur "
+        "du corps (celles d'une doublure vers lui). Épaisseur, dans Options, donne un envers au tissu à une seule "
+        "couche."
     ),
     "garment.info.combine": (
         "Regroupe tous les îlots UV dans un carré et cuit chaque matériau en un seul : la couleur avec sa "
@@ -1523,5 +1525,10 @@ TEXT = {
     "garment.push-region.torso_arms": "Torse et bras",
     "garment.push-region.torso_arms.desc": (
         "Pousse le torse et les manches ; les jambes et tout le reste ne bougent pas"
+    ),
+    "garment.prop.thickness": "Épaisseur (mm)",
+    "garment.prop.thickness.desc": (
+        "Donne au tissu à une seule couche un envers à ce nombre de millimètres derrière lui, pour qu'il ne soit pas "
+        "transparent de dos. 0 le laisse à une seule couche"
     ),
 }

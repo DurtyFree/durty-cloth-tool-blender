@@ -378,7 +378,7 @@ TEXT = {
     "garment.info.tears": "需要服装带有骨架和权重。服装会依次摆出几个测试姿势（手臂上举、手臂前伸、腿部前伸、扭转），并报告裂开的接缝。",
     "garment.info.prepare": (
         "合并部件之间的接缝（绝不会把下摆与自身合并，也不会把衬里与外层面料合并：未被识别的衬里请放进顶点组 DCT Lining），移除零散部分，三角化，平滑着色，并使用选项中的值为服装添加 Sollumz 的顶点颜色 "
-        "Color 1 和 Color 2。"
+        "Color 1 和 Color 2。 当服装位于身体上时，其面会转为朝外背离身体（衬里的面朝向身体）。选项中的厚度可为单层布料添加背面。"
     ),
     "garment.info.combine": (
         "把所有 UV 岛打包进一个正方形，并把所有材质烘焙为一个：带透明度的颜色，以及材质具有的法线、高光和自发光贴图。它将成为服装唯一的材质。原始 UV 贴图保留为 DCT Source UV。"
@@ -920,4 +920,6 @@ TEXT = {
     "garment.push-region.torso.desc": "只推出躯干：肩部、胸部、背部、腰部、臀部和颈部。袖子和裤腿保持不变",
     "garment.push-region.torso_arms": "躯干和手臂",
     "garment.push-region.torso_arms.desc": "推出躯干和袖子；裤腿和其他部分保持不变",
+    "garment.prop.thickness": "厚度（mm）",
+    "garment.prop.thickness.desc": "在单层布料后方这么多毫米处为其添加背面，使其从背后看不透明。0 表示保持单层",
 }

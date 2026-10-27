@@ -500,9 +500,11 @@ TEXT = {
         "braços para a frente, pernas para a frente, uma torção), e as costuras que se abrem são informadas."
     ),
     "garment.info.prepare": (
-        "Une as costuras entre as peças (nunca uma barra a ela mesma, nem um forro ao tecido externo: coloque um forro "
-        "que não for encontrado no grupo de vértices DCT Lining), remove partes soltas, triangula, suaviza o "
-        "sombreamento e dá à roupa as cores de vértice Color 1 e Color 2 do Sollumz com os valores em Opções."
+        "Une as costuras entre as peças (nunca uma barra a ela mesma, nem um forro ao tecido externo: coloque um "
+        "forro que não for encontrado no grupo de vértices DCT Lining), remove partes soltas, triangula, suaviza o "
+        "sombreamento e dá à roupa as cores de vértice Color 1 e Color 2 do Sollumz com os valores em Opções. Quando "
+        "a roupa está sobre o corpo, as faces dela são viradas para fora do corpo (as de um forro, para ele). "
+        "Espessura, em Opções, dá um verso ao tecido de uma camada."
     ),
     "garment.info.combine": (
         "Agrupa todas as ilhas UV em um quadrado e faz o bake de todos os materiais em um: a cor com a transparência, "
@@ -1414,4 +1416,9 @@ TEXT = {
     ),
     "garment.push-region.torso_arms": "Tronco e braços",
     "garment.push-region.torso_arms.desc": "Empurra o tronco e as mangas; as pernas e todo o resto ficam como estão",
+    "garment.prop.thickness": "Espessura (mm)",
+    "garment.prop.thickness.desc": (
+        "Dá ao tecido de uma camada um verso esta quantidade de milímetros atrás dele, para que não fique "
+        "transparente visto de trás. 0 o deixa com uma camada"
+    ),
 }
