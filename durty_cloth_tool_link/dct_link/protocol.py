@@ -52,6 +52,7 @@ __all__ = [
     "is_host_version",
     "is_access_token",
     "is_feature_id",
+    "is_capability",
     "is_https_url",
     "is_ped_model",
     "is_new_ped_model",
@@ -70,7 +71,7 @@ CONSTANTS: Dict[str, Any] = {
     "protocol": {
         "name": "dct-creator-link",
         "major": 2,
-        "minor": 1,
+        "minor": 2,
         "supportedMajors": {"min": 2, "max": 2},
     },
     "transport": {
@@ -123,9 +124,22 @@ CONSTANTS: Dict[str, Any] = {
         "maxPedAddChunkBytes": 33554432,
         "maxPedAddChunks": 8,
         "maxPedAddParts": 64,
+        "checkoutSeconds": 10,
+        "maxCapabilities": 32,
+        "maxAvatarPoses": 32,
+        "minAvatarFps": 10,
+        "maxAvatarFps": 60,
+        "maxAvatarSeconds": 3600,
+        "maxGarmentCheckPoses": 32,
+        "maxPoseRegionsReported": 6,
+        "maxPoseDepthMm": 1000,
+        "garmentCheckSeconds": 300,
+        "bodyAvatarSeconds": 180,
+        "maxVariationImages": 64,
+        "maxAddResultItems": 32,
     },
     "values": {
-        "pluginKinds": ["photoshop", "photopea", "blender", "gimp", "krita", "substance"],
+        "pluginKinds": ["photoshop", "photopea", "blender", "gimp", "krita", "substance", "marvelous"],
         "channels": ["release", "experimental", "development"],
         "liveTargets": ["diffuse", "normal", "specular"],
         "frameFormats": ["rgba8"],
@@ -156,6 +170,10 @@ CONSTANTS: Dict[str, Any] = {
             "ped-budget",
             "ped-ragdoll-mismatch",
             "ped-rest-strain",
+            "pose-clipping",
+            "model-unreadable",
+            "model-unsupported",
+            "model-too-large",
         ],
         "modelCloseReasons": ["closed", "replaced", "itemRemoved", "projectClosed", "entitlementLost", "signedOut"],
         "hostResultCodes": ["open-failed", "not-supported", "dependency-missing", "busy"],
@@ -312,6 +330,61 @@ CONSTANTS: Dict[str, Any] = {
             "cutscene",
             "story",
         ],
+        "capabilities": ["checkout"],
+        "checkoutTiers": ["advanced", "ultimate"],
+        "checkoutReasons": ["upsell", "quota", "plans"],
+        "garmentPlacements": ["free", "freemodeRest"],
+        "avatarPoses": [
+            "idle",
+            "walk",
+            "run",
+            "sprint",
+            "jump",
+            "stealthCrouch",
+            "climbLadder",
+            "swimming",
+            "handsUp",
+            "armsFolded",
+            "flexArms",
+            "cheering",
+            "texting",
+            "aimPistol",
+            "aimRifle",
+            "gunPoint",
+            "sitting",
+            "sittingPassenger",
+            "driving",
+            "sittingOnGround",
+            "kneeling",
+            "yoga",
+            "pushUps",
+            "sitUps",
+            "lyingOnBack",
+            "dancing",
+        ],
+        "bodyRegions": [
+            "head",
+            "neck",
+            "chest",
+            "back",
+            "abdomen",
+            "lowerBack",
+            "shoulderL",
+            "shoulderR",
+            "upperArmL",
+            "upperArmR",
+            "forearmL",
+            "forearmR",
+            "handL",
+            "handR",
+            "pelvis",
+            "thighL",
+            "thighR",
+            "calfL",
+            "calfR",
+            "footL",
+            "footR",
+        ],
     },
     "errorCodes": [
         "malformed-message",
@@ -433,6 +506,31 @@ MAX_PED_ADD_BYTES: int = _L["maxPedAddBytes"]
 MAX_PED_ADD_CHUNK_BYTES: int = _L["maxPedAddChunkBytes"]
 MAX_PED_ADD_CHUNKS: int = _L["maxPedAddChunks"]
 MAX_PED_ADD_PARTS: int = _L["maxPedAddParts"]
+#: DCT refuses an ``account.checkout`` that came less than this long after the last one on the connection opened its
+#: checkout: ``rate-limited`` while that checkout is still on screen, ``busy`` once the user closed it.
+CHECKOUT_SECONDS: int = _L["checkoutSeconds"]
+#: The most names ``welcome.capabilities`` carries.
+MAX_CAPABILITIES: int = _L["maxCapabilities"]
+#: Clothing from a plain model (minor 2): the poses one ``body.avatar`` or ``garment.check`` may name, the sampling
+#: rate of the avatar's animations and the longest one of them (seconds), the body regions one pose reports and the
+#: deepest clipping it reports (millimetres), how long a plugin waits for either answer, the pictures one variation
+#: of a GLB may replace and the cloths one add may become.
+MAX_AVATAR_POSES: int = _L["maxAvatarPoses"]
+MIN_AVATAR_FPS: int = _L["minAvatarFps"]
+MAX_AVATAR_FPS: int = _L["maxAvatarFps"]
+MAX_AVATAR_SECONDS: int = _L["maxAvatarSeconds"]
+MAX_GARMENT_CHECK_POSES: int = _L["maxGarmentCheckPoses"]
+MAX_POSE_REGIONS_REPORTED: int = _L["maxPoseRegionsReported"]
+MAX_POSE_DEPTH_MM: int = _L["maxPoseDepthMm"]
+GARMENT_CHECK_SECONDS: int = _L["garmentCheckSeconds"]
+BODY_AVATAR_SECONDS: int = _L["bodyAvatarSeconds"]
+MAX_VARIATION_IMAGES: int = _L["maxVariationImages"]
+MAX_ADD_RESULT_ITEMS: int = _L["maxAddResultItems"]
+#: The first minor with those messages: a DCT that welcomed the connection with a lower one does not know them.
+PLAIN_MODEL_MINOR: int = 2
+#: The plugin kinds a minor added, with that minor. A DCT from before it cannot read a hello of such a kind and
+#: answers it ``invalid-message``; every kind that is not listed has been there since minor 0.
+PLUGIN_KIND_MINORS: Dict[str, int] = {"marvelous": 2}
 #: The fixed record sizes of the custom ped payloads: one bone record, one bone of a rig result (its record and its
 #: pose matrix), one vertex of a rig result (rest position, four bone indices, four weights).
 PED_BONE_RECORD_BYTES: int = 100
@@ -484,6 +582,22 @@ PED_RIG_OUTCOMES: Tuple[str, ...] = tuple(_V["pedRigOutcomes"])
 PED_LAYOUTS: Tuple[str, ...] = tuple(_V["pedLayouts"])
 PED_RAGDOLLS: Tuple[str, ...] = tuple(_V["pedRagdolls"])
 PED_TEMPLATE_GROUPS: Tuple[str, ...] = tuple(_V["pedTemplateGroups"])
+#: What a DCT may name in ``welcome.capabilities``: requests it answers beyond the messages of its major and minor.
+#: A peer ignores a name it does not know (a newer DCT may name more), so names are never checked against this list.
+CAPABILITIES: Tuple[str, ...] = tuple(_V["capabilities"])
+#: DCT answers ``account.checkout`` (it shows its own checkout).
+CAPABILITY_CHECKOUT = "checkout"
+#: The plan ``account.checkout`` suggests, and why the plugin asks.
+CHECKOUT_TIERS: Tuple[str, ...] = tuple(_V["checkoutTiers"])
+CHECKOUT_REASONS: Tuple[str, ...] = tuple(_V["checkoutReasons"])
+#: Where a plain model stands (``placement``): ``free`` lets DCT place it on the body as it places any imported
+#: model, ``freemodeRest`` says it was made on the freemode body in its rest pose and stays where it is.
+GARMENT_PLACEMENTS: Tuple[str, ...] = tuple(_V["garmentPlacements"])
+PLACEMENT_FREE = "free"
+PLACEMENT_FREEMODE_REST = "freemodeRest"
+#: The poses of ``body.avatar`` and ``garment.check``, and the body regions a pose check reports.
+AVATAR_POSES: Tuple[str, ...] = tuple(_V["avatarPoses"])
+BODY_REGIONS: Tuple[str, ...] = tuple(_V["bodyRegions"])
 ERROR_CODES: Tuple[str, ...] = tuple(CONSTANTS["errorCodes"])
 CLOSE_CODES: Dict[str, int] = dict(CONSTANTS["closeCodes"])
 
@@ -542,6 +656,7 @@ _SEMVER_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Z
 _HOST_VERSION_RE = re.compile(r"[0-9A-Za-z._+ -]{1,64}")
 _ACCESS_TOKEN_RE = re.compile(r"[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 _FEATURE_ID_RE = re.compile(r"[a-z]+(?:\.[A-Za-z]+)+")
+_CAPABILITY_RE = re.compile(r"[a-z][A-Za-z0-9.-]{0,31}")
 # C0, DEL and C1 controls, plus unpaired surrogates (a JSON escape can produce one).
 _NOT_PRINTABLE_RE = re.compile("[\u0000-\u001f\u007f-\u009f\ud800-\udfff]")
 _SURROGATE_RE = re.compile("[\ud800-\udfff]")
@@ -628,6 +743,12 @@ def is_feature_id(value: Any) -> bool:
     return isinstance(value, str) and len(value) <= MAX_ID_LENGTH and _FEATURE_ID_RE.fullmatch(value) is not None
 
 
+def is_capability(value: Any) -> bool:
+    """A name ``welcome.capabilities`` may carry: a lowercase letter, then up to 31 letters, digits, ``.`` or ``-``.
+    Any such name is valid, also one this package does not know."""
+    return isinstance(value, str) and _CAPABILITY_RE.fullmatch(value) is not None
+
+
 def is_ped_model(value: Any) -> bool:
     """A ped model name as the game names it: 1 to 63 letters, digits and underscores."""
     return isinstance(value, str) and _PED_MODEL_RE.fullmatch(value) is not None
@@ -681,18 +802,6 @@ class _JsonObject(dict):
         self.earlier: Optional[Dict[str, List[Any]]] = None
 
 
-class _JsonBigInteger:
-    """An integer literal too long for an exact int conversion. It is never a valid field value."""
-
-    __slots__ = ("text",)
-
-    def __init__(self, text: str) -> None:
-        self.text = text
-
-    def __repr__(self) -> str:
-        return f"_JsonBigInteger({self.text[:24]}...)"
-
-
 def _object_pairs(pairs: List[Tuple[str, Any]]) -> _JsonObject:
     obj = _JsonObject()
     for key, value in pairs:
@@ -704,11 +813,15 @@ def _object_pairs(pairs: List[Tuple[str, Any]]) -> _JsonObject:
     return obj
 
 
-def _parse_int(text: str) -> Union[int, _JsonBigInteger]:
-    # Every integer field fits in a signed 64-bit value (at most 19 digits). Much longer literals never
-    # reach int(), which refuses very long literals since Python 3.10.7 and would make valid JSON look broken.
+def _parse_int(text: str) -> Union[int, float]:
+    # Every integer field fits in a signed 64-bit value (at most 19 digits). A longer integer literal is read the
+    # way the codecs read it that keep every JSON number as a double (DCT's and the TypeScript one): as that double.
+    # So it is no integer for an integer field, a number for a number field while it is finite, and no number at all
+    # once it is too long for a finite double (about 310 digits), wherever it stands: also as an earlier value of a
+    # repeated property, which the kind check looks at too. It never reaches int(), which refuses very long literals
+    # since Python 3.10.7 and would make valid JSON look broken; float() reads any length and answers infinity.
     if len(text.lstrip("-")) > 20:
-        return _JsonBigInteger(text)
+        return float(text)
     return int(text)
 
 
@@ -798,8 +911,14 @@ _INT32 = "int32"
 _INT64 = "int64"
 _INT32_REQUIRED = "int32!"
 _BOOL = "bool"
-#: Any finite JSON number (coordinates, fractions, measures); never a bool.
+#: Any finite JSON number (coordinates, fractions, measures); never a bool. Finite means a finite double, as in the
+#: codecs that read every number as one: ``1e999`` is no number, and neither is an integer literal too long for a
+#: double (:func:`_parse_int`). Every value of a known number property is held to this, an earlier value of a
+#: repeated property included, so no codec accepts a frame another one refuses.
 _NUMBER = "number"
+#: A bounded measure (a depth in millimetres, a length in seconds): a finite JSON number like :data:`_NUMBER`, whose
+#: validator bounds it (see :func:`_measure_ok`).
+_MEASURE = "measure"
 
 _INT32_MIN, _INT32_MAX = -(2**31), 2**31 - 1
 _INT64_MIN, _INT64_MAX = -(2**63), 2**63 - 1
@@ -836,7 +955,7 @@ def _kind_ok(value: Any, kind: Kind) -> bool:
         return _is_integer(value) and _INT64_MIN <= value <= _INT64_MAX
     if kind == _BOOL:
         return isinstance(value, bool)
-    if kind == _NUMBER:
+    if kind == _NUMBER or kind == _MEASURE:
         return type(value) in (int, float) and math.isfinite(value)
     tag, inner = kind  # type: ignore[misc]
     if tag == "obj":
@@ -886,6 +1005,17 @@ _FOCUSED = _obj(
     }
 )
 _MODEL_FILES = _list(_obj({"name": _STR, "length": _INT64}))
+#: A colour variation of an item: its diffuse file (an XML drawable), or a variant or pictures of a GLB.
+_ITEM_VARIATIONS = _list(
+    _obj(
+        {
+            "file": _STR,
+            "name": _STR,
+            "variant": _INT32,
+            "images": _list(_obj({"material": _INT32, "file": _STR})),
+        }
+    )
+)
 _PED_MARKERS_KIND = _map(_list(_NUMBER))
 _PED_PROPORTIONS = _obj({"height": _NUMBER, "shoulders": _NUMBER, "hips": _NUMBER, "arm": _NUMBER, "leg": _NUMBER, "torso": _NUMBER})
 _PED_REPORT = _obj(
@@ -1103,17 +1233,20 @@ def _model_push(m: Mapping[str, Any]) -> Optional[str]:
 
 
 def _host_open_model(m: Mapping[str, Any]) -> Optional[str]:
-    """Always with an id (what ``host.result`` answers), XML drawables only, the file rules of ``model.push``."""
+    """Always with an id (what ``host.result`` answers) and the file rules of ``model.push`` for its format: an XML
+    drawable with its textures, or one GLB (a plain model, which never comes with a lent skeleton)."""
+    fmt = m.get("format")
     if (
         not is_id(m.get("id"))
         or not _payload_in(m, 1)
         or not _binding_ok(m.get("binding"))
         or not is_text(m.get("name"))
-        or m.get("format") != MODEL_YDD_XML
+        or not _one_of(fmt, MODEL_FORMATS)
+        or (fmt == MODEL_GLB and m.get("lentSkeleton") is not None)
     ):
         return INVALID_MESSAGE
     files = m.get("files")
-    problem = model_files_problem(MODEL_YDD_XML, files)
+    problem = model_files_problem(fmt, files)
     if problem is not None:
         return problem
     total = sum(entry["length"] for entry in files)
@@ -1192,6 +1325,8 @@ def item_files_reason(files: Any, variations: Any) -> Optional[str]:
         file, title = variation.get("file"), variation.get("name")
         if not is_text(title):
             return "a variation's name is 1 to 128 characters of display text"
+        if variation.get("variant") is not None or variation.get("images") is not None:
+            return f"the variation {title} names a variant or images, which only a GLB has; it names its diffuse file"
         if not is_file_name(file) or file.lower() not in names:
             return f"the variation {title} names {file!r}, which is not one of the files"
         folded = file.lower()
@@ -1212,23 +1347,130 @@ def item_files_problem(files: Any, variations: Any) -> Optional[str]:
     return None if item_files_reason(files, variations) is None else INVALID_MESSAGE
 
 
+def garment_files_reason(files: Any, variations: Any) -> Optional[str]:
+    """Why the files and variations of a plain model (an ``item.add`` with ``glb``, an ``item.update``) break the
+    rules, as an English sentence for a developer, or ``None``. The rules: the bare-name rules of ``model.push``
+    (unique ignoring case, no empty file), exactly one ``*.glb`` and otherwise only ``*.png``; no variations, or up to
+    :data:`MAX_ITEM_VARIATIONS`, each with a display name and exactly one of ``variant`` (the index of one of the
+    GLB's colour variants, 0 or more) and ``images`` (1 to :data:`MAX_VARIATION_IMAGES` pictures, each naming a
+    material index once and a ``*.png`` of the files), never a ``file``; and every ``*.png`` named by an image. The
+    caller checks the lengths against the payload."""
+    if files is None or len(files) == 0 or len(files) > MAX_MODEL_FILES:
+        return f"a plain model carries 1 to {MAX_MODEL_FILES} files"
+    names = set()
+    pictures = set()
+    models = 0
+    for entry in files:
+        if entry is None:
+            return "a file entry is missing"
+        name, length = entry.get("name"), entry.get("length")
+        if not is_file_name(name):
+            return (
+                f"{name!r} is not a bare file name (letters, digits, _ - ., not starting with '.', no '..', "
+                "not a Windows device name)"
+            )
+        if not _in_range(length, 1, MAX_BINARY_PAYLOAD_BYTES):
+            return f"{name} is empty or larger than one binary frame allows"
+        folded = name.lower()  # names are ASCII, so this is ordinal ignore-case
+        if folded in names:
+            return f"two files are named {name} (names are unique ignoring case)"
+        names.add(folded)
+        if folded.endswith(".glb"):
+            models += 1
+        elif folded.endswith(".png"):
+            pictures.add(folded)
+        else:
+            return f"{name} is neither the model (*.glb) nor a variation picture (*.png)"
+    if models != 1:
+        return "a plain model carries exactly one model file (*.glb)"
+    used = set()
+    if variations is not None:
+        if len(variations) > MAX_ITEM_VARIATIONS:
+            return f"a plain model has at most {MAX_ITEM_VARIATIONS} colour variations"
+        for variation in variations:
+            if variation is None:
+                return "a variation is missing"
+            title, variant, images = variation.get("name"), variation.get("variant"), variation.get("images")
+            if not is_text(title):
+                return "a variation's name is 1 to 128 characters of display text"
+            if variation.get("file") is not None:
+                return f"the variation {title} names a file; with a GLB it names a variant or images"
+            if (variant is None) == (images is None):
+                return f"the variation {title} names exactly one of a variant and images"
+            if variant is not None:
+                if not _in_range(variant, 0, _INT32_MAX):
+                    return f"the variation {title} names its variant by an index of 0 or more"
+                continue
+            if not 1 <= len(images) <= MAX_VARIATION_IMAGES:
+                return f"the variation {title} replaces 1 to {MAX_VARIATION_IMAGES} pictures"
+            materials = set()
+            for image in images:
+                if image is None:
+                    return f"an image of the variation {title} is missing"
+                material, file = image.get("material"), image.get("file")
+                if not _in_range(material, 0, MAX_MATERIAL_INDEX):
+                    return f"an image of the variation {title} names a material index of 0 to {MAX_MATERIAL_INDEX}"
+                if material in materials:
+                    return f"the variation {title} names the material {material} twice"
+                materials.add(material)
+                # The name is checked as it is written: a character that only becomes a letter of a file name when
+                # its case changes (U+212A, the Kelvin sign) names no file.
+                if not is_file_name(file) or file.lower() not in pictures:
+                    return f"the variation {title} names {file!r}, which is not one of the pictures (*.png)"
+                used.add(file.lower())
+    unnamed = sorted(pictures - used)
+    if unnamed:
+        return f"{unnamed[0]} is a picture no variation names (a *.png always replaces a material of a variation)"
+    return None
+
+
+def garment_files_problem(files: Any, variations: Any) -> Optional[str]:
+    """The file and variation rules of a plain model (see :func:`garment_files_reason`). Returns ``None`` or
+    ``invalid-message``; the caller checks the lengths against the payload."""
+    return None if garment_files_reason(files, variations) is None else INVALID_MESSAGE
+
+
+def _placement_ok(placement: Any) -> bool:
+    return placement is None or _one_of(placement, GARMENT_PLACEMENTS)
+
+
 def _item_add(m: Mapping[str, Any]) -> Optional[str]:
-    """Always with an id (what ``item.addResult`` names), XML drawables only, skin only on a component, the file and
-    variation rules of :func:`item_files_reason`; the lengths add up to the payload."""
-    drawable_type, skin = m.get("drawableType"), m.get("skin")
+    """Always with an id (what ``item.addResult`` names), skin only on a component, and the file and variation rules
+    of its format: :func:`item_files_reason` for an XML drawable, :func:`garment_files_reason` for a GLB, which alone
+    may say where it stands (``placement``). The lengths add up to the payload."""
+    drawable_type, skin, fmt, placement = m.get("drawableType"), m.get("skin"), m.get("format"), m.get("placement")
     if (
         not is_id(m.get("id"))
         or not _payload_in(m, 1)
-        or m.get("format") != MODEL_YDD_XML
+        or not _one_of(fmt, MODEL_FORMATS)
         or not _one_of(drawable_type, DRAWABLE_TYPES)
         or not _one_of(m.get("gender"), GENDERS)
         or skin is None
         or (skin and is_prop_type(drawable_type))
         or not is_text(m.get("name"))
+        or not (_placement_ok(placement) if fmt == MODEL_GLB else placement is None)
     ):
         return INVALID_MESSAGE
     files = m.get("files")
-    problem = item_files_problem(files, m.get("variations"))
+    check = garment_files_problem if fmt == MODEL_GLB else item_files_problem
+    problem = check(files, m.get("variations"))
+    if problem is not None:
+        return problem
+    total = sum(entry["length"] for entry in files)
+    return None if total == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def _item_update(m: Mapping[str, Any]) -> Optional[str]:
+    """Always with an id and the binding of the cloth it replaces; a GLB only, under the rules of an ``item.add``
+    with ``glb``."""
+    if not is_id(m.get("id")) or not _payload_in(m, 1) or not _binding_ok(m.get("binding")):
+        return INVALID_MESSAGE
+    if m.get("format") != MODEL_GLB:
+        return UNSUPPORTED_FORMAT
+    if not _placement_ok(m.get("placement")):
+        return INVALID_MESSAGE
+    files = m.get("files")
+    problem = garment_files_problem(files, m.get("variations"))
     if problem is not None:
         return problem
     total = sum(entry["length"] for entry in files)
@@ -1237,12 +1479,157 @@ def _item_add(m: Mapping[str, Any]) -> Optional[str]:
 
 def _item_add_result(m: Mapping[str, Any]) -> Optional[str]:
     """``binding`` present and ``code`` absent exactly when ``ok`` is true; ``code`` (any protocol error code) present
-    and ``binding`` absent exactly when it is false. ``findings`` is always there."""
-    ok, code, binding = m.get("ok"), m.get("code"), m.get("binding")
+    and ``binding`` absent exactly when it is false. ``findings`` is always there. ``items`` (every cloth an add
+    became, each with its first variation) only accompanies ``ok`` true and names no cloth twice."""
+    ok, code, binding, items = m.get("ok"), m.get("code"), m.get("binding"), m.get("items")
     if ok is None or not is_id(m.get("re")):
         return INVALID_MESSAGE
     paired = (code is None and _binding_ok(binding)) if ok else (_one_of(code, _ERROR_CODE_SET) and binding is None)
+    if items is not None:
+        if not ok or not 1 <= len(items) <= MAX_ADD_RESULT_ITEMS:
+            return INVALID_MESSAGE
+        cloths = set()
+        for item in items:
+            if not _binding_ok(item) or item["clothId"].lower() in cloths:
+                return INVALID_MESSAGE
+            cloths.add(item["clothId"].lower())
     return _check(paired and _findings_ok(m.get("findings")))
+
+
+def _poses_ok(poses: Any, limit: int) -> bool:
+    """No list (DCT's default set), or 1 to ``limit`` different poses."""
+    if poses is None:
+        return True
+    return 1 <= len(poses) <= limit and all(_one_of(pose, AVATAR_POSES) for pose in poses) and len(set(poses)) == len(poses)
+
+
+def _measure_ok(value: Any, maximum: int) -> bool:
+    """A finite number from 0 to ``maximum`` (a depth in millimetres, a length in seconds). An integer literal too
+    long for an int arrives as a double (:func:`_parse_int`), which is beyond every bound."""
+    return type(value) in (int, float) and math.isfinite(value) and 0 <= value <= maximum
+
+
+def _garment_check(m: Mapping[str, Any]) -> Optional[str]:
+    """Always with an id (what ``garment.checkResult`` names); a GLB only: exactly one file, whose length is the
+    payload; the poses, when named, are different ones."""
+    if (
+        not is_id(m.get("id"))
+        or not _payload_in(m, 1)
+        or not _one_of(m.get("gender"), GENDERS)
+        or not _one_of(m.get("drawableType"), DRAWABLE_TYPES)
+        or not _placement_ok(m.get("placement"))
+        or not _poses_ok(m.get("poses"), MAX_GARMENT_CHECK_POSES)
+    ):
+        return INVALID_MESSAGE
+    if m.get("format") != MODEL_GLB:  # also a missing one, before the file rules
+        return UNSUPPORTED_FORMAT
+    files = m.get("files")
+    if files is None or len(files) != 1 or model_files_problem(MODEL_GLB, files) is not None:
+        return INVALID_MESSAGE
+    return None if files[0]["length"] == m.get("payloadLength") else FRAME_SIZE_MISMATCH
+
+
+def _garment_check_result(m: Mapping[str, Any]) -> Optional[str]:
+    """``checked`` and ``poses`` present and ``code`` absent exactly when ``ok`` is true; ``code`` present and
+    ``checked``, ``poses`` and ``missing`` absent exactly when it is false. No pose twice, no region twice within a
+    pose, at most :data:`MAX_POSE_REGIONS_REPORTED` regions a pose, every depth 0 to :data:`MAX_POSE_DEPTH_MM`;
+    ``missing`` names no pose twice and none that is in ``poses``. ``findings`` is always there."""
+    ok, code, poses = m.get("ok"), m.get("code"), m.get("poses")
+    checked, missing = m.get("checked"), m.get("missing")
+    if ok is None or not is_id(m.get("re")) or not _findings_ok(m.get("findings")):
+        return INVALID_MESSAGE
+    if not ok:
+        return _check(_one_of(code, _ERROR_CODE_SET) and poses is None and checked is None and missing is None)
+    if (
+        code is not None
+        or not _in_range(checked, 0, _INT32_MAX)
+        or poses is None
+        or len(poses) > MAX_GARMENT_CHECK_POSES
+    ):
+        return INVALID_MESSAGE
+    seen = set()
+    for entry in poses:
+        if entry is None:
+            return INVALID_MESSAGE
+        pose, regions = entry.get("pose"), entry.get("regions")
+        if (
+            not _one_of(pose, AVATAR_POSES)
+            or pose in seen
+            or not _in_range(entry.get("samples"), 1, _INT32_MAX)
+            or not _in_range(entry.get("clipped"), 0, _INT32_MAX)
+            or not _measure_ok(entry.get("maxDepthMm"), MAX_POSE_DEPTH_MM)
+            or regions is None
+            or len(regions) > MAX_POSE_REGIONS_REPORTED
+        ):
+            return INVALID_MESSAGE
+        seen.add(pose)
+        named = set()
+        for region in regions:
+            if (
+                region is None
+                or not _one_of(region.get("region"), BODY_REGIONS)
+                or region["region"] in named
+                or not _in_range(region.get("clipped"), 0, _INT32_MAX)
+                or not _measure_ok(region.get("maxDepthMm"), MAX_POSE_DEPTH_MM)
+            ):
+                return INVALID_MESSAGE
+            named.add(region["region"])
+    if missing is not None:
+        if len(missing) > MAX_GARMENT_CHECK_POSES:
+            return INVALID_MESSAGE
+        absent = set()
+        for pose in missing:
+            if not _one_of(pose, AVATAR_POSES) or pose in absent or pose in seen:
+                return INVALID_MESSAGE
+            absent.add(pose)
+    return None
+
+
+def _body_avatar(m: Mapping[str, Any]) -> Optional[str]:
+    fps = m.get("fps")
+    return _check(
+        _one_of(m.get("gender"), GENDERS)
+        and _poses_ok(m.get("poses"), MAX_AVATAR_POSES)
+        and (fps is None or _in_range(fps, MIN_AVATAR_FPS, MAX_AVATAR_FPS))
+    )
+
+
+def _body_avatar_data(m: Mapping[str, Any]) -> Optional[str]:
+    """A GLB of at least one byte. ``poses`` lists its animations in order (no pose twice, each more than 0 and at
+    most :data:`MAX_AVATAR_SECONDS` long), ``missing`` the requested poses DCT could not build (none twice, none that
+    is also in ``poses``)."""
+    poses, missing = m.get("poses"), m.get("missing")
+    if (
+        not _one_of(m.get("gender"), GENDERS)
+        or m.get("format") != MODEL_GLB
+        or not _payload_in(m, 1)
+        or poses is None
+        or len(poses) > MAX_AVATAR_POSES
+    ):
+        return INVALID_MESSAGE
+    seen = set()
+    for entry in poses:
+        if entry is None:
+            return INVALID_MESSAGE
+        pose, seconds = entry.get("pose"), entry.get("seconds")
+        if (
+            not _one_of(pose, AVATAR_POSES)
+            or pose in seen
+            or not is_text(entry.get("animation"))
+            or not _measure_ok(seconds, MAX_AVATAR_SECONDS)
+            or seconds <= 0
+        ):
+            return INVALID_MESSAGE
+        seen.add(pose)
+    if missing is not None:
+        if len(missing) > MAX_AVATAR_POSES:
+            return INVALID_MESSAGE
+        absent = set()
+        for pose in missing:
+            if not _one_of(pose, AVATAR_POSES) or pose in absent or pose in seen:
+                return INVALID_MESSAGE
+            absent.add(pose)
+    return None
 
 
 def _thumbnail_image(m: Mapping[str, Any]) -> Optional[str]:
@@ -1290,6 +1677,18 @@ def _incompatible(m: Mapping[str, Any]) -> Optional[str]:
     )
 
 
+def _capabilities_ok(capabilities: Any) -> bool:
+    """Absent, or at most ``MAX_CAPABILITIES`` distinct well-formed names. A name this package does not know is
+    valid: a peer ignores it."""
+    if capabilities is None:
+        return True
+    return (
+        len(capabilities) <= MAX_CAPABILITIES
+        and all(is_capability(name) for name in capabilities)
+        and len(set(capabilities)) == len(capabilities)
+    )
+
+
 def _welcome(m: Mapping[str, Any]) -> Optional[str]:
     dct, protocol, account = m.get("dct"), m.get("protocol"), m.get("account")
     return _check(
@@ -1301,7 +1700,27 @@ def _welcome(m: Mapping[str, Any]) -> Optional[str]:
         and account is not None
         and is_text(account.get("userName"))
         and _feature_states_ok(m.get("features"))
+        and _capabilities_ok(m.get("capabilities"))
     )
+
+
+def _checkout(m: Mapping[str, Any]) -> Optional[str]:
+    """Every field is optional: a plan of ``CHECKOUT_TIERS``, a feature id and a reason of ``CHECKOUT_REASONS``."""
+    tier, feature, reason = m.get("tier"), m.get("feature"), m.get("reason")
+    return _check(
+        (tier is None or _one_of(tier, CHECKOUT_TIERS))
+        and (feature is None or is_feature_id(feature))
+        and (reason is None or _one_of(reason, CHECKOUT_REASONS))
+    )
+
+
+def _checkout_result(m: Mapping[str, Any]) -> Optional[str]:
+    """``re`` names the request; ``code`` (any protocol error code) is present exactly when ``opened`` is false."""
+    opened = m.get("opened")
+    if opened is None or not is_id(m.get("re")):
+        return INVALID_MESSAGE
+    code = m.get("code")
+    return _check(code is None if opened else _one_of(code, _ERROR_CODE_SET))
 
 
 # ---- custom peds ----
@@ -1591,6 +2010,8 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
     "auth": _text(TO_DCT, {"assertion": _STR}, lambda m: _check(is_access_token(m.get("assertion")))),
     "account.assist": _text(TO_DCT, {"userCode": _STR}, lambda m: _check(is_user_code(m.get("userCode")))),
+    # Sent only to a DCT whose welcome names the capability checkout.
+    "account.checkout": _text(TO_DCT, {"tier": _STR, "feature": _STR, "reason": _STR}, _checkout),
     "context.get": _text(TO_DCT, {}, lambda m: None),
     "live.open": _text(
         TO_DCT,
@@ -1665,13 +2086,36 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
             "gender": _STR,
             "skin": _BOOL,
             "name": _STR,
-            "variations": _list(_obj({"file": _STR, "name": _STR})),
+            "placement": _STR,
+            "variations": _ITEM_VARIATIONS,
             "files": _MODEL_FILES,
         },
         _item_add,
     ),
+    # Replaces the model and textures of a cloth with a GLB; answered by item.addResult, withdrawn by item.addCancel.
+    "item.update": _binary(
+        TO_DCT,
+        {"binding": _BINDING, "format": _STR, "placement": _STR, "variations": _ITEM_VARIATIONS, "files": _MODEL_FILES},
+        _item_update,
+    ),
     # The cancel names the add it withdraws; it has no reply of its own.
     "item.addCancel": _text(TO_DCT, {}, lambda m: _check(is_id(m.get("re")))),
+    "garment.check": _binary(
+        TO_DCT,
+        {
+            "format": _STR,
+            "gender": _STR,
+            "drawableType": _STR,
+            "placement": _STR,
+            "poses": _list(_STR),
+            "showInDct": _BOOL,
+            "files": _MODEL_FILES,
+        },
+        _garment_check,
+    ),
+    "body.avatar": _text(
+        TO_DCT, {"gender": _STR, "poses": _list(_STR), "fps": _INT32, "transition": _BOOL}, _body_avatar
+    ),
     "ped.templates": _text(
         TO_DCT,
         {"gender": _STR, "all": _BOOL, "offset": _INT32},
@@ -1731,6 +2175,7 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
             "protocol": _obj({"major": _INT32, "minor": _INT32}),
             "account": _obj({"userName": _STR}),
             "features": _FEATURE_STATES,
+            "capabilities": _list(_STR),
         },
         _welcome,
     ),
@@ -1745,6 +2190,7 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
         _incompatible,
     ),
     "account.assistResult": _text(TO_CLIENT, {"ok": _BOOL, "code": _STR}, lambda m: _check(_ok_code_ok(m))),
+    "account.checkoutResult": _text(TO_CLIENT, {"opened": _BOOL, "code": _STR}, _checkout_result),
     "context.snapshot": _text(
         TO_CLIENT,
         {"project": _PROJECT, "focused": _FOCUSED},
@@ -1848,7 +2294,7 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
     "host.openModel": _binary(
         TO_CLIENT,
-        # lentSkeleton: true when DCT lent the ped's skeleton to a cloth stored without one (optional).
+        # lentSkeleton: true when DCT lent the ped's skeleton to a cloth stored without one (optional, XML only).
         {"binding": _BINDING, "name": _STR, "format": _STR, "files": _MODEL_FILES, "lentSkeleton": _BOOL},
         _host_open_model,
     ),
@@ -1862,8 +2308,40 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     ),
     "item.addResult": _text(
         TO_CLIENT,
-        {"ok": _BOOL, "code": _STR, "binding": _BINDING, "findings": _FINDINGS},
+        {"ok": _BOOL, "code": _STR, "binding": _BINDING, "items": _list(_BINDING), "findings": _FINDINGS},
         _item_add_result,
+    ),
+    "garment.checkResult": _text(
+        TO_CLIENT,
+        {
+            "ok": _BOOL,
+            "code": _STR,
+            "checked": _INT32,
+            "poses": _list(
+                _obj(
+                    {
+                        "pose": _STR,
+                        "samples": _INT32,
+                        "clipped": _INT32,
+                        "maxDepthMm": _MEASURE,
+                        "regions": _list(_obj({"region": _STR, "clipped": _INT32, "maxDepthMm": _MEASURE})),
+                    }
+                )
+            ),
+            "missing": _list(_STR),
+            "findings": _FINDINGS,
+        },
+        _garment_check_result,
+    ),
+    "body.avatar.data": _binary(
+        TO_CLIENT,
+        {
+            "gender": _STR,
+            "format": _STR,
+            "poses": _list(_obj({"pose": _STR, "animation": _STR, "seconds": _MEASURE})),
+            "missing": _list(_STR),
+        },
+        _body_avatar_data,
     ),
     "ped.templates.list": _text(
         TO_CLIENT,

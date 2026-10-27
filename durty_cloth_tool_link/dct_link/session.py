@@ -42,7 +42,9 @@ import socket
 import struct
 import threading
 import time
-from typing import Any, Callable, Dict, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union
+from typing import (
+    Any, Callable, Dict, FrozenSet, Iterable, List, Mapping, NamedTuple, Optional, Sequence, Set, Tuple, Union,
+)
 
 from . import ped as ped_module
 from . import protocol
@@ -61,11 +63,20 @@ __all__ = [
     "HostOpenModel",
     "Thumbnail",
     "ThumbnailRefusal",
+    "CheckoutResult",
     "ModelFile",
     "SkeletonTemplate",
     "SkeletonTemplateRefusal",
     "ItemAddRequest",
     "ItemAddResult",
+    "GarmentVariation",
+    "GarmentCheckResult",
+    "PoseClearance",
+    "RegionClearance",
+    "BodyAvatar",
+    "BodyAvatarRefusal",
+    "AvatarPose",
+    "GLB_FILE_NAME",
     "SignInPrompt",
     "DiscoveredEndpoint",
     "ASSERTION_AUDIENCE",
@@ -128,8 +139,10 @@ def _assertion_claims(assertion: str) -> Dict[str, Any]:
 class LinkError(Exception):
     """A request or session failure. ``code`` is a protocol error code or one of the local codes
     ``disconnected``, ``timeout``, ``superseded``, ``cancelled``, ``closed``, ``assertion-invalid``,
-    ``untrusted-endpoint``, ``signed-out``, ``pixel-source-failed``, ``callback-failed`` and
-    ``internal-error``."""
+    ``untrusted-endpoint``, ``signed-out``, ``pixel-source-failed``, ``callback-failed``, ``not-offered`` (a request
+    the connected DCT did not name in ``welcome.capabilities``; nothing was sent) and ``internal-error``.
+    ``dct-too-old`` is also raised here, without anything being sent, for a request the DCT that welcomed the
+    connection does not know yet (see :attr:`LinkSession.dct_minor`)."""
 
     def __init__(self, code: str, message: str = "") -> None:
         super().__init__(f"{code}: {message}" if message else code)
@@ -481,7 +494,7 @@ class Request:
 #: the session queues the rest.
 SERVICE_TYPES = frozenset(
     {"texture.read", "texture.validate", "uv.layout", "model.glb", "body.glb", "model.push", "item.thumbnail",
-     "skeleton.template", "ped.templates", "ped.skeleton"}
+     "skeleton.template", "ped.templates", "ped.skeleton", "garment.check", "body.avatar"}
 )
 MAX_SERVICE_IN_FLIGHT = 2
 
@@ -503,11 +516,17 @@ _RESPONSES: Dict[str, Tuple[str, ...]] = {
     "item.thumbnail": ("item.thumbnail.data",),
     "skeleton.template": ("skeleton.template.data",),
     "item.add": ("item.addResult",),
+    "item.update": ("item.addResult",),
+    "garment.check": ("garment.checkResult",),
+    "body.avatar": ("body.avatar.data",),
     "ped.templates": ("ped.templates.list",),
     "ped.skeleton": ("ped.skeleton.data",),
     "ped.rig": ("ped.rig.result",),
     "ped.add": ("ped.addResult",),
+    "account.checkout": ("account.checkoutResult",),
 }
+#: Requests a DCT answers only when its ``welcome.capabilities`` names them; to any other DCT they are not sent.
+_REQUIRED_CAPABILITIES: Dict[str, str] = {"account.checkout": protocol.CAPABILITY_CHECKOUT}
 
 
 class _ThreadTask:
@@ -884,9 +903,13 @@ class HostOpenTexture(HostRequest):
 
 
 class HostOpenModel(HostRequest):
-    """``host.openModel``: a cloth's model to open. ``files`` lists ``(name, data)`` in DCT's
-    order: one ``*.ydd.xml`` and its ``*.dds`` textures, among them the variation's diffuse; each ``data`` is a view
-    of the payload. ``format`` is ``ydd-xml``."""
+    """``host.openModel``: a cloth's model to open. ``files`` lists ``(name, data)`` in DCT's order; each ``data``
+    is a view of the payload. ``format`` says what they are: ``ydd-xml`` is one ``*.ydd.xml`` and its ``*.dds``
+    textures, among them the variation's diffuse (:attr:`lent_skeleton` says DCT lent the ped's skeleton: push the
+    model back without it); ``glb`` is one ``*.glb``, the cloth as a plain model with the selected variation's
+    textures and no skeleton (:attr:`glb`), which DCT sends only to a plugin of kind ``marvelous`` on a connection of
+    minor 2 or later. What the plugin sends back for a plain model is :meth:`LinkSession.update_item` with
+    :attr:`binding`."""
 
     def __init__(self, session: "LinkSession", header: Dict[str, Any], payload: memoryview, epoch: int) -> None:
         super().__init__(session, header, payload, epoch)
@@ -896,6 +919,16 @@ class HostOpenModel(HostRequest):
         for entry in header["files"]:  # the codec checked the names and that the lengths add up
             self.files.append((entry["name"], payload[offset : offset + entry["length"]]))
             offset += entry["length"]
+
+    @property
+    def glb(self) -> Optional[memoryview]:
+        """The model of a ``glb`` request (a view of the payload); ``None`` for another format."""
+        return self.files[0][1] if self.format == protocol.MODEL_GLB and self.files else None
+
+    @property
+    def lent_skeleton(self) -> bool:
+        """DCT added the skeleton of the ped the cloth is drawn on (``ydd-xml`` only)."""
+        return self.header.get("lentSkeleton") is True
 
 
 class Thumbnail(NamedTuple):
@@ -942,6 +975,36 @@ def _same_binding(a: Dict[str, str], b: Dict[str, str]) -> bool:
 
 def _is_binding(value: Any) -> bool:
     return isinstance(value, dict) and protocol.is_guid(value.get("clothId")) and protocol.is_guid(value.get("textureId"))
+
+
+# --------------------------------------------------------------------------------------------------
+# DCT's checkout ("See plans")
+# --------------------------------------------------------------------------------------------------
+
+#: How long :meth:`LinkSession.open_checkout` waits for DCT's answer by default; without one by then, the plugin
+#: opens the plans in the browser.
+CHECKOUT_ANSWER_SECONDS = 5.0
+
+
+class CheckoutResult(NamedTuple):
+    """DCT's answer to :meth:`LinkSession.open_checkout` (``account.checkoutResult``).
+
+    ``opened`` true: DCT shows its checkout now and brought its window forward. ``opened`` false: ``code`` says why,
+    ``rate-limited`` when this connection asked less than :data:`protocol.CHECKOUT_SECONDS` ago (DCT shows it
+    already) or ``busy`` when DCT cannot show it now. :attr:`shown` tells the two outcomes apart."""
+
+    opened: bool
+    code: Optional[str] = None
+
+    @property
+    def shown(self) -> bool:
+        """True when DCT shows its checkout (opened now, or already open: ``rate-limited``). False: the plugin opens
+        the plans in the browser instead."""
+        return self.opened or self.code == "rate-limited"
+
+
+def _checkout_answer(answer: Any) -> CheckoutResult:
+    return CheckoutResult(bool(answer["opened"]), answer.get("code"))
 
 
 # --------------------------------------------------------------------------------------------------
@@ -994,19 +1057,35 @@ def _skeleton_answer(gender: str) -> Callable[[Any], Union[SkeletonTemplate, Ske
 
 
 class ItemAddResult(NamedTuple):
-    """DCT's answer to :meth:`LinkSession.add_item` (``item.addResult``, or an ``error`` that answered the add).
+    """DCT's answer to :meth:`LinkSession.add_item`, :meth:`LinkSession.add_garment` and
+    :meth:`LinkSession.update_item` (``item.addResult``, or an ``error`` that answered the request).
 
-    ``ok`` true: the cloth was added. ``binding`` names it and its first variation (``clothId``, ``textureId``), and
-    this connection may now read it and push and save its model. ``ok`` false: ``code`` says why, for example
-    ``request-denied`` (the user chose Cancel, or the add was withdrawn), ``item-limit`` (the project cannot take more
-    clothes), ``model-rejected`` (the model or a picture did not convert), ``busy``, ``rate-limited``, ``no-project``,
-    ``item-refused`` or ``save-failed``. ``findings`` are DCT's checks of the model and the variations (each a
-    ``code`` and a ``severity``), also when the add failed; empty when DCT answered with an error."""
+    ``ok`` true: the cloth was added (or updated). ``binding`` names it and its first variation (``clothId``,
+    ``textureId``), and this connection may now read it and push and save its model. ``ok`` false: ``code`` says why,
+    for example ``request-denied`` (the user chose Cancel, or the add was withdrawn), ``item-limit`` (the project
+    cannot take more clothes), ``model-rejected`` (the model or a picture did not convert), ``needs-ultimate`` (a plain
+    model, which DCT turns into a cloth, is part of Ultimate), ``busy``, ``rate-limited``, ``no-project``,
+    ``item-refused``, ``binding-not-found`` (an update of a cloth that is not in the open project) or ``save-failed``.
+    ``findings`` are DCT's checks of the model and the variations (each a ``code`` and a ``severity``), also when the
+    add failed; empty when DCT answered with an error.
+
+    ``items`` lists every cloth the add created, each with its first variation: an add of a plain model can become
+    several cloths, and ``binding`` is then the one the user reviewed. It is empty when DCT named none (an add of one
+    cloth, or a DCT from before minor 2); :attr:`cloths` covers both."""
 
     ok: bool
     code: Optional[str]
     binding: Optional[Dict[str, str]]
     findings: List[Dict[str, str]]
+    items: Tuple[Dict[str, str], ...] = ()
+
+    @property
+    def cloths(self) -> Tuple[Dict[str, str], ...]:
+        """Every cloth the request created or updated, each with its first variation: ``items``, or ``binding``
+        alone when DCT listed none; empty when the request failed."""
+        if self.items:
+            return self.items
+        return (self.binding,) if self.binding is not None else ()
 
 
 def _item_add_answer(answer: Any) -> ItemAddResult:
@@ -1018,7 +1097,148 @@ def _item_add_answer(answer: Any) -> ItemAddResult:
         answer.get("code"),
         None if binding is None else {"clothId": binding["clothId"], "textureId": binding["textureId"]},
         [{"code": finding["code"], "severity": finding["severity"]} for finding in answer["findings"]],
+        tuple({"clothId": item["clothId"], "textureId": item["textureId"]} for item in answer.get("items") or ()),
     )
+
+
+# ---- clothing from a plain model (minor 2): variations, the pose check and the freemode body with poses ----
+
+#: The file name a GLB travels under when the caller gives none (the wire needs a bare ``*.glb`` name).
+GLB_FILE_NAME = "model.glb"
+
+
+class GarmentVariation(NamedTuple):
+    """One colour variation of a plain model (:meth:`LinkSession.add_garment`, :meth:`LinkSession.update_item`), in
+    the order the cloth gets its variations. ``name`` is the name the user sees. Its look comes from exactly one of
+    ``variant`` (the index of one of the GLB's ``KHR_materials_variants`` variants) and ``images`` (``(material
+    index, file name)`` pairs: pictures among the ``pngs`` that replace the base colour of those glTF materials, no
+    material twice)."""
+
+    name: str
+    variant: Optional[int] = None
+    images: Optional[Sequence[Tuple[int, str]]] = None
+
+
+class RegionClearance(NamedTuple):
+    """One body region of a pose in a :class:`GarmentCheckResult`: how many of the cloth's vertices the body came
+    through there and how far at the worst place (millimetres). ``region`` is one of :data:`protocol.BODY_REGIONS`."""
+
+    region: str
+    clipped: int
+    max_depth_mm: float
+
+
+class PoseClearance(NamedTuple):
+    """One pose of a :class:`GarmentCheckResult`: ``samples`` moments of the pose DCT looked at, ``clipped`` vertices
+    of the cloth the body came through that did not come through at rest, ``max_depth_mm`` how far at the worst place,
+    and up to six ``regions``, worst first. A pose without clipping has 0, 0.0 and no regions."""
+
+    pose: str
+    samples: int
+    clipped: int
+    max_depth_mm: float
+    regions: Tuple[RegionClearance, ...] = ()
+
+
+class GarmentCheckResult(NamedTuple):
+    """DCT's answer to :meth:`LinkSession.check_garment` (``garment.checkResult``, or an ``error`` that answered the
+    check). ``ok`` true: ``poses`` holds one :class:`PoseClearance` per checked pose, ``checked`` says how many of the
+    cloth's vertices DCT could check against the body, and ``missing`` names the requested poses this game
+    installation does not have (they are not in ``poses``). With ``checked`` 0 the result says nothing about clipping
+    (:attr:`nothing_checked`): the model does not lie on the body where it was sent, or lies inside the body already
+    at rest. Tell the user that instead of showing a clean result, and judge the size of a result against ``checked``,
+    not against the cloth's vertex count. ``ok`` false: ``code`` says why (``model-rejected`` with the import
+    ``findings``, ``game-required`` without the game files or when none of the asked poses could be looked at,
+    ``busy``, ``needs-ultimate``, ``item-refused`` for a slot or model DCT cannot check, ``rate-limited`` for a check
+    asked within three seconds of the last one ...), ``poses`` and ``missing`` are empty and ``checked`` is 0.
+    ``findings`` are DCT's checks of the model (each a ``code`` and a ``severity``). DCT measures no deeper than 30
+    mm: a ``max_depth_mm`` of 30 or more means "30 mm or more"."""
+
+    ok: bool
+    code: Optional[str]
+    poses: Tuple[PoseClearance, ...]
+    findings: List[Dict[str, str]]
+    checked: int = 0
+    missing: Tuple[str, ...] = ()
+
+    @property
+    def nothing_checked(self) -> bool:
+        """Whether the check ran but could compare no vertex with the body: no statement about clipping."""
+        return self.ok and self.checked == 0
+
+    @property
+    def worst(self) -> Optional[PoseClearance]:
+        """The pose with the deepest clipping; ``None`` when no pose clips (or the check failed)."""
+        clipping = [pose for pose in self.poses if pose.clipped > 0]
+        return max(clipping, key=lambda pose: (pose.max_depth_mm, pose.clipped)) if clipping else None
+
+
+def _garment_check_answer(answer: Any) -> GarmentCheckResult:
+    if isinstance(answer, GarmentCheckResult):
+        return answer
+    poses = tuple(
+        PoseClearance(
+            pose["pose"], pose["samples"], pose["clipped"], float(pose["maxDepthMm"]),
+            tuple(RegionClearance(region["region"], region["clipped"], float(region["maxDepthMm"]))
+                  for region in pose["regions"]),
+        )
+        for pose in answer.get("poses") or ()
+    )
+    findings = [{"code": finding["code"], "severity": finding["severity"]} for finding in answer["findings"]]
+    return GarmentCheckResult(
+        bool(answer["ok"]), answer.get("code"), poses, findings,
+        int(answer.get("checked") or 0), tuple(answer.get("missing") or ()),
+    )
+
+
+class AvatarPose(NamedTuple):
+    """One pose of a :class:`BodyAvatar`: ``pose`` (one of :data:`protocol.AVATAR_POSES`), the name of its
+    ``animation`` in the GLB and its length in ``seconds``."""
+
+    pose: str
+    animation: str
+    seconds: float
+
+
+class BodyAvatar(NamedTuple):
+    """The freemode body of one gender with poses (``body.avatar.data``): ``glb`` is a skinned GLB (the freemode
+    skeleton with its 128 joints named as the game names them, the body's own weights and base textures, one
+    animation per pose; metres, Y up, facing +Z, in the freemode ped's own frame: the origin lies between the hips,
+    so the soles are about one metre below it, and its rest pose is the freemode rest pose). A host that wants the
+    body on its ground moves it up and moves what it sends back down by the same amount. ``poses`` lists the poses in
+    the order of their animations in the GLB (each with its length in seconds, at most
+    :data:`protocol.MAX_AVATAR_SECONDS`); ``missing`` names the requested poses DCT could not build from this game
+    installation. DCT builds it from the user's own game files: keep it on this computer and send it nowhere."""
+
+    gender: str
+    glb: bytes
+    poses: List[AvatarPose]
+    missing: List[str]
+    ok: bool = True
+
+
+class BodyAvatarRefusal(NamedTuple):
+    """Why :meth:`LinkSession.request_body_avatar` got no body: DCT's error code (``game-required`` without the game
+    files, ``busy`` while DCT still reads them, ``needs-ultimate`` ...)."""
+
+    code: str
+    ok: bool = False
+
+
+def _body_avatar_answer(gender: str) -> Callable[[Any], Union[BodyAvatar, BodyAvatarRefusal]]:
+    """Turns DCT's answer to one ``body.avatar`` into its result. A body of the other gender does not answer the
+    request: ``protocol-violation``."""
+
+    def result(answer: Any) -> Union[BodyAvatar, BodyAvatarRefusal]:
+        if isinstance(answer, BodyAvatarRefusal):
+            return answer
+        header = answer.header
+        if header["gender"] != gender:
+            raise LinkError("protocol-violation", "DCT answered body.avatar with the body of another gender")
+        poses = [AvatarPose(pose["pose"], pose["animation"], float(pose["seconds"])) for pose in header["poses"]]
+        return BodyAvatar(header["gender"], bytes(answer.payload), poses, list(header.get("missing") or []))
+
+    return result
 
 
 # ---- custom peds ----
@@ -1190,6 +1410,9 @@ _REFUSALS: Dict[str, Callable[[str], Any]] = {
     "item.thumbnail": ThumbnailRefusal,
     "skeleton.template": SkeletonTemplateRefusal,
     "item.add": lambda code: ItemAddResult(False, code, None, []),
+    "item.update": lambda code: ItemAddResult(False, code, None, []),
+    "garment.check": lambda code: GarmentCheckResult(False, code, (), []),
+    "body.avatar": BodyAvatarRefusal,
     "ped.templates": PedRefusal,
     "ped.skeleton": PedRefusal,
     "ped.rig": lambda code: PedRigRefusal(code, []),
@@ -1201,7 +1424,8 @@ _ADD_CANCEL_GRACE_SECONDS = 10.0
 
 
 class WithdrawableRequest(Request):
-    """A request DCT may work on, or ask its user about, for a long time: ``item.add``, ``ped.rig`` and ``ped.add``.
+    """A request DCT may work on, or ask its user about, for a long time: ``item.add``, ``item.update``, ``ped.rig``
+    and ``ped.add``.
     It resolves with DCT's answer, whatever it says, and fails with :class:`LinkError` only when DCT gave no answer:
     ``disconnected``, or ``cancelled`` / ``timeout`` when a withdrawn request got no answer in time.
 
@@ -1238,8 +1462,9 @@ class WithdrawableRequest(Request):
 
 
 class ItemAddRequest(WithdrawableRequest):
-    """A pending ``item.add`` (:meth:`LinkSession.add_item`). Resolves with an :class:`ItemAddResult`, whatever DCT
-    decided; :meth:`cancel` sends ``item.addCancel``."""
+    """A pending ``item.add`` (:meth:`LinkSession.add_item`, :meth:`LinkSession.add_garment`) or ``item.update``
+    (:meth:`LinkSession.update_item`). Resolves with an :class:`ItemAddResult`, whatever DCT decided; :meth:`cancel`
+    sends ``item.addCancel``."""
 
     cancel_type = "item.addCancel"
 
@@ -1276,11 +1501,9 @@ def _pairs(values: Any, what: str, shape: str) -> List[Tuple[Any, Any]]:
     return [(item[0], item[1]) for item in items]
 
 
-def _prepare_item(
-    drawable_type: Any, gender: Any, skin: Any, name: Any, variations: Any, files: Any
-) -> Tuple[Dict[str, Any], List[Tuple[str, memoryview]], int]:
-    """Checks an ``item.add`` with the codec's rules before anything is sent. Returns its header (without an id), the
-    files as ``(name, view)`` and the payload size; raises ``ValueError`` with the rule that failed."""
+def _item_head(drawable_type: Any, gender: Any, skin: Any, name: Any) -> Dict[str, Any]:
+    """The fields that say where a new cloth goes and what it is called; raises ``ValueError`` with the rule that
+    failed."""
     if not isinstance(drawable_type, str) or drawable_type not in protocol.DRAWABLE_TYPES:
         raise ValueError("drawable_type is one of protocol.DRAWABLE_TYPES (the game's tokens, such as jbib or p_head)")
     if not isinstance(gender, str) or gender not in protocol.GENDERS:
@@ -1291,6 +1514,11 @@ def _prepare_item(
         raise ValueError("only a component shows skin; a prop (p_...) takes skin=False")
     if not protocol.is_text(name):
         raise ValueError("the name is 1 to 128 characters of display text without control characters")
+    return {"drawableType": drawable_type, "gender": gender, "skin": skin, "name": name}
+
+
+def _file_views(files: Any) -> List[Tuple[str, memoryview]]:
+    """``(name, data)`` pairs as ``(name, view)``, without a copy; raises ``ValueError`` for data that is not bytes."""
     prepared: List[Tuple[str, memoryview]] = []
     for file_name, data in _pairs(files, "files", "(name, data)"):
         try:
@@ -1298,6 +1526,27 @@ def _prepare_item(
         except TypeError:
             raise ValueError(f"the data of {file_name!r} is not bytes") from None
         prepared.append((file_name, view))
+    return prepared
+
+
+def _codec_check(header: Dict[str, Any], size: int) -> None:
+    """Runs the whole codec over a binary request before anything is sent, with the longest id the session could
+    give it (the header has a size limit); raises ``ValueError`` for what DCT would refuse."""
+    try:
+        protocol.encode_binary_header(dict(header, id="x" * protocol.MAX_ID_LENGTH), size)
+    except ProtocolError as exc:
+        if exc.code == protocol.MESSAGE_TOO_LARGE:
+            raise ValueError("the file and variation lists do not fit one binary header (16 KiB)") from None
+        raise ValueError(f"DCT would refuse this {header.get('type')} ({exc.code})") from None
+
+
+def _prepare_item(
+    drawable_type: Any, gender: Any, skin: Any, name: Any, variations: Any, files: Any
+) -> Tuple[Dict[str, Any], List[Tuple[str, memoryview]], int]:
+    """Checks an ``item.add`` with the codec's rules before anything is sent. Returns its header (without an id), the
+    files as ``(name, view)`` and the payload size; raises ``ValueError`` with the rule that failed."""
+    head = _item_head(drawable_type, gender, skin, name)
+    prepared = _file_views(files)
     entries = [{"name": file_name, "length": view.nbytes} for file_name, view in prepared]
     chosen = [{"file": file, "name": title} for file, title in _pairs(variations, "variations", "(file, name)")]
     reason = protocol.item_files_reason(entries, chosen)
@@ -1306,16 +1555,116 @@ def _prepare_item(
     size = sum(entry["length"] for entry in entries)
     if size > protocol.MAX_BINARY_PAYLOAD_BYTES:
         raise ValueError("the item is larger than one binary frame allows (64 MiB)")
-    header: Dict[str, Any] = {"type": "item.add", "format": protocol.MODEL_YDD_XML, "drawableType": drawable_type,
-                              "gender": gender, "skin": skin, "name": name, "variations": chosen, "files": entries}
-    try:
-        # The whole codec, with the longest id the session could give it (the header has a size limit).
-        protocol.encode_binary_header(dict(header, id="x" * protocol.MAX_ID_LENGTH), size)
-    except ProtocolError as exc:
-        if exc.code == protocol.MESSAGE_TOO_LARGE:
-            raise ValueError("the file and variation lists do not fit one binary header (16 KiB)") from None
-        raise ValueError(f"DCT would refuse this item.add ({exc.code})") from None
+    header: Dict[str, Any] = dict(head, type="item.add", format=protocol.MODEL_YDD_XML, variations=chosen,
+                                  files=entries)
+    _codec_check(header, size)
     return header, prepared, size
+
+
+def _wire_images(title: Any, images: Any) -> List[Dict[str, Any]]:
+    """The pictures of one variation as the wire carries them, from ``(material, file)`` pairs, a mapping of material
+    index to file name, or entries already in the wire's shape."""
+    if isinstance(images, Mapping):
+        pairs = list(images.items())
+    else:
+        try:
+            pairs = [(item.get("material"), item.get("file")) if isinstance(item, Mapping) else tuple(item)
+                     for item in images]
+        except TypeError:
+            raise ValueError(f"the images of the variation {title!r} are (material index, file name) pairs") from None
+    wire = []
+    for pair in pairs:
+        if len(pair) != 2 or type(pair[0]) is not int or not isinstance(pair[1], str):
+            raise ValueError(f"the images of the variation {title!r} are (material index, file name) pairs")
+        wire.append({"material": pair[0], "file": pair[1]})
+    return wire
+
+
+def _wire_variations(variations: Any) -> Optional[List[Dict[str, Any]]]:
+    """The variations of a plain model as the wire carries them. Each is a :class:`GarmentVariation`, a ``(name,
+    variant index)`` or ``(name, images)`` pair, or a mapping in the wire's shape; ``None`` stays ``None`` (DCT then
+    offers what the GLB declares)."""
+    if variations is None:
+        return None
+    try:
+        entries = list(variations)
+    except TypeError:
+        raise ValueError("variations is a sequence of GarmentVariation entries") from None
+    wire: List[Dict[str, Any]] = []
+    for entry in entries:
+        if isinstance(entry, Mapping):
+            if entry.get("file") is not None:
+                raise ValueError("a variation of a GLB names a variant or images, never a file")
+            title, variant, images = entry.get("name"), entry.get("variant"), entry.get("images")
+        elif isinstance(entry, (tuple, list)) and len(entry) == 3:  # a GarmentVariation
+            title, variant, images = entry
+        elif isinstance(entry, (tuple, list)) and len(entry) == 2:
+            title, look = entry
+            variant, images = (look, None) if type(look) is int else (None, look)
+        else:
+            raise ValueError("each variation is a GarmentVariation, or a (name, variant index) or (name, images) pair")
+        if (variant is None) == (images is None):
+            raise ValueError(f"the variation {title!r} names exactly one of a variant and images")
+        item: Dict[str, Any] = {"name": title}
+        if variant is not None:
+            if type(variant) is not int:
+                raise ValueError(f"the variant of the variation {title!r} is an index (an int)")
+            item["variant"] = variant
+        else:
+            item["images"] = _wire_images(title, images)
+        wire.append(item)
+    return wire
+
+
+def _prepare_garment(files: Any, placement: Any, variations: Any) -> Tuple[Dict[str, Any], List[memoryview], int]:
+    """Checks the files, the placement and the variations of a plain model (an ``item.add`` with ``glb``, an
+    ``item.update``) with the codec's rules. Returns those header fields, the file views and the payload size; raises
+    ``ValueError`` with the rule that failed."""
+    if placement is not None and (not isinstance(placement, str) or placement not in protocol.GARMENT_PLACEMENTS):
+        raise ValueError("placement is 'free', 'freemodeRest' or None")
+    prepared = _file_views(files)
+    entries = [{"name": file_name, "length": view.nbytes} for file_name, view in prepared]
+    chosen = _wire_variations(variations)
+    reason = protocol.garment_files_reason(entries, chosen)
+    if reason is not None:
+        raise ValueError(reason)
+    size = sum(entry["length"] for entry in entries)
+    if size > protocol.MAX_BINARY_PAYLOAD_BYTES:
+        raise ValueError("the model and its pictures are larger than one binary frame allows (64 MiB)")
+    fields: Dict[str, Any] = {"format": protocol.MODEL_GLB, "files": entries}
+    if placement is not None:
+        fields["placement"] = placement
+    if chosen is not None:
+        fields["variations"] = chosen
+    return fields, [view for _, view in prepared], size
+
+
+def _garment_files(glb: Any, pngs: Any, glb_name: Any) -> List[Tuple[Any, Any]]:
+    """The files of a plain model in payload order: the GLB, then its pictures (``(name, data)`` pairs, or a mapping
+    of name to data)."""
+    pictures = list(pngs.items()) if isinstance(pngs, Mapping) else _pairs(pngs or (), "pngs", "(name, data)")
+    return [(glb_name, glb)] + pictures
+
+
+def _check_poses(poses: Any, limit: int) -> Optional[List[str]]:
+    """The poses of a pose check or an avatar as a list (``None`` stays ``None``: DCT's default set); raises
+    ``ValueError`` unless they are 1 to ``limit`` different :data:`protocol.AVATAR_POSES`."""
+    if poses is None:
+        return None
+    if isinstance(poses, str):
+        raise ValueError("poses is a sequence of pose names, not one name")
+    try:
+        chosen = list(poses)
+    except TypeError:
+        raise ValueError("poses is a sequence of pose names") from None
+    if not 1 <= len(chosen) <= limit:
+        raise ValueError(f"poses names 1 to {limit} poses (None asks for DCT's default set)")
+    for pose in chosen:
+        if not isinstance(pose, str) or pose not in protocol.AVATAR_POSES:
+            raise ValueError(f"{pose!r} is not one of protocol.AVATAR_POSES")
+    if len(set(chosen)) != len(chosen):
+        raise ValueError("poses names no pose twice")
+    return chosen
 
 
 # --------------------------------------------------------------------------------------------------
@@ -1460,6 +1809,8 @@ class LinkSession:
         self.state = IDLE
         self.welcome: Optional[Dict[str, Any]] = None
         self.features: Dict[str, str] = {}
+        #: What the connected DCT named in ``welcome.capabilities`` (empty without a ready connection).
+        self.capabilities: FrozenSet[str] = frozenset()
         self.account_name: Optional[str] = None
         self.endpoint_port: Optional[int] = None
         self.last_error: Optional[LinkError] = None
@@ -1487,7 +1838,9 @@ class LinkSession:
         self._model_lease: Optional[str] = None
         self._push_request: Optional[Request] = None
         self._push_waiting: Optional[Tuple[ModelBundle, Optional[Dict[str, str]], Request]] = None
-        self._service_queue: "collections.deque[Tuple[Request, Dict[str, Any]]]" = collections.deque()
+        # Service requests waiting for a slot: a text message, or the send of a binary one (garment.check).
+        self._service_queue: "collections.deque[Tuple[Request, Union[Dict[str, Any], Callable[[], Any]]]]" = (
+            collections.deque())
         self._service_in_flight: Set[str] = set()
         self._close_hint: Optional[str] = None
         self._discovered: Optional[DiscoveredEndpoint] = None  # the discovery file read for this connection
@@ -1577,6 +1930,13 @@ class LinkSession:
         read from any thread."""
         with self._lock:
             return dict(self.features)
+
+    def offers(self, capability: str) -> bool:
+        """Whether the link is ready and the connected DCT named ``capability`` in ``welcome.capabilities`` (for
+        example :data:`protocol.CAPABILITY_CHECKOUT`). False while not ready and for a DCT that names none. Safe to
+        call from any thread."""
+        with self._lock:
+            return self.state == READY and capability in self.capabilities
 
     @property
     def endpoint_source(self) -> Optional[str]:
@@ -1907,6 +2267,7 @@ class LinkSession:
         self._busy_auths = 0
         was_connected = self.state in _HANDSHAKE_STATES + (READY,)
         self.welcome = None
+        self.capabilities = frozenset()
         if was_connected:
             self._emit("disconnected", code, reason)
 
@@ -2295,6 +2656,8 @@ class LinkSession:
         self.welcome = message
         # Replaced as a whole, never changed in place: another thread reading it sees the old or the new states.
         self.features = {f["id"]: f["state"] for f in message["features"]}
+        # Every name is kept, also one this package does not know (offers() is only asked about known ones).
+        self.capabilities = frozenset(message.get("capabilities") or ())
         self.account_name = message["account"]["userName"]
         self._attempt = 0
         self._set_state(READY)
@@ -2308,6 +2671,20 @@ class LinkSession:
             # handshake. Here it proves nothing (a program squatting on a link port could say it to stop the plugin
             # for good): leave this endpoint like any other unproven refusal, try the others, keep the session.
             self._untrusted_endpoint(LinkError("untrusted-endpoint", "an endpoint sent disconnected before welcome"))
+            return
+        if (
+            answered == "hello"
+            and code == protocol.INVALID_MESSAGE
+            and protocol.PLUGIN_KIND_MINORS.get(self.plugin.kind, 0) > 0
+        ):
+            # This library checked the hello before it sent it, and its kind came with a later minor (marvelous with
+            # minor 2): a DCT of this major that cannot read it is from before that minor, so it is too old for this
+            # plugin. Handled like DCT's own incompatible answer, so the host offers to update Durty Cloth Tool. A
+            # plugin of a kind every DCT of this major knows gets no such reading: its refused hello is a fault of
+            # its own, and the event names the real code.
+            major = protocol.PROTOCOL_MAJOR
+            self._on_handshake_message("incompatible", {"type": "incompatible", "code": "dct-too-old",
+                                                        "dct": {"protocol": {"min": major, "max": major}}})
             return
         if answered == "account.assist":
             # DCT could not prompt now (busy, rate-limited). The device sign-in goes on: DCT is
@@ -2605,11 +2982,14 @@ class LinkSession:
                 if request.done:
                     continue  # it timed out while it waited; it never reached DCT
                 try:
-                    self._send(message)
+                    if callable(message):
+                        message()  # a binary request: its header was encoded when it was queued
+                    else:
+                        self._send(message)
                     self._service_in_flight.add(request.id)
-                except LinkError as exc:
+                except (LinkError, ProtocolError, WebSocketError) as exc:
                     self._pending.pop(request.id, None)
-                    self._finish_request(request, error=exc)
+                    self._finish_request(request, error=_link_error(exc))
             elif self._push_waiting is not None and not self._push_busy():
                 self._send_waiting_push()
             else:
@@ -2659,9 +3039,18 @@ class LinkSession:
         *,
         timeout: Optional[float] = None,
         transform: Optional[Callable[[Any], Any]] = None,
+        min_minor: int = 0,
     ) -> Request:
-        """Sends a text request and returns its :class:`Request`. Needs a ready session."""
+        """Sends a text request and returns its :class:`Request`. Needs a ready session (``not-authenticated``
+        otherwise). ``min_minor`` is the protocol minor DCT must have welcomed the connection with (``dct-too-old``
+        is raised otherwise); a request the connected DCT answers only when it names a capability
+        (``account.checkout``) raises :class:`LinkError` ``not-offered`` when it does not. Nothing is sent in
+        either case."""
         with self._lock:
+            self._require_minor(min_minor)
+            needed = _REQUIRED_CAPABILITIES.get(message_type)
+            if needed is not None and self.state == READY and needed not in self.capabilities:
+                raise LinkError("not-offered", f"this Durty Cloth Tool does not answer {message_type}")
             request = self._register(message_type, timeout)
             request.transform = transform
             message = dict(fields or {}, type=message_type, id=request.id)
@@ -2733,6 +3122,31 @@ class LinkSession:
         return self.request("item.thumbnail", {"size": size, "binding": binding}, timeout=timeout,
                             transform=_thumbnail_answer(size, binding))
 
+    def open_checkout(self, tier: Optional[str] = None, feature: Optional[str] = None, reason: Optional[str] = None,
+                      timeout: Optional[float] = CHECKOUT_ANSWER_SECONDS) -> Request:
+        """``account.checkout``: asks DCT to show its own checkout (plans and payment) in front of the user, for "See
+        plans". ``tier`` is the plan the plugin suggests (:data:`protocol.CHECKOUT_TIERS`: ``ultimate`` for DCT's
+        Ultimate features, ``advanced`` where a larger daily allowance is the point), ``feature`` the feature id the
+        upsell is about and ``reason`` why the plugin asks (:data:`protocol.CHECKOUT_REASONS`: ``upsell``, ``quota``
+        or ``plans``). All are optional suggestions; DCT decides what its checkout offers. Another value raises
+        ``ValueError`` before anything is sent.
+
+        Needs a ready link to a DCT that names :data:`protocol.CAPABILITY_CHECKOUT` in ``welcome.capabilities``
+        (:meth:`offers`); otherwise it raises :class:`LinkError` (``not-authenticated`` while not ready, ``not-offered``
+        for a DCT without it) and sends nothing. Returns at once. The request resolves with a :class:`CheckoutResult`
+        and fails with :class:`LinkError` when no ``account.checkoutResult`` came: ``timeout`` (after ``timeout``
+        seconds, 5 by default), ``disconnected``, or DCT's ``error`` code. Whenever the result is not
+        :attr:`CheckoutResult.shown`, or the request failed, the plugin opens the plans in the browser. It takes no
+        service slot. Callable from any thread."""
+        if tier is not None and tier not in protocol.CHECKOUT_TIERS:
+            raise ValueError(f"tier is one of {', '.join(protocol.CHECKOUT_TIERS)} or None")
+        if feature is not None and not protocol.is_feature_id(feature):
+            raise ValueError("feature is a feature id such as dct.link.liveTexture, or None")
+        if reason is not None and reason not in protocol.CHECKOUT_REASONS:
+            raise ValueError(f"reason is one of {', '.join(protocol.CHECKOUT_REASONS)} or None")
+        return self.request("account.checkout", {"tier": tier, "feature": feature, "reason": reason}, timeout=timeout,
+                            transform=_checkout_answer)
+
     # ---- adding an item (Blender) --------------------------------------------------------------------
 
     def request_skeleton_template(self, gender: str, timeout: Optional[float] = 90.0) -> Request:
@@ -2753,12 +3167,19 @@ class LinkSession:
         gender: str,
         skin: bool,
         name: str,
-        variations: Sequence[Tuple[str, str]],
+        variations: Any,
         files: Sequence[Tuple[str, Union[bytes, bytearray, memoryview]]],
         timeout: Optional[float] = 900.0,
+        *,
+        fmt: str = protocol.MODEL_YDD_XML,
+        placement: Optional[str] = None,
     ) -> ItemAddRequest:
         """``item.add``: adds a new cloth to the open project. DCT shows the user what arrives and adds nothing unless
         the user chooses Add there, so the answer can take minutes.
+
+        ``fmt`` says what ``files`` holds. The default, ``ydd-xml``, is a GTA model as described below. ``glb`` is a
+        plain model that DCT turns into a cloth (minor 2, Ultimate): one ``*.glb`` and its ``*.png`` pictures, with
+        ``variations`` and ``placement`` as :meth:`add_garment` takes them, which is the simpler way to send one.
 
         ``drawable_type`` is the slot (one of :data:`protocol.DRAWABLE_TYPES`, such as ``jbib`` or ``p_head``),
         ``gender`` is ``male`` or ``female``, ``skin`` says the cloth shows skin (components only, never a ``p_``
@@ -2775,29 +3196,227 @@ class LinkSession:
         ``timeout`` / ``cancelled`` when the withdrawn add (see :meth:`ItemAddRequest.cancel`; a timeout withdraws
         it too) got no answer within 10 seconds; DCT's answer after that arrives as the ``item-add-late`` event. It
         does not take a service slot. Callable from any thread."""
-        header, files_out, size = _prepare_item(drawable_type, gender, skin, name, variations, files)
+        if fmt == protocol.MODEL_YDD_XML:
+            if placement is not None:
+                raise ValueError("placement says where a GLB stands; an XML drawable has none")
+            header, files_out, size = _prepare_item(drawable_type, gender, skin, name, variations, files)
+            return self._send_item("item.add", header, [data for _, data in files_out], size, timeout, 0)
+        if fmt != protocol.MODEL_GLB:
+            raise ValueError("fmt is 'ydd-xml' or 'glb'")
+        head = _item_head(drawable_type, gender, skin, name)
+        fields, parts, size = _prepare_garment(files, placement, variations)
+        header = dict(head, type="item.add", **fields)
+        _codec_check(header, size)
+        return self._send_item("item.add", header, parts, size, timeout, protocol.PLAIN_MODEL_MINOR)
+
+    def _send_item(self, message_type: str, header: Dict[str, Any], parts: Sequence[memoryview], size: int,
+                   timeout: Optional[float], min_minor: int) -> ItemAddRequest:
+        """Sends a checked ``item.add`` or ``item.update`` and returns its request (see :meth:`add_item`)."""
         with self._lock:
-            request = self._register("item.add", timeout, ItemAddRequest)
+            self._require_minor(min_minor)
+            request = self._register(message_type, timeout, ItemAddRequest)
             request.transform = _item_add_answer
-            header["id"] = request.id
             ws = self._ws
             try:
                 # The files are written one after another; they are never joined in memory.
-                prefix = protocol.encode_binary_header(header, size)
+                prefix = protocol.encode_binary_header(dict(header, id=request.id), size)
                 if ws is None or not ws.is_open:
                     raise LinkError("disconnected", "not connected to DCT")
-                ws.send_binary(prefix, *(data for _, data in files_out))
+                ws.send_binary(prefix, *parts)
             except (LinkError, ProtocolError, WebSocketError) as exc:
                 self._pending.pop(request.id, None)
-                if isinstance(exc, LinkError):
-                    error = exc
-                elif isinstance(exc, ProtocolError):
-                    error = LinkError(exc.code, str(exc))
-                else:
-                    error = LinkError("disconnected", str(exc))
-                self._finish_request(request, error=error)
+                self._finish_request(request, error=_link_error(exc))
         self._run_calls()
         return request  # type: ignore[return-value]
+
+    # ---- clothing from a plain model (minor 2) -------------------------------------------------------
+
+    def add_garment(
+        self,
+        drawable_type: str,
+        gender: str,
+        skin: bool,
+        name: str,
+        glb: Union[bytes, bytearray, memoryview],
+        *,
+        placement: Optional[str] = None,
+        variations: Any = None,
+        pngs: Any = None,
+        timeout: Optional[float] = 900.0,
+        glb_name: str = GLB_FILE_NAME,
+    ) -> ItemAddRequest:
+        """``item.add`` with a plain model (minor 2, ``dct.link.convertCloth``, Ultimate): DCT turns ``glb`` (glTF 2.0
+        binary with its buffers and images embedded; metres, Y up) into a GTA cloth with its own model import, shows
+        the result in that import's review and adds it when the user confirms there, so the answer can take minutes.
+
+        ``drawable_type``, ``gender``, ``skin`` and ``name`` are those of :meth:`add_item`. ``placement`` says where
+        the model stands: ``freemodeRest`` when it was made on the freemode body in its rest pose (DCT keeps it where
+        it is), ``free`` or ``None`` when DCT places it on the body as it places any imported model. A model whose
+        skin names the freemode bones, with its joints where the freemode skeleton's are, keeps its weights; any other
+        model is weighted by DCT.
+
+        Without ``variations`` DCT offers every colour variant the GLB declares (``KHR_materials_variants``), or its
+        one default look. With them (at most :data:`protocol.MAX_ITEM_VARIATIONS`, 26) each
+        :class:`GarmentVariation` is one texture variation, in order: ``GarmentVariation("Red", variant=0)`` takes a
+        variant of the GLB, ``GarmentVariation("Blue", images=[(0, "blue.png")])`` replaces the base colour of glTF
+        materials with pictures. ``pngs`` holds those pictures as ``(name, data)`` pairs (or a mapping of name to
+        data); every picture is named by an image. ``glb_name`` is the bare ``*.glb`` name the model travels under.
+        A broken rule raises ``ValueError`` before anything is sent; the data is sent as given, without a copy.
+
+        Resolves with an :class:`ItemAddResult` like :meth:`add_item`: one add can become several cloths (DCT splits
+        variations whose normal or specular maps differ, and more than 26), which ``items`` lists, and DCT grants all
+        of them to this connection. ``needs-ultimate`` answers a plan without the feature, ``model-rejected`` a model
+        DCT cannot convert (the findings ``model-unreadable``, ``model-unsupported`` and ``model-too-large`` say why).
+        :meth:`ItemAddRequest.cancel`, the timeout and ``item-add-late`` work as for :meth:`add_item`. Raises
+        :class:`LinkError` ``dct-too-old``, without sending, when the DCT that welcomed the connection is older than
+        minor 2 (:attr:`dct_minor`). Callable from any thread."""
+        return self.add_item(drawable_type, gender, skin, name, variations, _garment_files(glb, pngs, glb_name),
+                             timeout, fmt=protocol.MODEL_GLB, placement=placement)
+
+    def update_item(
+        self,
+        binding: Dict[str, str],
+        glb: Union[bytes, bytearray, memoryview],
+        *,
+        placement: Optional[str] = None,
+        variations: Any = None,
+        pngs: Any = None,
+        timeout: Optional[float] = 900.0,
+        glb_name: str = GLB_FILE_NAME,
+    ) -> ItemAddRequest:
+        """``item.update`` (minor 2, ``dct.link.convertCloth``, Ultimate): replaces the model and textures of a cloth
+        of the open project with a new plain model, after the same review as :meth:`add_garment` (which names the
+        cloth it updates). ``binding`` names the cloth (``clothId`` and ``textureId``, for example the one an add
+        returned or a ``glb`` ``open-model`` carried); ``glb``, ``placement``, ``variations``, ``pngs`` and
+        ``glb_name`` are those of :meth:`add_garment`. A broken rule raises ``ValueError`` before anything is sent.
+
+        DCT keeps the cloth's place, its texture ids in order and its shop data, appends variations the model adds
+        and records a History restore point. Resolves with an :class:`ItemAddResult` whose ``binding`` is the updated
+        cloth and its first variation: ``binding-not-found`` for a cloth that is not in the open project,
+        ``item-refused`` when the new model has fewer variations than the cloth, would become more than one cloth,
+        when the cloth carries a Texture Studio or Model Studio document, or is not freemode clothing. It shares the
+        one-at-a-time and rate rules of an add; :meth:`ItemAddRequest.cancel`, the timeout and ``item-add-late`` work
+        as for :meth:`add_item`. Raises :class:`LinkError` ``dct-too-old``, without sending, when the DCT that
+        welcomed the connection is older than minor 2 (a DCT that does not know the message would otherwise answer
+        ``unknown-message-type``). Callable from any thread."""
+        if not _is_binding(binding):
+            raise ValueError("a binding names a cloth and a texture variation by their ids (8-4-4-4-12 hex digits)")
+        fields, parts, size = _prepare_garment(_garment_files(glb, pngs, glb_name), placement, variations)
+        header = dict({"type": "item.update",
+                       "binding": {"clothId": binding["clothId"], "textureId": binding["textureId"]}}, **fields)
+        _codec_check(header, size)
+        return self._send_item("item.update", header, parts, size, timeout, protocol.PLAIN_MODEL_MINOR)
+
+    def check_garment(
+        self,
+        glb: Union[bytes, bytearray, memoryview],
+        gender: str,
+        drawable_type: str,
+        *,
+        placement: Optional[str] = None,
+        poses: Optional[Sequence[str]] = None,
+        show_in_dct: bool = False,
+        timeout: Optional[float] = float(protocol.GARMENT_CHECK_SECONDS),
+        glb_name: str = GLB_FILE_NAME,
+    ) -> Request:
+        """``garment.check`` (minor 2, ``dct.link.poseCheck``, Ultimate): asks DCT how a cloth behaves on the freemode
+        body in poses. DCT gives the model its weights as an add would, puts body and cloth through each pose and
+        reports where the body comes through the cloth that did not come through at rest. Nothing is added to the
+        project.
+
+        ``glb`` is the cloth as a plain model (as for :meth:`add_garment`), ``gender`` and ``drawable_type`` say what
+        it is worn as, ``placement`` where it stands. ``poses`` names 1 to
+        :data:`protocol.MAX_GARMENT_CHECK_POSES` different :data:`protocol.AVATAR_POSES`; without it DCT checks its
+        default set. ``show_in_dct`` also opens DCT's pose check window on the result. A broken rule raises
+        ``ValueError`` before anything is sent.
+
+        Resolves with a :class:`GarmentCheckResult`, whatever DCT decided: per pose the clipped vertices, the deepest
+        clipping and the body regions concerned, or ``ok`` false with DCT's code (``model-rejected`` with the import
+        findings, ``game-required`` without the game files, ``busy`` while another check runs, ``needs-ultimate``).
+        Fails with :class:`LinkError` when no answer came (``timeout`` after
+        :data:`protocol.GARMENT_CHECK_SECONDS`, ``disconnected``). It counts as a service request (two at a time; the
+        model is sent when its turn comes, without a copy). Raises ``dct-too-old``, without sending, when the DCT that
+        welcomed the connection is older than minor 2. Callable from any thread."""
+        if not isinstance(gender, str) or gender not in protocol.GENDERS:
+            raise ValueError("gender is 'male' or 'female'")
+        if not isinstance(drawable_type, str) or drawable_type not in protocol.DRAWABLE_TYPES:
+            raise ValueError("drawable_type is one of protocol.DRAWABLE_TYPES (the game's tokens, such as jbib or p_head)")
+        if placement is not None and (not isinstance(placement, str) or placement not in protocol.GARMENT_PLACEMENTS):
+            raise ValueError("placement is 'free', 'freemodeRest' or None")
+        if type(show_in_dct) is not bool:
+            raise ValueError("show_in_dct is True or False")
+        chosen = _check_poses(poses, protocol.MAX_GARMENT_CHECK_POSES)
+        (name, view), = _file_views([(glb_name, glb)])
+        if not 1 <= view.nbytes <= protocol.MAX_BINARY_PAYLOAD_BYTES:
+            raise ValueError("the model is empty or larger than one binary frame allows (64 MiB)")
+        header: Dict[str, Any] = {"type": "garment.check", "format": protocol.MODEL_GLB, "gender": gender,
+                                  "drawableType": drawable_type, "files": [{"name": name, "length": view.nbytes}]}
+        if placement is not None:
+            header["placement"] = placement
+        if chosen is not None:
+            header["poses"] = chosen
+        if show_in_dct:
+            header["showInDct"] = True
+        _codec_check(header, view.nbytes)
+        with self._lock:
+            self._require_minor(protocol.PLAIN_MODEL_MINOR)
+            request = self._register("garment.check", timeout)
+            request.transform = _garment_check_answer
+            prefix = protocol.encode_binary_header(dict(header, id=request.id), view.nbytes)
+
+            def send() -> None:
+                ws = self._ws
+                if ws is None or not ws.is_open:
+                    raise LinkError("disconnected", "not connected to DCT")
+                ws.send_binary(prefix, view)
+
+            self._service_queue.append((request, send))
+            self._pump_services()
+        self._run_calls()
+        return request
+
+    def request_body_avatar(
+        self,
+        gender: str,
+        *,
+        poses: Optional[Sequence[str]] = None,
+        fps: Optional[int] = None,
+        transition: Optional[bool] = None,
+        timeout: Optional[float] = float(protocol.BODY_AVATAR_SECONDS),
+    ) -> Request:
+        """``body.avatar`` (minor 2, ``dct.link.poseCheck``, Ultimate): the freemode body of ``gender`` as a skinned
+        GLB with one animation per pose, which DCT builds from the user's own game files. It is never hosted: keep it
+        on the user's computer and send it nowhere.
+
+        ``poses`` names 1 to :data:`protocol.MAX_AVATAR_POSES` different :data:`protocol.AVATAR_POSES`; without it DCT
+        sends its default set. ``fps`` (:data:`protocol.MIN_AVATAR_FPS` to :data:`protocol.MAX_AVATAR_FPS`, 30
+        without it) is the sampling rate of the animations. With ``transition`` (true without it) every animation
+        starts in the rest pose and blends into its pose over the first second, so a cloth can be draped at rest
+        first; with ``False`` it starts in the pose. A broken rule raises ``ValueError``.
+
+        Resolves with a :class:`BodyAvatar` (the GLB's bytes, its poses with their animation names and lengths, and
+        the requested poses DCT could not build), or with a :class:`BodyAvatarRefusal` when DCT refused (its error
+        code: ``game-required`` without the game files, ``busy`` when it still reads them after a minute,
+        ``needs-ultimate``). Fails with :class:`LinkError` when the request itself failed (``timeout`` after
+        :data:`protocol.BODY_AVATAR_SECONDS`, ``disconnected``), and with ``protocol-violation`` when DCT sends the
+        body of the other gender. It counts as a service request (two at a time). Raises ``dct-too-old``, without
+        sending, when the DCT that welcomed the connection is older than minor 2. Callable from any thread."""
+        if not isinstance(gender, str) or gender not in protocol.GENDERS:
+            raise ValueError("gender is 'male' or 'female'")
+        fields: Dict[str, Any] = {"gender": gender}
+        chosen = _check_poses(poses, protocol.MAX_AVATAR_POSES)
+        if chosen is not None:
+            fields["poses"] = chosen
+        if fps is not None:
+            if type(fps) is not int or not protocol.MIN_AVATAR_FPS <= fps <= protocol.MAX_AVATAR_FPS:
+                raise ValueError(f"fps is {protocol.MIN_AVATAR_FPS} to {protocol.MAX_AVATAR_FPS} (None: 30)")
+            fields["fps"] = fps
+        if transition is not None:
+            if type(transition) is not bool:
+                raise ValueError("transition is True, False or None")
+            fields["transition"] = transition
+        return self.request("body.avatar", fields, timeout=timeout, transform=_body_avatar_answer(gender),
+                            min_minor=protocol.PLAIN_MODEL_MINOR)
 
     def _withdraw(self, request: WithdrawableRequest, reason: str) -> bool:
         """Sends the cancel of a request that still waits, once, and gives DCT a short grace to answer it (its answer
@@ -3060,11 +3679,35 @@ class LinkSession:
             surface.last_error = None
         return None
 
-    def _dct_minor(self) -> int:
-        """The protocol minor DCT welcomed this connection with (0 before ``welcome``)."""
+    @property
+    def dct_minor(self) -> int:
+        """The protocol minor of this connection: what DCT said in ``welcome``, the smaller of its own minor and
+        this library's (0 before ``welcome`` and after the connection ended). Minor 1 has ``live.saveProgress``;
+        minor 2 (:data:`protocol.PLAIN_MODEL_MINOR`) has clothing from a plain model: :meth:`add_garment`,
+        :meth:`update_item`, :meth:`check_garment`, :meth:`request_body_avatar` and a ``glb`` ``open-model``. Those
+        requests raise ``dct-too-old`` on a connection of a lower minor, so a host that reads this first can ask the
+        user to update Durty Cloth Tool instead. Safe to read from any thread."""
         welcome = self.welcome
         minor = welcome.get("protocol", {}).get("minor") if isinstance(welcome, dict) else None
-        return minor if isinstance(minor, int) else 0
+        return minor if type(minor) is int else 0
+
+    def _dct_minor(self) -> int:
+        return self.dct_minor
+
+    def _require_minor(self, minor: int) -> None:
+        """Under the lock, before a request of a later minor is registered: raises ``not-authenticated`` while the
+        link is not ready and ``dct-too-old`` when the DCT that welcomed it does not know the request. Nothing was
+        sent."""
+        if minor <= 0:
+            return
+        if self.state != READY:
+            raise LinkError("not-authenticated", "the link is not ready")
+        if self.dct_minor < minor:
+            raise LinkError(
+                "dct-too-old",
+                f"this needs Creator Link protocol {protocol.PROTOCOL_MAJOR}.{minor}; Durty Cloth Tool speaks "
+                f"{protocol.PROTOCOL_MAJOR}.{self.dct_minor}",
+            )
 
     def _live_save(self, surface: LiveSurface, mode: str, timeout: Optional[float]) -> Request:
         surface._check_open()
