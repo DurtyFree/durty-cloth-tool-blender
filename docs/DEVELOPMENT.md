@@ -40,7 +40,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `link.py` | `LinkController`: connecting, sign-in, Live Preview, Texture Checks, model pushes, what Durty Cloth Tool opens in Blender, the linked cloth's picture, temporary folders |
 | `pixels.py` | Reading Blender's float pixels into RGBA8 rows, change detection and dirty rectangles, in small steps per timer tick |
 | `bundle.py` | Collecting a Sollumz export (one `*.ydd.xml` and its `*.dds` files) into a model push |
-| `garment.py` | Garment Fitting maths: types and slots, the type a file name names, import units and exports normalised to 1 m, markers and their plausibility, Align to Body, regions, the fit check, problem colours, seam welding, pose presets, the next-step hint |
+| `garment.py` | Garment Fitting maths: types and slots, the type a file name names, import units and exports normalised to 1 m, markers and their plausibility, Align to Body, regions, the fit check, problem colours, seam welding, Validate's checks, pose presets, the next-step hint |
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
 | `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version |
 | `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today |
@@ -56,7 +56,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `state.py` | The single link controller and helpers the panels, operators and timers share |
 | `host.py` | Blender I/O: the add-on's user folder, reading images, detecting paint strokes, Sollumz export and import, redraws |
 | `ui.py` | The **DCT** tab: the Durty Cloth Tool, Get Connected, Linked Cloth, Live Preview, Model and Settings panels and their operators |
-| `ui_garment.py`, `garment_host.py`, `garment_dct.py` | Garment Fitting's panel and operators, its mesh work in Blender, and the Sollumz setup and export for Add to Project |
+| `ui_garment.py`, `garment_host.py`, `garment_dct.py` | Garment Fitting's panel and operators, its mesh work in Blender, and the Sollumz setup and export for Add to Project with what Validate measures of it (shaders, diffuse size, armature placement) |
 | `ui_ped.py`, `ped_host.py` | Custom Ped's panel and operators, and its work on the character in Blender (markers, ray casts, applying a rig, GLB export) |
 | `preferences.py` | The add-on preferences, mirroring the sidebar's Settings |
 

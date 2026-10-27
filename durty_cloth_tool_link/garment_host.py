@@ -2434,9 +2434,10 @@ def retransfer_lod_weights(context: Any, obj: Any) -> int:
     return changed
 
 
-def _influences(obj: Any, mesh: Any) -> Tuple[int, int]:
+def _weight_rows(obj: Any, mesh: Any) -> List[List[float]]:
+    """Each vertex's bone weights in ``mesh`` (deformed by ``obj``'s vertex groups)."""
     bones = set(_bone_groups(obj))
-    return garment.influence_counts([[g.weight for g in v.groups if g.group in bones] for v in mesh.vertices])
+    return [[g.weight for g in v.groups if g.group in bones] for v in mesh.vertices]
 
 
 def fit_arrays(obj: Any) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -2630,7 +2631,9 @@ def validate_stats(obj: Any, body: Optional[Any], prop: bool = False,
         stats["colour1"] = "ok"
     stats["prop"] = prop
     stats["weighted"] = not prop and weighted(obj)
-    stats["unweighted"], stats["over_four"] = _influences(obj, mesh) if stats["weighted"] else (0, 0)
+    rows = _weight_rows(obj, mesh) if stats["weighted"] else []
+    stats["unweighted"], stats["over_four"] = garment.influence_counts(rows)
+    stats["weight_sum"] = garment.weight_sum_count(rows)
     if anchor is not None and len(positions):
         middle = (positions.min(axis=0) + positions.max(axis=0)) / 2
         stats["anchor"] = float(np.linalg.norm(middle - np.asarray(anchor, dtype=np.float64)))
@@ -2638,11 +2641,12 @@ def validate_stats(obj: Any, body: Optional[Any], prop: bool = False,
         short = "medium" if _level == "sollumz_medium" else "low"
         stats[f"triangles_{short}"] = len(mesh_triangles(lod_mesh))
         # Levels made before the garment was weighted get High's weights when it is added; only those made after
-        # count here.
+        # count here, each level on its own.
         if stats["weighted"] and any(v.groups for v in lod_mesh.vertices):
-            unweighted, over = _influences(obj, lod_mesh)
-            stats["unweighted"] += unweighted
+            rows = _weight_rows(obj, lod_mesh)
+            stats[f"unweighted_{short}"], over = garment.influence_counts(rows)
             stats["over_four"] += over
+            stats["weight_sum"] += garment.weight_sum_count(rows)
     if body is not None and len(positions) and not prop:
         signed, nearest, body_normals = clearance(body_tree(body), positions)
         finite = np.isfinite(signed)

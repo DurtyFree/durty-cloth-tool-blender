@@ -1775,10 +1775,13 @@ def anchor_point(context: Any) -> Optional[Tuple[float, float, float]]:
 
 
 def stats(context: Any, obj: Any) -> Dict[str, Any]:
-    """What Validate measures on the garment (a prop by its anchor instead of the body)."""
+    """What Validate measures on the garment (a prop by its anchor instead of the body) and on its Sollumz side."""
     if _is_prop(context):
-        return gh.validate_stats(obj, valid_body(context), prop=True, anchor=anchor_point(context))
-    return gh.validate_stats(obj, valid_body(context))
+        found = gh.validate_stats(obj, valid_body(context), prop=True, anchor=anchor_point(context))
+    else:
+        found = gh.validate_stats(obj, valid_body(context))
+    found.update(gdct.game_stats(obj, prop=_is_prop(context)))
+    return found
 
 
 class DCTLINK_OT_fit_validate(_MeshOp):

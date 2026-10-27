@@ -1177,4 +1177,23 @@ TEXT = {
     "garment.done.import-rescaled": (
         "{done} كان أطول جانب فيها 1 m كما في التصدير الموحَّد الحجم، لذا غُيّر حجمها بمعامل {factor} إلى حجم الجسم."
     ),
+    "garment.finding.weight-sum": "{count} رأسًا مجموع أوزان عظامها لا يساوي 1؛ تشوّه اللعبة قطعة الملابس هناك.",
+    "garment.finding.weight-sum.one": "{count} رأس مجموع أوزان عظامه لا يساوي 1؛ تشوّه اللعبة قطعة الملابس هناك.",
+    "garment.finding.lod-unweighted": (
+        "{count} رأسًا في المستوى {level} بلا أوزان؛ تتركها اللعبة خلفها عندما يتحرك الـ ped."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} رأس في المستوى {level} بلا أوزان؛ تتركه اللعبة خلفها عندما يتحرك الـ ped."
+    ),
+    "garment.finding.shader": (
+        "المادة {name} لا تستخدم ped shader، لذا لا تظهر قطعة الملابس بشكل صحيح في اللعبة. اختر لها ped shader في "
+        "Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "نسيج diffuse بحجم {width} x {height} بكسل؛ تحتاجه اللعبة مربعًا وضلعه قوة للعدد 2 (مثل 1024 أو 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "يبعد الـ armature مسافة {distance} cm عن نقطة الأصل، لذا تظهر قطعة الملابس بعيدة عن الـ ped في اللعبة. انقل "
+        "الـ armature إلى نقطة الأصل."
+    ),
 }

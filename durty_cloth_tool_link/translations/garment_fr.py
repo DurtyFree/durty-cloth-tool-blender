@@ -1467,4 +1467,28 @@ TEXT = {
         "{done} Son plus grand côté mesurait 1 m, comme dans un export normalisé, il a donc été mis à la taille du "
         "corps (facteur {factor})."
     ),
+    "garment.finding.weight-sum": (
+        "{count} sommets ont des poids d'os dont la somme n'est pas 1 ; le jeu y déforme le vêtement."
+    ),
+    "garment.finding.weight-sum.one": (
+        "{count} sommet a des poids d'os dont la somme n'est pas 1 ; le jeu y déforme le vêtement."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{count} sommets du niveau {level} n'ont pas de poids ; le jeu les laisse sur place quand le ped bouge."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} sommet du niveau {level} n'a pas de poids ; le jeu le laisse sur place quand le ped bouge."
+    ),
+    "garment.finding.shader": (
+        "Le matériau {name} n'utilise pas le shader de ped, le vêtement ne s'affiche donc pas correctement en jeu. "
+        "Donnez-lui un shader de ped dans Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "La texture diffuse fait {width} x {height} pixels ; le jeu la veut carrée, avec un côté en puissance de "
+        "deux (par exemple 1024 ou 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "L'armature est à {distance} cm de l'origine, le vêtement est donc décalé du ped en jeu. Déplacez l'armature "
+        "à l'origine."
+    ),
 }

@@ -741,4 +741,30 @@ TEXT = {
         "{done} Najdłuższy bok miał 1 m, jak w znormalizowanym eksporcie, więc przeskalowano go o {factor} do "
         "rozmiaru ciała."
     ),
+    "garment.finding.weight-sum": (
+        "Wierzchołki z wagami kości, które nie sumują się do 1: gra w tym miejscu zniekształca ubranie. Ich liczba: "
+        "{count}."
+    ),
+    "garment.finding.weight-sum.one": (
+        "Wierzchołki z wagami kości, które nie sumują się do 1: gra w tym miejscu zniekształca ubranie. Ich liczba: "
+        "{count}."
+    ),
+    "garment.finding.lod-unweighted": (
+        "Wierzchołki poziomu {level} bez wag pozostają w miejscu, gdy ped się porusza. Ich liczba: {count}."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "Wierzchołki poziomu {level} bez wag pozostają w miejscu, gdy ped się porusza. Ich liczba: {count}."
+    ),
+    "garment.finding.shader": (
+        "Materiał {name} nie używa shadera ped, więc ubranie nie wyświetla się w grze poprawnie. Nadaj mu shader ped "
+        "w Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "Tekstura diffuse ma {width} x {height} pikseli; gra wymaga tekstury kwadratowej o boku będącym potęgą "
+        "dwójki (na przykład 1024 lub 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "Armature jest {distance} cm od punktu początkowego, więc w grze ubranie jest przesunięte względem peda. "
+        "Przesuń armature do punktu początkowego."
+    ),
 }

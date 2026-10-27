@@ -1268,4 +1268,26 @@ TEXT = {
         "{done} इसकी सबसे लंबी भुजा 1 m थी, जैसी नॉर्मलाइज़ किए गए एक्सपोर्ट में होती है, इसलिए इसे {factor} से शरीर "
         "के आकार में स्केल किया गया।"
     ),
+    "garment.finding.weight-sum": "{count} वर्टेक्स के बोन वेट का जोड़ 1 नहीं है; गेम वहाँ कपड़े को बिगाड़ देता है।",
+    "garment.finding.weight-sum.one": (
+        "{count} वर्टेक्स के बोन वेट का जोड़ 1 नहीं है; गेम वहाँ कपड़े को बिगाड़ देता है।"
+    ),
+    "garment.finding.lod-unweighted": (
+        "{level} लेवल के {count} वर्टेक्स पर कोई वेट नहीं है; ped के हिलने पर गेम उन्हें पीछे छोड़ देता है।"
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{level} लेवल के {count} वर्टेक्स पर कोई वेट नहीं है; ped के हिलने पर गेम उसे पीछे छोड़ देता है।"
+    ),
+    "garment.finding.shader": (
+        "मटीरियल {name} ped shader इस्तेमाल नहीं करता, इसलिए कपड़ा गेम में ठीक से नहीं दिखता। Sollumz में उसे ped "
+        "shader दें।"
+    ),
+    "garment.finding.diffuse-size": (
+        "diffuse टेक्सचर {width} x {height} पिक्सेल का है; गेम को यह वर्गाकार चाहिए, और उसकी भुजा 2 की घात हो (जैसे "
+        "1024 या 2048)।"
+    ),
+    "garment.finding.armature-offset": (
+        "armature ओरिजिन से {distance} cm दूर है, इसलिए गेम में कपड़ा ped से हटकर बैठता है। armature को ओरिजिन पर ले "
+        "जाएँ।"
+    ),
 }

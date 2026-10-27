@@ -615,6 +615,37 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("Validate lists its findings with the garment", findings is not None, tpose.get(gh.FINDINGS))
     RESULT4 = {"check": "validate (synthetic)", "ok": True,
                "detail": "CLEAN" if garment.is_clean(findings) else ", ".join(f.code for f in findings)}
+    # Weights that do not add up to one and a diffuse that is not a square power of two are warned about. (The
+    # shoulder split_weights moved to the chest adds up to more than one already.)
+    def weight_sums():
+        return {f.code: f for f in findings}.get("weight-sum", garment.Finding("", "", {"count": 0})).fields["count"]
+
+    bones = set(gh._bone_groups(tpose))
+    index = next(v.index for v in tpose.data.vertices
+                 if abs(sum(g.weight for g in v.groups if g.group in bones) - 1.0) < 1e-3)
+    vertex = tpose.data.vertices[index]
+    saved_weights = {g.group: g.weight for g in vertex.groups}
+    sums_before = weight_sums()
+    for element in vertex.groups:
+        element.weight *= 0.5
+    node = next(n for n in material.node_tree.nodes if n.type == "TEX_IMAGE" and n.image == image)
+    odd = bpy.data.images.new("smoke_odd_diffuse", 100, 60)
+    node.image = odd
+    check("Validate runs on odd weights and an odd diffuse", "FINISHED" in bpy.ops.dct_link.fit_validate())
+    odd_codes = {f.code: f for f in garment.findings_from_json(tpose.get(gh.FINDINGS, "")) or []}
+    findings = list(odd_codes.values())
+    check("Validate warns about the weight sums and the diffuse size",
+          weight_sums() == sums_before + 1 and odd_codes["weight-sum"].severity == "warning"
+          and "diffuse-size" in odd_codes and odd_codes["diffuse-size"].fields == {"width": 100, "height": 60},
+          (sums_before, sorted(odd_codes)))
+    for element in tpose.data.vertices[index].groups:  # Validate may have reallocated the mesh's vertices
+        element.weight = saved_weights[element.group]
+    node.image = image
+    bpy.data.images.remove(odd)
+    check("Validate runs again", "FINISHED" in bpy.ops.dct_link.fit_validate())
+    findings = garment.findings_from_json(tpose.get(gh.FINDINGS, "")) or []
+    check("the warnings go with their causes", weight_sums() == sums_before
+          and not any(f.code == "diffuse-size" for f in findings), (sums_before, weight_sums()))
     log = draw_everything(package, state, "garment game ready")
     check("the Game Ready panel shows the result of Validate",
           any(entry[0] == "label" and ("CLEAN" in entry[1] or "Validate" in entry[1]) for entry in log))
@@ -1164,6 +1195,7 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     gdct = sys.modules[package + ".garment_dct"]
     gh = sys.modules[package + ".garment_host"]
     host = sys.modules[package + ".host"]
+    garment = sys.modules[package + ".garment"]
     from tests.support.fake_dct import ADDED_BINDING
     from tests.blender.sollumz_stub import STUB
 
@@ -1231,6 +1263,18 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
           and skeleton.root.sollum_type == "sollumz_drawable_dictionary" and skeleton.root.name != skeleton.armature.name
           and old_rig is not None and old_rig.name in bpy.data.objects, (ui_garment.RUNTIME.notice, bones[:4]))
     check("the template arrived once", dct.templates_sent.count("female") == 1)  # the refusal sends none
+    # A skeleton moved away from the origin is warned about; at the origin it is not.
+    check("Validate runs on the skeleton", "FINISHED" in bpy.ops.dct_link.fit_validate())
+    placed = {f.code for f in garment.findings_from_json(coat.get(gh.FINDINGS, "")) or []}
+    skeleton.root.location.x += 0.25
+    bpy.context.view_layer.update()
+    check("Validate runs on a moved skeleton", "FINISHED" in bpy.ops.dct_link.fit_validate())
+    moved = {f.code: f for f in garment.findings_from_json(coat.get(gh.FINDINGS, "")) or []}
+    check("Validate warns about an armature away from the origin only",
+          "armature-offset" not in placed and "armature-offset" in moved
+          and moved["armature-offset"].fields == {"distance": 25.0}, (sorted(placed), sorted(moved)))
+    skeleton.root.location.x -= 0.25
+    bpy.context.view_layer.update()
     log = draw_everything(package, state, "garment on the skeleton")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the panel shows the skeleton and the next step", "On the Female Durty Cloth Tool skeleton" in labels

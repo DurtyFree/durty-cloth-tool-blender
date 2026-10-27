@@ -1529,6 +1529,30 @@ EN: Dict[str, str] = {
         "{share} % of the surface near the body faces into it: the normals look flipped. Recalculate them outside in "
         "Edit Mode (Mesh > Normals)."
     ),
+    "garment.finding.weight-sum": (
+        "{count} vertices have bone weights that do not add up to 1; the game distorts the cloth there."
+    ),
+    "garment.finding.weight-sum.one": (
+        "{count} vertex has bone weights that do not add up to 1; the game distorts the cloth there."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{count} vertices of the {level} level have no weights; the game leaves them behind when the ped moves."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} vertex of the {level} level has no weights; the game leaves it behind when the ped moves."
+    ),
+    "garment.finding.shader": (
+        "The material {name} does not use the ped shader, so the cloth does not render right in the game. Give it a "
+        "ped shader in Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "The diffuse texture is {width} x {height} pixels; the game needs it square, with a side that is a power of "
+        "two (for example 1024 or 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "The armature is {distance} cm from the origin, so the cloth sits off the ped in the game. Move the armature "
+        "to the origin."
+    ),
     "add.result.added-late": (
         "Durty Cloth Tool added {name} after all: Add to project was chosen there before the cancel arrived. It is "
         "linked here now."

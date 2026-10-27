@@ -1489,4 +1489,31 @@ TEXT = {
         "{done} Die längste Seite war 1 m wie bei einem normierten Export, daher wurde es mit {factor} auf "
         "Körpergröße skaliert."
     ),
+    "garment.finding.weight-sum": (
+        "{count} Vertices haben Knochengewichte, die zusammen nicht 1 ergeben; das Spiel verzerrt das Kleidungsstück "
+        "dort."
+    ),
+    "garment.finding.weight-sum.one": (
+        "{count} Vertex hat Knochengewichte, die zusammen nicht 1 ergeben; das Spiel verzerrt das Kleidungsstück "
+        "dort."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{count} Vertices der Stufe {level} haben keine Gewichte; das Spiel lässt sie zurück, wenn sich das Ped "
+        "bewegt."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} Vertex der Stufe {level} hat keine Gewichte; das Spiel lässt ihn zurück, wenn sich das Ped bewegt."
+    ),
+    "garment.finding.shader": (
+        "Das Material {name} nutzt nicht den Ped-Shader, daher wird das Kleidungsstück im Spiel nicht richtig "
+        "dargestellt. Gib ihm in Sollumz einen Ped-Shader."
+    ),
+    "garment.finding.diffuse-size": (
+        "Die Diffuse-Textur ist {width} x {height} Pixel groß; das Spiel braucht sie quadratisch, mit einer "
+        "Seitenlänge als Zweierpotenz (zum Beispiel 1024 oder 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "Die Armature ist {distance} cm vom Ursprung entfernt, daher sitzt das Kleidungsstück im Spiel neben dem "
+        "Ped. Verschiebe die Armature in den Ursprung."
+    ),
 }

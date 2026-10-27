@@ -739,4 +739,28 @@ TEXT = {
         "{done} Sisi terpanjangnya 1 m, seperti pada ekspor yang dinormalisasi, jadi diskalakan {factor} ke ukuran "
         "tubuh."
     ),
+    "garment.finding.weight-sum": (
+        "{count} vertex memiliki bobot tulang yang jumlahnya bukan 1; game merusak bentuk pakaian di sana."
+    ),
+    "garment.finding.weight-sum.one": (
+        "{count} vertex memiliki bobot tulang yang jumlahnya bukan 1; game merusak bentuk pakaian di sana."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{count} vertex pada tingkat {level} tidak memiliki bobot; game meninggalkannya saat ped bergerak."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} vertex pada tingkat {level} tidak memiliki bobot; game meninggalkannya saat ped bergerak."
+    ),
+    "garment.finding.shader": (
+        "Material {name} tidak memakai ped shader, sehingga pakaian tidak tampil dengan benar di game. Beri material "
+        "itu ped shader di Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "Tekstur diffuse berukuran {width} x {height} piksel; game memerlukannya persegi, dengan sisi berupa pangkat "
+        "dua (misalnya 1024 atau 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "Armature berjarak {distance} cm dari titik asal, sehingga pakaian bergeser dari ped di game. Pindahkan "
+        "armature ke titik asal."
+    ),
 }

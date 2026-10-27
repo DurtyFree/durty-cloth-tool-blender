@@ -2820,6 +2820,12 @@ INSIDE_SHARE_LIMIT = 0.02
 PLACEMENT_LIMIT = 0.15
 #: More vertices near the body facing into it than this share means the normals are flipped.
 INWARD_LIMIT = 0.5
+#: A vertex's weights may differ this much from a sum of one before the game distorts the cloth.
+WEIGHT_SUM_TOLERANCE = 0.01
+#: The garment's armature further than this from the origin (metres) moves the cloth off the ped in the game.
+ARMATURE_OFFSET_LIMIT = 0.001
+#: The shader file names Sollumz gives the ped shaders start with this.
+PED_SHADER_PREFIX = "ped"
 
 
 def lod_budget(level: str, high_triangles: int, chosen: int = 0) -> int:
@@ -2865,11 +2871,24 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
             add("error", "unweighted", count=int(stats["unweighted"]))
         if stats.get("over_four", 0) > 0:
             add("warning", "influences", count=int(stats["over_four"]), limit=MAX_INFLUENCES)
+        if stats.get("weight_sum", 0) > 0:
+            add("warning", "weight-sum", count=int(stats["weight_sum"]))
+        for level in LOD_SHARE:
+            if stats.get(f"unweighted_{level}", 0) > 0:
+                add("warning", "lod-unweighted", level=level, count=int(stats[f"unweighted_{level}"]))
     colour = stats.get("colour1")
     if colour == "missing":
         add("warning", "colour-missing")
     elif colour == "format":
         add("warning", "colour-format")
+    if stats.get("non_ped"):
+        add("warning", "shader", name=str(stats["non_ped"][0]))
+    size = stats.get("diffuse_size")
+    if size is not None and not square_power_of_two(int(size[0]), int(size[1])):
+        add("warning", "diffuse-size", width=int(size[0]), height=int(size[1]))
+    offset = stats.get("armature_offset")
+    if offset is not None and offset > ARMATURE_OFFSET_LIMIT:
+        add("warning", "armature-offset", distance=round(float(offset) * 100.0, 1))
     for level, budget in TRIANGLE_BUDGET.items():
         count = stats.get(f"triangles_{level}")
         if count is not None and count > budget:
@@ -2886,6 +2905,29 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
     if stats.get("materials", 1) > 1:
         add("info", "materials", count=int(stats["materials"]))
     return findings
+
+
+def weight_sum_count(weights_per_vertex: Sequence[Sequence[float]], tolerance: float = WEIGHT_SUM_TOLERANCE) -> int:
+    """How many weighted vertices have bone weights that do not sum to one (vertices without any weight are counted
+    as unweighted instead)."""
+    count = 0
+    for weights in weights_per_vertex:
+        total = float(sum(w for w in weights if w > 1e-6))
+        if total > 0.0 and abs(total - 1.0) > tolerance:
+            count += 1
+    return count
+
+
+def non_ped_materials(materials: Sequence[Tuple[str, str]]) -> List[str]:
+    """The names of the Sollumz shader materials among ``(name, shader file name)`` pairs that do not use a ped
+    shader; a material without a Sollumz shader (an empty file name) is the garment's own, which Add to Project
+    turns into the ped shader."""
+    return [name for name, shader in materials if shader and not shader.lower().startswith(PED_SHADER_PREFIX)]
+
+
+def square_power_of_two(width: int, height: int) -> bool:
+    """Whether a texture is square and its side a power of two, as the game's clothing textures are."""
+    return width == height and width > 0 and width & (width - 1) == 0
 
 
 def is_clean(findings: Iterable[Finding]) -> bool:

@@ -894,4 +894,11 @@ TEXT = {
     "garment.why.uv-degenerate": "服装的 UV 贴图在任何地方都没有面积。请先展开服装。",
     "garment.done.import-typed": "{done} 已根据文件名将服装类型设为{type}。如有误请更改。",
     "garment.done.import-rescaled": "{done} 它最长的一边为 1 m，与归一化导出相同，因此已按 {factor} 缩放到身体尺寸。",
+    "garment.finding.weight-sum": "{count} 个顶点的骨骼权重之和不等于 1；游戏会在那里扭曲服装。",
+    "garment.finding.weight-sum.one": "{count} 个顶点的骨骼权重之和不等于 1；游戏会在那里扭曲服装。",
+    "garment.finding.lod-unweighted": "{level}细节级别有 {count} 个顶点没有权重；ped 移动时，游戏会把它们留在原地。",
+    "garment.finding.lod-unweighted.one": "{level}细节级别有 {count} 个顶点没有权重；ped 移动时，游戏会把它留在原地。",
+    "garment.finding.shader": "材质 {name} 没有使用 ped shader，因此服装在游戏中显示不正确。请在 Sollumz 中为它指定 ped shader。",
+    "garment.finding.diffuse-size": "diffuse 贴图为 {width} x {height} 像素；游戏需要正方形贴图，且边长为 2 的幂（例如 1024 或 2048）。",
+    "garment.finding.armature-offset": "armature 距原点 {distance} cm，因此服装在游戏中会偏离 ped。请把 armature 移到原点。",
 }

@@ -1405,4 +1405,28 @@ TEXT = {
         "{done} Su lado más largo medía 1 m, como en una exportación normalizada, así que se escaló por {factor} al "
         "tamaño del cuerpo."
     ),
+    "garment.finding.weight-sum": (
+        "{count} vértices tienen pesos de huesos que no suman 1; el juego deforma la prenda ahí."
+    ),
+    "garment.finding.weight-sum.one": (
+        "{count} vértice tiene pesos de huesos que no suman 1; el juego deforma la prenda ahí."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{count} vértices del nivel {level} no tienen pesos; el juego los deja atrás cuando el ped se mueve."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} vértice del nivel {level} no tiene pesos; el juego lo deja atrás cuando el ped se mueve."
+    ),
+    "garment.finding.shader": (
+        "El material {name} no usa el shader de ped, así que la prenda no se ve bien en el juego. Asígnale un shader "
+        "de ped en Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "La textura difusa mide {width} x {height} píxeles; el juego la necesita cuadrada y con un lado que sea "
+        "potencia de dos (por ejemplo 1024 o 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "El armature está a {distance} cm del origen, así que la prenda queda desplazada del ped en el juego. Mueve "
+        "el armature al origen."
+    ),
 }

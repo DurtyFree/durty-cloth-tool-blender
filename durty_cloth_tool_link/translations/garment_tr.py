@@ -739,4 +739,26 @@ TEXT = {
         "{done} En uzun kenarı, normalize edilmiş bir dışa aktarımdaki gibi 1 m idi; bu yüzden {factor} ölçeğiyle "
         "vücut boyutuna getirildi."
     ),
+    "garment.finding.weight-sum": "{count} köşenin kemik ağırlıklarının toplamı 1 değil; oyun kıyafeti orada bozar.",
+    "garment.finding.weight-sum.one": (
+        "{count} köşenin kemik ağırlıklarının toplamı 1 değil; oyun kıyafeti orada bozar."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{level} düzeyinde {count} köşenin ağırlığı yok; ped hareket ettiğinde oyun bunları geride bırakır."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{level} düzeyinde {count} köşenin ağırlığı yok; ped hareket ettiğinde oyun bunu geride bırakır."
+    ),
+    "garment.finding.shader": (
+        "{name} malzemesi ped shader kullanmıyor, bu yüzden kıyafet oyunda doğru görünmez. Sollumz içinde ona bir "
+        "ped shader verin."
+    ),
+    "garment.finding.diffuse-size": (
+        "Diffuse dokusu {width} x {height} piksel; oyun onu kare ve kenarı ikinin kuvveti olarak ister (örneğin 1024 "
+        "veya 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "Armature başlangıç noktasından {distance} cm uzakta, bu yüzden kıyafet oyunda ped konumundan kaymış durur. "
+        "Armature nesnesini başlangıç noktasına taşıyın."
+    ),
 }

@@ -741,4 +741,28 @@ TEXT = {
         "{done} Il lato più lungo misurava 1 m, come in un'esportazione normalizzata, quindi è stato scalato di "
         "{factor} alle dimensioni del corpo."
     ),
+    "garment.finding.weight-sum": (
+        "{count} vertici hanno pesi delle ossa la cui somma non è 1; il gioco lì deforma il capo."
+    ),
+    "garment.finding.weight-sum.one": (
+        "{count} vertice ha pesi delle ossa la cui somma non è 1; il gioco lì deforma il capo."
+    ),
+    "garment.finding.lod-unweighted": (
+        "{count} vertici del livello {level} non hanno pesi; il gioco li lascia indietro quando il ped si muove."
+    ),
+    "garment.finding.lod-unweighted.one": (
+        "{count} vertice del livello {level} non ha pesi; il gioco lo lascia indietro quando il ped si muove."
+    ),
+    "garment.finding.shader": (
+        "Il materiale {name} non usa lo shader ped, quindi il capo non viene visualizzato correttamente nel gioco. "
+        "Assegnagli uno shader ped in Sollumz."
+    ),
+    "garment.finding.diffuse-size": (
+        "La texture diffuse misura {width} x {height} pixel; il gioco la richiede quadrata, con un lato che sia una "
+        "potenza di due (per esempio 1024 o 2048)."
+    ),
+    "garment.finding.armature-offset": (
+        "L'armature è a {distance} cm dall'origine, quindi nel gioco il capo resta spostato rispetto al ped. Sposta "
+        "l'armature nell'origine."
+    ),
 }

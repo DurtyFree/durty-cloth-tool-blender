@@ -407,6 +407,27 @@ def garment_images(obj: Any) -> Dict[str, Optional[Any]]:
     return found
 
 
+def game_stats(obj: Any, prop: bool = False) -> Dict[str, Any]:
+    """What Validate checks of the garment's Sollumz side (see :func:`garment.validate`): the Sollumz materials without
+    a ped shader, the diffuse's size and, for a garment on an armature, how far that armature is from the origin."""
+    found: Dict[str, Any] = {}
+    materials = [slot.material for slot in obj.material_slots if slot.material is not None]
+    found["non_ped"] = garment.non_ped_materials([
+        (material.name, getattr(getattr(material, "shader_properties", None), "filename", "") or ""
+         if getattr(material, "sollum_type", None) == SHADER_MATERIAL else "") for material in materials])
+    diffuse = garment_images(obj)["diffuse"]
+    size = tuple(getattr(diffuse, "size", (0, 0))) if diffuse is not None else (0, 0)
+    if len(size) == 2 and size[0] > 0 and size[1] > 0:
+        found["diffuse_size"] = (int(size[0]), int(size[1]))
+    if not prop:
+        skeleton = skeleton_of(obj)
+        armature = skeleton.armature if skeleton is not None else next(
+            (m.object for m in obj.modifiers if m.type == "ARMATURE" and m.object is not None), None)
+        if armature is not None:
+            found["armature_offset"] = float(armature.matrix_world.translation.length)
+    return found
+
+
 def is_dds(image: Optional[Any]) -> bool:
     """An image Sollumz can embed in the model: a DDS file, or packed DDS data."""
     if image is None:
