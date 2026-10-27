@@ -1408,6 +1408,33 @@ class DCTLINK_OT_fit_push_out(_MeshOp):
         return self.run(context, push)
 
 
+def _spikes_reason(context: Any) -> Optional[Msg]:
+    reason = _fit_reason(context)
+    if reason is None and gh.reference_shape(current_garment(context)) is None:
+        reason = msg("garment.why.no-pre-fit")
+    return reason
+
+
+class DCTLINK_OT_fit_spikes(_SteppedOp):
+    bl_idname = "dct_link.fit_spikes"
+    bl_label = EN["garment.op.spikes"]
+    bl_description = EN["garment.op.spikes.desc"]
+    title = "garment.op.spikes"
+
+    @classmethod
+    def poll(cls, context):
+        return _refuse(cls, _spikes_reason(context))
+
+    def steps(self, context):
+        return gh.fix_spikes_steps(current_garment(context), valid_body(context), props(context).push_gap / 1000.0)
+
+    def finished(self, context, result):
+        _after_change(context)
+        if not result.moved:
+            return msg("garment.done.spikes-none")
+        return msg("garment.done.spikes", count=result.moved, most=round(result.most * 1000.0, 1))
+
+
 def _after_change(context: Any) -> None:
     """The shape changed: the problem colours follow; the fit check, the checks and the levels of detail no longer
     apply."""
@@ -2910,6 +2937,8 @@ def draw_fix(layout: Any, context: Any) -> None:
     layout.prop(settings_, "push_gap", text=t("garment.prop.gap"), translate=False)
     tool(layout, context, DCTLINK_OT_fit_push_out.bl_idname, "garment.op.push", "MOD_SHRINKWRAP",
          info="garment.info.push")
+    tool(layout, context, DCTLINK_OT_fit_spikes.bl_idname, "garment.op.spikes", "SHARPCURVE",
+         info="garment.info.spikes")
 
     layout.separator(factor=GAP)
     body = section(layout, "problems", "garment.heading.problems", "COLOR", info="garment.info.problems")
@@ -3462,6 +3491,7 @@ CLASSES = (
     DCTLINK_OT_fit_back_step,
     DCTLINK_OT_fit_remove_backups,
     DCTLINK_OT_fit_push_out,
+    DCTLINK_OT_fit_spikes,
     DCTLINK_OT_fit_snug,
     DCTLINK_OT_fit_relax,
     DCTLINK_OT_fit_show_problems,

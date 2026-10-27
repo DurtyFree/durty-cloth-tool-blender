@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
+# Copyright (c) 2026 muto
 """The garment fitting tools in Blender: reading and writing the garment's mesh, the body and its joints, markers,
 aligning the garment to the body, backups, the problem colours, the sculpt session, the moves against the body, the
 T-pose conversion, checking tears, and the game-ready steps (prepare, combine materials, levels of detail, the local
@@ -1078,17 +1079,20 @@ def tpose_to_apose(context: Any, obj: Any, markers: Dict[str, Any], target: floa
 # --------------------------------------------------------------------------------------------------
 
 
-def push_out(obj: Any, body: Any, gap: float, passes: int = 4, progress: Optional[Progress] = None) -> Dict[str, int]:
+def push_out(obj: Any, body: Any, gap: float, passes: int = 4, progress: Optional[Progress] = None,
+             within: Optional[np.ndarray] = None) -> Dict[str, int]:
     """Moves every vertex closer to the body than ``gap`` to ``gap`` outside it; the vertices around follow
     softly, so no crease forms, and layers lying over a moved vertex (a shell over its lining) move with it. Vertices
     deeper inside than :data:`garment.MAX_PUSH`, pinned ones and those under the sculpt mask stay, and vertices lying
-    on top of each other (the two sides of a UV seam or an open seam) move alike. After the first pass only the
-    vertices that moved are measured again. Returns how many vertices were inside before and after, how many moved,
-    and how many were too deep to move."""
+    on top of each other (the two sides of a UV seam or an open seam) move alike. ``within`` limits the move to those
+    vertices. After the first pass only the vertices that moved are measured again. Returns how many vertices were
+    inside before and after, how many moved, and how many were too deep to move."""
     tree = body_tree(body)
     positions = world_positions(obj)
     edges = mesh_edges(obj.data)
     locked = locked_vertices(obj)
+    if within is not None:
+        locked = locked | ~np.asarray(within, dtype=bool)
     start = positions.copy()
     stacked = garment.stacked_groups(start)
     signed, nearest, normals = clearance(tree, positions)
@@ -1175,6 +1179,43 @@ def relax(scene: Any, obj: Any, body: Optional[Any], region: str, amount: float,
     if body is not None:
         push_out(obj, body, gap)
     return {"moved": moved, "smoothed": smoothed}
+
+
+def fix_spikes_steps(obj: Any, body: Optional[Any], gap: float) -> Any:
+    """Fix Spikes (:func:`garment.spike_steps`) on the garment against its pre-fit backup, as a generator of ``(stage
+    text key, done, total)`` for a modal step. Pinned and masked vertices stay; with ``body``, what the fix moved into
+    the body, or closer than ``gap``, goes back out. Nothing changes on the garment before the last stage. Returns
+    the :class:`garment.SpikeFix` counts."""
+    reference = reference_shape(obj)
+    if reference is None:
+        raise fail("garment.why.no-pre-fit")
+    total = garment.SPIKE_ROUNDS // garment.SPIKE_REFRESH + 1
+    positions = world_positions(obj)
+    edges = mesh_edges(obj.data)
+    steps = garment.spike_steps(reference, positions, mesh_triangles(obj.data), edges, locked_vertices(obj))
+    done = 0
+    while True:
+        yield "garment.stage.spikes", min(done, total - 1), total
+        try:
+            next(steps)
+        except StopIteration as stop:
+            result = stop.value
+            break
+        done += 1
+    yield "garment.stage.spikes-body", total - 1, total
+    hide_problems(obj)
+    set_world_positions(obj, result.positions)
+    if body is not None and result.moved:
+        tree = body_tree(body)
+        moved = np.linalg.norm(result.positions - positions, axis=1) > 1e-6
+        before, _nearest, _normals = clearance(tree, positions[moved])
+        after, _nearest, _normals = clearance(tree, result.positions[moved])
+        closer = np.zeros(len(positions), dtype=bool)
+        closer[np.nonzero(moved)[0][(after < gap) & (after < before)]] = True
+        if closer.any():
+            push_out(obj, body, gap, within=garment.grow_mask(closer, edges, 2))
+    clear_flags(obj, *STALE)
+    return result
 
 
 def stretch(obj: Any, positions: np.ndarray, edges: np.ndarray) -> Optional[np.ndarray]:

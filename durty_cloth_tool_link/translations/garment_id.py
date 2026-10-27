@@ -763,4 +763,30 @@ TEXT = {
         "Armature berjarak {distance} cm dari titik asal, sehingga pakaian bergeser dari ped di game. Pindahkan "
         "armature ke titik asal."
     ),
+    "garment.op.spikes": "Perbaiki Lonjakan",
+    "garment.op.spikes.desc": (
+        "Tarik kembali vertex yang melompat menjauh saat penyesuaian ke tempat yang ditunjukkan kain di sekitarnya, "
+        "dibandingkan dengan bentuk sebelum penyesuaian"
+    ),
+    "garment.info.spikes": (
+        "Membandingkan pakaian dengan bentuknya sebelum penyesuaian. Jika sebuah vertex tidak lagi berada di tempat "
+        "yang ditunjukkan kain di sekitarnya, vertex itu ditarik kembali ke sana; sisanya tetap persis di tempatnya. "
+        "Tepi terbuka, vertex dalam grup vertex DCT Pinned, dan vertex yang dimask tetap diam, dan tidak ada yang "
+        "masuk ke tubuh. Kembali Satu Langkah membatalkannya."
+    ),
+    "garment.why.no-pre-fit": (
+        "Perbaiki Lonjakan membandingkan dengan cadangan sebelum penyesuaian, dan tidak ada cadangan dengan vertex "
+        "pakaian saat ini (Siapkan Pakaian dan suntingan yang menambah atau menghapus vertex mengubahnya)."
+    ),
+    "garment.done.spikes": (
+        "{count} vertex ditarik kembali ke tempat yang ditunjukkan kain di sekitarnya (paling jauh {most} mm)."
+    ),
+    "garment.done.spikes.one": (
+        "{count} vertex ditarik kembali ke tempat yang ditunjukkan kain di sekitarnya (paling jauh {most} mm)."
+    ),
+    "garment.done.spikes-none": (
+        "Tidak ada yang melompat menjauh dari kain di sekitarnya; pakaian tetap seperti semula."
+    ),
+    "garment.stage.spikes": "Mencari dan menarik kembali lonjakan",
+    "garment.stage.spikes-body": "Menjaga kain tetap di luar tubuh",
 }

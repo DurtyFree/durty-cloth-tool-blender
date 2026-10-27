@@ -1808,6 +1808,26 @@ EN: Dict[str, str] = {
     "garment.stage.bake-normal": "Baking the normal map",
     "garment.stage.bake-emission": "Baking the emission map",
     "garment.stage.material": "Making the combined material",
+    "garment.op.spikes": "Fix Spikes",
+    "garment.op.spikes.desc": (
+        "Pull vertices that jumped away during fitting back to where the cloth around them belongs, compared with the "
+        "shape from before fitting"
+    ),
+    "garment.info.spikes": (
+        "Compares the garment with its shape from before fitting. Where a vertex no longer sits where the cloth "
+        "around it says it belongs, it is pulled back there; the rest stays exactly where it is. Open edges, vertices "
+        "in the vertex group DCT Pinned and masked vertices stay, and nothing goes into the body. Back One Step "
+        "undoes it."
+    ),
+    "garment.why.no-pre-fit": (
+        "Fix Spikes compares with the backup from before fitting, and there is none with the garment's current "
+        "vertices (Prepare Garment and edits that add or remove vertices change them)."
+    ),
+    "garment.done.spikes": "Moved {count} vertices back to where the cloth around them belongs (at most {most} mm).",
+    "garment.done.spikes.one": "Moved {count} vertex back to where the cloth around it belongs (at most {most} mm).",
+    "garment.done.spikes-none": "Nothing had jumped away from the cloth around it; the garment is as it was.",
+    "garment.stage.spikes": "Finding and pulling back spikes",
+    "garment.stage.spikes-body": "Keeping the cloth out of the body",
 }
 # Custom Ped's texts live in their own table (translated in the ``ped_<language>`` modules of ``translations``).
 EN.update(ped_strings.EN)

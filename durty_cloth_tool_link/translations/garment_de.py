@@ -1516,4 +1516,29 @@ TEXT = {
         "Die Armature ist {distance} cm vom Ursprung entfernt, daher sitzt das Kleidungsstück im Spiel neben dem "
         "Ped. Verschiebe die Armature in den Ursprung."
     ),
+    "garment.op.spikes": "Spitzen beheben",
+    "garment.op.spikes.desc": (
+        "Vertices, die beim Anpassen weggesprungen sind, dorthin zurückziehen, wo der Stoff um sie herum sie "
+        "erwartet, verglichen mit der Form vor dem Anpassen"
+    ),
+    "garment.info.spikes": (
+        "Vergleicht das Kleidungsstück mit seiner Form vor dem Anpassen. Wo ein Vertex nicht mehr dort sitzt, wo der "
+        "Stoff um ihn herum ihn erwartet, wird er dorthin zurückgezogen; der Rest bleibt genau, wo er ist. Offene "
+        "Kanten, Vertices in der Vertexgruppe DCT Pinned und maskierte Vertices bleiben, und nichts gerät in den "
+        "Körper. Einen Schritt zurück macht es rückgängig."
+    ),
+    "garment.why.no-pre-fit": (
+        "Spitzen beheben vergleicht mit der Sicherung von vor dem Anpassen, und es gibt keine mit den aktuellen "
+        "Vertices des Kleidungsstücks (Kleidungsstück vorbereiten und Bearbeitungen, die Vertices hinzufügen oder "
+        "entfernen, ändern sie)."
+    ),
+    "garment.done.spikes": (
+        "{count} Vertices dorthin zurückgezogen, wo der Stoff um sie herum sie erwartet (höchstens {most} mm)."
+    ),
+    "garment.done.spikes.one": (
+        "{count} Vertex dorthin zurückgezogen, wo der Stoff um ihn herum ihn erwartet (höchstens {most} mm)."
+    ),
+    "garment.done.spikes-none": "Nichts war vom Stoff um sich herum weggesprungen; das Kleidungsstück ist wie vorher.",
+    "garment.stage.spikes": "Spitzen suchen und zurückziehen",
+    "garment.stage.spikes-body": "Den Stoff aus dem Körper halten",
 }

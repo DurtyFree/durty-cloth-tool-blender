@@ -761,4 +761,24 @@ TEXT = {
         "Armature başlangıç noktasından {distance} cm uzakta, bu yüzden kıyafet oyunda ped konumundan kaymış durur. "
         "Armature nesnesini başlangıç noktasına taşıyın."
     ),
+    "garment.op.spikes": "Sivrilikleri düzelt",
+    "garment.op.spikes.desc": (
+        "Uyarlama sırasında yerinden fırlayan köşeleri, uyarlama öncesindeki şekle göre çevrelerindeki kumaşın "
+        "gösterdiği yere geri çeker"
+    ),
+    "garment.info.spikes": (
+        "Kıyafeti uyarlama öncesindeki şekliyle karşılaştırır. Bir köşe artık çevresindeki kumaşın gösterdiği yerde "
+        "değilse oraya geri çekilir; geri kalanı tam olarak yerinde kalır. Açık kenarlar, DCT Pinned köşe grubundaki "
+        "köşeler ve maskelenmiş köşeler yerinde kalır ve hiçbir şey bedenin içine girmez. Bir adım geri bunu geri "
+        "alır."
+    ),
+    "garment.why.no-pre-fit": (
+        "Sivrilikleri düzelt uyarlama öncesindeki yedekle karşılaştırır ve kıyafetin şu anki köşeleriyle aynı bir "
+        "yedek yok (Kıyafeti hazırla ve köşe ekleyen ya da silen düzenlemeler onları değiştirir)."
+    ),
+    "garment.done.spikes": "{count} köşe çevresindeki kumaşın gösterdiği yere geri çekildi (en fazla {most} mm).",
+    "garment.done.spikes.one": "{count} köşe çevresindeki kumaşın gösterdiği yere geri çekildi (en fazla {most} mm).",
+    "garment.done.spikes-none": "Hiçbir şey çevresindeki kumaştan fırlamamıştı; kıyafet olduğu gibi duruyor.",
+    "garment.stage.spikes": "Sivrilikler bulunuyor ve geri çekiliyor",
+    "garment.stage.spikes-body": "Kumaş bedenin dışında tutuluyor",
 }

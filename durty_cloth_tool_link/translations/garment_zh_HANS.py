@@ -901,4 +901,16 @@ TEXT = {
     "garment.finding.shader": "材质 {name} 没有使用 ped shader，因此服装在游戏中显示不正确。请在 Sollumz 中为它指定 ped shader。",
     "garment.finding.diffuse-size": "diffuse 贴图为 {width} x {height} 像素；游戏需要正方形贴图，且边长为 2 的幂（例如 1024 或 2048）。",
     "garment.finding.armature-offset": "armature 距原点 {distance} cm，因此服装在游戏中会偏离 ped。请把 armature 移到原点。",
+    "garment.op.spikes": "修复尖刺",
+    "garment.op.spikes.desc": "与适配前的形状比较，把适配时跳开的顶点拉回周围布料所指示的位置",
+    "garment.info.spikes": (
+        "将服装与其适配前的形状比较。顶点若不再位于周围布料所指示的位置，就会被拉回该处；其余部分完全保持原位。开放边、顶点组 DCT Pinned "
+        "中的顶点和被遮罩的顶点保持不动，且不会有任何部分进入身体。后退一步可撤销此操作。"
+    ),
+    "garment.why.no-pre-fit": "修复尖刺需要与适配前的备份比较，但没有与服装当前顶点一致的备份（准备服装以及添加或删除顶点的编辑会改变顶点）。",
+    "garment.done.spikes": "已将 {count} 个顶点拉回周围布料所指示的位置（最多 {most} mm）。",
+    "garment.done.spikes.one": "已将 {count} 个顶点拉回周围布料所指示的位置（最多 {most} mm）。",
+    "garment.done.spikes-none": "没有顶点从周围布料跳开；服装保持原样。",
+    "garment.stage.spikes": "正在查找并拉回尖刺",
+    "garment.stage.spikes-body": "正在让布料保持在身体外",
 }

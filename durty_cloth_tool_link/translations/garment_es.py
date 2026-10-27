@@ -1429,4 +1429,27 @@ TEXT = {
         "El armature está a {distance} cm del origen, así que la prenda queda desplazada del ped en el juego. Mueve "
         "el armature al origen."
     ),
+    "garment.op.spikes": "Corregir picos",
+    "garment.op.spikes.desc": (
+        "Devuelve los vértices que saltaron durante el ajuste a donde los sitúa la tela de alrededor, comparando con "
+        "la forma de antes del ajuste"
+    ),
+    "garment.info.spikes": (
+        "Compara la prenda con su forma de antes del ajuste. Donde un vértice ya no está donde la tela de alrededor "
+        "indica, se devuelve allí; el resto se queda exactamente donde está. Los bordes abiertos, los vértices del "
+        "grupo DCT Pinned y los vértices enmascarados se quedan, y nada entra en el cuerpo. Un paso atrás lo deshace."
+    ),
+    "garment.why.no-pre-fit": (
+        "Corregir picos compara con la copia de seguridad de antes del ajuste, y no hay ninguna con los vértices "
+        "actuales de la prenda (Preparar prenda y las ediciones que añaden o quitan vértices los cambian)."
+    ),
+    "garment.done.spikes": (
+        "Se devolvieron {count} vértices a donde los sitúa la tela de alrededor (como máximo {most} mm)."
+    ),
+    "garment.done.spikes.one": (
+        "Se devolvió {count} vértice a donde lo sitúa la tela de alrededor (como máximo {most} mm)."
+    ),
+    "garment.done.spikes-none": "Nada se había separado de la tela de alrededor; la prenda está como estaba.",
+    "garment.stage.spikes": "Buscando y corrigiendo picos",
+    "garment.stage.spikes-body": "Manteniendo la tela fuera del cuerpo",
 }

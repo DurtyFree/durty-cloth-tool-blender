@@ -423,6 +423,31 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     signed, _, _ = gh.clearance(gh.body_tree(body), positions(tee))
     check("nothing is inside the body after Push Out of Body", int((signed < -0.001).sum()) == 0,
           int((signed < -0.001).sum()))
+    # Fix Spikes: a front vertex thrown 2.5 cm out comes back to where the cloth around it belongs; Back One Step
+    # undoes it.
+    smooth = positions(tee)
+    inner = ~gh.boundary_vertices(tee.data)
+    front = np.nonzero(inner & (np.abs(smooth[:, 2] - 0.2) < 0.03) & (smooth[:, 1] < -0.05))[0]
+    spike = int(front[np.argmin(np.abs(smooth[front, 0]))])
+    tee.data.vertices[spike].co.y -= 0.025
+    tee.data.update()
+    spiked = positions(tee)
+    check("Fix Spikes runs", "FINISHED" in bpy.ops.dct_link.fit_spikes())
+    fixed = positions(tee)
+    check("Fix Spikes pulls the spike back and leaves the rest of the garment",
+          np.linalg.norm(fixed[spike] - smooth[spike]) < 0.006
+          and np.median(np.linalg.norm(fixed - spiked, axis=1)) < 1e-6
+          and ui_garment.RUNTIME.notice.message.key == "garment.done.spikes",
+          (np.linalg.norm(fixed[spike] - smooth[spike]), ui_garment.RUNTIME.notice))
+    check("Back One Step undoes Fix Spikes", "FINISHED" in bpy.ops.dct_link.fit_back_step()
+          and np.allclose(positions(tee), spiked, atol=1e-6))
+    tee.data.vertices[spike].co.y += 0.025
+    tee.data.update()
+    kept = gh.backups(tee)
+    gh._store_backups(tee, [])
+    check("Fix Spikes waits for a backup from before fitting with the garment's vertices",
+          refused(bpy.ops.dct_link.fit_spikes, "backup from before fitting"))
+    gh._store_backups(tee, kept)
     check("the problem colours follow the change", tee.data.color_attributes.get(gh.PROBLEMS) is not None)
     check("Show Problems hides the colours again", "FINISHED" in bpy.ops.dct_link.fit_show_problems()
           and tee.data.color_attributes.get(gh.PROBLEMS) is None)

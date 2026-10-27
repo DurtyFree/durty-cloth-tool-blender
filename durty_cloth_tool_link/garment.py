@@ -1741,6 +1741,219 @@ def relax_positions(positions: Any, edges: Any, rest_lengths: Any, weights: Any,
     return points
 
 
+# --------------------------------------------------------------------------------------------------
+# Fix Spikes
+# --------------------------------------------------------------------------------------------------
+# Fitting moves vertex by vertex, and now and then single vertices or small patches jump away from where the cloth
+# around them says they belong (spikes and smeared patches at belly folds and armpits). The pre-fit shape is the
+# reference: around each vertex, the best similarity (a turn and a scale) maps the pre-fit edges to its fitted
+# neighbours' edges, smoothed over one ring. A vertex that this local fit cannot explain has jumped; it is pulled to
+# where its neighbours' similarities put it, and sound cloth stays exactly where it is. Ported from Muto Cloth by muto.
+
+#: How far a vertex's edges may differ from what its neighbourhood predicts, relative to their length, before it
+#: counts as jumped away (smaller fixes more).
+SPIKE_THRESHOLD = 0.25
+#: A vertex once found keeps being fixed until its difference falls below this share of the threshold.
+SPIKE_EXIT = 0.25
+#: The furthest Fix Spikes moves a vertex (metres): further away the shape was changed on purpose.
+SPIKE_MAX_MOVE = 0.04
+#: Rounds of pulling the found vertices to their predicted place, and how often the local fits are measured again.
+SPIKE_ROUNDS = 24
+SPIKE_REFRESH = 6
+#: The share of the way to the predicted place each round goes.
+SPIKE_PULL = 0.7
+
+
+class SpikeFix(NamedTuple):
+    positions: np.ndarray
+    found: int  # vertices that had jumped away from their neighbourhood (protected ones not counted)
+    moved: int  # vertices moved by more than a millimetre
+    most: float  # the largest move, in metres
+
+
+def _both_ways(edges: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    return np.concatenate([edges[:, 0], edges[:, 1]]), np.concatenate([edges[:, 1], edges[:, 0]])
+
+
+def _proper_rotations(left: np.ndarray, right: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """``left @ diag(1, 1, ±1) @ right`` for each vertex, the sign keeping the product a proper rotation: ``(rotation,
+    the diagonal used)``."""
+    sign = np.sign(np.linalg.det(np.einsum("nij,njk->nik", left, right)))
+    sign[sign == 0] = 1.0
+    diagonal = np.ones((len(left), 3))
+    diagonal[:, 2] = sign
+    return np.einsum("nij,nj,njk->nik", left, diagonal, right), diagonal
+
+
+def _group_median(groups: np.ndarray, values: np.ndarray, count: int, empty: float = 1.0) -> np.ndarray:
+    """The median of ``values`` per group of ``0 .. count - 1`` (``empty`` for a group without values)."""
+    order = np.lexsort((values, groups))
+    ordered = values[order]
+    sizes = np.bincount(groups, minlength=count)
+    starts = np.concatenate([[0], np.cumsum(sizes)[:-1]])
+    has = sizes > 0
+    result = np.full(count, empty, dtype=np.float64)
+    result[has] = 0.5 * (ordered[starts[has] + (sizes[has] - 1) // 2] + ordered[starts[has] + sizes[has] // 2])
+    return result
+
+
+def local_similarities(reference: Any, positions: Any, edges: Any, ignore: Optional[Any] = None
+                       ) -> Tuple[np.ndarray, np.ndarray]:
+    """For each vertex, the turn (3 x 3) and scale that best map its pre-fit edges onto its current ones (Procrustes),
+    smoothed over its neighbours: the turns averaged back onto a rotation, the scales by their median. A vertex
+    without edges keeps no turn and scale 1. The ``ignore`` vertices (those that jumped away) count for none of
+    their neighbours, so the neighbourhood says where they belong without being pulled along by them."""
+    reference, points = as_points(reference), as_points(positions)
+    count = len(points)
+    ignore = np.zeros(count, dtype=bool) if ignore is None else np.asarray(ignore, dtype=bool)
+    first, second = _both_ways(np.asarray(edges, dtype=np.int64).reshape(-1, 2))
+    clean = ~(ignore[first] | ignore[second])
+    first, second = first[clean], second[clean]
+    before = reference[second] - reference[first]
+    after = points[second] - points[first]
+    cross = np.zeros((count, 3, 3))
+    np.add.at(cross, first, before[:, :, None] * after[:, None, :])
+    length = np.zeros(count)
+    np.add.at(length, first, (before * before).sum(axis=1))
+    u, singular, vt = np.linalg.svd(cross)
+    turn, diagonal = _proper_rotations(np.transpose(vt, (0, 2, 1)), np.transpose(u, (0, 2, 1)))
+    scale = (singular * diagonal).sum(axis=1) / np.maximum(length, 1e-18)
+    alone = length < 1e-18
+    turn[alone] = np.eye(3)
+    scale[alone] = 1.0
+    own = np.arange(count)
+    rows, cols = np.concatenate([first, own]), np.concatenate([second, own])
+    counted = ~ignore[cols]
+    rows, cols = rows[counted], cols[counted]
+    summed = np.zeros((count, 3, 3))
+    np.add.at(summed, rows, turn[cols])
+    u, _singular, vt = np.linalg.svd(summed)
+    smooth, _diagonal = _proper_rotations(u, vt)
+    smooth[np.bincount(rows, minlength=count) == 0] = np.eye(3)
+    return smooth, _group_median(rows, scale[cols], count)
+
+
+def similarity_residual(reference: Any, positions: Any, edges: Any, turn: np.ndarray, scale: np.ndarray
+                        ) -> np.ndarray:
+    """Per vertex, how far its current edges are from what its local similarity predicts, relative to their length
+    (0 for a vertex whose neighbourhood only turned, moved or scaled)."""
+    reference, points = as_points(reference), as_points(positions)
+    count = len(points)
+    first, second = _both_ways(np.asarray(edges, dtype=np.int64).reshape(-1, 2))
+    after = points[second] - points[first]
+    predicted = np.einsum("eij,ej->ei", turn[first], reference[second] - reference[first]) * scale[first][:, None]
+    off = np.zeros(count)
+    total = np.zeros(count)
+    np.add.at(off, first, ((after - predicted) ** 2).sum(axis=1))
+    np.add.at(total, first, (after * after).sum(axis=1))
+    return np.sqrt(off / np.maximum(total, 1e-18))
+
+
+def grow_mask(mask: Any, edges: Any, rings: int = 1) -> np.ndarray:
+    """``mask`` widened by ``rings`` rings of edge neighbours."""
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    grown = np.asarray(mask, dtype=bool).copy()
+    for _ in range(max(0, rings)):
+        wider = grown.copy()
+        wider[edges[grown[edges[:, 0]], 1]] = True
+        wider[edges[grown[edges[:, 1]], 0]] = True
+        grown = wider
+    return grown
+
+
+def open_edge_vertices(triangles: Any, count: int) -> np.ndarray:
+    """The vertices on an edge that only one triangle uses (hems, cuffs, the open end of a panel)."""
+    triangles = np.asarray(triangles, dtype=np.int64).reshape(-1, 3)
+    found = np.zeros(count, dtype=bool)
+    if not len(triangles):
+        return found
+    sides = np.sort(np.concatenate([triangles[:, [0, 1]], triangles[:, [1, 2]], triangles[:, [2, 0]]]), axis=1)
+    unique, uses = np.unique(sides, axis=0, return_counts=True)
+    found[unique[uses == 1].ravel()] = True
+    return found
+
+
+def _spike_rounds(reference: np.ndarray, points: np.ndarray, triangles: np.ndarray, edges: np.ndarray,
+                  locked: np.ndarray, threshold: float) -> Any:
+    """Fix Spikes on a mesh without stacked vertices (see :func:`spike_steps`); yields after each measurement and
+    returns ``(positions, found)``."""
+    start = points
+    points = points.copy()
+    count = len(points)
+    # Open edges and the ring inside them stay: a frayed hem or a thin tail has no neighbourhood to go by.
+    protected = grow_mask(open_edge_vertices(triangles, count), edges, 1) | locked
+    first, second = _both_ways(edges)
+    hits = np.maximum(np.bincount(first, minlength=count), 1).astype(np.float64)
+    bad = np.zeros(count, dtype=bool)
+    region = bad
+    found = 0
+    turn, scale = np.tile(np.eye(3), (count, 1, 1)), np.ones(count)
+    for round_ in range(SPIKE_ROUNDS):
+        if round_ % SPIKE_REFRESH == 0:
+            turn, scale = local_similarities(reference, points, edges, bad)
+            residual = similarity_residual(reference, points, edges, turn, scale)
+            bad = (residual > threshold) | (bad & (residual > SPIKE_EXIT * threshold))
+            turn, scale = local_similarities(reference, points, edges, bad)
+            if round_ == 0:
+                found = int((bad & ~protected).sum())
+            region = grow_mask(bad, edges, 1) & ~protected
+            yield
+            if not region.any():
+                break
+        guess = points[second] + np.einsum("eij,ej->ei", turn[second], reference[first] - reference[second]) \
+            * scale[second][:, None]
+        predicted = np.zeros_like(points)
+        np.add.at(predicted, first, guess)
+        predicted /= hits[:, None]
+        points[region] += SPIKE_PULL * (predicted[region] - points[region])
+        points = clamp_moves(start, points, SPIKE_MAX_MOVE)
+    points[protected] = start[protected]
+    return points, found
+
+
+def spike_steps(reference: Any, positions: Any, triangles: Any, edges: Any, locked: Optional[Any] = None,
+                threshold: float = SPIKE_THRESHOLD) -> Any:
+    """Fix Spikes as a generator: it yields after each measurement of the local fits (a few times), so a modal step
+    can show its progress, and returns a :class:`SpikeFix`. ``reference`` is the pre-fit shape (the same vertices as
+    ``positions``), ``locked`` vertices (pinned, masked) stay. Vertices that lie on top of each other before the fit
+    (the two sides of a UV seam) count as one, so a seam is no open edge and its sides move together."""
+    reference, points = as_points(reference), as_points(positions)
+    count = len(points)
+    locked = np.zeros(count, dtype=bool) if locked is None else np.asarray(locked, dtype=bool)
+    group = stacked_groups(reference)
+    groups = int(group.max()) + 1 if count else 0
+    sizes = np.bincount(group, minlength=groups).astype(np.float64)
+    merged = np.zeros((groups, 3))
+    for axis in range(3):
+        merged[:, axis] = np.bincount(group, weights=points[:, axis], minlength=groups) / np.maximum(sizes, 1.0)
+    first_of = np.zeros(groups, dtype=np.int64)
+    first_of[group[::-1]] = np.arange(count)[::-1]
+    edges = group[np.asarray(edges, dtype=np.int64).reshape(-1, 2)]
+    edges = np.unique(np.sort(edges[edges[:, 0] != edges[:, 1]], axis=1), axis=0)
+    triangles = group[np.asarray(triangles, dtype=np.int64).reshape(-1, 3)]
+    triangles = triangles[(triangles[:, 0] != triangles[:, 1]) & (triangles[:, 1] != triangles[:, 2])
+                          & (triangles[:, 0] != triangles[:, 2])]
+    held = np.bincount(group, weights=locked.astype(np.float64), minlength=groups) > 0
+    fixed, found = yield from _spike_rounds(reference[first_of], merged, triangles, edges, held, threshold)
+    changed = np.linalg.norm(fixed - merged, axis=1) > 1e-9
+    result = points.copy()
+    moving = changed[group]
+    result[moving] = fixed[group[moving]]
+    moves = np.linalg.norm(result - points, axis=1)
+    return SpikeFix(result, found, int((moves > 1e-3).sum()), float(moves.max(initial=0.0)))
+
+
+def fix_spikes(reference: Any, positions: Any, triangles: Any, edges: Any, locked: Optional[Any] = None,
+               threshold: float = SPIKE_THRESHOLD) -> SpikeFix:
+    """:func:`spike_steps` at once."""
+    steps = spike_steps(reference, positions, triangles, edges, locked, threshold)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+
+
 def rotate_about_y(points: Any, pivot: Any, degrees: float) -> np.ndarray:
     """Points rotated about the axis through ``pivot`` along +Y (front to back). A positive angle lowers a point
     on the ped's left (+X) side."""

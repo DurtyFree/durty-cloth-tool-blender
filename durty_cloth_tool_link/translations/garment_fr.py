@@ -1491,4 +1491,24 @@ TEXT = {
         "L'armature est à {distance} cm de l'origine, le vêtement est donc décalé du ped en jeu. Déplacez l'armature "
         "à l'origine."
     ),
+    "garment.op.spikes": "Corriger les pointes",
+    "garment.op.spikes.desc": (
+        "Ramène les sommets qui ont sauté pendant l'ajustement là où le tissu autour les place, par rapport à la "
+        "forme d'avant l'ajustement"
+    ),
+    "garment.info.spikes": (
+        "Compare le vêtement à sa forme d'avant l'ajustement. Là où un sommet n'est plus où le tissu autour indique, "
+        "il y est ramené ; le reste ne bouge pas du tout. Les bords ouverts, les sommets du groupe DCT Pinned et les "
+        "sommets masqués restent en place, et rien n'entre dans le corps. Revenir d'une étape l'annule."
+    ),
+    "garment.why.no-pre-fit": (
+        "Corriger les pointes compare avec la sauvegarde d'avant l'ajustement, et il n'y en a aucune avec les sommets "
+        "actuels du vêtement (Préparer le vêtement et les modifications qui ajoutent ou retirent des sommets les "
+        "changent)."
+    ),
+    "garment.done.spikes": "{count} sommets ramenés là où le tissu autour les place (au plus {most} mm).",
+    "garment.done.spikes.one": "{count} sommet ramené là où le tissu autour le place (au plus {most} mm).",
+    "garment.done.spikes-none": "Rien ne s'était écarté du tissu autour ; le vêtement est resté tel quel.",
+    "garment.stage.spikes": "Recherche et correction des pointes",
+    "garment.stage.spikes-body": "Maintien du tissu hors du corps",
 }

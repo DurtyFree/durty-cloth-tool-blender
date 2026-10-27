@@ -767,4 +767,28 @@ TEXT = {
         "Armature jest {distance} cm od punktu początkowego, więc w grze ubranie jest przesunięte względem peda. "
         "Przesuń armature do punktu początkowego."
     ),
+    "garment.op.spikes": "Napraw kolce",
+    "garment.op.spikes.desc": (
+        "Przesuń wierzchołki, które odskoczyły podczas dopasowania, z powrotem tam, gdzie wskazuje otaczająca je "
+        "tkanina, w porównaniu z kształtem sprzed dopasowania"
+    ),
+    "garment.info.spikes": (
+        "Porównuje ubranie z jego kształtem sprzed dopasowania. Gdy wierzchołek nie leży już tam, gdzie wskazuje "
+        "otaczająca go tkanina, zostaje tam cofnięty; reszta zostaje dokładnie na miejscu. Otwarte krawędzie, "
+        "wierzchołki w grupie DCT Pinned i zamaskowane wierzchołki zostają, a nic nie wchodzi w ciało. Cofnij jeden "
+        "krok to odwraca."
+    ),
+    "garment.why.no-pre-fit": (
+        "Napraw kolce porównuje z kopią zapasową sprzed dopasowania, a nie ma żadnej z obecnymi wierzchołkami ubrania "
+        "(Przygotuj ubranie i edycje, które dodają lub usuwają wierzchołki, je zmieniają)."
+    ),
+    "garment.done.spikes": (
+        "Liczba wierzchołków cofniętych tam, gdzie wskazuje otaczająca tkanina: {count} (najwyżej {most} mm)."
+    ),
+    "garment.done.spikes.one": (
+        "Cofnięto {count} wierzchołek tam, gdzie wskazuje otaczająca go tkanina (najwyżej {most} mm)."
+    ),
+    "garment.done.spikes-none": "Nic nie odskoczyło od otaczającej tkaniny; ubranie jest takie jak wcześniej.",
+    "garment.stage.spikes": "Szukanie i cofanie kolców",
+    "garment.stage.spikes-body": "Utrzymywanie tkaniny poza ciałem",
 }

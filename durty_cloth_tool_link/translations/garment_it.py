@@ -765,4 +765,24 @@ TEXT = {
         "L'armature è a {distance} cm dall'origine, quindi nel gioco il capo resta spostato rispetto al ped. Sposta "
         "l'armature nell'origine."
     ),
+    "garment.op.spikes": "Correggi punte",
+    "garment.op.spikes.desc": (
+        "Riporta i vertici saltati via durante l'adattamento dove li colloca il tessuto intorno, rispetto alla forma "
+        "prima dell'adattamento"
+    ),
+    "garment.info.spikes": (
+        "Confronta il capo con la sua forma prima dell'adattamento. Dove un vertice non si trova più dove il tessuto "
+        "intorno indica, viene riportato lì; il resto rimane esattamente dov'è. I bordi aperti, i vertici nel gruppo "
+        "DCT Pinned e i vertici mascherati restano fermi, e nulla entra nel corpo. Indietro di un passaggio lo "
+        "annulla."
+    ),
+    "garment.why.no-pre-fit": (
+        "Correggi punte confronta con il backup di prima dell'adattamento, e non ce n'è nessuno con i vertici attuali "
+        "del capo (Prepara capo e le modifiche che aggiungono o rimuovono vertici li cambiano)."
+    ),
+    "garment.done.spikes": "Riportati {count} vertici dove li colloca il tessuto intorno (al massimo {most} mm).",
+    "garment.done.spikes.one": "Riportato {count} vertice dove lo colloca il tessuto intorno (al massimo {most} mm).",
+    "garment.done.spikes-none": "Niente si era staccato dal tessuto intorno; il capo è rimasto com'era.",
+    "garment.stage.spikes": "Ricerca e correzione delle punte",
+    "garment.stage.spikes-body": "Tenuta del tessuto fuori dal corpo",
 }
