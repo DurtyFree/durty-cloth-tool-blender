@@ -1746,6 +1746,10 @@ EN: Dict[str, str] = {
         "Imported {name} ({count} vertices), but at {size} m it does not have the size of this kind of garment. Import "
         "it again and choose the Unit, or check the Garment Type."
     ),
+    "garment.done.import-typed": "{done} Garment Type set to {type} from the file name. Change it if that is wrong.",
+    "garment.done.import-rescaled": (
+        "{done} Its longest side was 1 m, as in a normalised export, so it was scaled by {factor} to body size."
+    ),
     "garment.done.prepare-open": (
         "Prepared, but {count} seam vertices found no partner on the panel next to them ({welded} joined): the panels "
         "do not quite meet there. They are selected: press Tab to see them. Fit on gta.clothing still gives both sides "

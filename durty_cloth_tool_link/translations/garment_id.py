@@ -734,4 +734,9 @@ TEXT = {
     "prop.fit-consent": "Unggah Pakaian untuk Penyesuaian",
     "prop.fit-consent.desc": "Izinkan Sesuaikan pada gta.clothing dan Transfer Bobot mengunggah pakaian. Nonaktifkan untuk mencabut persetujuan; add-on akan meminta lagi sebelum mengunggah apa pun",
     "settings.fit-consent-subtext": "Hanya bentuk dan penanda pakaian yang dikirim bersama opsi penyesuaian, dan semuanya disimpan paling lama sepuluh menit setelah penyesuaian.",
+    "garment.done.import-typed": "{done} Jenis Pakaian diatur ke {type} dari nama file. Ubah jika keliru.",
+    "garment.done.import-rescaled": (
+        "{done} Sisi terpanjangnya 1 m, seperti pada ekspor yang dinormalisasi, jadi diskalakan {factor} ke ukuran "
+        "tubuh."
+    ),
 }

@@ -81,6 +81,8 @@ class _Runtime:
         self.layout_generation = 0
         self.layout_session = int(time.time()) % 1000000
         self.redraw: Callable[[], None] = lambda: None
+        #: True while the add-on itself sets the Type (from a garment or a guess): that is no choice of the user's.
+        self.setting_type = False
 
 
 RUNTIME = _Runtime()
@@ -206,13 +208,25 @@ def _choice_changed(self: Any, context: Any) -> None:
 
 
 def _category_changed(self: Any, context: Any) -> None:
-    """Another type: its usual slot (unless the slot chosen fits it too), its skin and front."""
+    """Another type: its usual slot (unless the slot chosen fits it too), its skin and front. A type the user picks
+    is kept by the next Import Garment instead of the type its file name names."""
+    if not RUNTIME.setting_type:
+        self.category_chosen = True
     kind = garment.garment_type(self.category)
     if self.slot not in kind.slots:
         self.slot = kind.slots[0]
     self.skin = kind.skin
     self.open_front = kind.open_front
     _keep_on_garment(self)
+
+
+def set_type(settings_: Any, category: str) -> None:
+    """Sets the Type as the add-on (not the user) chooses it."""
+    RUNTIME.setting_type = True
+    try:
+        settings_.category = category
+    finally:
+        RUNTIME.setting_type = False
 
 
 def _avatar_changed(self: Any, context: Any) -> None:
@@ -250,7 +264,7 @@ def _garment_changed(self: Any, context: Any) -> None:
         category, slot, avatar = obj.get(gh.TYPE_TAG), obj.get(gh.SLOT_TAG), obj.get(AVATAR_TAG)
         skin, open_front = obj.get(SKIN_TAG), obj.get(OPEN_FRONT_TAG)
         # The type sets its usual slot, skin and front; what the garment kept wins over them.
-        self.category = category if category in garment.CATEGORIES else self.category
+        set_type(self, category if category in garment.CATEGORIES else self.category)
         if slot in garment.slots_for(self.category):
             self.slot = slot
         if skin is not None:
@@ -293,6 +307,8 @@ class DCTLINK_PG_garment(PropertyGroup):
     category: EnumProperty(name=EN["garment.prop.category"], items=_category_items,
                            default=garment.CATEGORIES.index("tshirt"), update=_category_changed,
                            description=EN["garment.prop.category.desc"], translation_context=CONTEXT)
+    #: The user picked the Type since the last import (see :func:`_category_changed`).
+    category_chosen: BoolProperty(default=False, options={"HIDDEN"})
     avatar: EnumProperty(name=EN["garment.prop.avatar"], items=AVATAR_ITEMS, default="detect", update=_avatar_changed,
                          description=EN["garment.prop.avatar.desc"], translation_context=CONTEXT)
     open_front: BoolProperty(name=EN["garment.prop.open-front"], default=False, update=_choice_changed,
@@ -701,21 +717,36 @@ class DCTLINK_OT_fit_import_garment(_MeshOp):
             if not path.is_file():
                 raise UserError(msg("garment.why.no-file"))
             settings_ = props(context)
-            obj, info = gh.import_garment(context, path, ground=self.ground, category=settings_.category,
+            # The file name names the type unless the user picked one for this import.
+            guessed = garment.guess_category(path.stem, settings_.category if settings_.category_chosen else None)
+            obj, info = gh.import_garment(context, path, ground=self.ground, category=guessed or settings_.category,
                                           unit=self.unit, orient=self.orient)
             settings_.garment = obj
+            if guessed is not None:
+                set_type(settings_, guessed)  # set on the new garment, never on the one chosen before
+            settings_.category_chosen = False
             _add_kept_body(context)
-            count = len(obj.data.vertices)
-            if not info["plausible"]:
-                return "WARNING", msg("garment.done.import-size", name=obj.name, count=count, size=info["size"])
-            if self.unit == "auto" and info["unit"] not in garment.USUAL_UNITS:
-                return "WARNING", msg("garment.done.import-unit", name=obj.name, count=count,
-                                      unit=msg(f"garment.unit.{info['unit']}"))
-            key = "garment.done.import-rig" if info["rig"] else "garment.done.import-avatar" if info["avatar"] else (
-                "garment.done.import-turned" if info["turned"] else "garment.done.import")
-            return msg(key, name=obj.name, count=count)
+            level, done = _import_message(obj, info, self.unit)
+            if info["rescaled"] is not None:
+                done = msg("garment.done.import-rescaled", done=done, factor=round(float(info["rescaled"]), 2))
+            if guessed is not None:
+                done = msg("garment.done.import-typed", done=done, type=msg(f"garment.category.{guessed}"))
+            return level, done
 
         return self.run(context, load, backup=False)
+
+
+def _import_message(obj: Any, info: Dict[str, Any], unit: str) -> Tuple[str, Msg]:
+    """What Import Garment did, with its level."""
+    count = len(obj.data.vertices)
+    if not info["plausible"]:
+        return "WARNING", msg("garment.done.import-size", name=obj.name, count=count, size=info["size"])
+    if unit == "auto" and info["unit"] not in garment.USUAL_UNITS:
+        return "WARNING", msg("garment.done.import-unit", name=obj.name, count=count,
+                              unit=msg(f"garment.unit.{info['unit']}"))
+    key = "garment.done.import-rig" if info["rig"] else "garment.done.import-avatar" if info["avatar"] else (
+        "garment.done.import-turned" if info["turned"] else "garment.done.import")
+    return "INFO", msg(key, name=obj.name, count=count)
 
 
 def _add_kept_body(context: Any) -> None:

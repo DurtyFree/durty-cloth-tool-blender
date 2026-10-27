@@ -1482,4 +1482,11 @@ TEXT = {
     "garment.why.uv-degenerate": (
         "Die UV-Map des Kleidungsstücks hat nirgends eine Fläche. Wickle das Kleidungsstück zuerst ab."
     ),
+    "garment.done.import-typed": (
+        "{done} Kleidungsart aus dem Dateinamen auf {type} gesetzt. Ändere sie, falls das falsch ist."
+    ),
+    "garment.done.import-rescaled": (
+        "{done} Die längste Seite war 1 m wie bei einem normierten Export, daher wurde es mit {factor} auf "
+        "Körpergröße skaliert."
+    ),
 }

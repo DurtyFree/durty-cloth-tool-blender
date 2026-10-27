@@ -734,4 +734,9 @@ TEXT = {
     "prop.fit-consent": "Uyarlama için kıyafet yükle",
     "prop.fit-consent.desc": "gta.clothing üzerinde uyarla ve Ağırlıkları aktar işlemlerinin kıyafeti internete yüklemesine izin verir. Geri çekmek için kapatın; eklenti herhangi bir şey yüklemeden önce yeniden sorar",
     "settings.fit-consent-subtext": "Yalnızca kıyafetin şekli ve işaretleri uyarlama seçenekleriyle birlikte gönderilir; hiçbir veri uyarlamadan sonra on dakikadan uzun tutulmaz.",
+    "garment.done.import-typed": "{done} Kıyafet türü dosya adından {type} olarak ayarlandı. Yanlışsa değiştirin.",
+    "garment.done.import-rescaled": (
+        "{done} En uzun kenarı, normalize edilmiş bir dışa aktarımdaki gibi 1 m idi; bu yüzden {factor} ölçeğiyle "
+        "vücut boyutuna getirildi."
+    ),
 }

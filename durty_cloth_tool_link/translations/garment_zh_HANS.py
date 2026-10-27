@@ -892,4 +892,6 @@ TEXT = {
     ),
     "garment.done.combine-sparse": "合并后的布局只使用了贴图的 {used}%，所以服装会显得模糊。它的 UV 贴图中有没有空间或离得很远的岛：请检查它，或重新展开服装，然后再次合并。",
     "garment.why.uv-degenerate": "服装的 UV 贴图在任何地方都没有面积。请先展开服装。",
+    "garment.done.import-typed": "{done} 已根据文件名将服装类型设为{type}。如有误请更改。",
+    "garment.done.import-rescaled": "{done} 它最长的一边为 1 m，与归一化导出相同，因此已按 {factor} 缩放到身体尺寸。",
 }

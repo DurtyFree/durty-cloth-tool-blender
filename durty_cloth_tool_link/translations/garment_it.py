@@ -734,4 +734,11 @@ TEXT = {
     "prop.fit-consent": "Carica i capi per l'adattamento",
     "prop.fit-consent.desc": "Consenti ad Adatta su gta.clothing e Trasferisci i pesi di caricare il capo. Disattiva l'opzione per revocare il consenso; l'add-on lo richiederà di nuovo prima di caricare qualsiasi dato",
     "settings.fit-consent-subtext": "Vengono inviati solo la forma del capo, i marcatori e le opzioni di adattamento. Tutti questi dati vengono eliminati entro dieci minuti dall'adattamento.",
+    "garment.done.import-typed": (
+        "{done} Tipo di capo impostato su {type} dal nome del file. Cambialo se non è corretto."
+    ),
+    "garment.done.import-rescaled": (
+        "{done} Il lato più lungo misurava 1 m, come in un'esportazione normalizzata, quindi è stato scalato di "
+        "{factor} alle dimensioni del corpo."
+    ),
 }

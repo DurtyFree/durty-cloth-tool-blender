@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
+# Copyright (c) 2026 muto
 """The garment fitting tools without Blender: slots and categories, the next-step hint, marker placement and its
 plausibility, aligning the garment to the body's joints, body regions, the fit check, the problem colours, mesh moves,
 seam welding, strip cutting, the local checks and pose presets.
@@ -85,7 +86,8 @@ class GarmentType(NamedTuple):
     regions the tools offer and those Snug to Body works on, whether its front is open (never welded across the centre
     front), whether its thigh weights are bridged across the legs (a skirt or coat tails that hang between the legs
     must not split), whether it usually shows skin, the extra hint the panel shows (a text key), the largest dimension
-    it has (metres, for the units of an import) and how a prop is snapped to its anchor."""
+    it has (metres, for the units of an import), how a prop is snapped to its anchor and how tall it usually is on the
+    body (metres, for an export normalised to 1 m)."""
 
     slots: Tuple[str, ...]
     family: str
@@ -98,43 +100,47 @@ class GarmentType(NamedTuple):
     hint: str = ""
     size: Tuple[float, float] = (0.3, 1.8)
     snap: str = ""
+    height: float = 0.7
 
 
 _TOPS = ("jbib", "accs")
 #: Every garment type. Nothing here is measured from the game: the slots, markers and regions are the add-on's own
-#: choices, and the sizes are generic human proportions.
+#: choices, and the sizes and heights are generic human proportions.
 TYPES: Dict[str, GarmentType] = {
-    "tshirt": GarmentType(_TOPS, "upper", "short", _SHORT_SLEEVES, _SHORT_SLEEVES),
-    "long_sleeve": GarmentType(_TOPS, "upper", "long", _TOP_REGIONS, _TOP_REGIONS),
-    "vest": GarmentType(_TOPS, "upper", "none", _NO_SLEEVES, _NO_SLEEVES),
-    "hoodie": GarmentType(("jbib",), "upper", "long", _TOP_REGIONS, _TOP_REGIONS, hint="garment.hint.hood"),
+    "tshirt": GarmentType(_TOPS, "upper", "short", _SHORT_SLEEVES, _SHORT_SLEEVES, height=0.7),
+    "long_sleeve": GarmentType(_TOPS, "upper", "long", _TOP_REGIONS, _TOP_REGIONS, height=0.72),
+    "vest": GarmentType(_TOPS, "upper", "none", _NO_SLEEVES, _NO_SLEEVES, height=0.65),
+    "hoodie": GarmentType(("jbib",), "upper", "long", _TOP_REGIONS, _TOP_REGIONS, hint="garment.hint.hood",
+                          height=0.85),
     "open_jacket": GarmentType(("jbib",), "upper", "long", _TOP_REGIONS, _TOP_REGIONS, open_front=True,
-                               hint="garment.hint.open-front"),
-    "long_jacket": GarmentType(("jbib",), "upper", "long", _LONG_REGIONS, _TOP_REGIONS, size=(0.4, 2.2)),
+                               hint="garment.hint.open-front", height=0.72),
+    "long_jacket": GarmentType(("jbib",), "upper", "long", _LONG_REGIONS, _TOP_REGIONS, size=(0.4, 2.2), height=0.9),
     "long_coat": GarmentType(("jbib",), "upper", "long", _LONG_REGIONS, _TOP_REGIONS, bridge=True,
-                             hint="garment.hint.coat", size=(0.5, 2.4)),
+                             hint="garment.hint.coat", size=(0.5, 2.4), height=1.15),
     "dress": GarmentType(("jbib",), "upper", "short", _LONG_REGIONS, _TOP_REGIONS, bridge=True,
-                         hint="garment.hint.dress", size=(0.4, 2.4)),
-    "pants": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=_LOWER_REGIONS, size=(0.25, 1.6)),
+                         hint="garment.hint.dress", size=(0.4, 2.4), height=1.0),
+    "pants": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=_LOWER_REGIONS, size=(0.25, 1.6),
+                         height=1.05),
     "shorts": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=_LOWER_REGIONS, skin=True,
-                          hint="garment.hint.bare-legs", size=(0.25, 1.6)),
+                          hint="garment.hint.bare-legs", size=(0.25, 1.6), height=0.55),
     "skirt": GarmentType(("lowr",), "lower", regions=_LOWER_REGIONS, snug=("waist", "hips"), bridge=True, skin=True,
-                         hint="garment.hint.bare-legs", size=(0.2, 1.6)),
-    "shoes": GarmentType(("feet",), "none", regions=("legs",), snug=("legs",), size=(0.08, 0.5)),
+                         hint="garment.hint.bare-legs", size=(0.2, 1.6), height=0.55),
+    "shoes": GarmentType(("feet",), "none", regions=("legs",), snug=("legs",), size=(0.08, 0.5), height=0.14),
     "sandals": GarmentType(("feet",), "none", regions=("legs",), snug=("legs",), skin=True,
-                           hint="garment.hint.bare-feet", size=(0.08, 0.5)),
+                           hint="garment.hint.bare-feet", size=(0.08, 0.5), height=0.1),
     "mask": GarmentType(("berd",), "head", regions=("head", "neck"), snug=("head", "neck"),
-                        hint="garment.hint.avatar", size=(0.08, 0.6)),
-    "armour": GarmentType(("task",), "upper", "none", _NO_SLEEVES, _NO_SLEEVES, size=(0.2, 1.2)),
+                        hint="garment.hint.avatar", size=(0.08, 0.6), height=0.3),
+    "armour": GarmentType(("task",), "upper", "none", _NO_SLEEVES, _NO_SLEEVES, size=(0.2, 1.2), height=0.5),
     "bag": GarmentType(("hand",), "torso", regions=("shoulders", "chest", "back", "waist"), snug=("shoulders",),
-                       hint="garment.hint.avatar", size=(0.15, 1.4)),
-    "hat": GarmentType(("p_head",), "anchor", hint="garment.hint.prop", size=(0.1, 0.8), snap="hat"),
-    "glasses": GarmentType(("p_eyes",), "anchor", hint="garment.hint.prop", size=(0.05, 0.4), snap="glasses"),
-    "ears": GarmentType(("p_ears",), "anchor", hint="garment.hint.prop", size=(0.02, 0.19), snap="ears"),
+                       hint="garment.hint.avatar", size=(0.15, 1.4), height=0.5),
+    "hat": GarmentType(("p_head",), "anchor", hint="garment.hint.prop", size=(0.1, 0.8), snap="hat", height=0.18),
+    "glasses": GarmentType(("p_eyes",), "anchor", hint="garment.hint.prop", size=(0.05, 0.4), snap="glasses",
+                           height=0.06),
+    "ears": GarmentType(("p_ears",), "anchor", hint="garment.hint.prop", size=(0.02, 0.19), snap="ears", height=0.05),
     "watch": GarmentType(("p_lwrist", "p_rwrist"), "anchor", hint="garment.hint.prop", size=(0.03, 0.25),
-                         snap="wrist"),
+                         snap="wrist", height=0.05),
     "bracelet": GarmentType(("p_rwrist", "p_lwrist"), "anchor", hint="garment.hint.prop", size=(0.03, 0.25),
-                            snap="wrist"),
+                            snap="wrist", height=0.04),
 }
 #: How far the sleeves of a top reach.
 SLEEVES = {name: kind.sleeves for name, kind in TYPES.items() if kind.family == "upper"}
@@ -3052,6 +3058,58 @@ def avatar_meshes(meshes: Sequence[ImportedMesh]) -> List[int]:
     return sorted(found)
 
 
+#: Words of a file name that name a garment type, in English and Turkish, the more particular types first ("short
+#: sleeve shirt" is a T-shirt, "jean jacket" a jacket). A keyword with a space is a phrase of whole words.
+TYPE_WORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
+    ("sandals", ("sandal", "sandalet", "terlik", "slipper", "flip flop")),
+    ("shoes", ("boot", "shoe", "sneaker", "loafer", "ayakkabi", "ayakkabı", "bot", "cizme", "çizme")),
+    ("armour", ("armor", "armour", "plate carrier", "tactical vest", "zirh", "zırh", "celik yelek", "çelik yelek")),
+    ("bag", ("backpack", "bag", "pouch", "parachute", "canta", "çanta", "parasut", "paraşüt")),
+    ("mask", ("mask", "balaclava", "maske")),
+    ("hat", ("hat", "cap", "beanie", "helmet", "sapka", "şapka", "bere", "kask")),
+    ("glasses", ("glasses", "sunglasses", "goggles", "gozluk", "gözlük")),
+    ("ears", ("earring", "earpiece", "kupe", "küpe")),
+    ("watch", ("watch", "wristwatch", "saat")),
+    ("bracelet", ("bracelet", "bangle", "bileklik", "bilezik")),
+    ("hoodie", ("hoodie", "hoody", "hooded", "kapusonlu", "kapüşonlu")),
+    ("tshirt", ("tshirt", "t shirt", "tee", "short sleeve", "tisort", "tişört", "kisa kollu", "kısa kollu")),
+    ("dress", ("dress", "gown", "elbise")),
+    ("skirt", ("skirt", "etek")),
+    ("shorts", ("short", "bermuda", "sort", "şort")),
+    ("long_coat", ("coat", "overcoat", "trench", "robe", "palto", "kaban", "pardesu", "pardesü", "trenckot",
+                   "trençkot")),
+    ("open_jacket", ("cardigan", "open jacket", "hirka", "hırka")),
+    ("long_jacket", ("jacket", "parka", "blazer", "tunic", "gambeson", "ceket", "mont", "tunik")),
+    ("pants", ("pant", "trouser", "jean", "jogger", "legging", "cargo", "pantolon", "tayt")),
+    ("vest", ("vest", "tank", "sleeveless", "singlet", "yelek", "atlet")),
+    ("long_sleeve", ("longsleeve", "long sleeve", "shirt", "sweater", "sweatshirt", "jumper", "pullover", "gomlek",
+                     "gömlek", "kazak", "uzun kollu")),
+)
+#: A keyword at least this long also names a word that starts with it ("sneakers", "maskesi").
+TYPE_PREFIX_LENGTH = 5
+
+
+def _names_type(words: Sequence[str], joined: str, keyword: str) -> bool:
+    if " " in keyword:
+        return f" {keyword} " in joined
+    return any(word == keyword or word in (keyword + "s", keyword + "es")
+               or (len(keyword) >= TYPE_PREFIX_LENGTH and word.startswith(keyword)) for word in words)
+
+
+def guess_category(name: str, chosen: Optional[str] = None) -> Optional[str]:
+    """The garment type a file name names in whole words, whatever their case ("robot" names no boot and "baggy" no
+    bag), or ``None`` when it names none or a type was ``chosen`` already: a guess never replaces the user's choice."""
+    if chosen is not None:
+        return None
+    # A lower-cased Turkish capital I with a dot keeps the dot as a mark of its own, which would split the word.
+    words = re.findall(r"[^\W\d_]+", str(name).lower().replace("̇", ""))
+    joined = " " + " ".join(words) + " "
+    for category, keywords in TYPE_WORDS:
+        if any(_names_type(words, joined, keyword) for keyword in keywords):
+            return category
+    return None
+
+
 def import_scale(size: float, category: str = "tshirt", unit: str = "auto") -> float:
     """The factor that brings an imported garment whose largest dimension is ``size`` (Blender units) to metres.
     With ``unit`` ``auto``, the unit whose size fits the category wins (Marvelous Designer files are often in
@@ -3067,6 +3125,29 @@ def import_unit(size: float, category: str = "tshirt", unit: str = "auto") -> Op
         if plausible_size(size * factor, category):
             return name
     return None
+
+
+#: Mesh generators export a model normalised so its longest side is 1 m; a longest side this close to it (metres)
+#: looks like such an export.
+NORMALISED_SIDE = 0.01
+#: A normalised export is scaled to body size only when its height is further than this share from the type's usual
+#: height; nearer, it has body size already.
+NORMALISED_MISMATCH = 0.15
+
+
+def normalised_scale(positions: Any, category: str = "tshirt", unit: str = "auto") -> Optional[float]:
+    """The factor that brings a garment exported normalised to 1 m (its longest side; ``positions`` as the file
+    gives them, standing upright) to the usual height of its type on the body, or ``None``: the unit is not
+    Automatic, the garment is not 1 m at its longest, or it is about as tall as its type already."""
+    points = as_points(positions)
+    if unit != "auto" or len(points) < 3 or not np.isfinite(points).all():
+        return None
+    extent = np.ptp(points, axis=0)
+    height = float(extent[2])
+    if abs(float(extent.max()) - 1.0) > NORMALISED_SIDE or height <= 0.0:
+        return None
+    factor = garment_type(category).height / height
+    return None if abs(factor - 1.0) <= NORMALISED_MISMATCH else factor
 
 
 def plausible_size(size: float, category: str = "tshirt") -> bool:

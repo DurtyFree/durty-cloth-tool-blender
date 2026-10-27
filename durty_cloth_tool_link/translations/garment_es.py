@@ -1398,4 +1398,11 @@ TEXT = {
         "tiene islas sin sitio o muy apartadas: compruébalo, o vuelve a desplegar la prenda, y combina de nuevo."
     ),
     "garment.why.uv-degenerate": "El mapa UV de la prenda no tiene área en ninguna parte. Despliega primero la prenda.",
+    "garment.done.import-typed": (
+        "{done} Tipo de prenda establecido en {type} según el nombre del archivo. Cámbialo si no es correcto."
+    ),
+    "garment.done.import-rescaled": (
+        "{done} Su lado más largo medía 1 m, como en una exportación normalizada, así que se escaló por {factor} al "
+        "tamaño del cuerpo."
+    ),
 }

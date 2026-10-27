@@ -734,4 +734,11 @@ TEXT = {
     "prop.fit-consent": "Przesyłaj ubrania do dopasowania",
     "prop.fit-consent.desc": "Zezwól opcjom Dopasuj na gta.clothing i Przenieś wagi na przesyłanie ubrania. Wyłącz, aby wycofać zgodę. Dodatek ponownie zapyta przed wysłaniem danych",
     "settings.fit-consent-subtext": "Wysyłany jest tylko kształt ubrania, znaczniki i opcje dopasowania. Dane nie są przechowywane dłużej niż dziesięć minut po dopasowaniu.",
+    "garment.done.import-typed": (
+        "{done} Typ ubrania ustawiono na {type} na podstawie nazwy pliku. Zmień go, jeśli jest błędny."
+    ),
+    "garment.done.import-rescaled": (
+        "{done} Najdłuższy bok miał 1 m, jak w znormalizowanym eksporcie, więc przeskalowano go o {factor} do "
+        "rozmiaru ciała."
+    ),
 }

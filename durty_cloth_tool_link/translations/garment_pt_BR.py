@@ -1359,4 +1359,11 @@ TEXT = {
         "espaço ou muito afastadas: confira-o, ou desdobre a roupa de novo, e combine outra vez."
     ),
     "garment.why.uv-degenerate": "O mapa UV da roupa não tem área em lugar nenhum. Desdobre a roupa primeiro.",
+    "garment.done.import-typed": (
+        "{done} Tipo de roupa definido como {type} pelo nome do arquivo. Mude-o se estiver errado."
+    ),
+    "garment.done.import-rescaled": (
+        "{done} O lado mais longo media 1 m, como em uma exportação normalizada, então foi escalada por {factor} "
+        "para o tamanho do corpo."
+    ),
 }

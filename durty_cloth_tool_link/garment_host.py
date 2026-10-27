@@ -725,8 +725,9 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
                    orient: bool = True) -> Tuple[Any, Dict[str, Any]]:
     """Imports a garment file (FBX, OBJ, glTF): converted to metres, an avatar exported with it left out, joined into
     one mesh object, turned upright and to the front when it lies or faces backwards, its transform applied, and
-    moved down by the ped's ground height when it was made on an avatar standing on the ground. Returns the garment
-    and what was done (``factor``, ``turned``, ``avatar``)."""
+    moved down by the ped's ground height when it was made on an avatar standing on the ground. An export normalised
+    to 1 m is scaled to body size when the unit is Automatic. Returns the garment and what was done (``factor``,
+    ``turned``, ``avatar``, ``rescaled``: the factor of that scaling or ``None``)."""
     new = _import_file(path)
     meshes = [obj for obj in new if obj.type == "MESH"]
     if not meshes:
@@ -750,10 +751,9 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
     rigs = [obj for obj in new if obj.type == "ARMATURE"]
     avatars += [obj for obj in rigs if avatars and obj.name not in kept_rigs]
     rigged = [obj for obj in rigs if obj not in avatars]
-    scale = Matrix.Scale(factor, 4)
     turns: List[Tuple[str, float]] = []
+    points = np.concatenate([world_positions(obj) for obj in meshes]) * factor
     if orient:
-        points = np.concatenate([world_positions(obj) for obj in meshes]) * factor
         first = garment.upright_turn(points, category)
         if first is not None and first[0] == "x":
             turns.append(first)
@@ -761,6 +761,11 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
             first = garment.upright_turn(points, category)
         if first is not None and first[0] == "z":
             turns.append(first)
+    # An export normalised to 1 m (as mesh generators make them) is scaled to body size, read as it stands upright.
+    rescaled = garment.normalised_scale(points / factor, category, unit)
+    if rescaled is not None:
+        factor, unit_name = rescaled, "m"
+    scale = Matrix.Scale(factor, 4)
     turn = Matrix.Identity(4)
     for step in turns:
         turn = _turn_matrix(step) @ turn
@@ -792,9 +797,10 @@ def import_garment(context: Any, path: pathlib.Path, *, ground: bool, category: 
     if layer.objects.get(chosen.name) is not None:
         chosen.select_set(True)
         layer.objects.active = chosen
+    plausible = unit_name is not None and (rescaled is None or garment.plausible_size(size * factor, category))
     return chosen, {"factor": factor, "turned": [step[0] for step in turns], "avatar": bool(avatars),
-                    "unit": unit_name or "m", "plausible": unit_name is not None, "size": round(size * factor, 2),
-                    "rig": avatar_markers is not None}
+                    "unit": unit_name or "m", "plausible": plausible, "size": round(size * factor, 2),
+                    "rig": avatar_markers is not None, "rescaled": rescaled}
 
 
 def avatar_markers(obj: Optional[Any], name: str) -> Optional[Dict[str, Any]]:

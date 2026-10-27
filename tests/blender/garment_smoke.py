@@ -196,6 +196,38 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
         if index < len(tee.data.materials):
             tee.data.materials[index] = material
 
+    # Import Garment takes the type from the file name and scales an export normalised to 1 m to body size; a type
+    # the user picked first is kept.
+    hoodie_mesh = synthetic.top("long", 45.0)
+    longest = float(np.ptp(hoodie_mesh.positions, axis=0).max())
+    source = mesh_object("smoke_hoodie_source", synthetic.Mesh(hoodie_mesh.positions / longest, hoodie_mesh.faces,
+                                                                hoodie_mesh.joints))
+    for obj in bpy.context.view_layer.objects:
+        obj.select_set(obj == source)
+    bpy.context.view_layer.objects.active = source
+    hoodie_path = folder / "Black_Hoodie_AI.obj"
+    bpy.ops.wm.obj_export(filepath=str(hoodie_path), export_selected_objects=True, export_materials=False)
+    bpy.data.objects.remove(source)
+    check("Import Garment runs on a named, normalised file",
+          "FINISHED" in bpy.ops.dct_link.fit_import_garment(filepath=str(hoodie_path), ground=True))
+    hoodie = props.garment
+    notice = ui_garment.RUNTIME.notice
+    check("the type comes from the file name and the import says so",
+          props.category == "hoodie" and notice is not None and notice.message.key == "garment.done.import-typed"
+          and notice.message.fields["done"].key == "garment.done.import-rescaled",
+          (props.category, notice))
+    check("the normalised export is scaled to body size",
+          abs(float(np.ptp(positions(hoodie)[:, 2])) - garment.garment_type("hoodie").height) < 0.01,
+          tuple(np.ptp(positions(hoodie), axis=0).round(3)))
+    bpy.data.objects.remove(hoodie)
+    props.category = "pants"
+    check("Import Garment keeps a type the user picked",
+          "FINISHED" in bpy.ops.dct_link.fit_import_garment(filepath=str(hoodie_path), ground=True)
+          and props.category == "pants" and not props.category_chosen, props.category)
+    bpy.data.objects.remove(props.garment)
+    props.garment = tee
+    check("the tee keeps its own type", props.category == "tshirt", props.category)
+
     # The hosted body: downloaded from the fake gta.clothing for the signed-in account and kept per version.
     glb = body_glb(folder)
     api.body_files = {"freemode_male.glb": glb.read_bytes(), "freemode_joints.json": joints_file()}

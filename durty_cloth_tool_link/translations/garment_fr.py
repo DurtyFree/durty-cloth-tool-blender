@@ -1460,4 +1460,11 @@ TEXT = {
         "des îlots sans place ou très éloignés : vérifiez-la, ou redépliez le vêtement, puis combinez à nouveau."
     ),
     "garment.why.uv-degenerate": "La carte UV du vêtement n'a de surface nulle part. Dépliez d'abord le vêtement.",
+    "garment.done.import-typed": (
+        "{done} Type de vêtement réglé sur {type} d'après le nom du fichier. Changez-le s'il est faux."
+    ),
+    "garment.done.import-rescaled": (
+        "{done} Son plus grand côté mesurait 1 m, comme dans un export normalisé, il a donc été mis à la taille du "
+        "corps (facteur {factor})."
+    ),
 }
