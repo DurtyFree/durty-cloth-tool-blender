@@ -513,8 +513,10 @@ TEXT = {
     ),
     "garment.info.lods": (
         "Reduz uma cópia da roupa a cada limite de triângulos e a coloca nos slots de LOD Medium e Low do Sollumz, "
-        "mantendo bordas abertas e costuras UV o máximo possível. Cada nível assume os pesos de High (quatro ossos por "
-        "vértice) e é empurrado para fora do corpo."
+        "mantendo bordas abertas e costuras UV o máximo possível. Cada nível assume os pesos de High (quatro ossos "
+        "por vértice) e é empurrado para fora do corpo. Cada nível é criado de algumas formas, unindo antes as partes "
+        "soltas a distâncias diferentes, e fica o que tem os menores buracos em comparação com High, nunca acima do "
+        "orçamento de triângulos dele."
     ),
     "garment.info.validate": (
         "Verificações locais rápidas: pesos, mais de quatro ossos por vértice, coordenadas quebradas, onde a roupa "
@@ -1421,4 +1423,6 @@ TEXT = {
         "Dá ao tecido de uma camada um verso esta quantidade de milímetros atrás dele, para que não fique "
         "transparente visto de trás. 0 o deixa com uma camada"
     ),
+    "garment.stage.lod-medium": "Criando o nível Medium",
+    "garment.stage.lod-low": "Criando o nível Low",
 }

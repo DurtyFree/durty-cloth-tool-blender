@@ -389,7 +389,13 @@ TEXT = {
     "garment.info.check": "Mengukur jarak setiap area pakaian dari tubuh: nilai tengah dan rentang sebagian besar vertex, dalam milimeter. Nilai negatif berada di dalam tubuh.",
     "garment.info.combine": "Mengemas semua pulau UV ke satu persegi dan melakukan bake setiap material menjadi satu: warna beserta transparansinya, serta peta normal, spekular, dan emisi jika material memilikinya. Hasilnya menjadi satu-satunya material pakaian. Peta UV asli disimpan sebagai DCT Source UV.",
     "garment.info.garment": "Alat hanya mengubah objek ini. Impor Pakaian mengonversi sentimeter dan milimeter (seperti ekspor Marvelous Designer) ke meter. Setiap langkah yang mengubah pakaian menyimpan cadangan, dan Ctrl+Z membatalkannya.",
-    "garment.info.lods": "Mengurangi detail salinan pakaian sesuai setiap batas segitiga dan menempatkannya di slot LOD Medium dan Low Sollumz, sambil mempertahankan tepi terbuka dan jahitan UV sebisa mungkin. Setiap tingkat mengambil bobot High (empat tulang per vertex) dan didorong keluar tubuh.",
+    "garment.info.lods": (
+        "Mengurangi detail salinan pakaian sesuai setiap batas segitiga dan menempatkannya di slot LOD Medium dan Low "
+        "Sollumz, sambil mempertahankan tepi terbuka dan jahitan UV sebisa mungkin. Setiap tingkat mengambil bobot "
+        "High (empat tulang per vertex) dan didorong keluar tubuh. Setiap level dibuat dengan beberapa cara, dengan "
+        "potongan lepas disambung lebih dulu pada jarak yang berbeda, dan yang lubangnya paling kecil dibandingkan "
+        "High yang disimpan, tidak pernah melebihi anggaran segitiganya."
+    ),
     "garment.info.markers": "Penanda mewakili sendi ped: leher, dada, panggul, bahu, siku, pergelangan tangan, dan pinggul (untuk celana: pinggul, lutut, dan pergelangan kaki; untuk masker: kepala). Penanda Otomatis menempatkannya pada sendi avatar yang dipilih di bagian Persiapan, atau membaca bentuk pakaian (atasan dan celana), atau menempatkannya pada sendi tubuh. Garis di tampilan 3D menghubungkannya: garis oranye berarti ada yang tampak keliru. Pindahkan penanda yang tidak tepat; Cerminkan Kiri ke Kanan menyalin sisi kiri ke kanan.",
     "garment.info.pose": "Pilih pose avatar tempat pakaian dibuat. Pakaian yang dibuat dalam pose T dapat diubah ke pose A game di bagian Sesuaikan.",
     "garment.info.prepare": (
@@ -820,4 +826,6 @@ TEXT = {
         "Memberi kain satu lapis sisi belakang sejauh milimeter ini di belakangnya, agar tidak tembus pandang dari "
         "belakang. 0 membiarkannya satu lapis"
     ),
+    "garment.stage.lod-medium": "Membuat level Medium",
+    "garment.stage.lod-low": "Membuat level Low",
 }

@@ -389,7 +389,13 @@ TEXT = {
     "garment.info.check": "Misura quanto ogni zona del capo è distante dal corpo: il valore mediano e l'intervallo della maggior parte dei suoi vertici, in millimetri. I valori negativi indicano punti all'interno del corpo.",
     "garment.info.combine": "Compatta tutte le isole UV in un quadrato ed esegue il bake di tutti i materiali in uno solo: il colore con la sua trasparenza e le mappe delle normali, speculare e di emissione, se presenti nei materiali. Questo diventa l'unico materiale del capo. La mappa UV originale viene conservata come DCT Source UV.",
     "garment.info.garment": "Gli strumenti modificano solo questo oggetto. Importa capo converte centimetri e millimetri, come esportati da Marvelous Designer, in metri. Ogni passaggio che modifica il capo conserva un backup e Ctrl+Z lo annulla.",
-    "garment.info.lods": "Decima una copia del capo fino al limite di triangoli di ciascun livello e la inserisce negli slot LOD Medium e Low di Sollumz, conservando per quanto possibile i bordi aperti e le cuciture UV. Ogni livello eredita i pesi di High (quattro ossa per vertice) e viene spinto fuori dal corpo.",
+    "garment.info.lods": (
+        "Decima una copia del capo fino al limite di triangoli di ciascun livello e la inserisce negli slot LOD "
+        "Medium e Low di Sollumz, conservando per quanto possibile i bordi aperti e le cuciture UV. Ogni livello "
+        "eredita i pesi di High (quattro ossa per vertice) e viene spinto fuori dal corpo. Ogni livello viene creato "
+        "in alcuni modi, unendo prima le parti sciolte a distanze diverse, e si tiene quello con i buchi più piccoli "
+        "rispetto a High, mai oltre il suo budget di triangoli."
+    ),
     "garment.info.markers": "I marcatori rappresentano le articolazioni del ped: collo, torace, bacino, spalle, gomiti, polsi e anche (per i pantaloni, anche, ginocchia e caviglie; per una maschera, la testa). Marcatori automatici li posiziona sulle articolazioni dell'avatar scelto in Configurazione; altrimenti li ricava dalla forma del capo (parti superiori e pantaloni) o li posiziona inizialmente sulle articolazioni del corpo. Le linee nella vista 3D li collegano: le linee arancioni indicano un possibile problema. Sposta i marcatori fuori posto; Specchia S su D copia il lato sinistro su quello destro.",
     "garment.info.pose": "Scegli la posa dell'avatar su cui è stato creato il capo. Un capo creato in posa T può essere portato nella posa A del gioco in Adattamento.",
     "garment.info.prepare": (
@@ -811,4 +817,6 @@ TEXT = {
         "Dà al tessuto a strato singolo un retro a questi millimetri dietro di esso, così da dietro non è "
         "trasparente. 0 lo lascia a strato singolo"
     ),
+    "garment.stage.lod-medium": "Creazione del livello Medium",
+    "garment.stage.lod-low": "Creazione del livello Low",
 }

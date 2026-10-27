@@ -704,7 +704,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     medium, low = lods.get_lod("sollumz_medium").mesh, lods.get_lod("sollumz_low").mesh
     weighted = medium is not None and sum(1 for v in medium.vertices if v.groups) == len(medium.vertices)
     check("the levels of detail are in Sollumz's slots, decimated and weighted",
-          medium is not None and low is not None and len(medium.polygons) <= 700 and len(low.polygons) <= 200
+          medium is not None and low is not None and len(medium.polygons) <= 600 and len(low.polygons) <= 150
           and lods.get_lod("sollumz_high").mesh == tpose.data and weighted,
           (len(medium.polygons) if medium else None, len(low.polygons) if low else None, weighted))
     check("Validate runs", "FINISHED" in bpy.ops.dct_link.fit_validate())

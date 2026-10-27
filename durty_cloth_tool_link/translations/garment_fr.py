@@ -529,9 +529,11 @@ TEXT = {
         "matériau du vêtement. La carte UV d'origine est conservée sous le nom DCT Source UV."
     ),
     "garment.info.lods": (
-        "Réduit une copie du vêtement à chaque budget de triangles et la place dans les emplacements LOD Medium et Low "
-        "de Sollumz, en gardant autant que possible les bords ouverts et les coutures UV. Chaque niveau reprend les "
-        "poids de High (quatre os par sommet) et est poussé hors du corps."
+        "Réduit une copie du vêtement à chaque budget de triangles et la place dans les emplacements LOD Medium et "
+        "Low de Sollumz, en gardant autant que possible les bords ouverts et les coutures UV. Chaque niveau reprend "
+        "les poids de High (quatre os par sommet) et est poussé hors du corps. Chaque niveau est créé de plusieurs "
+        "façons, en joignant d'abord les morceaux libres à différentes distances, et celui qui a les plus petits "
+        "trous par rapport à High est conservé, jamais au-dessus de son budget de triangles."
     ),
     "garment.info.validate": (
         "Contrôles locaux rapides : poids, plus de quatre os par sommet, coordonnées cassées, position du vêtement, "
@@ -1531,4 +1533,6 @@ TEXT = {
         "Donne au tissu à une seule couche un envers à ce nombre de millimètres derrière lui, pour qu'il ne soit pas "
         "transparent de dos. 0 le laisse à une seule couche"
     ),
+    "garment.stage.lod-medium": "Création du niveau Medium",
+    "garment.stage.lod-low": "Création du niveau Low",
 }

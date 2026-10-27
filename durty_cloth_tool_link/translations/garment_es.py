@@ -515,7 +515,9 @@ TEXT = {
     "garment.info.lods": (
         "Reduce una copia de la prenda a cada presupuesto de triángulos y la pone en las ranuras de LOD Medium y Low "
         "de Sollumz, conservando los bordes abiertos y las costuras UV todo lo posible. Cada nivel toma los pesos de "
-        "High (cuatro huesos por vértice) y se empuja fuera del cuerpo."
+        "High (cuatro huesos por vértice) y se empuja fuera del cuerpo. Cada nivel se crea de varias formas, uniendo "
+        "antes las piezas sueltas a distintas distancias, y se conserva el que tiene los agujeros más pequeños en "
+        "comparación con High, nunca por encima de su presupuesto de triángulos."
     ),
     "garment.info.validate": (
         "Comprobaciones locales rápidas: pesos, más de cuatro huesos por vértice, coordenadas rotas, dónde está la "
@@ -1474,4 +1476,6 @@ TEXT = {
         "Da a la tela de una sola capa una cara trasera a estos milímetros por detrás, para que no se vea a través "
         "desde atrás. 0 la deja en una sola capa"
     ),
+    "garment.stage.lod-medium": "Creando el nivel Medium",
+    "garment.stage.lod-low": "Creando el nivel Low",
 }

@@ -389,7 +389,13 @@ TEXT = {
     "garment.info.check": "Kıyafetin her bölgesinin bedenden ne kadar uzakta durduğunu ölçer: köşelerinin orta değeri ve çoğunu kapsayan aralık, milimetre cinsinden. Negatif değerler bedenin içindedir.",
     "garment.info.combine": "Tüm UV adalarını tek kareye paketleyip her malzemeye bake uygulayarak tek malzemede birleştirir: saydamlığıyla renk ve malzemede varsa normal, yansıtma ve yayım haritası. Bu, kıyafetin tek malzemesi olur. Özgün UV haritası DCT Source UV olarak korunur.",
     "garment.info.garment": "Araçlar yalnızca bu nesneyi değiştirir. Kıyafet içe aktar, santimetre ve milimetreyi (Marvelous Designer dışa aktarımındaki gibi) metreye dönüştürür. Kıyafeti değiştiren her adım yedek tutar ve Ctrl+Z ile geri alınabilir.",
-    "garment.info.lods": "Kıyafetin bir kopyasının çokgen sayısını her üçgen bütçesine göre azaltıp Sollumz içindeki Medium ve Low LOD yuvalarına yerleştirir; açık kenarları ve UV dikişlerini olabildiğince korur. Her düzey High ağırlıklarını devralır (köşe başına dört kemik) ve bedenin dışına çıkarılır.",
+    "garment.info.lods": (
+        "Kıyafetin bir kopyasının çokgen sayısını her üçgen bütçesine göre azaltıp Sollumz içindeki Medium ve Low LOD "
+        "yuvalarına yerleştirir; açık kenarları ve UV dikişlerini olabildiğince korur. Her düzey High ağırlıklarını "
+        "devralır (köşe başına dört kemik) ve bedenin dışına çıkarılır. Her seviye birkaç şekilde oluşturulur, önce "
+        "ayrık parçalar farklı uzaklıklarda birleştirilir ve High ile karşılaştırıldığında en küçük deliklere sahip "
+        "olan, üçgen bütçesini asla aşmadan tutulur."
+    ),
     "garment.info.markers": "İşaretler ped'in eklemlerini temsil eder: boyun, göğüs, leğen kemiği, omuzlar, dirsekler, el bilekleri ve kalçalar (pantolonda kalçalar, dizler ve ayak bilekleri; maskede baş). Otomatik işaretler bunları Kurulum altında seçilen avatarın eklemlerine yerleştirir; aksi halde kıyafetin şeklinden okur (üst kıyafetler ve pantolonlar) veya bedenin eklemlerinden başlatır. 3D görünümdeki çizgiler bunları birleştirir: turuncu çizgiler bir şeyin yanlış göründüğünü belirtir. Yanlış yerdeki işaretleri taşıyın; Solu sağa yansıt sol tarafı sağa kopyalar.",
     "garment.info.pose": "Kıyafetin üzerinde yapıldığı avatarın pozunu seçin. T pozunda yapılan kıyafet, Uyarla altında oyunun A pozuna getirilebilir.",
     "garment.info.prepare": (
@@ -810,4 +816,6 @@ TEXT = {
         "Tek katlı kumaşa bu kadar milimetre arkasında bir arka yüz verir, böylece arkadan saydam görünmez. 0 onu tek "
         "katlı bırakır"
     ),
+    "garment.stage.lod-medium": "Medium seviyesi oluşturuluyor",
+    "garment.stage.lod-low": "Low seviyesi oluşturuluyor",
 }

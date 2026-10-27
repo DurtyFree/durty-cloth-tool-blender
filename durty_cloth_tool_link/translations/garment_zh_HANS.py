@@ -384,7 +384,8 @@ TEXT = {
         "把所有 UV 岛打包进一个正方形，并把所有材质烘焙为一个：带透明度的颜色，以及材质具有的法线、高光和自发光贴图。它将成为服装唯一的材质。原始 UV 贴图保留为 DCT Source UV。"
     ),
     "garment.info.lods": (
-        "把服装的副本减面到各个三角面预算，放入 Sollumz 的 Medium 和 Low LOD 槽位，并尽量保留开放边和 UV 接缝。每个级别都沿用 High 的权重（每个顶点四根骨骼），并被推出身体。"
+        "把服装的副本减面到各个三角面预算，放入 Sollumz 的 Medium 和 Low LOD 槽位，并尽量保留开放边和 UV 接缝。每个级别都沿用 High 的权重（每个顶点四根骨骼），并被推出身体。 "
+        "每个级别会用几种方式生成，先以不同距离连接松散的部分，然后保留与 High 相比孔洞最小的那个，且绝不超过其三角面预算。"
     ),
     "garment.info.validate": "快速本地检查：权重、每个顶点超过四根骨骼、损坏的坐标、服装的位置、反转的法线、UV 布局、顶点颜色、每个细节级别的三角面数，以及有多少部分在身体内。",
     # ---- adding to Durty Cloth Tool ----
@@ -922,4 +923,6 @@ TEXT = {
     "garment.push-region.torso_arms.desc": "推出躯干和袖子；裤腿和其他部分保持不变",
     "garment.prop.thickness": "厚度（mm）",
     "garment.prop.thickness.desc": "在单层布料后方这么多毫米处为其添加背面，使其从背后看不透明。0 表示保持单层",
+    "garment.stage.lod-medium": "正在生成 Medium 级别",
+    "garment.stage.lod-low": "正在生成 Low 级别",
 }

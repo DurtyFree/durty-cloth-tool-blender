@@ -3335,6 +3335,44 @@ def lod_budget(level: str, high_triangles: int, chosen: int = 0) -> int:
     return max(4, min(TRIANGLE_BUDGET[level], int(round(LOD_SHARE[level] * high_triangles))))
 
 
+#: The weld distances (metres) Generate LODs tries for each level before reducing it: welding loose patches together
+#: first keeps a reduced level from losing whole small patches, but can bridge gaps it should not, so each is tried
+#: and the result closest to High kept. Ported from Muto Cloth by muto.
+LOD_WELDS = {"medium": (0.0, 0.004, 0.008), "low": (0.0, 0.008, 0.012, 0.02, 0.03)}
+#: The share of High's surface (percent) whose distance to a level counts: the level's largest holes, not a few
+#: stray points.
+HOLE_PERCENTILE = 98
+#: Candidates whose holes differ by less than this (metres) count as alike, and the larger weld is kept: a joined
+#: surface does not part when the ped moves.
+LOD_TIE = 0.002
+#: High's surface is measured at no more than this many of its vertices.
+HOLE_SAMPLES = 5000
+
+
+class LodCandidate(NamedTuple):
+    weld: float  # metres
+    triangles: int
+    hole: float  # :func:`hole_size`, metres
+
+
+def hole_size(distances: Any) -> float:
+    """How large a level's holes are compared with High: of the distances from points of High's surface to the
+    level's surface, the one :data:`HOLE_PERCENTILE` percent stay within (metres; 0 without points)."""
+    distances = np.asarray(distances, dtype=np.float64).reshape(-1)
+    return float(np.percentile(distances, HOLE_PERCENTILE)) if len(distances) else 0.0
+
+
+def choose_lod(candidates: Sequence[LodCandidate], budget: int, tie: float = LOD_TIE) -> int:
+    """The candidate Generate LODs keeps (its index): of those within the triangle ``budget`` (the smallest when none
+    is), the one with the smallest holes, and among holes alike (within ``tie``) the larger weld."""
+    pool = [i for i, c in enumerate(candidates) if c.triangles <= budget]
+    if not pool:
+        pool = [min(range(len(candidates)), key=lambda i: candidates[i].triangles)]
+    smallest = min(candidates[i].hole for i in pool)
+    alike = [i for i in pool if candidates[i].hole <= smallest + tie]
+    return max(alike, key=lambda i: (candidates[i].weld, -candidates[i].hole))
+
+
 class Finding(NamedTuple):
     severity: str  # "error", "warning" or "info"
     code: str

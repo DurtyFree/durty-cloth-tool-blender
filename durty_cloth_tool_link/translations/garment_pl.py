@@ -389,7 +389,13 @@ TEXT = {
     "garment.info.check": "Mierzy odległość każdego obszaru ubrania od ciała: wartość środkową i zakres obejmujący większość jego wierzchołków, w milimetrach. Wartości ujemne oznaczają położenie wewnątrz ciała.",
     "garment.info.combine": "Upakowuje wszystkie wyspy UV w jednym kwadracie i wypala wszystkie materiały w jeden: kolor z przezroczystością oraz mapy normalnych, odbić i emisji, jeśli materiał je ma. Staje się on jedynym materiałem ubrania. Oryginalna mapa UV zostaje zachowana jako DCT Source UV.",
     "garment.info.garment": "Narzędzia zmieniają tylko ten obiekt. Opcja Importuj ubranie przelicza centymetry i milimetry (używane przy eksporcie przez Marvelous Designer) na metry. Każdy krok zmieniający ubranie zachowuje kopię zapasową, a Ctrl+Z go cofa.",
-    "garment.info.lods": "Upraszcza kopię ubrania do każdego limitu trójkątów i umieszcza ją w slotach LOD Medium i Low w Sollumz, w miarę możliwości zachowując otwarte krawędzie i szwy UV. Każdy poziom przejmuje wagi High (cztery kości na wierzchołek) i zostaje wypchnięty poza ciało.",
+    "garment.info.lods": (
+        "Upraszcza kopię ubrania do każdego limitu trójkątów i umieszcza ją w slotach LOD Medium i Low w Sollumz, w "
+        "miarę możliwości zachowując otwarte krawędzie i szwy UV. Każdy poziom przejmuje wagi High (cztery kości na "
+        "wierzchołek) i zostaje wypchnięty poza ciało. Każdy poziom powstaje na kilka sposobów, z luźnymi kawałkami "
+        "najpierw złączonymi przy różnych odległościach, i zostaje ten z najmniejszymi dziurami w porównaniu z High, "
+        "nigdy ponad jego budżet trójkątów."
+    ),
     "garment.info.markers": "Znaczniki odpowiadają stawom peda: szyi, klatce piersiowej, miednicy, barkom, łokciom, nadgarstkom i biodrom (dla spodni: biodrom, kolanom i kostkom; dla maski: głowie). Opcja Automatyczne znaczniki umieszcza je na stawach awatara wybranego w sekcji Przygotowanie, odczytuje z kształtu ubrania (górne części i spodnie) lub początkowo ustawia w stawach ciała. Łączą je linie w widoku 3D: pomarańczowe oznaczają, że coś wygląda nieprawidłowo. Popraw niewłaściwie położone znaczniki. Opcja Odbij lewą na prawą kopiuje lewą stronę na prawą.",
     "garment.info.pose": "Wybierz pozę awatara, na którym utworzono ubranie. Ubranie wykonane w pozie T można przestawić do pozy A używanej przez grę w sekcji Dopasuj.",
     "garment.info.prepare": (
@@ -818,4 +824,6 @@ TEXT = {
         "Daje jednowarstwowej tkaninie spód tyle milimetrów za nią, by od tyłu nie była przezroczysta. 0 zostawia ją "
         "jednowarstwową"
     ),
+    "garment.stage.lod-medium": "Tworzenie poziomu Medium",
+    "garment.stage.lod-low": "Tworzenie poziomu Low",
 }

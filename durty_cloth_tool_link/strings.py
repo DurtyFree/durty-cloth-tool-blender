@@ -1019,7 +1019,9 @@ EN: Dict[str, str] = {
     "garment.info.lods": (
         "Decimates a copy of the garment to each triangle budget and puts it into Sollumz's Medium and Low LOD slots, "
         "keeping open edges and UV seams as far as it can. Each level takes over High's weights (four bones per "
-        "vertex) and is pushed out of the body."
+        "vertex) and is pushed out of the body. Each level is made a few ways, with loose patches joined at different "
+        "distances first, and the one with the smallest holes compared with High is kept, never over its triangle "
+        "budget."
     ),
     "garment.info.validate": (
         "Quick local checks: weights, more than four bones per vertex, broken coordinates, where the garment sits, "
@@ -1811,6 +1813,8 @@ EN: Dict[str, str] = {
     "garment.stage.bake-normal": "Baking the normal map",
     "garment.stage.bake-emission": "Baking the emission map",
     "garment.stage.material": "Making the combined material",
+    "garment.stage.lod-medium": "Making the Medium level",
+    "garment.stage.lod-low": "Making the Low level",
     "garment.prop.thickness": "Thickness (mm)",
     "garment.prop.thickness.desc": (
         "Give single-layer cloth a back side this many millimetres behind it, so it is not see-through from behind. 0 "

@@ -2495,11 +2495,64 @@ def _protected(mesh: Any) -> np.ndarray:
     return protect
 
 
+def _welded_copy(mesh: Any, distance: float) -> Any:
+    """A copy of ``mesh`` with its vertices within ``distance`` metres merged and the loose ones removed."""
+    copy = mesh.copy()
+    if distance > 0:
+        bm = bmesh.new()
+        bm.from_mesh(copy)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=distance)
+        loose = [v for v in bm.verts if not v.link_faces]
+        if loose:
+            bmesh.ops.delete(bm, geom=loose, context="VERTS")
+        bm.to_mesh(copy)
+        bm.free()
+    return copy
+
+
+def _reduced(context: Any, obj: Any, mesh: Any, budget: int) -> Any:
+    """``mesh`` decimated to at most ``budget`` triangles (a few tries: a collapse can land above its ratio), open
+    edges and UV seams kept as far as possible, with High's weights."""
+    protect = _protected(mesh)
+    triangles = max(1, len(mesh_triangles(mesh)))
+    ratio = min(1.0, budget / triangles)
+    reduced = None
+    for _ in range(3):
+        if reduced is not None:
+            bpy.data.meshes.remove(reduced)
+        reduced = _transfer(context, obj, mesh, ratio, protect)
+        count = len(mesh_triangles(reduced))
+        if count <= budget or ratio <= 0.001:
+            break
+        ratio = max(0.001, ratio * budget / count * 0.98)
+    return reduced
+
+
+def _hole(samples: np.ndarray, mesh: Any, matrix: Any) -> float:
+    """:func:`garment.hole_size` of ``mesh`` (a level) against points of High's surface (world positions)."""
+    triangles = mesh_triangles(mesh)
+    if not len(triangles):
+        return float("inf")
+    tree = BVHTree.FromPolygons(mesh_positions(mesh, matrix).tolist(), triangles.tolist(), all_triangles=True)
+    find = tree.find_nearest
+    distances = [find(Vector(point))[3] for point in samples]
+    return garment.hole_size([d if d is not None else np.inf for d in distances])
+
+
 def generate_lods(context: Any, obj: Any, budgets: Dict[str, int], body: Optional[Any] = None,
                   gap: float = 0.004) -> Dict[str, Any]:
-    """Medium and Low levels of detail in Sollumz's LOD slots: the High mesh decimated to the triangle budgets (0: a
-    share of High, never more than the budgets Durty Cloth Tool advises), open edges and UV seams kept as far as
-    possible, the bone weights taken over from High (four per vertex), and pushed out of the body like High."""
+    """:func:`lod_steps` at once."""
+    return run_steps(lod_steps(context, obj, budgets, body, gap))
+
+
+def lod_steps(context: Any, obj: Any, budgets: Dict[str, int], body: Optional[Any] = None,
+              gap: float = 0.004) -> Any:
+    """Medium and Low levels of detail in Sollumz's LOD slots, as a generator of ``(stage text key, done, total)``:
+    for each level, the High mesh welded at each of :data:`garment.LOD_WELDS` and decimated to the triangle budget
+    (0: a share of High, never more than the budgets Durty Cloth Tool advises; Low never more than Medium), open edges
+    and UV seams kept as far as possible, with the bone weights of High (four per vertex). The candidate whose holes
+    compared with High are smallest is kept (:func:`garment.choose_lod`) and pushed out of the body like High. The
+    slots change only at the end; stopped earlier, the candidates made so far go."""
     if not sollumz_lods_available():
         raise fail("garment.why.no-sollumz")
     hide_problems(obj)
@@ -2513,25 +2566,57 @@ def generate_lods(context: Any, obj: Any, budgets: Dict[str, int], body: Optiona
     source = obj.data
     triangles = len(mesh_triangles(source))
     results: Dict[str, Any] = {"high": triangles}
-    protect = _protected(source)
     tree = body_tree(body) if body is not None else None
-    for level, short in LOD_LEVELS:
-        budget = garment.lod_budget(short, triangles, int(budgets.get(short, 0)))
-        copy = source.copy()
-        lod_mesh = _transfer(context, obj, copy, min(1.0, budget / max(1, triangles)), protect)
-        bpy.data.meshes.remove(copy)
-        lod_mesh.name = f"{obj.name}_{short}"
-        if tree is not None:
-            positions = mesh_positions(lod_mesh, obj.matrix_world)
-            signed, nearest, normals = clearance(tree, positions)
-            offsets = garment.push_out_offsets(positions, nearest, normals, signed, gap)
-            if np.any(offsets):
-                set_mesh_positions(lod_mesh, obj.matrix_world, positions + offsets)
-        old = lods.get_lod(level).mesh
-        lods.get_lod(level).mesh = lod_mesh
-        if old is not None and old != source and old.users == 0:
-            bpy.data.meshes.remove(old)
-        results[short] = len(mesh_triangles(lod_mesh))
+    high = mesh_positions(source, obj.matrix_world)
+    samples = high[:: max(1, len(high) // garment.HOLE_SAMPLES)]
+    total = sum(len(garment.LOD_WELDS[short]) for _level, short in LOD_LEVELS)
+    done = 0
+    made: List[Any] = []
+    chosen: Dict[str, Any] = {}
+    try:
+        ceiling = None
+        for level, short in LOD_LEVELS:
+            budget = garment.lod_budget(short, triangles, int(budgets.get(short, 0)))
+            if ceiling is not None:
+                budget = min(budget, ceiling)  # Low never more than Medium
+            candidates, meshes = [], []
+            for weld in garment.LOD_WELDS[short]:
+                yield f"garment.stage.lod-{short}", done, total
+                done += 1
+                copy = _welded_copy(source, weld)
+                try:
+                    reduced = _reduced(context, obj, copy, budget)
+                finally:
+                    bpy.data.meshes.remove(copy)
+                made.append(reduced)
+                meshes.append(reduced)
+                candidates.append(garment.LodCandidate(weld, len(mesh_triangles(reduced)),
+                                                       _hole(samples, reduced, obj.matrix_world)))
+            pick = garment.choose_lod(candidates, budget)
+            lod_mesh = meshes[pick]
+            chosen[short] = lod_mesh
+            ceiling = candidates[pick].triangles
+            results[f"{short}_weld"] = round(candidates[pick].weld * 1000.0, 1)
+            results[f"{short}_hole"] = round(candidates[pick].hole * 1000.0, 1)
+        for level, short in LOD_LEVELS:
+            lod_mesh = chosen[short]
+            lod_mesh.name = f"{obj.name}_{short}"
+            if tree is not None:
+                positions = mesh_positions(lod_mesh, obj.matrix_world)
+                signed, nearest, normals = clearance(tree, positions)
+                offsets = garment.push_out_offsets(positions, nearest, normals, signed, gap)
+                if np.any(offsets):
+                    set_mesh_positions(lod_mesh, obj.matrix_world, positions + offsets)
+            old = lods.get_lod(level).mesh
+            lods.get_lod(level).mesh = lod_mesh
+            if old is not None and old != source and old.users == 0:
+                bpy.data.meshes.remove(old)
+            results[short] = len(mesh_triangles(lod_mesh))
+    finally:
+        kept = set(chosen.values()) if len(chosen) == len(LOD_LEVELS) else set()
+        for mesh in made:
+            if mesh not in kept and mesh.users == 0:
+                bpy.data.meshes.remove(mesh)
     set_flag(obj, "dct_lods")
     clear_flags(obj, "dct_validated", FINDINGS)
     return results

@@ -532,7 +532,9 @@ TEXT = {
     "garment.info.lods": (
         "Reduziert eine Kopie des Kleidungsstücks auf jedes Dreiecksbudget und legt sie in die LOD-Plätze Medium und "
         "Low von Sollumz; offene Kanten und UV-Nähte bleiben so weit wie möglich erhalten. Jede Stufe übernimmt die "
-        "Gewichte von High (vier Knochen pro Vertex) und wird aus dem Körper geschoben."
+        "Gewichte von High (vier Knochen pro Vertex) und wird aus dem Körper geschoben. Jede Stufe wird auf einige "
+        "Arten erzeugt, wobei lose Stücke zuerst mit verschiedenen Abständen verbunden werden, und die mit den "
+        "kleinsten Löchern im Vergleich zu High wird behalten, nie über ihrem Dreiecksbudget."
     ),
     "garment.info.validate": (
         "Schnelle lokale Prüfungen: Gewichte, mehr als vier Knochen pro Vertex, kaputte Koordinaten, wo das "
@@ -1560,4 +1562,6 @@ TEXT = {
         "Gibt einlagigem Stoff eine Rückseite so viele Millimeter dahinter, damit er von hinten nicht durchsichtig "
         "ist. 0 lässt ihn einlagig"
     ),
+    "garment.stage.lod-medium": "Stufe Medium erzeugen",
+    "garment.stage.lod-low": "Stufe Low erzeugen",
 }

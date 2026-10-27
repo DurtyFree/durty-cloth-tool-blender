@@ -552,6 +552,8 @@ class _SteppedOp(_MeshOp):
     total)`` that returns the step's result) and :meth:`finished` (the result's message)."""
 
     title = "garment.op.prepare"
+    #: Whether the step keeps a backup of the garment first (Back One Step undoes it) and puts it back on a failure.
+    backs_up = True
     _steps: Any = None
     _timer: Any = None
     _garment: Any = None
@@ -563,11 +565,13 @@ class _SteppedOp(_MeshOp):
         raise NotImplementedError
 
     def execute(self, context):
-        return self.run(context, lambda: self.finished(context, gh.run_steps(self.steps(context))))
+        return self.run(context, lambda: self.finished(context, gh.run_steps(self.steps(context))),
+                        backup=self.backs_up)
 
     def invoke(self, context, event):
         obj = current_garment(context)
-        gh.backup(obj)
+        if self.backs_up:
+            gh.backup(obj)
         self._garment = obj
         self._steps = self.steps(bpy.context)
         self._timer = context.window_manager.event_timer_add(0.05, window=context.window)
@@ -602,7 +606,8 @@ class _SteppedOp(_MeshOp):
         try:
             if obj.mode != "OBJECT":
                 bpy.ops.object.mode_set(mode="OBJECT")
-            gh.roll_back(obj)
+            if self.backs_up:
+                gh.roll_back(obj)
         except Exception:  # noqa: BLE001 - the rollback is best effort; Ctrl+Z still has the garment
             traceback.print_exc()
         self._end(context)
@@ -1776,10 +1781,12 @@ class DCTLINK_OT_fit_combine(_SteppedOp):
                    cut=result["cut"], density=result["density"])
 
 
-class DCTLINK_OT_fit_lods(_MeshOp):
+class DCTLINK_OT_fit_lods(_SteppedOp):
     bl_idname = "dct_link.fit_lods"
     bl_label = EN["garment.op.lods"]
     bl_description = EN["garment.op.lods.desc"]
+    title = "garment.op.lods"
+    backs_up = False  # the garment's own mesh does not change; its levels do, only at the end
 
     @classmethod
     def poll(cls, context):
@@ -1788,16 +1795,15 @@ class DCTLINK_OT_fit_lods(_MeshOp):
             reason = msg("garment.why.no-sollumz")
         return _refuse(cls, reason)
 
-    def execute(self, context):
-        def lods() -> Msg:
-            settings_ = props(context)
-            body = None if _is_prop(context) else valid_body(context)  # a prop keeps its shape on every level
-            result = gh.generate_lods(context, current_garment(context),
-                                      {"medium": settings_.lod_medium, "low": settings_.lod_low},
-                                      body, settings_.push_gap / 1000.0)
-            return msg("garment.done.lods", high=result["high"], medium=result["medium"], low=result["low"])
+    def steps(self, context):
+        settings_ = props(context)
+        body = None if _is_prop(context) else valid_body(context)  # a prop keeps its shape on every level
+        return gh.lod_steps(context, current_garment(context),
+                            {"medium": settings_.lod_medium, "low": settings_.lod_low}, body,
+                            settings_.push_gap / 1000.0)
 
-        return self.run(context, lods, backup=False)
+    def finished(self, context, result):
+        return msg("garment.done.lods", high=result["high"], medium=result["medium"], low=result["low"])
 
 
 def anchor_point(context: Any) -> Optional[Tuple[float, float, float]]:
