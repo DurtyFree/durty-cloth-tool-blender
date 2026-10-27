@@ -423,6 +423,29 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     signed, _, _ = gh.clearance(gh.body_tree(body), positions(tee))
     check("nothing is inside the body after Push Out of Body", int((signed < -0.001).sum()) == 0,
           int((signed < -0.001).sum()))
+    # Push Out of Body by region: a sleeve vertex pressed into the arm stays with Torso Only and comes out with Torso
+    # and Arms.
+    check("Push Out of Body works on the whole garment unless asked", props.push_region == "whole")
+    data = gh.measure(scene, tee, body, ui_garment.joints(bpy.context)[0])
+    groups = garment.stacked_groups(data["positions"])
+    alone = np.bincount(groups)[groups] == 1  # not on a seam, whose sides must stay together
+    sleeve = np.nonzero((data["regions"] == garment.REGIONS.index("upper_arms")) & alone)[0]
+    pressed = int(sleeve[np.argmax(data["clearance"][sleeve])])
+    world = np.array(tee.matrix_world)
+    target = data["nearest"][pressed] - data["normals"][pressed] * 0.005
+    tee.data.vertices[pressed].co = np.linalg.inv(world[:3, :3]) @ (target - world[:3, 3])
+    tee.data.update()
+    props.push_region = "torso"
+    before_region = positions(tee)
+    check("Push Out of Body runs on the torso only", "FINISHED" in bpy.ops.dct_link.fit_push_out())
+    torso_only = positions(tee)
+    arms = np.isin(data["regions"], [garment.REGIONS.index(r) for r in ("upper_arms", "forearms", "cuffs")])
+    check("Torso Only leaves the sleeves where they are", np.allclose(torso_only[arms], before_region[arms]))
+    props.push_region = "torso_arms"
+    check("Push Out of Body runs on the torso and arms", "FINISHED" in bpy.ops.dct_link.fit_push_out())
+    signed, _, _ = gh.clearance(gh.body_tree(body), positions(tee)[[pressed]])
+    check("Torso and Arms pushes the sleeve out", signed[0] > props.push_gap / 1000.0 - 1e-4, signed)
+    props.push_region = "whole"
     # Fix Spikes: a front vertex thrown 2.5 cm out comes back to where the cloth around it belongs; Back One Step
     # undoes it.
     smooth = positions(tee)

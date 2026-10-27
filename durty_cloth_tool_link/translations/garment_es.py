@@ -473,9 +473,10 @@ TEXT = {
     ),
     "garment.info.push": (
         "Mueve todo lo que está dentro del cuerpo, o más cerca que la separación, hasta la separación por fuera. Los "
-        "vértices de alrededor lo siguen, así que no se forma ningún pliegue, y las capas de encima (una tela exterior "
-        "sobre su forro) se mueven con ellos. Las partes a más de 3 cm por dentro, los vértices del grupo DCT Pinned y "
-        "los vértices enmascarados se quedan."
+        "vértices de alrededor lo siguen, así que no se forma ningún pliegue, y las capas de encima (una tela "
+        "exterior sobre su forro) se mueven con ellos. Las partes a más de 3 cm por dentro, los vértices del grupo "
+        "DCT Pinned y los vértices enmascarados se quedan. Región limita el empuje al torso, o al torso y los brazos; "
+        "el resto se queda como está."
     ),
     "garment.info.regions": (
         "Ceñir al cuerpo acerca una zona suelta al cuerpo, hasta la separación; los faldones, faldas y capuchas que "
@@ -1452,4 +1453,18 @@ TEXT = {
     "garment.done.spikes-none": "Nada se había separado de la tela de alrededor; la prenda está como estaba.",
     "garment.stage.spikes": "Buscando y corrigiendo picos",
     "garment.stage.spikes-body": "Manteniendo la tela fuera del cuerpo",
+    "garment.prop.push-region.desc": (
+        "La parte de la prenda que mueve Empujar fuera del cuerpo; el resto se queda como está"
+    ),
+    "garment.push-region.whole": "Prenda completa",
+    "garment.push-region.whole.desc": "Empuja todas las partes de la prenda fuera del cuerpo",
+    "garment.push-region.torso": "Solo torso",
+    "garment.push-region.torso.desc": (
+        "Empuja solo el torso: hombros, pecho, espalda, cintura, caderas y cuello. Las mangas y las piernas se quedan "
+        "como están"
+    ),
+    "garment.push-region.torso_arms": "Torso y brazos",
+    "garment.push-region.torso_arms.desc": (
+        "Empuja el torso y las mangas; las piernas y todo lo demás se quedan como están"
+    ),
 }

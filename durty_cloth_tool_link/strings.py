@@ -980,7 +980,8 @@ EN: Dict[str, str] = {
     "garment.info.push": (
         "Moves everything inside the body, or closer than the gap, to the gap outside it. The vertices around follow, "
         "so no crease forms, and layers on top (a shell over its lining) move along. Parts more than 3 cm inside, "
-        "vertices in the vertex group DCT Pinned and masked vertices stay."
+        "vertices in the vertex group DCT Pinned and masked vertices stay. Region limits the push to the torso, or to "
+        "the torso and arms; the rest stays as it is."
     ),
     "garment.info.regions": (
         "Snug to Body pulls a loose region towards the body, down to the gap; coat tails, skirts and hoods that hang "
@@ -1808,6 +1809,15 @@ EN: Dict[str, str] = {
     "garment.stage.bake-normal": "Baking the normal map",
     "garment.stage.bake-emission": "Baking the emission map",
     "garment.stage.material": "Making the combined material",
+    "garment.prop.push-region.desc": "The part of the garment Push Out of Body moves; the rest stays as it is",
+    "garment.push-region.whole": "Whole Garment",
+    "garment.push-region.whole.desc": "Push every part of the garment out of the body",
+    "garment.push-region.torso": "Torso Only",
+    "garment.push-region.torso.desc": (
+        "Push only the torso: shoulders, chest, back, waist, hips and neck. Sleeves and legs stay as they are"
+    ),
+    "garment.push-region.torso_arms": "Torso and Arms",
+    "garment.push-region.torso_arms.desc": "Push the torso and the sleeves; legs and everything else stay as they are",
     "garment.op.spikes": "Fix Spikes",
     "garment.op.spikes.desc": (
         "Pull vertices that jumped away during fitting back to where the cloth around them belongs, compared with the "

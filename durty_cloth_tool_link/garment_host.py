@@ -1081,48 +1081,35 @@ def tpose_to_apose(context: Any, obj: Any, markers: Dict[str, Any], target: floa
 
 def push_out(obj: Any, body: Any, gap: float, passes: int = 4, progress: Optional[Progress] = None,
              within: Optional[np.ndarray] = None) -> Dict[str, int]:
-    """Moves every vertex closer to the body than ``gap`` to ``gap`` outside it; the vertices around follow
-    softly, so no crease forms, and layers lying over a moved vertex (a shell over its lining) move with it. Vertices
-    deeper inside than :data:`garment.MAX_PUSH`, pinned ones and those under the sculpt mask stay, and vertices lying
-    on top of each other (the two sides of a UV seam or an open seam) move alike. ``within`` limits the move to those
-    vertices. After the first pass only the vertices that moved are measured again. Returns how many vertices were
-    inside before and after, how many moved, and how many were too deep to move."""
+    """Push Out of Body (:func:`garment.push_out_steps`) on the garment: everything closer to the body than ``gap``
+    goes to ``gap`` outside it and the push spreads into the cloth around; pinned and masked vertices stay, and
+    ``within`` limits the move to those vertices (a region). Returns how many vertices were inside before and after,
+    how many moved, and how many were too deep to move."""
     tree = body_tree(body)
-    positions = world_positions(obj)
-    edges = mesh_edges(obj.data)
-    locked = locked_vertices(obj)
-    if within is not None:
-        locked = locked | ~np.asarray(within, dtype=bool)
-    start = positions.copy()
-    stacked = garment.stacked_groups(start)
-    signed, nearest, normals = clearance(tree, positions)
-    before = int((signed < -garment.INSIDE_MM / 1000.0).sum())
-    if progress is not None:
-        progress.step()
-    for _ in range(max(1, passes)):
-        needs = (signed < gap - 1e-5) & (signed > -garment.MAX_PUSH) & ~locked
-        if not np.any(needs):
+    steps = garment.push_out_steps(world_positions(obj), mesh_edges(obj.data), lambda points: clearance(tree, points),
+                                   gap, locked=locked_vertices(obj), within=within, passes=passes)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            result = stop.value
             break
-        offsets = garment.push_out_offsets(positions, nearest, normals, signed, gap, locked=locked)
-        offsets = garment.layer_follow(positions, offsets, signed)
-        offsets = garment.spread_offsets(offsets, edges, needs, iterations=3)
-        offsets[locked] = 0.0
-        previous = positions
-        # However the passes and the spreading add up, no vertex moves further than the deepest push to the gap.
-        positions = garment.clamp_moves(start, positions + offsets, garment.MAX_PUSH + gap)
-        # The spreading follows the edges, which the sides of a split do not share: they would part into a gap.
-        positions = garment.keep_stacked(start, positions, stacked, locked)
-        changed = np.nonzero(np.linalg.norm(positions - previous, axis=1) > 1e-7)[0]
-        if len(changed):
-            s, n, nn = clearance(tree, positions[changed])
-            signed[changed], nearest[changed], normals[changed] = s, n, nn
         if progress is not None:
             progress.step()
-    set_world_positions(obj, positions)
-    moved = int((np.linalg.norm(positions - start, axis=1) > 1e-4).sum())
-    inside = signed < -garment.INSIDE_MM / 1000.0
-    return {"before": before, "after": int(inside.sum()), "moved": moved,
-            "deep": int((signed <= -garment.MAX_PUSH).sum())}
+    set_world_positions(obj, result.positions)
+    return {"before": result.before, "after": result.after, "moved": result.moved, "deep": result.deep}
+
+
+def push_within(scene: Any, obj: Any, body: Any, region: str, joints: Optional[Dict[str, Any]] = None
+                ) -> Optional[np.ndarray]:
+    """The vertices Push Out of Body moves for ``region`` (:data:`garment.PUSH_REGIONS`): ``None`` for the whole
+    garment, else those whose body region the region covers."""
+    if region == "whole":
+        return None
+    within = garment.push_region(measure(scene, obj, body, joints)["regions"], region)
+    if not within.any():
+        raise fail("garment.why.region-empty", region=msg(f"garment.push-region.{region}"))
+    return within
 
 
 def region_weights(data: Dict[str, Any], names: Sequence[str]) -> np.ndarray:

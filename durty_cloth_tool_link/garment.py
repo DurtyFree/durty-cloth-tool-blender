@@ -1741,6 +1741,126 @@ def relax_positions(positions: Any, edges: Any, rest_lengths: Any, weights: Any,
     return points
 
 
+#: The parts of the garment Push Out of Body can work on, by the body regions they cover (Whole Garment: all).
+PUSH_REGIONS = ("whole", "torso", "torso_arms")
+_TORSO_REGIONS = ("shoulders", "chest", "back", "waist", "hips", "neck")
+PUSH_REGION_PARTS = {"torso": _TORSO_REGIONS, "torso_arms": _TORSO_REGIONS + ("upper_arms", "forearms", "cuffs")}
+#: Push Out of Body spreads the push it needs into the cloth around over this many rings of edges, each ring
+#: taking this share of the largest push next to it, so a pushed patch blends in without a step. Ported from Muto
+#: Cloth by muto.
+PUSH_SPREAD = 4
+PUSH_DECAY = 0.6
+#: Rounds of spreading, each followed by pushing again what came within reach.
+PUSH_ROUNDS = 3
+
+
+class Push(NamedTuple):
+    positions: np.ndarray
+    before: int  # vertices inside the body before
+    after: int  # and after
+    moved: int  # vertices moved by more than 0.1 mm
+    deep: int  # vertices left because they run deeper through the body than MAX_PUSH
+
+
+def push_region(regions: Any, region: str) -> np.ndarray:
+    """Which vertices Push Out of Body moves for ``region`` (one of :data:`PUSH_REGIONS`), from each vertex's body
+    region (indices into :data:`REGIONS`)."""
+    regions = np.asarray(regions, dtype=np.int64)
+    if region == "whole":
+        return np.ones(len(regions), dtype=bool)
+    return np.isin(regions, [REGIONS.index(name) for name in PUSH_REGION_PARTS[region]])
+
+
+def push_out_steps(positions: Any, edges: Any, measure: Any, gap: float, *, locked: Optional[Any] = None,
+                   within: Optional[Any] = None, passes: int = 4, spread: int = PUSH_SPREAD,
+                   max_push: float = MAX_PUSH) -> Any:
+    """Push Out of Body as a generator that yields after each pass and returns a :class:`Push`. ``measure(points)``
+    gives each point's signed distance to the body, its nearest body point and the body's outward normal there.
+
+    Every vertex closer to the body than ``gap`` (inside too) is moved to ``gap`` outside it, in passes that measure
+    again only what moved; layers lying over a moved vertex (a shell over its lining) move with it. The push each
+    vertex needed is then spread along the edges, each ring taking :data:`PUSH_DECAY` of the largest push next to it,
+    along its own body normal, so no dent or ridge is left; what that brought within reach is pushed again, over a
+    few rounds. ``locked`` vertices (pinned, masked) and those outside
+    ``within`` (the chosen region) stay; vertices deeper inside than ``max_push`` stay and are counted as deep;
+    vertices lying on top of each other (the two sides of a UV seam) move alike. No vertex moves further than
+    ``max_push + gap``."""
+    start = as_points(positions)
+    count = len(start)
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    held = np.zeros(count, dtype=bool) if locked is None else np.asarray(locked, dtype=bool).copy()
+    if within is not None:
+        held |= ~np.asarray(within, dtype=bool)
+    stacked = stacked_groups(start)
+    signed, nearest, normals = (np.array(value, dtype=np.float64) for value in measure(start))
+    first_normals = normals.copy()
+    before = int((signed < -INSIDE_MM / 1000.0).sum())
+    points = start.copy()
+
+    def settle(moved: np.ndarray) -> np.ndarray:
+        moved = clamp_moves(start, moved, max_push + gap)
+        return keep_stacked(start, moved, stacked, held)
+
+    def measure_changed(previous: np.ndarray, now: np.ndarray) -> None:
+        changed = np.nonzero(np.linalg.norm(now - previous, axis=1) > 1e-7)[0]
+        if len(changed):
+            s, n, nn = measure(now[changed])
+            signed[changed], nearest[changed], normals[changed] = s, n, nn
+
+    def push_passes() -> Any:
+        nonlocal points
+        for _ in range(max(1, passes)):
+            needs = (signed < gap - 1e-5) & (signed > -max_push) & ~held
+            if not np.any(needs):
+                return
+            offsets = push_out_offsets(points, nearest, normals, signed, gap, max_push, held)
+            offsets = layer_follow(points, offsets, signed)
+            offsets[held] = 0.0
+            previous, points = points, settle(points + offsets)
+            measure_changed(previous, points)
+            yield
+
+    yield from push_passes()
+    for _ in range(PUSH_ROUNDS if spread > 0 and len(edges) else 0):
+        needed = np.linalg.norm(points - start, axis=1)
+        amount = needed.copy()
+        for _ in range(spread):
+            largest = np.zeros(count)
+            np.maximum.at(largest, edges[:, 0], amount[edges[:, 1]])
+            np.maximum.at(largest, edges[:, 1], amount[edges[:, 0]])
+            amount = np.where(held, 0.0, np.maximum(needed, PUSH_DECAY * largest))
+        extra = np.clip(amount - needed, 0.0, None)
+        if not np.any(extra > 1e-6):
+            break
+        offsets = first_normals * extra[:, None]
+        offsets = layer_follow(points, offsets, signed)
+        offsets[held] = 0.0
+        was = signed.copy()
+        previous, points = points, settle(points + offsets)
+        measure_changed(previous, points)
+        # Cloth the spread carried closer to another part of the body (from the side of the torso into an arm)
+        # stays where it was.
+        closer = (signed < gap - 1e-5) & (signed < was - 1e-6)
+        if np.any(closer):
+            points[closer] = previous[closer]
+            signed[closer], nearest[closer], normals[closer] = measure(points[closer])
+        # What the spread brought within reach (cloth running deep through the body next to pushed cloth) is pushed
+        # again, and its push spreads in the next round.
+        yield from push_passes()
+    moved = int((np.linalg.norm(points - start, axis=1) > 1e-4).sum())
+    return Push(points, before, int((signed < -INSIDE_MM / 1000.0).sum()), moved, int((signed <= -max_push).sum()))
+
+
+def push_out_positions(positions: Any, edges: Any, measure: Any, gap: float, **options: Any) -> Push:
+    """:func:`push_out_steps` at once."""
+    steps = push_out_steps(positions, edges, measure, gap, **options)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+
+
 # --------------------------------------------------------------------------------------------------
 # Fix Spikes
 # --------------------------------------------------------------------------------------------------

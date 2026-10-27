@@ -394,7 +394,13 @@ TEXT = {
     "garment.info.pose": "Pilih pose avatar tempat pakaian dibuat. Pakaian yang dibuat dalam pose T dapat diubah ke pose A game di bagian Sesuaikan.",
     "garment.info.prepare": "Menyambungkan jahitan antarpanel (tidak pernah menyambungkan kelim ke dirinya sendiri atau furing ke lapisan luarnya: tempatkan furing yang tidak terdeteksi dalam grup vertex DCT Lining), menghapus bagian lepas, membuat segitiga, menghaluskan shading, dan memberi pakaian warna vertex Color 1 dan Color 2 Sollumz dengan nilai di bagian Opsi.",
     "garment.info.problems": "Mewarnai pakaian saat Anda bekerja: merah di dalam tubuh, kuning terlalu dekat, ungu teregang dibandingkan bentuk asli, biru untuk bahu yang menggantung jauh dari tubuh.",
-    "garment.info.push": "Memindahkan semua bagian di dalam tubuh, atau yang lebih dekat dari celah, ke jarak celah di luar tubuh. Vertex di sekitarnya mengikuti agar tidak terbentuk lipatan, dan lapisan di atasnya (lapisan luar di atas furing) ikut bergerak. Bagian yang lebih dari 3 cm di dalam, vertex dalam grup vertex DCT Pinned, dan vertex yang dimasker tetap di tempat.",
+    "garment.info.push": (
+        "Memindahkan semua bagian di dalam tubuh, atau yang lebih dekat dari celah, ke jarak celah di luar tubuh. "
+        "Vertex di sekitarnya mengikuti agar tidak terbentuk lipatan, dan lapisan di atasnya (lapisan luar di atas "
+        "furing) ikut bergerak. Bagian yang lebih dari 3 cm di dalam, vertex dalam grup vertex DCT Pinned, dan vertex "
+        "yang dimasker tetap di tempat. Area membatasi dorongan pada badan, atau badan dan lengan; sisanya tetap "
+        "seperti semula."
+    ),
     "garment.info.regions": "Rapatkan ke Tubuh menarik area longgar ke arah tubuh hingga jarak celah; bagian bawah mantel, rok, dan tudung yang menggantung bebas tetap seperti semula. Kendurkan Bagian Teregang mengembalikan ukuran bagian teregang mendekati ukuran asli. Tepi area membaur.",
     "garment.info.sculpt": "Sculpt Mode dengan kuas Grab, tubuh ditampilkan sebagai wireframe. Terima menyimpan bentuk (dan memindahkan bagian yang masuk ke tubuh kembali keluar jika Tetap di Luar Tubuh aktif); Batal memulihkan bentuk sebelumnya.",
     "garment.info.service": "Sesuaikan pada gta.clothing menyesuaikan pakaian pada posisinya setelah Selaraskan ke Tubuh. Pakaian kembali dalam pose game, dengan bobot tubuh freemode, dan bagian yang berada di dalam tubuh dipindahkan keluar. Pakaian menyimpan cadangan, sehingga Kembali Satu Langkah memulihkannya. Setiap penyesuaian menggunakan satu jatah penyesuaian hari ini.",
@@ -789,4 +795,18 @@ TEXT = {
     ),
     "garment.stage.spikes": "Mencari dan menarik kembali lonjakan",
     "garment.stage.spikes-body": "Menjaga kain tetap di luar tubuh",
+    "garment.prop.push-region.desc": (
+        "Bagian pakaian yang dipindahkan Dorong Keluar Tubuh; sisanya tetap seperti semula"
+    ),
+    "garment.push-region.whole": "Seluruh Pakaian",
+    "garment.push-region.whole.desc": "Dorong setiap bagian pakaian keluar dari tubuh",
+    "garment.push-region.torso": "Hanya Badan",
+    "garment.push-region.torso.desc": (
+        "Dorong hanya badan: bahu, dada, punggung, pinggang, pinggul, dan leher. Lengan baju dan kaki celana tetap "
+        "seperti semula"
+    ),
+    "garment.push-region.torso_arms": "Badan dan Lengan",
+    "garment.push-region.torso_arms.desc": (
+        "Dorong badan dan lengan baju; kaki celana dan semua bagian lain tetap seperti semula"
+    ),
 }

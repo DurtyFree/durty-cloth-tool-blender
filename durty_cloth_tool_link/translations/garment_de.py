@@ -490,9 +490,10 @@ TEXT = {
     ),
     "garment.info.push": (
         "Bewegt alles, was im Körper oder näher als der Abstand liegt, auf den Abstand außerhalb des Körpers. Die "
-        "umliegenden Vertices folgen, damit kein Knick entsteht, und Lagen darüber (eine Außenhülle über ihrem Futter) "
-        "gehen mit. Teile, die mehr als 3 cm innen liegen, Vertices in der Vertexgruppe DCT Pinned und maskierte "
-        "Vertices bleiben."
+        "umliegenden Vertices folgen, damit kein Knick entsteht, und Lagen darüber (eine Außenhülle über ihrem "
+        "Futter) gehen mit. Teile, die mehr als 3 cm innen liegen, Vertices in der Vertexgruppe DCT Pinned und "
+        "maskierte Vertices bleiben. Bereich beschränkt das Schieben auf den Rumpf oder auf Rumpf und Arme; der Rest "
+        "bleibt, wie er ist."
     ),
     "garment.info.regions": (
         "An den Körper anlegen zieht eine lockere Region zum Körper, bis auf den Abstand; frei hängende Mantelschöße, "
@@ -1541,4 +1542,16 @@ TEXT = {
     "garment.done.spikes-none": "Nichts war vom Stoff um sich herum weggesprungen; das Kleidungsstück ist wie vorher.",
     "garment.stage.spikes": "Spitzen suchen und zurückziehen",
     "garment.stage.spikes-body": "Den Stoff aus dem Körper halten",
+    "garment.prop.push-region.desc": (
+        "Der Teil des Kleidungsstücks, den Aus dem Körper schieben bewegt; der Rest bleibt, wie er ist"
+    ),
+    "garment.push-region.whole": "Ganzes Kleidungsstück",
+    "garment.push-region.whole.desc": "Jeden Teil des Kleidungsstücks aus dem Körper schieben",
+    "garment.push-region.torso": "Nur Rumpf",
+    "garment.push-region.torso.desc": (
+        "Nur den Rumpf schieben: Schultern, Brust, Rücken, Taille, Hüften und Hals. Ärmel und Beine bleiben, wie sie "
+        "sind"
+    ),
+    "garment.push-region.torso_arms": "Rumpf und Arme",
+    "garment.push-region.torso_arms.desc": "Rumpf und Ärmel schieben; Beine und alles andere bleiben, wie sie sind",
 }

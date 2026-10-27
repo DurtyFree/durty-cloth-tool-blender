@@ -394,7 +394,13 @@ TEXT = {
     "garment.info.pose": "Wybierz pozę awatara, na którym utworzono ubranie. Ubranie wykonane w pozie T można przestawić do pozy A używanej przez grę w sekcji Dopasuj.",
     "garment.info.prepare": "Łączy szwy między panelami (nigdy brzegu z nim samym ani podszewki z warstwą zewnętrzną: niewykrytą podszewkę umieść w grupie wierzchołków DCT Lining), usuwa luźne części, trianguluje, wygładza cieniowanie i nadaje ubraniu kolory wierzchołków Sollumz Color 1 i Color 2 z wartościami z sekcji Opcje.",
     "garment.info.problems": "Koloruje ubranie podczas pracy: czerwony wewnątrz ciała, żółty zbyt blisko, fioletowy rozciągnięcie względem pierwotnego kształtu, niebieski bark odstający od ciała.",
-    "garment.info.push": "Przesuwa części wewnątrz ciała lub bliżej niż ustawiony odstęp na odległość tego odstępu na zewnątrz. Sąsiednie wierzchołki podążają za nimi, aby nie powstało zagięcie, a warstwy zewnętrzne (nad podszewką) przesuwają się razem z nimi. Części głębiej niż 3 cm wewnątrz, wierzchołki z grupy DCT Pinned i zamaskowane wierzchołki pozostają na miejscu.",
+    "garment.info.push": (
+        "Przesuwa części wewnątrz ciała lub bliżej niż ustawiony odstęp na odległość tego odstępu na zewnątrz. "
+        "Sąsiednie wierzchołki podążają za nimi, aby nie powstało zagięcie, a warstwy zewnętrzne (nad podszewką) "
+        "przesuwają się razem z nimi. Części głębiej niż 3 cm wewnątrz, wierzchołki z grupy DCT Pinned i zamaskowane "
+        "wierzchołki pozostają na miejscu. Obszar ogranicza wypychanie do tułowia albo do tułowia i ramion; reszta "
+        "zostaje bez zmian."
+    ),
     "garment.info.regions": "Opcja Przybliż do ciała przyciąga luźny obszar w stronę ciała do ustawionego odstępu. Swobodnie wiszące poły, spódnice i kaptury pozostają bez zmian. Opcja Rozluźnij rozciągnięcia przywraca rozciągniętym częściom rozmiar bliższy pierwotnemu. Krawędzie obszaru płynnie przechodzą w otoczenie.",
     "garment.info.sculpt": "Sculpt Mode z pędzlem Grab i ciałem jako szkieletem siatki. Opcja Zatwierdź zachowuje kształt (i wypycha części, które znalazły się wewnątrz ciała, gdy włączona jest opcja Utrzymuj poza ciałem). Anuluj przywraca poprzedni kształt.",
     "garment.info.service": "Opcja Dopasuj na gta.clothing dopasowuje ubranie w jego położeniu po użyciu Wyrównaj do ciała. Wynik ma pozę gry i wagi ciała freemode, a części, które były wewnątrz ciała, zostają wypchnięte na zewnątrz. Ubranie zachowuje kopię zapasową, więc Cofnij jeden krok przywraca poprzedni stan. Każde dopasowanie zużywa jedno z dzisiejszego limitu.",
@@ -791,4 +797,14 @@ TEXT = {
     "garment.done.spikes-none": "Nic nie odskoczyło od otaczającej tkaniny; ubranie jest takie jak wcześniej.",
     "garment.stage.spikes": "Szukanie i cofanie kolców",
     "garment.stage.spikes-body": "Utrzymywanie tkaniny poza ciałem",
+    "garment.prop.push-region.desc": "Część ubrania, którą przesuwa Wypchnij poza ciało; reszta zostaje bez zmian",
+    "garment.push-region.whole": "Całe ubranie",
+    "garment.push-region.whole.desc": "Wypchnij każdą część ubrania poza ciało",
+    "garment.push-region.torso": "Tylko tułów",
+    "garment.push-region.torso.desc": (
+        "Wypchnij tylko tułów: barki, klatkę piersiową, plecy, talię, biodra i szyję. Rękawy i nogawki zostają bez "
+        "zmian"
+    ),
+    "garment.push-region.torso_arms": "Tułów i ramiona",
+    "garment.push-region.torso_arms.desc": "Wypchnij tułów i rękawy; nogawki i cała reszta zostają bez zmian",
 }

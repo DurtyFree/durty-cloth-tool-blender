@@ -361,7 +361,7 @@ TEXT = {
     ),
     "garment.info.push": (
         "把身体内或比间隙更靠近身体的所有部分移到身体外的间隙处。周围的顶点会跟随移动，因此不会形成折痕，上面的层（衬里上的面料）也会一起移动。陷入身体超过 3 厘米的部分、顶点组 DCT Pinned "
-        "中的顶点以及被遮罩的顶点保持不动。"
+        "中的顶点以及被遮罩的顶点保持不动。 区域可将推出限制在躯干，或躯干和手臂；其余部分保持不变。"
     ),
     "garment.info.regions": "贴合身体把松散的区域拉近身体，直到间隙为止；自由下垂的大衣下摆、裙子和兜帽保持原样。放松拉伸让被拉伸的部分恢复到接近原来的大小。区域边缘会平滑过渡。",
     "garment.info.problems": (
@@ -913,4 +913,11 @@ TEXT = {
     "garment.done.spikes-none": "没有顶点从周围布料跳开；服装保持原样。",
     "garment.stage.spikes": "正在查找并拉回尖刺",
     "garment.stage.spikes-body": "正在让布料保持在身体外",
+    "garment.prop.push-region.desc": "推出身体所移动的服装部分；其余部分保持不变",
+    "garment.push-region.whole": "整件服装",
+    "garment.push-region.whole.desc": "将服装的每个部分推出身体",
+    "garment.push-region.torso": "仅躯干",
+    "garment.push-region.torso.desc": "只推出躯干：肩部、胸部、背部、腰部、臀部和颈部。袖子和裤腿保持不变",
+    "garment.push-region.torso_arms": "躯干和手臂",
+    "garment.push-region.torso_arms.desc": "推出躯干和袖子；裤腿和其他部分保持不变",
 }

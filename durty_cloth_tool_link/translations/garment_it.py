@@ -394,7 +394,13 @@ TEXT = {
     "garment.info.pose": "Scegli la posa dell'avatar su cui è stato creato il capo. Un capo creato in posa T può essere portato nella posa A del gioco in Adattamento.",
     "garment.info.prepare": "Unisce le cuciture tra pannelli (mai un orlo con sé stesso, né una fodera con il tessuto esterno: inserisci una fodera non riconosciuta nel gruppo di vertici DCT Lining), rimuove le parti isolate, triangola, applica l'ombreggiatura uniforme e assegna al capo i colori dei vertici Color 1 e Color 2 di Sollumz con i valori in Opzioni.",
     "garment.info.problems": "Colora il capo durante il lavoro: rosso all'interno del corpo, giallo troppo vicino, viola allungato rispetto alla forma originale, blu per una spalla staccata dal corpo.",
-    "garment.info.push": "Sposta tutto ciò che si trova all'interno del corpo, o più vicino della distanza impostata, fino a tale distanza all'esterno. I vertici circostanti seguono lo spostamento per evitare pieghe e gli strati sovrastanti, come il tessuto esterno sopra una fodera, si muovono insieme. Le parti a più di 3 cm all'interno, i vertici nel gruppo DCT Pinned e i vertici mascherati restano fermi.",
+    "garment.info.push": (
+        "Sposta tutto ciò che si trova all'interno del corpo, o più vicino della distanza impostata, fino a tale "
+        "distanza all'esterno. I vertici circostanti seguono lo spostamento per evitare pieghe e gli strati "
+        "sovrastanti, come il tessuto esterno sopra una fodera, si muovono insieme. Le parti a più di 3 cm "
+        "all'interno, i vertici nel gruppo DCT Pinned e i vertici mascherati restano fermi. Zona limita la spinta al "
+        "busto, o al busto e alle braccia; il resto rimane com'è."
+    ),
     "garment.info.regions": "Aderisci al corpo avvicina una zona larga al corpo fino alla distanza impostata; falde di cappotti, gonne e cappucci che pendono liberi restano come sono. Rilassa zone allungate riporta le parti allungate verso le dimensioni originali. I bordi della zona si raccordano gradualmente.",
     "garment.info.sculpt": "Sculpt Mode con il pennello Grab e il corpo in wireframe. Accetta conserva la forma (e riporta all'esterno ciò che è entrato nel corpo, se Mantieni fuori dal corpo è attivo); Annulla ripristina la forma precedente.",
     "garment.info.service": "Adatta su gta.clothing adatta il capo così come si trova dopo Allinea al corpo. Lo restituisce nella posa del gioco, con i pesi del corpo freemode, spostando all'esterno le parti che erano dentro il corpo. Il capo conserva un backup, quindi Indietro di un passaggio lo ripristina. Ogni adattamento usa uno degli adattamenti di oggi.",
@@ -785,4 +791,13 @@ TEXT = {
     "garment.done.spikes-none": "Niente si era staccato dal tessuto intorno; il capo è rimasto com'era.",
     "garment.stage.spikes": "Ricerca e correzione delle punte",
     "garment.stage.spikes-body": "Tenuta del tessuto fuori dal corpo",
+    "garment.prop.push-region.desc": "La parte del capo che Spingi fuori dal corpo sposta; il resto rimane com'è",
+    "garment.push-region.whole": "Capo intero",
+    "garment.push-region.whole.desc": "Spinge ogni parte del capo fuori dal corpo",
+    "garment.push-region.torso": "Solo busto",
+    "garment.push-region.torso.desc": (
+        "Spinge solo il busto: spalle, petto, schiena, vita, fianchi e collo. Maniche e gambe restano come sono"
+    ),
+    "garment.push-region.torso_arms": "Busto e braccia",
+    "garment.push-region.torso_arms.desc": "Spinge il busto e le maniche; le gambe e tutto il resto restano come sono",
 }

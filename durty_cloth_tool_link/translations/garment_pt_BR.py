@@ -476,7 +476,7 @@ TEXT = {
         "Move tudo o que está dentro do corpo, ou mais perto que a folga, até a folga do lado de fora. Os vértices ao "
         "redor acompanham, então não se forma nenhum vinco, e as camadas por cima (um tecido externo sobre o forro) "
         "vão junto. Partes a mais de 3 cm para dentro, vértices do grupo DCT Pinned e vértices mascarados ficam no "
-        "lugar."
+        "lugar. Região limita o empurrão ao tronco, ou ao tronco e aos braços; o resto fica como está."
     ),
     "garment.info.regions": (
         "Aproximar do corpo puxa uma região solta para perto do corpo, até a folga; abas de casaco, saias e capuzes "
@@ -1405,4 +1405,13 @@ TEXT = {
     "garment.done.spikes-none": "Nada tinha se afastado do tecido ao redor; a roupa está como estava.",
     "garment.stage.spikes": "Encontrando e corrigindo pontas",
     "garment.stage.spikes-body": "Mantendo o tecido fora do corpo",
+    "garment.prop.push-region.desc": "A parte da roupa que Empurrar para fora do corpo move; o resto fica como está",
+    "garment.push-region.whole": "Roupa inteira",
+    "garment.push-region.whole.desc": "Empurra todas as partes da roupa para fora do corpo",
+    "garment.push-region.torso": "Só o tronco",
+    "garment.push-region.torso.desc": (
+        "Empurra só o tronco: ombros, peito, costas, cintura, quadris e pescoço. Mangas e pernas ficam como estão"
+    ),
+    "garment.push-region.torso_arms": "Tronco e braços",
+    "garment.push-region.torso_arms.desc": "Empurra o tronco e as mangas; as pernas e todo o resto ficam como estão",
 }

@@ -488,10 +488,11 @@ TEXT = {
         "la première. Elles partent avec le vêtement quand il est supprimé ou ajouté à Durty Cloth Tool."
     ),
     "garment.info.push": (
-        "Déplace tout ce qui est dans le corps, ou plus proche que l'écart, jusqu'à l'écart à l'extérieur. Les sommets "
-        "autour suivent, pour qu'aucun pli ne se forme, et les couches au-dessus (un tissu extérieur sur sa doublure) "
-        "suivent aussi. Les parties à plus de 3 cm à l'intérieur, les sommets du groupe DCT Pinned et les sommets "
-        "masqués restent en place."
+        "Déplace tout ce qui est dans le corps, ou plus proche que l'écart, jusqu'à l'écart à l'extérieur. Les "
+        "sommets autour suivent, pour qu'aucun pli ne se forme, et les couches au-dessus (un tissu extérieur sur sa "
+        "doublure) suivent aussi. Les parties à plus de 3 cm à l'intérieur, les sommets du groupe DCT Pinned et les "
+        "sommets masqués restent en place. Zone limite la poussée au torse, ou au torse et aux bras ; le reste ne "
+        "bouge pas."
     ),
     "garment.info.regions": (
         "Plaquer au corps rapproche une région lâche du corps, jusqu'à l'écart ; les pans de manteau, jupes et "
@@ -1511,4 +1512,16 @@ TEXT = {
     "garment.done.spikes-none": "Rien ne s'était écarté du tissu autour ; le vêtement est resté tel quel.",
     "garment.stage.spikes": "Recherche et correction des pointes",
     "garment.stage.spikes-body": "Maintien du tissu hors du corps",
+    "garment.prop.push-region.desc": "La partie du vêtement que Pousser hors du corps déplace ; le reste ne bouge pas",
+    "garment.push-region.whole": "Vêtement entier",
+    "garment.push-region.whole.desc": "Pousse toutes les parties du vêtement hors du corps",
+    "garment.push-region.torso": "Torse seulement",
+    "garment.push-region.torso.desc": (
+        "Pousse seulement le torse : épaules, poitrine, dos, taille, hanches et cou. Les manches et les jambes ne "
+        "bougent pas"
+    ),
+    "garment.push-region.torso_arms": "Torse et bras",
+    "garment.push-region.torso_arms.desc": (
+        "Pousse le torse et les manches ; les jambes et tout le reste ne bougent pas"
+    ),
 }

@@ -394,7 +394,12 @@ TEXT = {
     "garment.info.pose": "Kıyafetin üzerinde yapıldığı avatarın pozunu seçin. T pozunda yapılan kıyafet, Uyarla altında oyunun A pozuna getirilebilir.",
     "garment.info.prepare": "Kalıplar arasındaki dikişleri birleştirir (bir etek ucunu kendisiyle veya astarı dış katmanıyla asla birleştirmez: bulunmayan astarı DCT Lining köşe grubuna koyun), ayrık parçaları kaldırır, üçgenlere ayırır, yumuşak gölgelendirir ve kıyafete Seçenekler altındaki değerlerle Sollumz köşe renklerini, Color 1 ve Color 2, verir.",
     "garment.info.problems": "Çalışırken kıyafeti renklendirir: bedenin içi kırmızı, çok yakın yerler sarı, özgün şekle göre gerilenler mor, bedenden uzakta havada duran omuz mavi.",
-    "garment.info.push": "Bedenin içindeki veya aralıktan daha yakın her şeyi dışarıdaki aralığa taşır. Çevredeki köşeler de izler; böylece kırışıklık oluşmaz ve üst katmanlar (astarın üzerindeki dış katman) birlikte taşınır. 3 cm'den fazla içerideki parçalar, DCT Pinned köşe grubundaki köşeler ve maskelenmiş köşeler kalır.",
+    "garment.info.push": (
+        "Bedenin içindeki veya aralıktan daha yakın her şeyi dışarıdaki aralığa taşır. Çevredeki köşeler de izler; "
+        "böylece kırışıklık oluşmaz ve üst katmanlar (astarın üzerindeki dış katman) birlikte taşınır. 3 cm'den fazla "
+        "içerideki parçalar, DCT Pinned köşe grubundaki köşeler ve maskelenmiş köşeler kalır. Bölge, itmeyi gövdeyle "
+        "ya da gövde ve kollarla sınırlar; geri kalanı olduğu gibi kalır."
+    ),
     "garment.info.regions": "Bedene yaklaştır, gevşek bölgeyi aralığa kadar bedene çeker; serbestçe asılan palto etekleri, etekler ve kapüşonlar olduğu gibi kalır. Gerilenleri gevşet, gerilmiş parçaları özgün boyutlarına yaklaştırır. Bölgenin kenarlarında geçiş yumuşatılır.",
     "garment.info.sculpt": "Grab fırçasıyla Sculpt Mode; beden tel kafes olarak gösterilir. Kabul et şekli korur (Bedenin dışında tut açıkken bedene girenleri yeniden dışarı taşır); İptal et önceki şekle döndürür.",
     "garment.info.service": "gta.clothing üzerinde uyarla, kıyafeti Bedene hizala sonrasındaki haliyle uyarlar. Oyun pozunda, freemode bedeninin ağırlıklarıyla ve içeride kaldığı yerlerde bedenin dışına taşınmış olarak döner. Kıyafet yedek tuttuğu için Bir adım geri önceki haline döndürür. Her uyarlama bugünkü haklardan birini kullanır.",
@@ -781,4 +786,17 @@ TEXT = {
     "garment.done.spikes-none": "Hiçbir şey çevresindeki kumaştan fırlamamıştı; kıyafet olduğu gibi duruyor.",
     "garment.stage.spikes": "Sivrilikler bulunuyor ve geri çekiliyor",
     "garment.stage.spikes-body": "Kumaş bedenin dışında tutuluyor",
+    "garment.prop.push-region.desc": (
+        "Bedenin dışına çıkar işleminin taşıdığı kıyafet kısmı; geri kalanı olduğu gibi kalır"
+    ),
+    "garment.push-region.whole": "Tüm kıyafet",
+    "garment.push-region.whole.desc": "Kıyafetin her kısmını bedenin dışına çıkarır",
+    "garment.push-region.torso": "Yalnızca gövde",
+    "garment.push-region.torso.desc": (
+        "Yalnızca gövdeyi çıkarır: omuzlar, göğüs, sırt, bel, kalça ve boyun. Kollar ve paçalar olduğu gibi kalır"
+    ),
+    "garment.push-region.torso_arms": "Gövde ve kollar",
+    "garment.push-region.torso_arms.desc": (
+        "Gövdeyi ve kolları çıkarır; paçalar ve geri kalan her şey olduğu gibi kalır"
+    ),
 }

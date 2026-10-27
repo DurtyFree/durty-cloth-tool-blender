@@ -167,6 +167,8 @@ AVATAR_IDS = ("detect", "file", *garment_avatars.AVATARS)
 AVATAR_ITEMS = tuple((name, EN[f"garment.avatar.{name}"], EN[f"garment.avatar.{name}.desc"], index)
                      for index, name in enumerate(AVATAR_IDS))
 REGION_ITEMS = tuple((r, EN[f"garment.region.{r}"], EN["garment.region.desc"]) for r in garment.REGIONS)
+PUSH_REGION_ITEMS = tuple((r, EN[f"garment.push-region.{r}"], EN[f"garment.push-region.{r}.desc"])
+                          for r in garment.PUSH_REGIONS)
 UNIT_ITEMS = tuple((u, EN[f"garment.unit.{u}"], EN["garment.unit.desc"]) for u in ("auto", *garment.UNITS))
 #: The garment types in the picker's groups (Blender keeps a dynamic enum's strings only while they are referenced).
 CATEGORY_ITEMS = [None if c is None else (c, EN[f"garment.category.{c}"], EN[f"garment.category.{c}.desc"],
@@ -325,6 +327,8 @@ class DCTLINK_PG_garment(PropertyGroup):
                              description=EN["garment.prop.arm-angle.desc"], translation_context=CONTEXT)
     push_gap: FloatProperty(name=EN["garment.prop.gap"], default=4.0, min=0.0, max=50.0, precision=1,
                             description=EN["garment.prop.push-gap.desc"], translation_context=CONTEXT)
+    push_region: EnumProperty(name=EN["garment.prop.region"], items=PUSH_REGION_ITEMS, default="whole",
+                              description=EN["garment.prop.push-region.desc"], translation_context=CONTEXT)
     region: EnumProperty(name=EN["garment.prop.region"], items=REGION_ITEMS, default="shoulders",
                          description=EN["garment.prop.region.desc"], translation_context=CONTEXT)
     snug_gap: FloatProperty(name=EN["garment.prop.gap"], default=8.0, min=0.0, max=80.0, precision=1,
@@ -1394,10 +1398,12 @@ class DCTLINK_OT_fit_push_out(_MeshOp):
     def execute(self, context):
         def push() -> Msg:
             settings_ = props(context)
+            obj = current_garment(context)
+            within = gh.push_within(context.scene, obj, settings_.body, settings_.push_region, joints(context)[0])
             progress = gh.Progress(5)
             try:
-                result = gh.push_out(current_garment(context), settings_.body, settings_.push_gap / 1000.0,
-                                     progress=progress)
+                result = gh.push_out(obj, settings_.body, settings_.push_gap / 1000.0, progress=progress,
+                                     within=within)
             finally:
                 progress.end()
             _after_change(context)
@@ -2934,6 +2940,7 @@ def draw_fix(layout: Any, context: Any) -> None:
     draw_report(layout, context)
 
     layout.separator(factor=GAP)
+    labelled(layout, context, settings_, "push_region", "garment.prop.region")
     layout.prop(settings_, "push_gap", text=t("garment.prop.gap"), translate=False)
     tool(layout, context, DCTLINK_OT_fit_push_out.bl_idname, "garment.op.push", "MOD_SHRINKWRAP",
          info="garment.info.push")
