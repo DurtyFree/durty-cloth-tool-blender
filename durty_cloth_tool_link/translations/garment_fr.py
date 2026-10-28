@@ -804,6 +804,14 @@ TEXT = {
     "add.result.save-failed": (
         "Durty Cloth Tool n'a pas pu ajouter le vêtement. Sa barre d'état contient les détails."
     ),
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool n'a pas pu prendre la peau des bras pour les gants dans votre installation de GTA V, donc "
+        "rien n'a été ajouté. Vérifiez le dossier du jeu dans Durty Cloth Tool, puis ajoutez de nouveau les gants."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool n'a pas accepté les gants avec leur peau des bras, donc rien n'a été ajouté. Mettez à jour "
+        "Durty Cloth Tool et ce module, puis réessayez."
+    ),
     "add.finding.rig-invalid": (
         "Les poids ou les indices d'os ne correspondent pas au squelette freemode : le vêtement bougerait mal dans "
         "le jeu."

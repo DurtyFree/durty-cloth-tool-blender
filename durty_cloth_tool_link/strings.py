@@ -1479,6 +1479,14 @@ EN: Dict[str, str] = {
     ),
     "add.result.rate-limited": "Too many adds in a short time. Wait a few seconds, then try again.",
     "add.result.save-failed": "Durty Cloth Tool could not add the cloth. Its status bar has the details.",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool could not take the arm skin for the gloves from your GTA V installation, so nothing was "
+        "added. Check the game folder in Durty Cloth Tool, then add the gloves again."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool did not accept the gloves with their arm skin, so nothing was added. Update Durty Cloth Tool "
+        "and this add-on, then try again."
+    ),
     "add.finding.rig-invalid": (
         "The weights or bone indices do not fit the freemode skeleton: the cloth would move wrongly in the game."
     ),

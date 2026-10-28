@@ -385,14 +385,32 @@ RESULT_KEYS = {
     # A Durty Cloth Tool that cannot read the add answers it by its id.
     "unknown-message-type": "add.dct-too-old",
 }
+#: Durty Cloth Tool's answers to gloves that say more than for another cloth: it found no arm skin in the game files
+#: (no GTA V folder, or one it cannot read the bare arms from), or it does not take gloves with their arm skin.
+GLOVES_RESULT_KEYS = {
+    "game-required": "add.result.gloves-game-required",
+    "invalid-message": "add.result.gloves-refused",
+}
 #: The level each answer is shown with.
 RESULT_LEVELS = {"request-denied": "INFO", "item-limit": "WARNING", "busy": "WARNING", "rate-limited": "WARNING"}
 
 
-def result_message(code: Optional[str], *, withdrawn: bool = False) -> Tuple[str, Msg]:
-    """``(level, message)`` for an add Durty Cloth Tool did not make. ``withdrawn``: the add-on cancelled it."""
+def arm_skin(category: Optional[str]) -> Optional[str]:
+    """The body cut whose arm skin Durty Cloth Tool merges into the cloth (``item.add``'s ``armSkin``): the bare arms
+    for gloves, which the game makes part of the arms with the ped's skin, so a glove without it would hide the arms.
+    ``None`` for every other type (and for no type)."""
+    if category and garment.garment_type(category).family == "hand":
+        return protocol.ARM_SKIN_BASE
+    return None
+
+
+def result_message(code: Optional[str], *, withdrawn: bool = False, gloves: bool = False) -> Tuple[str, Msg]:
+    """``(level, message)`` for an add Durty Cloth Tool did not make. ``withdrawn``: the add-on cancelled it;
+    ``gloves``: the add asked for the arm skin."""
     if code == "request-denied" and withdrawn:
         return "INFO", msg("add.result.withdrawn")
+    if gloves and code in GLOVES_RESULT_KEYS:
+        return "ERROR", msg(GLOVES_RESULT_KEYS[code])
     key = RESULT_KEYS.get(code or "")
     if key is not None:
         return RESULT_LEVELS.get(code or "", "ERROR"), msg(key)
@@ -401,15 +419,16 @@ def result_message(code: Optional[str], *, withdrawn: bool = False) -> Tuple[str
     return "ERROR", msg("error.generic-code", code=code) if code else msg("error.generic")
 
 
-def failure_message(code: str) -> Tuple[str, Msg]:
-    """``(level, message)`` for an add that got no answer from Durty Cloth Tool."""
+def failure_message(code: str, *, gloves: bool = False) -> Tuple[str, Msg]:
+    """``(level, message)`` for an add that got no answer from Durty Cloth Tool (``gloves``: as for
+    :func:`result_message`)."""
     if code == "cancelled":
         return "WARNING", msg("add.result.cancel-unanswered")
     if code == "timeout":
         return "WARNING", msg("add.result.timeout")
     if code == "disconnected":
         return "WARNING", msg("add.result.disconnected")
-    return result_message(code)
+    return result_message(code, gloves=gloves)
 
 
 #: How big a picture's PNG can get at most, per pixel (zlib stores what it cannot compress with a small overhead,
@@ -445,6 +464,7 @@ __all__ = [
     "PictureCheck",
     "TemplateError",
     "Variation",
+    "arm_skin",
     "armature_problem",
     "export_problem",
     "export_summary",

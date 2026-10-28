@@ -2518,9 +2518,10 @@ class AddJob:
             host.push_undo(t("add.op.add"))
             host.redraw()
 
-        # A prop never shows skin; gloves always do.
+        # A prop never shows skin; gloves always do, and Durty Cloth Tool merges the arm skin into them.
         skin = (bool(settings_.skin) or garment.skin_locked(settings_.category)) and self.slot not in garment.PROP_SLOTS
-        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files, on_added=added)
+        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files, category=settings_.category,
+                            on_added=added)
         if self.changed:
             host.push_undo(t("add.op.add"))
         self.result = {"sent": msg("add.sent", name=name, count=len(chosen))}

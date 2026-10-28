@@ -71,6 +71,14 @@ TEXT = {
     "add.result.cancel-unanswered": "Ekleme iptal edildi ancak Durty Cloth Tool doğrulamadı. Durty Cloth Tool içindeki projeyi kontrol edin.",
     "add.result.denied": "Durty Cloth Tool kıyafeti eklemedi: orada İptal et seçildi. Proje değişmedi.",
     "add.result.disconnected": "Ekleme sırasında Durty Cloth Tool bağlantısı kesildi. Kıyafeti yeniden eklemeden önce Durty Cloth Tool içindeki projeyi kontrol edin.",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool eldivenler için kol cildini GTA V kurulumunuzdan alamadığı için hiçbir şey eklenmedi. Durty "
+        "Cloth Tool içinde oyun klasörünü kontrol edin, ardından eldivenleri yeniden ekleyin."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool eldivenleri kol cildiyle birlikte kabul etmediği için hiçbir şey eklenmedi. Durty Cloth "
+        "Tool'u ve bu eklentiyi güncelleyip yeniden deneyin."
+    ),
     "add.result.item-limit": "Durty Cloth Tool kıyafeti eklemedi: projede Durty Cloth Tool planınızın izin verdiği kadar kıyafet zaten var veya kıyafetin renk varyasyonları planın kıyafet başına sınırını aşıyor. Bu sınırları eklenti değil Durty Cloth Tool belirler ve kontrol eder.",
     "add.result.item-refused": "Bu proje freemode kıyafetlerini bu yolla kabul etmez (örneğin özel ped projesi). Durty Cloth Tool içinde freemode projesi açın.",
     "add.result.no-project": "Önce Durty Cloth Tool içinde proje açın, ardından kıyafeti yeniden ekleyin.",

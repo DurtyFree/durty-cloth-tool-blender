@@ -775,6 +775,14 @@ TEXT = {
     ),
     "add.result.rate-limited": "Demasiadas adiciones en poco tiempo. Espera unos segundos y vuelve a intentarlo.",
     "add.result.save-failed": "Durty Cloth Tool no pudo añadir la prenda. Su barra de estado tiene los detalles.",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool no pudo tomar la piel de los brazos para los guantes de tu instalación de GTA V, así que no "
+        "se añadió nada. Revisa la carpeta del juego en Durty Cloth Tool y luego vuelve a añadir los guantes."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool no aceptó los guantes con su piel de los brazos, así que no se añadió nada. Actualiza Durty "
+        "Cloth Tool y este complemento y vuelve a intentarlo."
+    ),
     "add.finding.rig-invalid": (
         "Los pesos o los índices de hueso no encajan con el esqueleto freemode: la prenda se movería mal en el "
         "juego."

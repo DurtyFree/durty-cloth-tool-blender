@@ -71,6 +71,14 @@ TEXT = {
     "add.result.cancel-unanswered": "Penambahan dibatalkan, tetapi Durty Cloth Tool belum mengonfirmasinya. Periksa proyek di Durty Cloth Tool.",
     "add.result.denied": "Durty Cloth Tool tidak menambahkan pakaian: Batal dipilih di sana. Proyek tidak berubah.",
     "add.result.disconnected": "Koneksi ke Durty Cloth Tool terputus saat penambahan. Periksa proyek di Durty Cloth Tool sebelum menambahkan pakaian lagi.",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool tidak dapat mengambil kulit lengan untuk sarung tangan dari instalasi GTA V Anda, jadi tidak "
+        "ada yang ditambahkan. Periksa folder game di Durty Cloth Tool, lalu tambahkan sarung tangan lagi."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool tidak menerima sarung tangan dengan kulit lengannya, jadi tidak ada yang ditambahkan. "
+        "Perbarui Durty Cloth Tool dan add-on ini, lalu coba lagi."
+    ),
     "add.result.item-limit": "Durty Cloth Tool tidak menambahkan pakaian: jumlah pakaian proyek sudah mencapai batas paket Anda di Durty Cloth Tool, atau variasi warna pakaian melebihi batas paket untuk satu pakaian. Durty Cloth Tool yang menetapkan dan memeriksa batas ini, bukan add-on.",
     "add.result.item-refused": "Proyek ini tidak menerima pakaian freemode dengan cara ini (misalnya proyek ped kustom). Buka proyek freemode di Durty Cloth Tool.",
     "add.result.no-project": "Buka proyek di Durty Cloth Tool terlebih dahulu, lalu tambahkan pakaian lagi.",

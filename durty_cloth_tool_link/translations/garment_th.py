@@ -71,6 +71,14 @@ TEXT = {
     "add.result.cancel-unanswered": "ยกเลิกการเพิ่มแล้ว แต่ Durty Cloth Tool ไม่ยืนยัน ตรวจสอบโปรเจกต์ใน Durty Cloth Tool",
     "add.result.denied": "Durty Cloth Tool ไม่ได้เพิ่มเสื้อผ้า: มีการเลือก ยกเลิก ที่นั่น โปรเจกต์ไม่เปลี่ยนแปลง",
     "add.result.disconnected": "ขาดการเชื่อมต่อกับ Durty Cloth Tool ระหว่างเพิ่ม ตรวจสอบโปรเจกต์ใน Durty Cloth Tool ก่อนเพิ่มเสื้อผ้าอีกครั้ง",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool นำผิวแขนสำหรับถุงมือจากการติดตั้ง GTA V ของคุณไม่ได้ จึงยังไม่เพิ่มสิ่งใด "
+        "ตรวจสอบโฟลเดอร์เกมใน Durty Cloth Tool แล้วเพิ่มถุงมืออีกครั้ง"
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool ไม่รับถุงมือพร้อมผิวแขน จึงยังไม่เพิ่มสิ่งใด อัปเดต Durty Cloth Tool "
+        "และส่วนเสริมนี้แล้วลองอีกครั้ง"
+    ),
     "add.result.item-limit": "Durty Cloth Tool ไม่ได้เพิ่มเสื้อผ้า: โปรเจกต์ถึงจำนวนเสื้อผ้าสูงสุดตามแผนใน Durty Cloth Tool หรือเสื้อผ้ามีรูปแบบสีเกินที่แผนอนุญาตต่อชิ้น Durty Cloth Tool เป็นผู้กำหนดและตรวจสอบขีดจำกัด ไม่ใช่ส่วนเสริม",
     "add.result.item-refused": "โปรเจกต์นี้ไม่รับเสื้อผ้า freemode ด้วยวิธีนี้ (เช่น โปรเจกต์ตัวละคร ped แบบกำหนดเอง) เปิดโปรเจกต์ freemode ใน Durty Cloth Tool",
     "add.result.no-project": "เปิดโปรเจกต์ใน Durty Cloth Tool ก่อน แล้วเพิ่มเสื้อผ้าอีกครั้ง",

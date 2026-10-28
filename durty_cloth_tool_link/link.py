@@ -1118,19 +1118,23 @@ class ItemAdd:
         return self.controller.feature_problem(settings.FEATURE_ADD_ITEM)
 
     def start(self, drawable_type: str, gender: str, skin: bool, name: str, variations: List[Any], files: List[Any],
-              *, on_added: Optional[Callable[[Dict[str, str]], None]] = None) -> Request:
-        """Sends the add. ``on_added(binding)`` runs once DCT added the cloth. Raises :class:`strings.UserError` when it
-        cannot be sent now, with what to do."""
+              *, category: Optional[str] = None,
+              on_added: Optional[Callable[[Dict[str, str]], None]] = None) -> Request:
+        """Sends the add. ``category`` is the garment's type: gloves ask DCT to merge the arm skin of the bare arms
+        from the user's game files (:func:`garment_add.arm_skin`). ``on_added(binding)`` runs once DCT added the
+        cloth. Raises :class:`strings.UserError` when it cannot be sent now, with what to do."""
         session = self.controller.ready_session()
         problem = self.problem()
         if problem is not None:
             raise UserError(problem)
+        arm_skin = garment_add.arm_skin(category)
         try:
-            request = session.add_item(drawable_type, gender, skin, name, variations, files, timeout=self.TIMEOUT)
+            request = session.add_item(drawable_type, gender, skin, name, variations, files, timeout=self.TIMEOUT,
+                                       arm_skin=arm_skin)
         except ValueError as exc:
             raise UserError(msg("add.invalid", detail=str(exc))) from exc
         self.request = request
-        self._plan = {"name": name, "slot": drawable_type, "gender": gender}
+        self._plan = {"name": name, "slot": drawable_type, "gender": gender, "gloves": arm_skin is not None}
         self._on_added = on_added
         self.findings = []
         self.added = None
@@ -1197,7 +1201,7 @@ class ItemAdd:
             if withdrawn and code in ("cancelled", "timeout"):
                 self._late.append((request, plan, on_added))  # DCT may still answer it (item-add-late)
                 del self._late[:-self.MAX_LATE]
-            self.status = Notice(*garment_add.failure_message(code))
+            self.status = Notice(*garment_add.failure_message(code, gloves=bool(plan.get("gloves"))))
             self.findings = []
             self.controller.touch()
             return
@@ -1207,7 +1211,8 @@ class ItemAdd:
             self._link(plan, on_added, dict(result.binding or {}), late=False)
         else:
             self.controller._remember_error(result.code)
-            self.status = Notice(*garment_add.result_message(result.code, withdrawn=withdrawn))
+            self.status = Notice(*garment_add.result_message(result.code, withdrawn=withdrawn,
+                                                             gloves=bool(plan.get("gloves"))))
         self.controller.touch()
 
     def forget(self) -> None:

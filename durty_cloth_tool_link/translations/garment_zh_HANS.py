@@ -555,6 +555,10 @@ TEXT = {
     "add.result.busy": "Durty Cloth Tool 正忙（正在构建，或另一个添加正在等待回应）。请稍后重试。",
     "add.result.rate-limited": "短时间内添加次数过多。请等待几秒钟，然后重试。",
     "add.result.save-failed": "Durty Cloth Tool 无法添加这件服装。详情见其状态栏。",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool 无法从你的 GTA V 安装中获取手套所需的手臂皮肤，因此未添加任何内容。请在 Durty Cloth Tool 中检查游戏文件夹，然后再次添加手套。"
+    ),
+    "add.result.gloves-refused": "Durty Cloth Tool 未接受带手臂皮肤的手套，因此未添加任何内容。请更新 Durty Cloth Tool 和此插件后重试。",
     "add.finding.rig-invalid": "权重或骨骼索引与 freemode 骨架不匹配：服装在游戏中会错误地移动。",
     "add.finding.rig-unchecked": "Durty Cloth Tool 无法读取权重进行检查。",
     "add.finding.single-bone-rig": "某个细节级别几乎全部权重都在一根骨骼上，因此服装几乎不会随身体移动。",

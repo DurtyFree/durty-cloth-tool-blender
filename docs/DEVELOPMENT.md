@@ -104,6 +104,11 @@ type and slot by their place in those lists. What the type changes, and where:
   The fit check has no usual ranges of game clothing for this slot.
 - **Type guess.** `glove`, `mitten` and `gauntlet` with their plurals, and Turkish `eldiven` with `eldivenler`,
   `eldiveni` and `eldivenleri`, as whole words.
+- **Add to Project.** The add carries `armSkin` `base` with `uppr` and `skin` true (`garment_add.arm_skin`, passed
+  by `ItemAdd.start` in `link.py`); no other type sends it. Durty Cloth Tool takes the bare arms' skin from the
+  user's own game files and merges it into the gloves; the add-on sends no game data. Durty Cloth Tool answers
+  `game-required` when it cannot read that skin (no GTA V folder, or one without it) and `invalid-message` when it
+  does not take the field; for gloves the panel explains both in their own words (`GLOVES_RESULT_KEYS`).
 
 ### Texts
 

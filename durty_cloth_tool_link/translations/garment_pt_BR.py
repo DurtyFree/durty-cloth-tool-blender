@@ -764,6 +764,14 @@ TEXT = {
     "add.result.save-failed": (
         "O Durty Cloth Tool não conseguiu adicionar a roupa. A barra de status dele tem os detalhes."
     ),
+    "add.result.gloves-game-required": (
+        "O Durty Cloth Tool não conseguiu pegar a pele dos braços para as luvas da sua instalação do GTA V, então nada "
+        "foi adicionado. Verifique a pasta do jogo no Durty Cloth Tool e depois adicione as luvas de novo."
+    ),
+    "add.result.gloves-refused": (
+        "O Durty Cloth Tool não aceitou as luvas com a pele dos braços, então nada foi adicionado. Atualize o Durty "
+        "Cloth Tool e este add-on e tente de novo."
+    ),
     "add.finding.rig-invalid": (
         "Os pesos ou índices de osso não combinam com o esqueleto freemode: a roupa se moveria errado no jogo."
     ),

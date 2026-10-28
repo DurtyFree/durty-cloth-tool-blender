@@ -71,6 +71,15 @@ TEXT = {
     "add.result.cancel-unanswered": "L'aggiunta è stata annullata, ma Durty Cloth Tool non l'ha confermato. Controlla il progetto in Durty Cloth Tool.",
     "add.result.denied": "Durty Cloth Tool non ha aggiunto il capo: è stato scelto Annulla. Il progetto è invariato.",
     "add.result.disconnected": "Il collegamento a Durty Cloth Tool è stato perso durante l'aggiunta. Controlla il progetto in Durty Cloth Tool prima di aggiungere di nuovo il capo.",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool non ha potuto prendere la pelle delle braccia per i guanti dalla tua installazione di GTA V, "
+        "quindi non è stato aggiunto nulla. Controlla la cartella del gioco in Durty Cloth Tool, poi aggiungi di nuovo "
+        "i guanti."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool non ha accettato i guanti con la pelle delle braccia, quindi non è stato aggiunto nulla. "
+        "Aggiorna Durty Cloth Tool e questo add-on, poi riprova."
+    ),
     "add.result.item-limit": "Durty Cloth Tool non ha aggiunto il capo: il progetto ha già il numero massimo di capi consentito dal tuo piano in Durty Cloth Tool oppure il capo ha più varianti di colore di quante ne consenta il piano per un capo. Durty Cloth Tool definisce e controlla questi limiti, non l'add-on.",
     "add.result.item-refused": "Questo progetto non accetta capi freemode in questo modo (ad esempio un progetto ped personalizzato). Apri un progetto freemode in Durty Cloth Tool.",
     "add.result.no-project": "Apri prima un progetto in Durty Cloth Tool, poi aggiungi di nuovo il capo.",

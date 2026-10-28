@@ -810,6 +810,14 @@ TEXT = {
     "add.result.save-failed": (
         "Durty Cloth Tool konnte das Kleidungsstück nicht hinzufügen. Seine Statusleiste zeigt die Details."
     ),
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool konnte die Armhaut für die Handschuhe nicht aus deiner GTA V Installation übernehmen, daher "
+        "wurde nichts hinzugefügt. Prüfe den Spielordner in Durty Cloth Tool und füge die Handschuhe dann erneut hinzu."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool hat die Handschuhe mit ihrer Armhaut nicht angenommen, daher wurde nichts hinzugefügt. "
+        "Aktualisiere Durty Cloth Tool und dieses Add-on und versuche es dann erneut."
+    ),
     "add.finding.rig-invalid": (
         "Die Gewichte oder Knochenindizes passen nicht zum Freemode-Skelett: Das Kleidungsstück würde sich im Spiel "
         "falsch bewegen."

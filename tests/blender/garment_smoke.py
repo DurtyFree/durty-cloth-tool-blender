@@ -1088,7 +1088,7 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
           and gh.aligned(mask, scene), (positions(mask).mean(axis=0) - before, head - avatar_head))
     props.avatar = "detect"
 
-    gloves_smoke(package, state, check, draw_everything, mask)
+    gloves_smoke(package, addon, state, ctrl, dct, check, pump, draw_everything, mask)
 
     # A thick export: two sides of a panel share their UVs, and the side walls between them lie on a line.
     thick = bpy.data.meshes.new("smoke_thick")
@@ -1201,10 +1201,11 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
     return {"check": "garment types (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True, "detail": detail}
 
 
-def gloves_smoke(package, state, check, draw_everything, other):
+def gloves_smoke(package, addon, state, ctrl, dct, check, pump, draw_everything, other):
     """Gloves (Experimental) on synthetic gloves: the arms slot with Shows Skin locked on, Body Cut switched to the
     bare arms once, no Thickness or Push Out region, the fit without markers, the wrist markers that Align to Body puts
-    each glove on its hand with, and the two-gloves check of Validate. ``other`` is another garment to switch to."""
+    each glove on its hand with, the two-gloves check of Validate, and (with a Durty Cloth Tool) Add to Project asking
+    for the bare arms' skin, refused without the game first. ``other`` is another garment to switch to."""
     ui_garment = sys.modules[package + ".ui_garment"]
     gh = sys.modules[package + ".garment_host"]
     garment = sys.modules[package + ".garment"]
@@ -1263,6 +1264,8 @@ def gloves_smoke(package, state, check, draw_everything, other):
 
     check("Validate finds a left and a right glove", "FINISHED" in bpy.ops.dct_link.fit_validate()
           and not two_gloves(gloves), gloves.get(gh.FINDINGS))
+    if dct is not None:
+        gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, gloves)
     joined = mesh_object("smoke_gloves_joined", synthetic.gloves(joined=True))
     choose(joined)
     check("Validate warns about gloves in one piece", props.category == "gloves"
@@ -1274,6 +1277,49 @@ def gloves_smoke(package, state, check, draw_everything, other):
     choose(other)
 
 
+def gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, gloves):
+    """Add to Project for gloves: refused when Durty Cloth Tool has no game files (the panel says why), then added
+    with the bare arms' skin asked for, in the arms slot with Shows Skin."""
+    ui_garment = sys.modules[package + ".ui_garment"]
+    props = bpy.context.scene.dct_garment
+    choose(gloves)
+    uv_by_position(gloves, 2.0)
+    gloves.data.materials.append(textured_material("smoke_gloves_leather", (0.15, 0.1, 0.08)))
+    left = 1.0 if synthetic.joints_of()["SKEL_L_Hand"][0] > 0 else -1.0
+    points = positions(gloves)
+    for name, side in (("SKEL_L_Hand", left), ("SKEL_R_Hand", -left)):
+        gloves.vertex_groups.new(name=name).add([i for i, p in enumerate(points) if p[0] * side > 0], 1.0, "REPLACE")
+    props.gender, props.item_name = "male", "Smoke Gloves"
+    pump(addon, lambda: ctrl.ready and ctrl.project is not None, timeout=60, what="the link before the gloves")
+
+    def add(what):
+        adds = len(dct.item_adds)
+        check(f"the gloves' add starts ({what})", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+        pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
+             what=f"the gloves' add ({what})")
+        pump(addon, lambda: len(dct.item_adds) > adds and not ctrl.item_add.adding, timeout=30,
+             what=f"the gloves' answer ({what})")
+        return dct.item_adds[-1][0]
+
+    dct.fail["item.add"] = "game-required"
+    try:
+        add("without the game")
+    finally:
+        del dct.fail["item.add"]
+    log = draw_everything(package, state, "gloves refused without the game")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("gloves refused without the game say why in the panel",
+          ctrl.item_add.status is not None and ctrl.item_add.status.message.key == "add.result.gloves-game-required"
+          and "could not take the arm skin" in labels and ctrl.item_add.added is None,
+          (ctrl.item_add.status, labels[-400:]))
+    dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING_GLOVES), "findings": []}
+    header = add("with the game")
+    check("gloves go in as Body (uppr) with Shows Skin and the bare arms' skin",
+          (header["drawableType"], header["skin"], header.get("armSkin")) == ("uppr", True, "base")
+          and ctrl.item_add.added is not None, (header, ctrl.item_add.status))
+
+
+ADDED_BINDING_GLOVES = {"clothId": "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b", "textureId": "2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c"}
 ADDED_BINDING_HAT = {"clothId": "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f", "textureId": "0d1e2f3a-4b5c-4d6e-9f7a-8b9c0d1e2f3a"}
 
 

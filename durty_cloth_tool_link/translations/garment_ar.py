@@ -672,6 +672,14 @@ TEXT = {
     "add.result.busy": "Durty Cloth Tool مشغول (يجري بناء، أو ينتظر طلب إضافة آخر ردًا). حاول مرة أخرى بعد لحظة.",
     "add.result.rate-limited": "طلبات إضافة كثيرة جدًا في وقت قصير. انتظر بضع ثوانٍ، ثم حاول مرة أخرى.",
     "add.result.save-failed": "تعذر على Durty Cloth Tool إضافة قطعة الملابس. التفاصيل في شريط الحالة لديه.",
+    "add.result.gloves-game-required": (
+        "تعذر على Durty Cloth Tool أخذ بشرة الذراعين للقفازات من تثبيت GTA V لديك، لذا لم يُضف شيء. تحقق من مجلد "
+        "اللعبة في Durty Cloth Tool، ثم أضف القفازات مرة أخرى."
+    ),
+    "add.result.gloves-refused": (
+        "لم يقبل Durty Cloth Tool القفازات مع بشرة الذراعين، لذا لم يُضف شيء. حدّث Durty Cloth Tool وهذه الإضافة، ثم "
+        "حاول مرة أخرى."
+    ),
     "add.finding.rig-invalid": (
         "الأوزان أو فهارس العظام لا تناسب هيكل freemode العظمي: ستتحرك قطعة الملابس بشكل خاطئ في اللعبة."
     ),

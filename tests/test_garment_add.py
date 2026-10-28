@@ -16,7 +16,7 @@ from typing import Callable
 import numpy as np
 import pytest
 
-from durty_cloth_tool_link import garment_add, link, strings
+from durty_cloth_tool_link import garment_add, link, strings, translations
 from durty_cloth_tool_link.dct_link import protocol
 from durty_cloth_tool_link.dct_link import session as link_session
 from tests.support import synthetic
@@ -495,3 +495,55 @@ def test_the_payload_is_estimated_before_any_picture_is_written():
     assert least == 1000 and most >= 1000 + 2048 * 2048 * 4 + 16 * 16 * 4
     picture = garment_add.png_bytes(np.random.default_rng(1).integers(0, 255, 64 * 64 * 4, dtype=np.uint8), 64, 64)
     assert len(picture) <= garment_add.payload_estimate(0, [(64, 64)])[1]
+
+
+# ---- gloves: the arm skin ------------------------------------------------------------------------------------------
+
+
+def test_gloves_ask_durty_cloth_tool_for_the_bare_arms_skin(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    ctrl.item_add.start("uppr", "female", True, "Leather Gloves", variations, files, category="gloves")
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    header, _ = dct.item_adds[-1]
+    assert (header["drawableType"], header["skin"], header["armSkin"]) == ("uppr", True, "base")
+    assert ctrl.item_add.status.message.key == "add.result.added"
+    ctrl.disconnect()
+
+
+@pytest.mark.parametrize("slot, skin, category", [("jbib", False, "tshirt"), ("lowr", True, "pants"),
+                                                  ("p_head", False, "hat"), ("jbib", True, None)])
+def test_no_other_type_asks_for_an_arm_skin(tmp_path, dct, api, slot, skin, category):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    ctrl.item_add.start(slot, "male", skin, "Cloth", variations, files, category=category)
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    assert "armSkin" not in dct.item_adds[-1][0]
+    ctrl.disconnect()
+
+
+@pytest.mark.parametrize("code, key", [("game-required", "add.result.gloves-game-required"),
+                                       ("invalid-message", "add.result.gloves-refused")])
+def test_gloves_durty_cloth_tool_refuses_say_why_in_every_language(tmp_path, dct, api, code, key):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    linked = []
+    dct.fail["item.add"] = code
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, category="gloves", on_added=linked.append)
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("ERROR", key)
+    assert linked == [] and ctrl.item_add.added is None
+    for language in translations.LOCALES:
+        assert translations.table(language)[key] not in ("", strings.EN[key]), language
+    ctrl.disconnect()
+
+
+def test_another_cloth_without_the_game_keeps_the_general_reason(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.fail["item.add"] = "game-required"
+    ctrl.item_add.start("jbib", "male", False, "Jacket", variations, files, category="tshirt")
+    drive(ctrl, lambda: not ctrl.item_add.adding)
+    assert ctrl.item_add.status.message.key == "error.game-required"
+    ctrl.disconnect()

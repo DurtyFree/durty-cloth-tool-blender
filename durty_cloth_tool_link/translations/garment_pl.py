@@ -71,6 +71,14 @@ TEXT = {
     "add.result.cancel-unanswered": "Anulowano dodawanie, ale Durty Cloth Tool tego nie potwierdziło. Sprawdź projekt w Durty Cloth Tool.",
     "add.result.denied": "Durty Cloth Tool nie dodało ubrania: wybrano tam Anuluj. Projekt pozostał bez zmian.",
     "add.result.disconnected": "Utracono połączenie z Durty Cloth Tool podczas dodawania. Sprawdź projekt w Durty Cloth Tool, zanim ponownie dodasz ubranie.",
+    "add.result.gloves-game-required": (
+        "Durty Cloth Tool nie zdołało pobrać skóry rąk dla rękawiczek z Twojej instalacji GTA V, więc nic nie dodano. "
+        "Sprawdź folder gry w Durty Cloth Tool, a potem ponownie dodaj rękawiczki."
+    ),
+    "add.result.gloves-refused": (
+        "Durty Cloth Tool nie przyjęło rękawiczek ze skórą rąk, więc nic nie dodano. Zaktualizuj Durty Cloth Tool i "
+        "ten dodatek, a potem spróbuj ponownie."
+    ),
     "add.result.item-limit": "Durty Cloth Tool nie dodało ubrania: projekt osiągnął limit ubrań Twojego planu w Durty Cloth Tool lub ubranie ma więcej wariantów koloru, niż plan dopuszcza dla jednego ubrania. Limity ustala i sprawdza Durty Cloth Tool, a nie dodatek.",
     "add.result.item-refused": "Tą metodą nie można dodawać ubrań freemode do tego projektu (na przykład projektu własnego peda). Otwórz projekt freemode w Durty Cloth Tool.",
     "add.result.no-project": "Najpierw otwórz projekt w Durty Cloth Tool, a potem ponownie dodaj ubranie.",
