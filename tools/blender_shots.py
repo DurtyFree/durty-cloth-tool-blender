@@ -249,6 +249,7 @@ class Shots:
                 import importlib
 
                 importlib.invalidate_caches()
+                bpy.ops.extensions.repo_refresh_all()  # Blender 5.2 imports a new repository's packages only then
                 yield 1.0
         addon = sys.modules[package + ".addon"]
         state = sys.modules[package + ".state"]
@@ -646,6 +647,7 @@ class Shots:
         # the body with bare arms.
         folder = pathlib.Path(tempfile.mkdtemp(prefix="dct_shots_gloves_", dir=os.environ["BLENDER_USER_RESOURCES"]))
         gloves = garment_smoke.mesh_object("gloves", synthetic.gloves())
+        bpy.context.view_layer.update()  # the removed objects leave the view layer
         props.garment = gloves
         props.gender = "male"
         glb = garment_smoke.body_glb(folder)
