@@ -13,8 +13,9 @@ its states against the fake Durty Cloth Tool and fake gta.clothing of the tests 
 running, signing in, connected, live preview, saving, a pushed model, items opened from Durty Cloth Tool, no cloth,
 no project, disconnected in Durty Cloth Tool, a Durty Cloth Tool that is too old, and signed out. ``--scenario
 garment`` walks Garment Fitting (Experimental) instead, on a synthetic garment and body: Setup before and after a
-garment and the hosted body are added, Fit with markers, Fix with the fit check and the problem colours, a sculpt
-session, the tear check, Game Ready after the local steps, and Add to Project (the skeleton missing and
+garment and the hosted body are added, Fit with markers, a fit whose report names where weights were repaired, Fix
+with the fit check and the problem colours, a sculpt session, the tear check, Game Ready after the local steps, and
+Add to Project (the skeleton missing and
 in place, what blocks an add, Durty Cloth Tool asking, the cloth added, the free limit, no project open, not
 connected). ``--scenario ped`` walks Custom Ped (Experimental) on a synthetic mannequin: no character, the character's
 checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting to be applied, the rigged
@@ -443,6 +444,24 @@ class Shots:
         yield from self.wait(lambda: True, 5)
         self.shot("garment-fit-options")
         bpy.context.scene.dct_garment.fit_proportions = False
+        self.show_garment(garment_ui, "fit")
+
+        # Fit on gta.clothing whose report says where it repaired weights that tore the garment, then taken back.
+        sys.modules[package + ".state"].preferences().fit_upload_consent = True
+        api.fit.body_version = props.body.get(gh.BODY_VERSION)
+        api.fit.warnings = ["weights_repaired_neck", "weights_repaired_arms", "marker_offset"]
+        self.operator(lambda: bpy.ops.dct_link.fit_service_fit())
+        yield from self.wait(lambda: not ctrl.fitting.busy and garment_ui.RUNTIME.fit_lines, 60, "the fit")
+        self.show_garment(garment_ui, "fit")
+        yield from self.wait(lambda: True, 5)
+        self.scroll(1)
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fit-repaired")
+        self.operator(lambda: bpy.ops.dct_link.fit_back_step())
+        for group in [g for g in tee.vertex_groups if g.name.startswith("SKEL_")]:
+            tee.vertex_groups.remove(group)
+        tee.pop("dct_fitted", None)
+        garment_ui.RUNTIME.fit_lines = []
         self.show_garment(garment_ui, "fit")
 
         # 5. Fix: the fit check and the problem colours.

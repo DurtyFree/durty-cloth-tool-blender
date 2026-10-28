@@ -355,6 +355,8 @@ class FakeFitService:
         self.uploads: List[Tuple[Dict[str, Any], bytes]] = []
         self.cancels: List[str] = []
         self.position_offset = (0.0, 0.0, 0.0)
+        #: The warning codes of a fitted job's report (the repair notes ``weights_repaired_*`` among them).
+        self.warnings: List[str] = ["marker_offset"]
         #: The next uploads are answered fit_busy (each takes one).
         self.busy = 0
         #: Polls that answer queued before a job starts running.
@@ -683,7 +685,7 @@ class FakeFitService:
             "report": {"confidence": 0 if not_on_body else 0.92, "matchedAreaShare": 0.12 if not_on_body else 0.97,
                        "maximumMarkerOffsetMm": 0, "insideBodyBefore": 0, "insideBodyAfter": 0, "pushedVertices": 0,
                        "unweightedVertices": 0,
-                       "warnings": [] if not_on_body else [{"code": "marker_offset", "message": "marker_offset"}]},
+                       "warnings": [] if not_on_body else [{"code": code, "message": code} for code in self.warnings]},
         }
         text = json.dumps(header)
         text += " " * (-len(text) % 4)

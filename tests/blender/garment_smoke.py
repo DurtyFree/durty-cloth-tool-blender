@@ -325,6 +325,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     prefs.fit_upload_consent = True
     api.fit.position_offset = (0.0, 0.0, 0.004)
     api.fit.body_version = body.get(gh.BODY_VERSION)  # the fake fits to the hosted body the smoke added
+    api.fit.warnings = ["marker_offset", "weights_repaired_neck", "weights_repaired_legs"]  # where weights were repaired
     # Proportion Strength shows only with Match Proportions and goes out as a share from 0 to 1.
     props.fit_proportions = False
     log = draw_everything(package, state, "fit options without Match Proportions")
@@ -357,6 +358,11 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the panel says the fit worked and how many fits are left today",
           "Fitted to the body" in labels and "Fits left today" in labels, labels[-500:])
+    check("the fit's warnings say where weights that tore the garment were repaired, one line per region",
+          [line.key for _, line in ui_garment.RUNTIME.fit_lines][1:4]
+          == ["fit.warning.marker-offset", "fit.warning.weights-repaired-neck", "fit.warning.weights-repaired-legs"]
+          and "neck and collar" in labels and "knees, calves and feet" in labels, labels[-700:])
+    api.fit.warnings = ["marker_offset"]
     check("Back One Step takes the fit back", "FINISHED" in bpy.ops.dct_link.fit_back_step()
           and np.allclose(positions(tee), before_fit, atol=1e-5))
     for group in [g for g in tee.vertex_groups if g.name.startswith("SKEL_")]:

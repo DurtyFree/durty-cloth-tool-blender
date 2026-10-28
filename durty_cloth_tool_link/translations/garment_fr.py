@@ -1199,6 +1199,30 @@ TEXT = {
     "fit.warning.unweighted": (
         "Certains sommets n'ont reçu aucun poids ; le jeu les laisse derrière quand le personnage bouge."
     ),
+    "fit.warning.weights-repaired-neck": (
+        "Les poids du cou et du col déchiraient le vêtement dans les poses courantes et ont été réparés. Vérifiez "
+        "cette zone en mouvement."
+    ),
+    "fit.warning.weights-repaired-arms": (
+        "Les poids des épaules et des bras déchiraient le vêtement dans les poses courantes et ont été réparés. "
+        "Vérifiez cette zone en mouvement."
+    ),
+    "fit.warning.weights-repaired-torso": (
+        "Les poids de la poitrine et du dos déchiraient le vêtement dans les poses courantes et ont été réparés. "
+        "Vérifiez cette zone en mouvement."
+    ),
+    "fit.warning.weights-repaired-hips": (
+        "Les poids des hanches et des cuisses déchiraient le vêtement dans les poses courantes et ont été réparés. "
+        "Vérifiez cette zone en mouvement."
+    ),
+    "fit.warning.weights-repaired-legs": (
+        "Les poids des genoux, des mollets et des pieds déchiraient le vêtement dans les poses courantes et ont été "
+        "réparés. Vérifiez cette zone en mouvement."
+    ),
+    "fit.warning.other": (
+        "gta.clothing a remarqué quelque chose dans le résultat ({code}). Une version plus récente de l'add-on "
+        "l'explique."
+    ),
     "fit.done.fit": "Ajusté au corps : dans la pose du jeu, avec des poids pour {bones} os.",
     "fit.done.review": "Ajusté au corps, avec des poids pour {bones} os. Vérifiez ce que gta.clothing a remarqué :",
     "fit.done.weights": "Poids transférés : {bones} os.",

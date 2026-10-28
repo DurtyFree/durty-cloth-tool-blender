@@ -359,7 +359,10 @@ def failure_lines(code: str, issues: Sequence[fit.FitIssue] = (), *, retry_after
 
 
 def warning_lines(result: fit.FitResult) -> List[Tuple[str, Msg]]:
-    return [("WARNING", msg(WARNING_TEXTS[code])) for code in result.warnings if code in WARNING_TEXTS]
+    """What gta.clothing noticed about a result, one line per warning in the report's order (a repair note names its
+    region); a code this add-on does not know yet still gets a line that names it."""
+    return [("WARNING", msg(WARNING_TEXTS[code]) if code in WARNING_TEXTS else msg("fit.warning.other", code=code))
+            for code in result.warnings]
 
 
 # --------------------------------------------------------------------------------------------------

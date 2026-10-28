@@ -157,6 +157,25 @@ def test_fit_on_gta_clothing_uploads_polls_and_hands_back_the_garment_with_weigh
     assert garment_fit.warning_lines(run.result) == [("WARNING", strings.msg("fit.warning.marker-offset"))]
 
 
+@pytest.mark.parametrize("operation", ["fit", "weights"])
+def test_the_report_says_where_weights_that_tore_the_cloth_were_repaired(tmp_path, api, operation):
+    api.fit.warnings = ["weights_repaired_neck", "weights_repaired_arms", "weights_repaired_torso",
+                        "weights_repaired_hips", "weights_repaired_legs", "weights_repaired_tail"]
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    upload, mesh = garment_upload()
+    run = ctrl.fitting.start(operation, request(operation, mesh=mesh), upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    lines = garment_fit.warning_lines(run.result)
+    assert [level for level, _ in lines] == ["WARNING"] * 6  # one note per region, with the other warnings
+    assert lines[:5] == [("WARNING", strings.msg(f"fit.warning.weights-repaired-{region}"))
+                         for region in ("neck", "arms", "torso", "hips", "legs")]
+    # A note this add-on does not know yet still says that gta.clothing noticed something.
+    assert lines[5] == ("WARNING", strings.msg("fit.warning.other", code="weights_repaired_tail"))
+    assert "neck and collar" in str(lines[0][1]).lower() and "knees" in str(lines[4][1]).lower()
+
+
 @pytest.mark.parametrize("match, strength, sent", [
     (True, 25.0, {"matchProportions": True, "proportionStrength": 0.25}),
     (True, 100.0, {"matchProportions": True, "proportionStrength": 1.0}),

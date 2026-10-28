@@ -1800,6 +1800,26 @@ EN: Dict[str, str] = {
         "Loose parts were weighted to the nearest part of the body. Check them in Weight Paint mode."
     ),
     "fit.warning.unweighted": "Some vertices got no weights; the game leaves them behind when the character moves.",
+    "fit.warning.weights-repaired-neck": (
+        "Weights at the neck and collar tore the garment in common poses and were repaired. Check that area in motion."
+    ),
+    "fit.warning.weights-repaired-arms": (
+        "Weights at the shoulders and arms tore the garment in common poses and were repaired. Check that area in "
+        "motion."
+    ),
+    "fit.warning.weights-repaired-torso": (
+        "Weights at the chest and back tore the garment in common poses and were repaired. Check that area in motion."
+    ),
+    "fit.warning.weights-repaired-hips": (
+        "Weights at the hips and thighs tore the garment in common poses and were repaired. Check that area in motion."
+    ),
+    "fit.warning.weights-repaired-legs": (
+        "Weights at the knees, calves and feet tore the garment in common poses and were repaired. Check that area in "
+        "motion."
+    ),
+    "fit.warning.other": (
+        "gta.clothing noticed something about the result ({code}). A newer version of the add-on explains it."
+    ),
     "fit.done.fit": "Fitted to the body: in the game's pose, with weights for {bones} bones.",
     "fit.done.review": "Fitted to the body, with weights for {bones} bones. Check what gta.clothing noticed:",
     "fit.done.weights": "Weights transferred: {bones} bones.",
