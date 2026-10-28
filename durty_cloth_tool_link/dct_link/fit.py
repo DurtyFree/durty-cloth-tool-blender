@@ -257,9 +257,8 @@ class FitRange(NamedTuple):
 
 
 class FitStretch(NamedTuple):
-    """How much the game's own clothing of a category stretches in the game's test poses: per garment, the share of
-    its edges (3 mm or longer) stretched beyond 1.8 times their rest length in its worst pose, in percent; the median,
-    the 90th percentile and the largest share over ``garments`` vanilla garments."""
+    """The stretch statistics of the game's own clothing of a category, for comparison: the median, the 90th percentile
+    and the largest of a percentage per garment, over ``garments`` vanilla garments."""
 
     p50: float
     p90: float

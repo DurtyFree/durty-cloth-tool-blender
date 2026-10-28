@@ -19,7 +19,7 @@ Do not edit these files by hand. Change dct_link upstream, then run
 | `LICENSE` | `a2a344cb8f78fc31647efd0e12df7c4f7c7b4b79dab10c2c01418bb229323a75` |
 | `__init__.py` | `fd27be9fcc223a9578b1fa53b3549ddd8fce75121a61d4aed1f6f98e26ed9592` |
 | `auth.py` | `d5039c4a6b13910b3a943b3c2199a14c57dc5c5845d7df8050608872e8722eee` |
-| `fit.py` | `dd4cc7e79daff9e707e13d8c8ac90d660984508b4b6ddb0779734a82b8a5a5cb` |
+| `fit.py` | `d99e940987b2a3625b77a8fcb8636200e2282a2944424c0ac220a78f3b36d150` |
 | `ped.py` | `1fc7514bc97dc5a432c580327cfca2739d57236999dbe1e65303319ddebd4c64` |
 | `protocol.py` | `6f45c07b2d3b16cf763dcbdd7e3ae2b14b87bd02059a303cb09b29a128a1ae8d` |
 | `session.py` | `a38c93dd327aa4e0c6b9287cc3cbf4060101b1e7212a7e8c76ca0fa95328b491` |
