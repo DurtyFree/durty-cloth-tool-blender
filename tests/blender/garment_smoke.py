@@ -317,6 +317,15 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     prefs.fit_upload_consent = True
     api.fit.position_offset = (0.0, 0.0, 0.004)
     api.fit.body_version = body.get(gh.BODY_VERSION)  # the fake fits to the hosted body the smoke added
+    # Proportion Strength shows only with Match Proportions and goes out as a share from 0 to 1.
+    props.fit_proportions = False
+    log = draw_everything(package, state, "fit options without Match Proportions")
+    check("Proportion Strength is hidden without Match Proportions",
+          ("prop", "fit_proportion_strength") not in log and props.fit_proportion_strength == 100.0)
+    props.fit_proportions = True
+    props.fit_proportion_strength = 40.0
+    log = draw_everything(package, state, "fit options with Match Proportions")
+    check("Proportion Strength shows with Match Proportions", ("prop", "fit_proportion_strength") in log)
     before_fit = positions(tee)
     check("Fit on gta.clothing runs", "FINISHED" in bpy.ops.dct_link.fit_service_fit())
     log = draw_everything(package, state, "garment being fitted")
@@ -328,6 +337,10 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("the fit uploaded the aligned garment with its markers in the rest pose",
           sent_request["sourcePose"] == "rest" and "lShoulder" in sent_request.get("markers", {})
           and "lKnee" not in sent_request.get("markers", {}), sent_request)
+    check("the fit sent Match Proportions with its strength as a share",
+          sent_request["options"].get("matchProportions") is True
+          and sent_request["options"].get("proportionStrength") == 0.4, sent_request["options"])
+    props.fit_proportions = False
     check("Fit on gta.clothing moves the garment as answered and weights it by bone name, never to the root",
           np.allclose(positions(tee), before_fit + [0.0, 0.0, 0.004], atol=1e-4) and "SKEL_Spine3" in groups
           and "SKEL_ROOT" not in groups and tee.get("dct_fitted"),

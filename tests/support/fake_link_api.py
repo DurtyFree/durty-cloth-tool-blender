@@ -301,7 +301,7 @@ MARKERS = ("pelvis", "chest", "neck", "lShoulder", "lElbow", "lWrist", "rShoulde
 CHAINS = (("lShoulder", "lElbow", "lWrist"), ("rShoulder", "rElbow", "rWrist"), ("lHip", "lKnee", "lAnkle"),
           ("rHip", "rKnee", "rAnkle"))
 OPTIONS = {"seamWeldMm": (0, 3), "clearanceMm": (0, 20), "maxPushMm": (1, 100), "pushOut": None,
-           "matchProportions": None}
+           "matchProportions": None, "proportionStrength": (0, 1)}
 #: The bones of the fake's result, under indices of its own.
 BONE_NAMES = {1: "SKEL_Pelvis", 2: "SKEL_L_Thigh", 3: "SKEL_R_Thigh", 4: "SKEL_Spine0", 5: "SKEL_Spine1",
               6: "SKEL_Spine2", 7: "SKEL_Spine3", 8: "SKEL_L_UpperArm", 9: "SKEL_R_UpperArm"}
@@ -603,6 +603,8 @@ class FakeFitService:
                 elif isinstance(option, bool) or not isinstance(option, (int, float)) \
                         or not bounds[0] <= option <= bounds[1]:
                     errors.append(_issue("options_out_of_range", f"options.{name}"))
+            if "proportionStrength" in options and options.get("matchProportions") is not True:
+                errors.append(_issue("options_out_of_range", "options.proportionStrength"))
         if errors:
             return refuse(errors)
         return dict(value, sourcePose=pose)

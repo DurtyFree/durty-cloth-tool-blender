@@ -305,12 +305,13 @@ class Shots:
 
     # ---- the garment fitting states (--scenario garment) ---------------------------------------------------
 
-    def show_garment(self, garment_ui, stage=None, sections=()):
-        """The Garment Fitting view with ``stage`` open and the closed ``sections`` (``problems``, ``tears``...) open
-        too. The panel opens the stage of the next step by itself; a shot of another stage asks for that one instead
-        (``None``: the panel's own choice)."""
+    def show_garment(self, garment_ui, stage=None, sections=(), options=()):
+        """The Garment Fitting view with ``stage`` open and the closed ``sections`` (``problems``, ``tears``...) and
+        Options sections (``service``...) open too. The panel opens the stage of the next step by itself; a shot of
+        another stage asks for that one instead (``None``: the panel's own choice)."""
         if not hasattr(self, "open_stage"):
             self.open_stage, self.section = garment_ui.open_stage, garment_ui.section
+            self.options = garment_ui.options
         garment_ui.open_stage = self.open_stage if stage is None else (lambda context, stage=stage: stage)
         self.generation = getattr(self, "generation", 0) + 1
         original, generation = self.section, self.generation
@@ -324,18 +325,27 @@ class Shots:
                 garment_ui.info_button(header, info)
             return body
 
+        def options_section(layout, context, name, original=self.options):
+            if name not in options:
+                return original(layout, context, name)
+            header, body = layout.panel(f"dct_link_garment_{name}_shot{generation}", default_closed=False)
+            header.label(text=garment_ui.t("garment.heading.options"), icon="PREFERENCES", translate=False)
+            return body
+
         garment_ui.section = section
+        garment_ui.options = options_section
         bpy.context.scene.dct_link.workspace = "GARMENT"
         self.scroll(-20)
         self.show_tab()
 
-    def scroll(self, pages):
-        """Scrolls the sidebar by whole pages (negative: up), for panels taller than the window."""
+    def scroll(self, pages, page=True, ticks=1):
+        """Scrolls the sidebar by whole pages (negative: up), for panels taller than the window; with ``page``
+        False, by ``ticks`` small steps per page instead."""
         window, area, region = self.view()
         with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
-            for _ in range(abs(pages)):
+            for _ in range(abs(pages) * (1 if page else ticks)):
                 try:
-                    (bpy.ops.view2d.scroll_down if pages > 0 else bpy.ops.view2d.scroll_up)(page=True)
+                    (bpy.ops.view2d.scroll_down if pages > 0 else bpy.ops.view2d.scroll_up)(page=page)
                 except RuntimeError:
                     break  # at the end already
         self.redraw()
@@ -411,6 +421,15 @@ class Shots:
         self.show_garment(garment_ui, "fit")
         yield from self.wait(lambda: True, 5)
         self.shot("garment-fit-aligned")
+
+        # Fit on gta.clothing's options with Match Proportions on, so Proportion Strength shows too.
+        bpy.context.scene.dct_garment.fit_proportions = True
+        self.show_garment(garment_ui, "fit", options=("service",))
+        self.scroll(1, page=False, ticks=12)
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fit-options")
+        bpy.context.scene.dct_garment.fit_proportions = False
+        self.show_garment(garment_ui, "fit")
 
         # 5. Fix: the fit check and the problem colours.
         self.operator(lambda: bpy.ops.dct_link.fit_check())

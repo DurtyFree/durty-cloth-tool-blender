@@ -180,14 +180,19 @@ def densest_seam_cell(positions: Any, triangles: Any, seam_weld_mm: float) -> Tu
 
 
 def fit_options(clearance: float, push_out: bool, max_push: float, seam_weld: float,
-                match_proportions: bool) -> Dict[str, Any]:
-    """The options of Fit on gta.clothing, each kept within the service's range."""
+                match_proportions: bool, proportion_strength: float = 100.0) -> Dict[str, Any]:
+    """The options of Fit on gta.clothing, each kept within the service's range. Proportion Strength is a percentage
+    in the panel and a share from 0 to 1 for the service, which takes it only with Match Proportions."""
     weld = min(3.0, max(0.0, float(seam_weld)))
     if 0.0 < weld < fit.MIN_SEAM_WELD_MM:
         weld = fit.MIN_SEAM_WELD_MM
-    return {"clearanceMm": round(min(20.0, max(0.0, float(clearance))), 3), "pushOut": bool(push_out),
-            "maxPushMm": round(min(100.0, max(1.0, float(max_push))), 3), "seamWeldMm": round(weld, 3),
-            "matchProportions": bool(match_proportions)}
+    options: Dict[str, Any] = {
+        "clearanceMm": round(min(20.0, max(0.0, float(clearance))), 3), "pushOut": bool(push_out),
+        "maxPushMm": round(min(100.0, max(1.0, float(max_push))), 3), "seamWeldMm": round(weld, 3),
+        "matchProportions": bool(match_proportions)}
+    if match_proportions:
+        options["proportionStrength"] = round(min(1.0, max(0.0, float(proportion_strength) / 100.0)), 4)
+    return options
 
 
 def build_request(operation: str, gender: str, slot: str, category: str, body_version: str,

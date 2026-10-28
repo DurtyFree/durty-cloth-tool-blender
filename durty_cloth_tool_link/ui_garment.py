@@ -375,6 +375,10 @@ class DCTLINK_PG_garment(PropertyGroup):
                                 description=EN["garment.prop.seam-gap.desc"], translation_context=CONTEXT)
     fit_proportions: BoolProperty(name=EN["garment.prop.proportions"], default=False,
                                   description=EN["garment.prop.proportions.desc"], translation_context=CONTEXT)
+    fit_proportion_strength: FloatProperty(name=EN["garment.prop.proportion-strength"], default=100.0, min=0.0,
+                                           max=100.0, precision=0, subtype="PERCENTAGE",
+                                           description=EN["garment.prop.proportion-strength.desc"],
+                                           translation_context=CONTEXT)
     lod_medium: IntProperty(name=EN["garment.prop.lod-medium"], default=0, min=0, max=200000,
                             description=EN["garment.prop.lod.desc"], translation_context=CONTEXT)
     lod_low: IntProperty(name=EN["garment.prop.lod-low"], default=0, min=0, max=100000,
@@ -1913,7 +1917,8 @@ def start_service(context: Any, operation: str) -> Any:
     positions, triangles, pinned, lining = gh.fit_arrays(obj)
     upload = garment_fit.prepare_upload(positions, triangles, pinned, lining)
     options = garment_fit.fit_options(settings_.fit_clearance, settings_.fit_push, settings_.fit_max_push,
-                                      settings_.fit_seam_gap, settings_.fit_proportions)
+                                      settings_.fit_seam_gap, settings_.fit_proportions,
+                                      settings_.fit_proportion_strength)
     crowded, where = garment_fit.densest_seam_cell(upload.positions, upload.triangles, options["seamWeldMm"])
     if crowded > fit.MAX_SEAM_DENSITY:
         gh.select_vertices(obj, where)
@@ -3257,6 +3262,9 @@ def draw_service(layout: Any, context: Any, operation: str) -> None:
             body.prop(settings_, "fit_max_push", text=t("garment.prop.max-push"), translate=False)
             body.prop(settings_, "fit_seam_gap", text=t("garment.prop.seam-gap"), translate=False)
             ui.checkbox(body, context, settings_, "fit_proportions", "garment.prop.proportions")
+            if settings_.fit_proportions:
+                body.prop(settings_, "fit_proportion_strength", text=t("garment.prop.proportion-strength"),
+                          translate=False)
 
 
 def draw_findings(layout: Any, context: Any) -> None:

@@ -1622,7 +1622,11 @@ EN: Dict[str, str] = {
     ),
     "garment.prop.proportions": "Match Proportions",
     "garment.prop.proportions.desc": (
-        "Also stretch the body's arms and legs to the garment's markers, for a garment made on another avatar"
+        "Also stretch and resize the garment's arms and legs to the body's joints, for a garment made on another avatar"
+    ),
+    "garment.prop.proportion-strength": "Proportion Strength",
+    "garment.prop.proportion-strength.desc": (
+        "How far Match Proportions goes: 100 % gives the garment the body's proportions, less keeps some of its own"
     ),
     "fit.left": "Fits left today: {left} of {total}",
     "fit.stage.uploading": "Sending the garment ({percent} %)",

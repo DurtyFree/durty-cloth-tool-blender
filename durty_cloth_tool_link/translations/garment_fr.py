@@ -1020,8 +1020,13 @@ TEXT = {
     ),
     "garment.prop.proportions": "Adapter les proportions",
     "garment.prop.proportions.desc": (
-        "Étire aussi les bras et les jambes du corps jusqu'aux marqueurs du vêtement, pour un vêtement fait sur un "
-        "autre avatar"
+        "Étire et redimensionne aussi les bras et les jambes du vêtement selon les articulations du corps, pour un "
+        "vêtement fait sur un autre avatar"
+    ),
+    "garment.prop.proportion-strength": "Force des proportions",
+    "garment.prop.proportion-strength.desc": (
+        "Jusqu'où va Adapter les proportions : 100 % donne au vêtement les proportions du corps, moins garde une "
+        "partie des siennes"
     ),
     "fit.left": "Ajustements restants aujourd'hui : {left} sur {total}",
     "fit.stage.uploading": "Envoi du vêtement ({percent} %)",

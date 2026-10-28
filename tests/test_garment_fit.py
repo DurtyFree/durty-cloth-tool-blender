@@ -157,6 +157,49 @@ def test_fit_on_gta_clothing_uploads_polls_and_hands_back_the_garment_with_weigh
     assert garment_fit.warning_lines(run.result) == [("WARNING", strings.msg("fit.warning.marker-offset"))]
 
 
+@pytest.mark.parametrize("match, strength, sent", [
+    (True, 25.0, {"matchProportions": True, "proportionStrength": 0.25}),
+    (True, 100.0, {"matchProportions": True, "proportionStrength": 1.0}),
+    (True, 140.0, {"matchProportions": True, "proportionStrength": 1.0}),  # kept within 0 to 100 %
+    (False, 25.0, {"matchProportions": False}),  # without Match Proportions it is not sent at all
+])
+def test_proportion_strength_goes_to_gta_clothing_as_a_share_only_with_match_proportions(tmp_path, api, match,
+                                                                                         strength, sent):
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    upload, mesh = garment_upload()
+    options = garment_fit.fit_options(3, True, 30, 1.5, match, proportion_strength=strength)
+    run = ctrl.fitting.start("fit", garment_fit.build_request("fit", "male", "jbib", "tshirt", "1", mesh.joints,
+                                                              options), upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    assert run.state == "done"
+    sent_options = api.fit.uploads[0][0]["options"]
+    assert {name: sent_options[name] for name in sent_options if "roportion" in name} == sent
+
+
+@pytest.mark.parametrize("options", [
+    {"proportionStrength": 0.5},
+    {"matchProportions": False, "proportionStrength": 0.5},
+    {"matchProportions": True, "proportionStrength": 1.5},
+    {"matchProportions": True, "proportionStrength": -0.1},
+])
+def test_the_fake_service_refuses_proportion_strength_as_gta_clothing_does(tmp_path, api, monkeypatch, options):
+    """The client never sends these (dct_link checks them first); with its check out of the way, the fake refuses
+    them as gta.clothing does."""
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    upload, mesh = garment_upload()
+    smuggled = request(mesh=mesh)
+    smuggled["options"] = dict(smuggled["options"], **options)
+    monkeypatch.setattr(fit, "fit_request", lambda *args, **kwargs: None)
+    run = ctrl.fitting.start("fit", smuggled, upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    assert run.state == "failed" and "fit.input.options" in [line.key for _, line in run.lines]
+    assert not api.fit.uploads
+
+
 def test_a_busy_service_is_asked_again_and_cancel_gives_an_unstarted_fit_back(tmp_path, api, monkeypatch):
     monkeypatch.setattr(garment_fit.FitRun, "BUSY_WAIT", (0.05, 0.1))
     api.fit.busy = 1

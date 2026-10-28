@@ -1026,8 +1026,13 @@ TEXT = {
     ),
     "garment.prop.proportions": "Proportionen angleichen",
     "garment.prop.proportions.desc": (
-        "Streckt auch Arme und Beine des Körpers zu den Markern des Kleidungsstücks, für ein Kleidungsstück, das auf "
-        "einem anderen Avatar entstand"
+        "Streckt und skaliert auch Arme und Beine des Kleidungsstücks auf die Gelenke des Körpers, für ein "
+        "Kleidungsstück, das auf einem anderen Avatar entstand"
+    ),
+    "garment.prop.proportion-strength": "Proportionsstärke",
+    "garment.prop.proportion-strength.desc": (
+        "Wie weit Proportionen angleichen geht: 100 % gibt dem Kleidungsstück die Proportionen des Körpers, weniger "
+        "behält einen Teil seiner eigenen"
     ),
     "fit.left": "Anpassungen heute übrig: {left} von {total}",
     "fit.stage.uploading": "Kleidungsstück wird gesendet ({percent} %)",

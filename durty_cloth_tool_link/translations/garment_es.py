@@ -980,8 +980,13 @@ TEXT = {
     ),
     "garment.prop.proportions": "Igualar proporciones",
     "garment.prop.proportions.desc": (
-        "Estira también los brazos y las piernas del cuerpo hasta los marcadores de la prenda, para una prenda hecha "
-        "sobre otro avatar"
+        "Estira y ajusta también los brazos y las piernas de la prenda a las articulaciones del cuerpo, para una "
+        "prenda hecha sobre otro avatar"
+    ),
+    "garment.prop.proportion-strength": "Intensidad de proporciones",
+    "garment.prop.proportion-strength.desc": (
+        "Cuánto se igualan las proporciones: 100 % da a la prenda las proporciones del cuerpo, menos conserva parte de "
+        "las suyas"
     ),
     "fit.left": "Ajustes restantes hoy: {left} de {total}",
     "fit.stage.uploading": "Enviando la prenda ({percent} %)",
