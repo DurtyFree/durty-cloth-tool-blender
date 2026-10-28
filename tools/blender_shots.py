@@ -199,6 +199,7 @@ class Shots:
     def steps(self):
         args = self.args
         prefs = bpy.context.preferences
+        prefs.view.show_tooltips = False  # a tooltip under the pointer would cover the sidebar in a shot
         if args.language:
             prefs.view.language = args.language
             prefs.view.use_translate_interface = prefs.view.use_translate_tooltips = True
@@ -413,7 +414,8 @@ class Shots:
         props.body_arms = "wire"
         props.body_legs = "hidden"
         self.show_garment(garment_ui, "setup", options=("body",))
-        self.scroll(1, page=False, ticks=12)
+        yield from self.wait(lambda: True, 5)
+        self.scroll(3)  # once the open Options have drawn: down to the note under them
         yield from self.wait(lambda: True, 5)
         self.shot("garment-body-view")
         props.body_cut = "full"

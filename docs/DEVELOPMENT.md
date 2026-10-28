@@ -224,7 +224,8 @@ python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Ble
 
 `--scenario garment` or `--scenario ped` walks Garment Fitting or Custom Ped, `--expanded` opens every collapsed
 panel, `--language de_DE` and `--theme light` give variants, and `--text-size 14` shows what a narrow sidebar cuts or
-wraps. The fakes sign in as "Durty", the name the screenshots show.
+wraps. The fakes sign in as "Durty", the name the screenshots show. Tooltips are off for the run, so the pointer
+never covers the sidebar, and a state with an opened section is scrolled only after it has drawn.
 
 ### Measuring an avatar
 
