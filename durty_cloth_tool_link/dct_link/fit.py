@@ -145,7 +145,7 @@ INPUT_CODES = (
 #: The stable codes of a result's warnings.
 WARNING_CODES = ("inside_body", "low_coverage", "marker_offset", "proportion_clamped", "shape_strained",
                  "attachment_fallback", "unweighted", "weights_repaired_neck", "weights_repaired_arms",
-                 "weights_repaired_torso", "weights_repaired_hips", "weights_repaired_legs")
+                 "weights_repaired_torso", "weights_repaired_hips", "weights_repaired_legs", "gloves_not_placed")
 #: The codes this module gives a failure that has no answer of the service.
 LOCAL_CODES = ("network", "invalid-response", "signed-out", "cancelled")
 
