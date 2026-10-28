@@ -65,6 +65,7 @@ __all__ = [
     "FitStatus",
     "FitResult",
     "FitRange",
+    "FitStretch",
     "FitReference",
     "FitAllowance",
     "FitTask",
@@ -108,10 +109,11 @@ SLEEVED_TYPES = ("jbib", "accs", "uppr")
 SOURCE_POSES = ("rest", "a-pose", "t-pose", "custom")
 OPERATIONS = ("fit", "weights")
 GENDERS = ("male", "female")
-#: The options and their ranges (``None``: a boolean). A seam weld is 0 (off) or 0.05 to 3 mm.
+#: The options and their ranges (``None``: a boolean). A seam weld is 0 (off) or 0.05 to 3 mm;
+#: ``proportionStrength`` (default 1: the body's proportions, 0: the garment's own) needs ``matchProportions``.
 OPTIONS: Dict[str, Optional[Tuple[float, float]]] = {
     "seamWeldMm": (0.0, 3.0), "clearanceMm": (0.0, 20.0), "maxPushMm": (1.0, 100.0), "pushOut": None,
-    "matchProportions": None,
+    "matchProportions": None, "proportionStrength": (0.0, 1.0),
 }
 MIN_SEAM_WELD_MM = 0.05
 #: With the seam weld on, at most this many open-edge vertices may lie in one cube as wide as the weld
@@ -253,11 +255,24 @@ class FitRange(NamedTuple):
     samples: int
 
 
+class FitStretch(NamedTuple):
+    """How much the game's own clothing of a category stretches in the game's test poses: per garment, the share of
+    its edges (3 mm or longer) stretched beyond 1.8 times their rest length in its worst pose, in percent; the median,
+    the 90th percentile and the largest share over ``garments`` vanilla garments."""
+
+    p50: float
+    p90: float
+    max: float
+    garments: int
+
+
 class FitReference(NamedTuple):
     body_version: str
     gender: str
     category: str
     regions: Dict[str, FitRange]
+    #: The game's stretch statistics of the category, ``None`` when the service has none for it.
+    stretch: Optional[FitStretch] = None
 
 
 class FitAllowance(NamedTuple):
@@ -332,6 +347,8 @@ def fit_request(operation: str, gender: str, drawable_type: str, body_version: s
                 name == "seamWeldMm" and 0 < value < MIN_SEAM_WELD_MM):
             raise ValueError(f"{name} is out of its range")
         chosen[name] = round(float(value), 4)
+    if "proportionStrength" in chosen and chosen.get("matchProportions") is not True:
+        raise ValueError("proportionStrength needs matchProportions")
     request: Dict[str, Any] = {"operation": operation, "gender": gender, "drawableType": drawable_type,
                                "sourcePose": source_pose, "bodyVersion": body_version}
     if category is not None:
@@ -611,7 +628,8 @@ def parse_result(data: bytes, expected_vertices: Optional[int] = None) -> FitRes
 
 
 def parse_reference(payload: bytes) -> FitReference:
-    """The answer of ``fit/reference``: the percentiles per body region."""
+    """The answer of ``fit/reference``: the percentiles per body region and, when the service has them, the game's
+    stretch statistics of the category."""
     body = _json_object(payload)
     version, gender, category, regions = (body.get("bodyVersion"), body.get("gender"), body.get("category"),
                                            body.get("regions"))
@@ -628,7 +646,16 @@ def parse_reference(payload: bytes) -> FitReference:
         if not all(_number(v) and abs(v) <= 1000.0 for v in numbers) or type(samples) is not int or samples < 0:
             raise FitError("invalid-response", "a reference range is not readable")
         ranges[name] = FitRange(float(numbers[0]), float(numbers[1]), float(numbers[2]), samples)
-    return FitReference(version, gender, category, ranges)
+    stretch = None
+    if body.get("stretch") is not None:
+        value = body["stretch"]
+        numbers = [value.get(key) for key in ("p50", "p90", "max")] if isinstance(value, dict) else []
+        garments = value.get("garments") if isinstance(value, dict) else None
+        if (len(numbers) != 3 or not all(_number(v) and 0.0 <= v <= 100.0 for v in numbers)
+                or type(garments) is not int or garments < 0):
+            raise FitError("invalid-response", "the stretch statistics are not readable")
+        stretch = FitStretch(float(numbers[0]), float(numbers[1]), float(numbers[2]), garments)
+    return FitReference(version, gender, category, ranges, stretch)
 
 
 def parse_allowance(payload: bytes) -> Optional[FitAllowance]:

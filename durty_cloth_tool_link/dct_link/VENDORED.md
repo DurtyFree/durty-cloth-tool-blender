@@ -12,14 +12,14 @@ Do not edit these files by hand. Change dct_link upstream, then run
 - Source: the `dct_link` package and its `LICENSE` in the Durty Cloth Tool repository
 - dct_link version: 0.1.0
 - Creator Link protocol: 2.2
-- Synced: 2026-10-27
+- Synced: 2026-10-28
 
 | File | SHA-256 |
 |---|---|
 | `LICENSE` | `a2a344cb8f78fc31647efd0e12df7c4f7c7b4b79dab10c2c01418bb229323a75` |
 | `__init__.py` | `fd27be9fcc223a9578b1fa53b3549ddd8fce75121a61d4aed1f6f98e26ed9592` |
 | `auth.py` | `d5039c4a6b13910b3a943b3c2199a14c57dc5c5845d7df8050608872e8722eee` |
-| `fit.py` | `d26234e2a69bd1c92fa208611f9b3116e77b796830322204cb4609f262027700` |
+| `fit.py` | `6f69f417bb89d96b2f0d880c70335e215c187cadd3c62fd2ccfd1996b71ead9c` |
 | `ped.py` | `1fc7514bc97dc5a432c580327cfca2739d57236999dbe1e65303319ddebd4c64` |
 | `protocol.py` | `6f45c07b2d3b16cf763dcbdd7e3ae2b14b87bd02059a303cb09b29a128a1ae8d` |
 | `session.py` | `a38c93dd327aa4e0c6b9287cc3cbf4060101b1e7212a7e8c76ca0fa95328b491` |
