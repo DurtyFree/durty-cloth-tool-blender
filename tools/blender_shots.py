@@ -13,9 +13,9 @@ its states against the fake Durty Cloth Tool and fake gta.clothing of the tests 
 running, signing in, connected, live preview, saving, a pushed model, items opened from Durty Cloth Tool, no cloth,
 no project, disconnected in Durty Cloth Tool, a Durty Cloth Tool that is too old, and signed out. ``--scenario
 garment`` walks Garment Fitting (Experimental) instead, on a synthetic garment and body: Setup before and after a
-garment and the hosted body are added, Fit with markers, a fit whose report names where weights were repaired, Fix
-with the fit check and the problem colours, a sculpt session, the tear check, Game Ready after the local steps, and
-Add to Project (the skeleton missing and
+garment and the hosted body are added, the body's view options, Fit with markers, a fit whose report names where
+weights were repaired, Fix with the fit check and the problem colours, a sculpt session, the tear check beside the
+game's own clothing, Game Ready after the local steps, and Add to Project (the skeleton missing and
 in place, what blocks an add, Durty Cloth Tool asking, the cloth added, the free limit, no project open, not
 connected). ``--scenario ped`` walks Custom Ped (Experimental) on a synthetic mannequin: no character, the character's
 checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting to be applied, the rigged
@@ -525,6 +525,9 @@ class Shots:
         garment_smoke.split_weights(tpose)
         self.operator(lambda: bpy.ops.dct_link.fit_check_tears())
         self.show_garment(garment_ui, "fix", sections=("tears",))
+        # The summary compares the stretch with the game's own clothing once gta.clothing's statistics arrived.
+        yield from self.wait(lambda: garment_ui.game_reference(bpy.context)[0] is not None, 20, "the statistics")
+        self.redraw()
         yield from self.wait(lambda: True, 5)
         self.scroll(2)  # once the panel has drawn: the sidebar knows its height
         yield from self.wait(lambda: True, 5)

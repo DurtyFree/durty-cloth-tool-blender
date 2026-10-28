@@ -711,6 +711,15 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("the Tears section names the game poses that tear", "game poses tear nothing" in labels
           and "climb@0.5:" in labels, labels[-400:])
+    # gta.clothing's stretch statistics of the game's own clothing (free, no fit used) put the stretch in context.
+    used = api.fit.used
+    pump(addon, lambda: ui_garment.game_reference(bpy.context)[0] is not None, timeout=20,
+         what="the stretch statistics")
+    log = draw_everything(package, state, "tears beside the game's clothing")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the Tears summary compares the stretch with the game's own clothing, without using a fit",
+          tears.get("share", 0) > 0 and "Stretch:" in labels and "pieces of the game's own clothing" in labels
+          and api.fit.used == used, (tears.get("share"), labels[-500:]))
     RESULT_GAME = {"check": "tears (synthetic pack poses)", "ok": True,
                    "detail": "; ".join(f"{p['pose']}: {p['torn']} torn, stretch {p['stretch']}"
                                        for p in tears["poses"])}

@@ -1323,6 +1323,25 @@ TEXT = {
     "garment.tears.game-summary": "{clean} من {total} وضعية في اللعبة لا يتمزق فيها شيء.",
     "garment.tears.game-pose": "{pose}: تتمزق {count} نقطة، بتمدد حتى {stretch} مرة",
     "garment.tears.game-pose.one": "{pose}: تتمزق {count} نقطة، بتمدد حتى {stretch} مرة",
+    "garment.tears.stretch-low": (
+        "التمدد: يتمدد {share} % من القماش حتى التمزق في أسوأ وضعية، وهذا لا يزيد على المعتاد في ملابس اللعبة من هذا "
+        "النوع ({p50} %)."
+    ),
+    "garment.tears.stretch-usual": (
+        "التمدد: يتمدد {share} % من القماش حتى التمزق في أسوأ وضعية، أكثر من المعتاد ({p50} %) لكن ضمن ما تبلغه 9 من "
+        "كل 10 قطع من ملابس اللعبة من هذا النوع ({p90} %)."
+    ),
+    "garment.tears.stretch-high": (
+        "التمدد: يتمدد {share} % من القماش حتى التمزق في أسوأ وضعية، أكثر من 9 من كل 10 قطع من ملابس اللعبة من هذا "
+        "النوع ({p90} %). تحقق من المناطق في DCT Tears."
+    ),
+    "garment.tears.stretch-beyond": (
+        "التمدد: يتمدد {share} % من القماش حتى التمزق في أسوأ وضعية، أكثر من أي قطعة من ملابس اللعبة من هذا النوع "
+        "({max} %). هذا على الأرجح تمزق حقيقي: أصلح المناطق في DCT Tears."
+    ),
+    "garment.tears.stretch-subtext": (
+        "مقارنةً بـ{garments} قطعة من ملابس اللعبة من الجنس والفئة نفسيهما، من gta.clothing."
+    ),
     "garment.done.tears-game": "{count} رأسًا تتمزق في وضعيات اللعبة. وهي في مجموعة الرؤوس DCT Tears.",
     "garment.done.tears-game.one": "{count} رأس يتمزق في وضعيات اللعبة. وهو في مجموعة الرؤوس DCT Tears.",
     "garment.done.no-tears-game": "لا يتمزق شيء في وضعيات اللعبة البالغة {total}.",

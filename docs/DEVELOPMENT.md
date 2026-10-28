@@ -45,7 +45,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
 | `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version, with the Reference Data Pack when that version lists it, and deleting a pack the current version no longer lists |
 | `garment_reference.py` | The Reference Data Pack: checking its files against their limits, keeping it whole with a record of every file's size and SHA-256, reading its index, its upper-body cuts and its poses, Body Cut's choices and which of its parts each Body Cut, Arms and Legs setting shows |
-| `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today, the result's warnings (one line per region where weights were repaired, a generic line for a code the add-on does not know yet) |
+| `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today, the result's warnings (one line per region where weights were repaired, a generic line for a code the add-on does not know yet), the fit check's usual ranges and Check Tears' comparison with the game's own clothing |
 | `garment_add.py` | Add to Project rules: the skeleton template's bones, the checks before anything is sent, the variation pictures, Durty Cloth Tool's answer |
 | `ped.py` | Custom Ped maths: markers (click guide, Auto Markers, from an old rig), character checks, the rig result as an armature plan, test poses, local checks |
 | `ped_link.py` | Custom Ped's part of the link: the template list, the rig with its progress, sending the rigged character |
@@ -108,7 +108,10 @@ plugins. Its modules describe themselves in their docstrings; in short:
 - **Fitting.** `fit.py` is the client of gta.clothing's fitting routes, used by `garment_fit.py`. It uploads only
   the clothing's triangles in ped space, its markers and the chosen options, after checking them against the
   service's size rules. A result's report carries warning codes, among them the repair notes `weights_repaired_*`
-  (one per region where weights that tore the clothing were repaired).
+  (one per region where weights that tore the clothing were repaired). The free reference route answers the usual
+  ranges of game clothing and, when the server has them, the stretch statistics of the game's own clothing of the
+  same gender and category; it uses none of the day's fits, and without the statistics Check Tears leaves its
+  comparison out.
 
 `durty_cloth_tool_link/dct_link/VENDORED.md` records the dct_link version, the Creator Link protocol version and the
 SHA-256 of every file. The package is developed in the Durty Cloth Tool repository together with Creator Link's
@@ -134,7 +137,8 @@ What reaches gta.clothing: the sign-in (with the computer's name unless the user
 each connection, the sign-out, the hosted body download (once per body version, with the Reference Data Pack when
 that version lists one, behind the same ticket), Blender's update checks of the
 extension repository, and, once the user agreed, clothing for Fit on gta.clothing or Transfer Weights with the
-questions for the fits left today and the usual ranges of game clothing. The add-on collects no usage data.
+questions for the fits left today and the usual ranges and stretch statistics of game clothing. The add-on collects
+no usage data.
 
 Files the add-on keeps:
 

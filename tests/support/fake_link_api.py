@@ -313,6 +313,8 @@ REFERENCE = {
     "legs": {"pelvis": (3.1, 12.6, 24.8, 1540), "thighL": (4.0, 15.2, 27.7, 980), "thighR": (4.0, 15.2, 27.7, 975)},
     "shoes": {"footL": (1.2, 4.9, 9.8, 610), "footR": (1.2, 4.9, 9.8, 612)},
 }
+#: The game's stretch statistics of a category's clothing (p50, p90, max, garments), made up.
+REFERENCE_STRETCH = {"top": (1.2, 4.5, 11.0, 412), "legs": (2.0, 6.5, 14.0, 236)}
 #: How a job can end besides fitted (:attr:`FakeFitService.outcome`).
 OUTCOMES = ("notOnBody", "invalid", "dense", "timeout", "error", "notStarted")
 RESULT_TYPE = "application/vnd.dct.fit-result"
@@ -355,6 +357,8 @@ class FakeFitService:
         self.uploads: List[Tuple[Dict[str, Any], bytes]] = []
         self.cancels: List[str] = []
         self.position_offset = (0.0, 0.0, 0.0)
+        #: Whether the reference route answers with the stretch statistics (an older server does not).
+        self.stretch = True
         #: The warning codes of a fitted job's report (the repair notes ``weights_repaired_*`` among them).
         self.warnings: List[str] = ["marker_offset"]
         #: The next uploads are answered fit_busy (each takes one).
@@ -710,9 +714,13 @@ class FakeFitService:
         regions = REFERENCE.get(body["category"])
         if regions is None:
             return self._fail(404, "not_found")
-        return self._json(200, {"bodyVersion": self.body_version, "gender": body["gender"], "category": body["category"],
-                                "regions": {name: {"p10": p10, "p50": p50, "p90": p90, "samples": samples}
-                                            for name, (p10, p50, p90, samples) in regions.items()}})
+        answer = {"bodyVersion": self.body_version, "gender": body["gender"], "category": body["category"],
+                  "regions": {name: {"p10": p10, "p50": p50, "p90": p90, "samples": samples}
+                              for name, (p10, p50, p90, samples) in regions.items()}}
+        stretch = REFERENCE_STRETCH.get(body["category"]) if self.stretch else None
+        if stretch is not None:
+            answer["stretch"] = dict(zip(("p50", "p90", "max", "garments"), stretch))
+        return self._json(200, answer)
 
 
 __all__ = ["FakeLinkApi", "FakeFitService", "make_assertion"]

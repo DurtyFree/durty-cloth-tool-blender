@@ -969,6 +969,26 @@ EN: Dict[str, str] = {
     "garment.tears.game-summary": "{clean} of {total} game poses tear nothing.",
     "garment.tears.game-pose": "{pose}: {count} points tear, stretched up to {stretch} times",
     "garment.tears.game-pose.one": "{pose}: {count} point tears, stretched up to {stretch} times",
+    "garment.tears.stretch-low": (
+        "Stretch: {share} % of the cloth stretches far enough to tear in its worst pose, no more than a typical piece "
+        "of the game's own clothing of this kind ({p50} %)."
+    ),
+    "garment.tears.stretch-usual": (
+        "Stretch: {share} % of the cloth stretches far enough to tear in its worst pose, more than typical ({p50} %) "
+        "but within what 9 in 10 pieces of the game's own clothing of this kind reach ({p90} %)."
+    ),
+    "garment.tears.stretch-high": (
+        "Stretch: {share} % of the cloth stretches far enough to tear in its worst pose, more than 9 in 10 pieces of "
+        "the game's own clothing of this kind ({p90} %). Check the areas in DCT Tears."
+    ),
+    "garment.tears.stretch-beyond": (
+        "Stretch: {share} % of the cloth stretches far enough to tear in its worst pose, more than any piece of the "
+        "game's own clothing of this kind ({max} %). This is likely a real tear: fix the areas in DCT Tears."
+    ),
+    "garment.tears.stretch-subtext": (
+        "Compared with {garments} pieces of the game's own clothing of the same gender and category, from "
+        "gta.clothing."
+    ),
     "garment.done.tears-game": "{count} vertices tear in the game's poses. They are in the vertex group DCT Tears.",
     "garment.done.tears-game.one": "{count} vertex tears in the game's poses. It is in the vertex group DCT Tears.",
     "garment.done.no-tears-game": "Nothing tears in the game's {total} poses.",

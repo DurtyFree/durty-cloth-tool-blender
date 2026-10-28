@@ -1525,6 +1525,25 @@ TEXT = {
     "garment.tears.game-summary": "{clean} de {total} poses do jogo não rasgam nada.",
     "garment.tears.game-pose": "{pose}: {count} pontos rasgam, esticados até {stretch} vezes",
     "garment.tears.game-pose.one": "{pose}: {count} ponto rasga, esticado até {stretch} vezes",
+    "garment.tears.stretch-low": (
+        "Estiramento: {share} % do tecido estica até rasgar na pior pose, não mais que uma roupa típica do jogo desse "
+        "tipo ({p50} %)."
+    ),
+    "garment.tears.stretch-usual": (
+        "Estiramento: {share} % do tecido estica até rasgar na pior pose, mais que o típico ({p50} %), mas dentro do "
+        "que 9 em cada 10 roupas do jogo desse tipo alcançam ({p90} %)."
+    ),
+    "garment.tears.stretch-high": (
+        "Estiramento: {share} % do tecido estica até rasgar na pior pose, mais que 9 em cada 10 roupas do jogo desse "
+        "tipo ({p90} %). Confira as áreas em DCT Tears."
+    ),
+    "garment.tears.stretch-beyond": (
+        "Estiramento: {share} % do tecido estica até rasgar na pior pose, mais que qualquer roupa do jogo desse tipo "
+        "({max} %). Provavelmente é um rasgo real: corrija as áreas em DCT Tears."
+    ),
+    "garment.tears.stretch-subtext": (
+        "Comparado com {garments} roupas do jogo do mesmo gênero e categoria, segundo o gta.clothing."
+    ),
     "garment.done.tears-game": "{count} vértices rasgam nas poses do jogo. Eles estão no grupo de vértices DCT Tears.",
     "garment.done.tears-game.one": "{count} vértice rasga nas poses do jogo. Ele está no grupo de vértices DCT Tears.",
     "garment.done.no-tears-game": "Nada rasga nas {total} poses do jogo.",

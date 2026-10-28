@@ -1646,7 +1646,7 @@ def check_tears_steps(context: Any, obj: Any, poses: Optional[Any] = None, thres
     Pack's poses (:class:`garment_reference.PoseSet`) and weights on their bones, the garment is skinned in each of
     the game's poses, one pose per stage, and both the seams that open and the cloth stretched until it tears go into
     ``DCT Tears``; otherwise the test poses of :func:`check_tears` run. Returns what :func:`check_tears` returns,
-    with ``game`` and ``total`` for the game's poses."""
+    with ``game``, ``total`` and the stretch ``share`` (:attr:`garment.PoseTears.share`) for the game's poses."""
     names, table = weight_table(obj) if poses is not None else ([], None)
     poses = garment.tear_poses_for(poses, names, table) if poses is not None else None
     if poses is None:
@@ -1674,7 +1674,7 @@ def check_tears_steps(context: Any, obj: Any, poses: Optional[Any] = None, thres
         obj.vertex_groups.new(name=TEARS_GROUP).add(torn.tolist(), 1.0, "REPLACE")
     rows = [{"pose": label, **row} for label, row in zip(poses.labels, result.rows)]
     return {"poses": rows, "pairs": int(len(pairs)), "vertices": int(len(torn)), "skipped": 0, "game": True,
-            "total": total}
+            "total": total, "share": result.share}
 
 
 # --------------------------------------------------------------------------------------------------

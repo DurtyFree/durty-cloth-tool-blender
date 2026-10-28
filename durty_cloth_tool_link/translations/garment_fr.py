@@ -1636,6 +1636,25 @@ TEXT = {
     "garment.tears.game-summary": "{clean} poses du jeu sur {total} ne déchirent rien.",
     "garment.tears.game-pose": "{pose} : {count} points se déchirent, étirés jusqu'à {stretch} fois",
     "garment.tears.game-pose.one": "{pose} : {count} point se déchire, étiré jusqu'à {stretch} fois",
+    "garment.tears.stretch-low": (
+        "Étirement : {share} % du tissu s'étire au point de se déchirer dans sa pire pose, pas plus qu'un vêtement "
+        "typique du jeu de ce type ({p50} %)."
+    ),
+    "garment.tears.stretch-usual": (
+        "Étirement : {share} % du tissu s'étire au point de se déchirer dans sa pire pose, plus que la normale ({p50} "
+        "%) mais dans ce qu'atteignent 9 vêtements du jeu de ce type sur 10 ({p90} %)."
+    ),
+    "garment.tears.stretch-high": (
+        "Étirement : {share} % du tissu s'étire au point de se déchirer dans sa pire pose, plus que 9 vêtements du jeu "
+        "de ce type sur 10 ({p90} %). Vérifiez les zones de DCT Tears."
+    ),
+    "garment.tears.stretch-beyond": (
+        "Étirement : {share} % du tissu s'étire au point de se déchirer dans sa pire pose, plus que tout vêtement du "
+        "jeu de ce type ({max} %). C'est probablement une vraie déchirure : corrigez les zones de DCT Tears."
+    ),
+    "garment.tears.stretch-subtext": (
+        "Comparé à {garments} vêtements du jeu du même genre et de la même catégorie, d'après gta.clothing."
+    ),
     "garment.done.tears-game": "{count} sommets se déchirent dans les poses du jeu. Ils sont dans le groupe de sommets DCT Tears.",
     "garment.done.tears-game.one": "{count} sommet se déchire dans les poses du jeu. Il est dans le groupe de sommets DCT Tears.",
     "garment.done.no-tears-game": "Rien ne se déchire dans les {total} poses du jeu.",

@@ -3185,22 +3185,28 @@ def report_columns(context: Any, rows: List[Tuple[str, str, str]]) -> Optional[T
     return tuple((need + spare) / width for need in needed)
 
 
-def usual_ranges(context: Any) -> Tuple[Optional[Dict[str, Tuple[float, float, float]]], Optional[str]]:
-    """How far game clothing of the garment's kind usually sits from each region (from gta.clothing), or ``None`` with
-    the text that says why there is none (``None`` while it is asked for)."""
-    settings_ = props(context)
+def game_reference(context: Any) -> Tuple[Optional[Any], Optional[str]]:
+    """What gta.clothing's free reference route says about the game's own clothing of the garment's gender and
+    category (:class:`fit.FitReference`, asked for on a worker thread and kept), or ``None`` with the text that says
+    why there is none (``None`` while it is asked for, or without a hosted body or a category it knows)."""
     body = valid_body(context)
     version = _hosted_version(body)
-    category = garment_fit.REFERENCE_CATEGORIES.get(settings_.slot)
+    category = garment_fit.REFERENCE_CATEGORIES.get(props(context).slot)
     if version is None or category is None:
         return None, None
     ctrl = state.get()
     if not ctrl.fitting.ready():
         return None, "garment.check.reference-offline"
-    reference = ctrl.fitting.reference(body_gender(context, body), category, version)
+    return ctrl.fitting.reference(body_gender(context, body), category, version), None
+
+
+def usual_ranges(context: Any) -> Tuple[Optional[Dict[str, Tuple[float, float, float]]], Optional[str]]:
+    """How far game clothing of the garment's kind usually sits from each region (from gta.clothing), or ``None`` with
+    the text that says why there is none (``None`` while it is asked for)."""
+    reference, why = game_reference(context)
     if reference is None:
-        return None, None
-    return garment_fit.usual_ranges(reference, settings_.category), None
+        return None, why
+    return garment_fit.usual_ranges(reference, props(context).category), None
 
 
 def draw_report(layout: Any, context: Any) -> None:
@@ -3283,6 +3289,11 @@ def draw_tears(layout: Any, context: Any) -> None:
         for pose in worst[:GAME_POSES_SHOWN]:
             wrapped(layout, context, t("garment.tears.game-pose", pose=pose["pose"], count=pose["torn"],
                                        stretch=pose["stretch"]), "ERROR")
+        reference, _why = game_reference(context)
+        stretch = garment_fit.stretch_line(result.get("share"), reference)
+        if stretch is not None:  # without gta.clothing's statistics the summary leaves the comparison out
+            wrapped(layout, context, t(stretch[1].key, **stretch[1].fields), stretch[0])
+            subtext(layout, context, "garment.tears.stretch-subtext", garments=reference.stretch.garments)
         return
     for pose in result["poses"]:
         if pose.get("skipped"):

@@ -1422,6 +1422,23 @@ TEXT = {
     "garment.tears.game-summary": "गेम के {total} पोज़ में से {clean} में कुछ नहीं फटता।",
     "garment.tears.game-pose": "{pose}: {count} बिंदु फटते हैं, {stretch} गुना तक खिंचे हुए",
     "garment.tears.game-pose.one": "{pose}: {count} बिंदु फटता है, {stretch} गुना तक खिंचा हुआ",
+    "garment.tears.stretch-low": (
+        "खिंचाव: सबसे बुरे पोज़ में {share} % कपड़ा फटने तक खिंचता है, इस तरह के गेम के आम कपड़े से ज़्यादा नहीं "
+        "({p50} %)।"
+    ),
+    "garment.tears.stretch-usual": (
+        "खिंचाव: सबसे बुरे पोज़ में {share} % कपड़ा फटने तक खिंचता है, आम से ज़्यादा ({p50} %), पर उस सीमा में जहाँ तक "
+        "इस तरह के गेम के 10 में से 9 कपड़े पहुँचते हैं ({p90} %)।"
+    ),
+    "garment.tears.stretch-high": (
+        "खिंचाव: सबसे बुरे पोज़ में {share} % कपड़ा फटने तक खिंचता है, इस तरह के गेम के 10 में से 9 कपड़ों से ज़्यादा "
+        "({p90} %)। DCT Tears के हिस्से जाँचें।"
+    ),
+    "garment.tears.stretch-beyond": (
+        "खिंचाव: सबसे बुरे पोज़ में {share} % कपड़ा फटने तक खिंचता है, इस तरह के गेम के किसी भी कपड़े से ज़्यादा "
+        "({max} %)। यह शायद असली फटन है: DCT Tears के हिस्से ठीक करें।"
+    ),
+    "garment.tears.stretch-subtext": "एक ही लिंग और श्रेणी के गेम के {garments} कपड़ों से तुलना, gta.clothing से।",
     "garment.done.tears-game": "गेम के पोज़ में {count} वर्टेक्स फटते हैं। वे DCT Tears नाम के vertex group में हैं।",
     "garment.done.tears-game.one": "गेम के पोज़ में {count} वर्टेक्स फटता है। वह DCT Tears नाम के vertex group में है।",
     "garment.done.no-tears-game": "गेम के {total} पोज़ में कुछ नहीं फटता।",

@@ -2558,10 +2558,13 @@ def tear_poses_for(poses: Optional[Any], names: Sequence[str], table: Any) -> Op
 
 class PoseTears(NamedTuple):
     """Check Tears in the game's poses: one row per pose (``torn`` vertices, the widest seam ``gap`` in millimetres,
-    the ``stretched`` edges and the largest ``stretch``), and every vertex that tore in any pose."""
+    the ``stretched`` edges and the largest ``stretch``), every vertex that tore in any pose, and the ``share`` of the
+    edges (:data:`TEAR_MIN_EDGE` or longer) stretched past :data:`TEAR_STRETCH` in the worst pose, in percent: the
+    measure gta.clothing's stretch statistics of the game's own clothing use."""
 
     rows: List[Dict[str, Any]]
     torn: np.ndarray
+    share: float = 0.0
 
 
 def pose_tear_steps(rest: Any, pairs: Any, edges: Any, bones: Any, weights: Any, matrices: Any,
@@ -2576,6 +2579,7 @@ def pose_tear_steps(rest: Any, pairs: Any, edges: Any, bones: Any, weights: Any,
     edges, lengths = edges[lengths >= TEAR_MIN_EDGE], lengths[lengths >= TEAR_MIN_EDGE]
     torn_any = np.zeros(len(points), dtype=bool)
     rows: List[Dict[str, Any]] = []
+    worst = 0
     for number, matrix in enumerate(np.asarray(matrices, dtype=np.float64)):
         posed = skinned(points, bones, weights, matrix)
         torn = np.zeros(len(points), dtype=bool)
@@ -2585,13 +2589,14 @@ def pose_tear_steps(rest: Any, pairs: Any, edges: Any, bones: Any, weights: Any,
             np.zeros(0)
         stretched = ratio > TEAR_STRETCH
         torn[edges[stretched].ravel()] = True
+        worst = max(worst, int(stretched.sum()))
         torn_any |= torn
         rows.append({"torn": int(torn.sum()),
                      "gap": round(float(separation.max() * 1000.0), 1) if len(separation) else 0.0,
                      "stretched": int(stretched.sum()), "stretch": round(float(ratio.max()), 2) if len(ratio)
                      else 1.0})
         yield number
-    return PoseTears(rows, torn_any)
+    return PoseTears(rows, torn_any, 100.0 * worst / len(edges) if len(edges) else 0.0)
 
 
 def run_tear_steps(*args: Any, **kwargs: Any) -> PoseTears:

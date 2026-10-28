@@ -1661,6 +1661,27 @@ TEXT = {
     "garment.tears.game-summary": "{clean} von {total} Posen des Spiels reißen nichts.",
     "garment.tears.game-pose": "{pose}: {count} Punkte reißen, bis zum {stretch}-Fachen gedehnt",
     "garment.tears.game-pose.one": "{pose}: {count} Punkt reißt, bis zum {stretch}-Fachen gedehnt",
+    "garment.tears.stretch-low": (
+        "Dehnung: {share} % des Stoffs dehnen sich in der schlimmsten Pose so weit, dass sie reißen, nicht mehr als "
+        "bei typischer Kleidung dieser Art aus dem Spiel ({p50} %)."
+    ),
+    "garment.tears.stretch-usual": (
+        "Dehnung: {share} % des Stoffs dehnen sich in der schlimmsten Pose so weit, dass sie reißen, mehr als typisch "
+        "({p50} %), aber im Rahmen dessen, was 9 von 10 Kleidungsstücken dieser Art aus dem Spiel erreichen ({p90} %)."
+    ),
+    "garment.tears.stretch-high": (
+        "Dehnung: {share} % des Stoffs dehnen sich in der schlimmsten Pose so weit, dass sie reißen, mehr als bei 9 "
+        "von 10 Kleidungsstücken dieser Art aus dem Spiel ({p90} %). Prüfe die Bereiche in DCT Tears."
+    ),
+    "garment.tears.stretch-beyond": (
+        "Dehnung: {share} % des Stoffs dehnen sich in der schlimmsten Pose so weit, dass sie reißen, mehr als bei "
+        "jedem Kleidungsstück dieser Art aus dem Spiel ({max} %). Das ist wahrscheinlich ein echter Riss: Korrigiere "
+        "die Bereiche in DCT Tears."
+    ),
+    "garment.tears.stretch-subtext": (
+        "Verglichen mit {garments} Kleidungsstücken aus dem Spiel mit demselben Geschlecht und derselben Kategorie, "
+        "von gta.clothing."
+    ),
     "garment.done.tears-game": "{count} Vertices reißen in den Posen des Spiels. Sie sind in der Punktgruppe DCT Tears.",
     "garment.done.tears-game.one": "{count} Vertex reißt in den Posen des Spiels. Er ist in der Punktgruppe DCT Tears.",
     "garment.done.no-tears-game": "In den {total} Posen des Spiels reißt nichts.",

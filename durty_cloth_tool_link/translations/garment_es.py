@@ -1577,6 +1577,25 @@ TEXT = {
     "garment.tears.game-summary": "{clean} de {total} poses del juego no rompen nada.",
     "garment.tears.game-pose": "{pose}: {count} puntos se rompen, estirados hasta {stretch} veces",
     "garment.tears.game-pose.one": "{pose}: {count} punto se rompe, estirado hasta {stretch} veces",
+    "garment.tears.stretch-low": (
+        "Estiramiento: el {share} % de la tela se estira hasta romperse en su peor pose, no más que una prenda típica "
+        "del juego de este tipo ({p50} %)."
+    ),
+    "garment.tears.stretch-usual": (
+        "Estiramiento: el {share} % de la tela se estira hasta romperse en su peor pose, más de lo típico ({p50} %) "
+        "pero dentro de lo que alcanzan 9 de cada 10 prendas del juego de este tipo ({p90} %)."
+    ),
+    "garment.tears.stretch-high": (
+        "Estiramiento: el {share} % de la tela se estira hasta romperse en su peor pose, más que 9 de cada 10 prendas "
+        "del juego de este tipo ({p90} %). Revisa las zonas de DCT Tears."
+    ),
+    "garment.tears.stretch-beyond": (
+        "Estiramiento: el {share} % de la tela se estira hasta romperse en su peor pose, más que cualquier prenda del "
+        "juego de este tipo ({max} %). Probablemente sea una rotura real: corrige las zonas de DCT Tears."
+    ),
+    "garment.tears.stretch-subtext": (
+        "Comparado con {garments} prendas del juego del mismo género y categoría, según gta.clothing."
+    ),
     "garment.done.tears-game": "{count} vértices se rompen en las poses del juego. Están en el grupo de vértices DCT Tears.",
     "garment.done.tears-game.one": "{count} vértice se rompe en las poses del juego. Está en el grupo de vértices DCT Tears.",
     "garment.done.no-tears-game": "Nada se rompe en las {total} poses del juego.",

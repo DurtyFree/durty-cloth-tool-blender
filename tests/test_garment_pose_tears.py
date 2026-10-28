@@ -113,3 +113,19 @@ def test_cloth_stretched_past_its_limit_tears_even_without_a_seam(poses):
     calm = garment.run_tear_steps(positions, np.zeros((0, 2), dtype=np.int64), edges, index, weight,
                                   poses.matrices, threshold=0.005)
     assert not calm.torn.any()
+
+
+def test_the_share_of_cloth_stretched_to_tearing_is_taken_in_the_worst_pose():
+    # Five points 10 mm apart in a row and a sixth 1 mm past the end: four edges that count and one too short to.
+    rest = np.array([[0.0, 0.0, 0.0], [0.01, 0.0, 0.0], [0.02, 0.0, 0.0], [0.03, 0.0, 0.0], [0.04, 0.0, 0.0],
+                     [0.041, 0.0, 0.0]])
+    edges = np.array([[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]])
+    bones = np.array([[0], [0], [0], [1], [0], [1]])
+    weights = np.ones((6, 1))
+    still = np.tile(np.eye(4), (2, 1, 1))
+    lifted = still.copy()
+    lifted[1, :3, 3] = (0.0, 0.0, 0.03)  # the second bone lifts points 3 and 5 by 30 mm
+    result = garment.run_tear_steps(rest, np.zeros((0, 2), dtype=np.int64), edges, bones, weights,
+                                    np.stack([still, lifted, still]), threshold=0.005)
+    assert [row["stretched"] for row in result.rows] == [0, 2, 0]
+    assert result.share == pytest.approx(50.0)  # two of the four edges that count, in the worst pose

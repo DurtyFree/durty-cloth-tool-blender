@@ -329,6 +329,33 @@ def test_the_usual_ranges_of_game_clothing_fill_the_fit_check(tmp_path, api):
     assert ctrl.fitting.reference("male", "capes", "1") is None  # not measured: no column, and not asked again soon
 
 
+@pytest.mark.parametrize("share, icon, key", [
+    (0.4, "CHECKMARK", "garment.tears.stretch-low"),  # the fake's tops: median 1.2 %, 90th percentile 4.5 %, most 11 %
+    (3.0, "INFO", "garment.tears.stretch-usual"),
+    (8.0, "ERROR", "garment.tears.stretch-high"),
+    (16.0, "ERROR", "garment.tears.stretch-beyond"),
+])
+def test_check_tears_places_the_garments_stretch_among_the_games_own_clothing(tmp_path, api, share, icon, key):
+    ctrl = signed_in(tmp_path, api)
+    until(ctrl, lambda: ctrl.fitting.reference("male", "top", "1") is not None)
+    line = garment_fit.stretch_line(share, ctrl.fitting.reference("male", "top", "1"))
+    assert line is not None and line[0] == icon and line[1].key == key
+    assert line[1].fields == {"share": share, "p50": 1.2, "p90": 4.5, "max": 11.0}
+    assert api.fit.used == 0 and not api.fit.uploads  # the statistics never take one of the day's fits
+
+
+def test_without_stretch_statistics_check_tears_leaves_the_comparison_out(tmp_path, api):
+    api.fit.stretch = False  # an older server, or a category gta.clothing has no statistics for
+    ctrl = signed_in(tmp_path, api)
+    until(ctrl, lambda: ctrl.fitting.reference("male", "top", "1") is not None)
+    reference = ctrl.fitting.reference("male", "top", "1")
+    assert reference.stretch is None and garment_fit.stretch_line(3.0, reference) is None
+    assert garment_fit.stretch_line(3.0, None) is None  # offline, or still being asked for
+    empty = reference._replace(stretch=fit.FitStretch(0.0, 0.0, 0.0, 0))
+    assert garment_fit.stretch_line(3.0, empty) is None  # no garment measured: nothing to compare with
+    assert garment_fit.stretch_line(None, reference._replace(stretch=fit.FitStretch(1.2, 4.5, 11.0, 412))) is None
+
+
 # ---- weights --------------------------------------------------------------------------------------------------------
 
 

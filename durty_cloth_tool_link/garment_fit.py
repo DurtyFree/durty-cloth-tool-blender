@@ -366,6 +366,30 @@ def warning_lines(result: fit.FitResult) -> List[Tuple[str, Msg]]:
 
 
 # --------------------------------------------------------------------------------------------------
+# Check Tears beside the game's own clothing
+# --------------------------------------------------------------------------------------------------
+
+
+def stretch_line(share: Optional[float], reference: Optional[fit.FitReference]) -> Optional[Tuple[str, Msg]]:
+    """Where the garment's stretch in the game's poses (``share``, :attr:`garment.PoseTears.share`) sits among the
+    game's own clothing of its gender and category, as an icon and a text: from the free reference route's
+    statistics, so it never takes one of the day's fits. ``None`` without a share or without statistics (offline,
+    still being asked for, an older server, a category without them): the summary then leaves the comparison out."""
+    stretch = reference.stretch if reference is not None else None
+    if share is None or stretch is None or stretch.garments <= 0:
+        return None
+    fields = {"share": round(share, 1), "p50": round(stretch.p50, 1), "p90": round(stretch.p90, 1),
+              "max": round(stretch.max, 1)}
+    if share <= stretch.p50:
+        return "CHECKMARK", msg("garment.tears.stretch-low", **fields)
+    if share <= stretch.p90:
+        return "INFO", msg("garment.tears.stretch-usual", **fields)
+    if share <= stretch.max:
+        return "ERROR", msg("garment.tears.stretch-high", **fields)
+    return "ERROR", msg("garment.tears.stretch-beyond", **fields)
+
+
+# --------------------------------------------------------------------------------------------------
 # The fit check's usual ranges
 # --------------------------------------------------------------------------------------------------
 
