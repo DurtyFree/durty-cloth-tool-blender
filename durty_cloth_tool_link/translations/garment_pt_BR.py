@@ -1464,4 +1464,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Posicionando as imagens",
     "garment.stage.pack-fill": "Preenchendo os espaços entre as imagens",
+    "garment.prop.body-cut": "Corte do corpo",
+    "garment.prop.body-cut.desc": (
+        "Qual pele da parte de cima do corpo aparece, como sob uma roupa desse corte. Só muda o que você vê: "
+        "ajustes e verificações sempre usam o corpo padrão"
+    ),
+    "garment.prop.arms": "Braços",
+    "garment.prop.arms.desc": "Como os braços do corpo aparecem. Só muda o que você vê",
+    "garment.prop.legs": "Pernas",
+    "garment.prop.legs.desc": "Como as pernas do corpo aparecem. Só muda o que você vê",
+    "garment.view.solid": "Sólido",
+    "garment.view.solid.desc": "Mostrado como sempre",
+    "garment.view.wire": "Aramado",
+    "garment.view.wire.desc": "Mostrado em aramado, para ver a roupa através dele",
+    "garment.view.hidden": "Oculto",
+    "garment.view.hidden.desc": "Não mostrado",
+    "garment.cut.full_body": "Corpo inteiro",
+    "garment.cut.bare_arms": "Braços nus",
+    "garment.cut.bare_arms_open_neck": "Braços nus, pescoço aberto",
+    "garment.cut.short_sleeves": "Mangas curtas",
+    "garment.cut.short_sleeves_open_neck": "Mangas curtas, pescoço aberto",
+    "garment.cut.long_sleeves": "Mangas longas",
+    "garment.cut.long_sleeves_open_neck": "Mangas longas, pescoço aberto",
+    "garment.cut.other": "Corte {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Pele da parte de cima do corpo do Reference Data Pack",
+    "garment.why.no-pack": (
+        "Corte do corpo, Braços e Pernas precisam do Reference Data Pack. Adicionar corpo freemode o traz quando o "
+        "gta.clothing o oferece."
+    ),
+    "garment.view.note": "Só muda o que você vê. Ajustes e verificações sempre usam o corpo padrão.",
 }

@@ -1366,4 +1366,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "इमेज रखी जा रही हैं",
     "garment.stage.pack-fill": "इमेज के बीच की खाली जगह भरी जा रही है",
+    "garment.prop.body-cut": "बॉडी कट",
+    "garment.prop.body-cut.desc": (
+        "ऊपरी शरीर की कौन सी त्वचा दिखती है, जैसे उस कट के कपड़ों के नीचे। केवल वही बदलता है जो आप देखते हैं: फ़िट "
+        "और जाँचें हमेशा मानक बॉडी का उपयोग करती हैं"
+    ),
+    "garment.prop.arms": "बाँहें",
+    "garment.prop.arms.desc": "बॉडी की बाँहें कैसे दिखती हैं। केवल वही बदलता है जो आप देखते हैं",
+    "garment.prop.legs": "टाँगें",
+    "garment.prop.legs.desc": "बॉडी की टाँगें कैसे दिखती हैं। केवल वही बदलता है जो आप देखते हैं",
+    "garment.view.solid": "ठोस",
+    "garment.view.solid.desc": "सामान्य रूप से दिखाया गया",
+    "garment.view.wire": "वायर",
+    "garment.view.wire.desc": "वायरफ़्रेम के रूप में दिखाया गया, ताकि कपड़े आर-पार दिखें",
+    "garment.view.hidden": "छिपा हुआ",
+    "garment.view.hidden.desc": "नहीं दिखाया गया",
+    "garment.cut.full_body": "पूरी बॉडी",
+    "garment.cut.bare_arms": "खुली बाँहें",
+    "garment.cut.bare_arms_open_neck": "खुली बाँहें, खुली गर्दन",
+    "garment.cut.short_sleeves": "छोटी आस्तीन",
+    "garment.cut.short_sleeves_open_neck": "छोटी आस्तीन, खुली गर्दन",
+    "garment.cut.long_sleeves": "लंबी आस्तीन",
+    "garment.cut.long_sleeves_open_neck": "लंबी आस्तीन, खुली गर्दन",
+    "garment.cut.other": "कट {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Reference Data Pack से ऊपरी शरीर की त्वचा",
+    "garment.why.no-pack": (
+        "बॉडी कट, बाँहों और टाँगों को Reference Data Pack चाहिए। जब gta.clothing इसे देता है, फ़्रीमोड बॉडी जोड़ें "
+        "इसे साथ लाता है।"
+    ),
+    "garment.view.note": "केवल वही बदलता है जो आप देखते हैं। फ़िट और जाँचें हमेशा मानक बॉडी का उपयोग करती हैं।",
 }

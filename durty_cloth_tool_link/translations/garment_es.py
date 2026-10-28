@@ -1516,4 +1516,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Colocando las imágenes",
     "garment.stage.pack-fill": "Rellenando los huecos entre las imágenes",
+    "garment.prop.body-cut": "Corte del cuerpo",
+    "garment.prop.body-cut.desc": (
+        "Qué piel de la parte superior del cuerpo se ve, como bajo ropa de ese corte. Solo cambia lo que ves: los "
+        "ajustes y las comprobaciones siempre usan el cuerpo estándar"
+    ),
+    "garment.prop.arms": "Brazos",
+    "garment.prop.arms.desc": "Cómo se muestran los brazos del cuerpo. Solo cambia lo que ves",
+    "garment.prop.legs": "Piernas",
+    "garment.prop.legs.desc": "Cómo se muestran las piernas del cuerpo. Solo cambia lo que ves",
+    "garment.view.solid": "Sólido",
+    "garment.view.solid.desc": "Se muestra como siempre",
+    "garment.view.wire": "Alambre",
+    "garment.view.wire.desc": "Se muestra como malla de alambre, para ver la ropa a través",
+    "garment.view.hidden": "Oculto",
+    "garment.view.hidden.desc": "No se muestra",
+    "garment.cut.full_body": "Cuerpo completo",
+    "garment.cut.bare_arms": "Brazos descubiertos",
+    "garment.cut.bare_arms_open_neck": "Brazos descubiertos, cuello abierto",
+    "garment.cut.short_sleeves": "Manga corta",
+    "garment.cut.short_sleeves_open_neck": "Manga corta, cuello abierto",
+    "garment.cut.long_sleeves": "Manga larga",
+    "garment.cut.long_sleeves_open_neck": "Manga larga, cuello abierto",
+    "garment.cut.other": "Corte {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Piel de la parte superior del cuerpo del Reference Data Pack",
+    "garment.why.no-pack": (
+        "Corte del cuerpo, Brazos y Piernas necesitan el Reference Data Pack. Añadir cuerpo freemode lo trae cuando "
+        "gta.clothing lo ofrece."
+    ),
+    "garment.view.note": "Solo cambia lo que ves. Los ajustes y las comprobaciones siempre usan el cuerpo estándar.",
 }

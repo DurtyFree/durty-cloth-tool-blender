@@ -1431,4 +1431,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Размещение изображений",
     "garment.stage.pack-fill": "Заполнение промежутков между изображениями",
+    "garment.prop.body-cut": "Вырез тела",
+    "garment.prop.body-cut.desc": (
+        "Какая кожа верхней части тела видна, как под одеждой такого кроя. Меняется только то, что вы видите: "
+        "подгонка и проверки всегда используют стандартное тело"
+    ),
+    "garment.prop.arms": "Руки",
+    "garment.prop.arms.desc": "Как отображаются руки тела. Меняется только то, что вы видите",
+    "garment.prop.legs": "Ноги",
+    "garment.prop.legs.desc": "Как отображаются ноги тела. Меняется только то, что вы видите",
+    "garment.view.solid": "Сплошные",
+    "garment.view.solid.desc": "Отображаются как обычно",
+    "garment.view.wire": "Каркас",
+    "garment.view.wire.desc": "Отображаются каркасом, чтобы одежда просвечивала",
+    "garment.view.hidden": "Скрыты",
+    "garment.view.hidden.desc": "Не отображаются",
+    "garment.cut.full_body": "Всё тело",
+    "garment.cut.bare_arms": "Голые руки",
+    "garment.cut.bare_arms_open_neck": "Голые руки, открытая шея",
+    "garment.cut.short_sleeves": "Короткие рукава",
+    "garment.cut.short_sleeves_open_neck": "Короткие рукава, открытая шея",
+    "garment.cut.long_sleeves": "Длинные рукава",
+    "garment.cut.long_sleeves_open_neck": "Длинные рукава, открытая шея",
+    "garment.cut.other": "Вырез {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Кожа верхней части тела из Reference Data Pack",
+    "garment.why.no-pack": (
+        "Для выреза тела, рук и ног нужен Reference Data Pack. «Добавить тело freemode» загружает его, когда "
+        "gta.clothing его предлагает."
+    ),
+    "garment.view.note": "Меняется только то, что вы видите. Подгонка и проверки всегда используют стандартное тело.",
 }

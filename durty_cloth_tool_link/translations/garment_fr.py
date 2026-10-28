@@ -1574,4 +1574,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Placement des images",
     "garment.stage.pack-fill": "Remplissage des espaces entre les images",
+    "garment.prop.body-cut": "Coupe du corps",
+    "garment.prop.body-cut.desc": (
+        "Quelle peau du haut du corps est visible, comme sous un vêtement de cette coupe. Seul l'affichage change : "
+        "les ajustements et les vérifications utilisent toujours le corps standard"
+    ),
+    "garment.prop.arms": "Bras",
+    "garment.prop.arms.desc": "Comment les bras du corps s'affichent. Seul l'affichage change",
+    "garment.prop.legs": "Jambes",
+    "garment.prop.legs.desc": "Comment les jambes du corps s'affichent. Seul l'affichage change",
+    "garment.view.solid": "Plein",
+    "garment.view.solid.desc": "Affiché normalement",
+    "garment.view.wire": "Filaire",
+    "garment.view.wire.desc": "Affiché en filaire, pour voir le vêtement au travers",
+    "garment.view.hidden": "Masqué",
+    "garment.view.hidden.desc": "Non affiché",
+    "garment.cut.full_body": "Corps entier",
+    "garment.cut.bare_arms": "Bras nus",
+    "garment.cut.bare_arms_open_neck": "Bras nus, cou dégagé",
+    "garment.cut.short_sleeves": "Manches courtes",
+    "garment.cut.short_sleeves_open_neck": "Manches courtes, cou dégagé",
+    "garment.cut.long_sleeves": "Manches longues",
+    "garment.cut.long_sleeves_open_neck": "Manches longues, cou dégagé",
+    "garment.cut.other": "Coupe {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Peau du haut du corps issue du Reference Data Pack",
+    "garment.why.no-pack": (
+        "Coupe du corps, Bras et Jambes nécessitent le Reference Data Pack. Ajouter le corps freemode l'apporte "
+        "quand gta.clothing le propose."
+    ),
+    "garment.view.note": "Seul l'affichage change. Les ajustements et les vérifications utilisent toujours le corps standard.",
 }

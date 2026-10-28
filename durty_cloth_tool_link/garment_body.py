@@ -172,11 +172,13 @@ def cached_body(cache_root: pathlib.Path, gender: str, version: Optional[str] = 
     return None
 
 
-def kept_pack(cache_root: pathlib.Path, version: Optional[str]) -> Optional[garment_reference.Pack]:
-    """The Reference Data Pack kept with a body version, while it is whole (``None`` without a version)."""
+def kept_pack(cache_root: pathlib.Path, version: Optional[str],
+              verify: bool = True) -> Optional[garment_reference.Pack]:
+    """The Reference Data Pack kept with a body version, while it is whole (``None`` without a version). Without
+    ``verify`` only the files' sizes are compared with the record (for a panel that redraws often)."""
     if not valid_version(version):
         return None
-    return garment_reference.kept_pack(pathlib.Path(cache_root) / CACHE_FOLDER / str(version))
+    return garment_reference.kept_pack(pathlib.Path(cache_root) / CACHE_FOLDER / str(version), verify)
 
 
 def pack_summary(cache_root: pathlib.Path) -> str:

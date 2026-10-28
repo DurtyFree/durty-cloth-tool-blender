@@ -864,4 +864,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Posizionamento delle immagini",
     "garment.stage.pack-fill": "Riempimento degli spazi tra le immagini",
+    "garment.prop.body-cut": "Taglio del corpo",
+    "garment.prop.body-cut.desc": (
+        "Quale pelle della parte superiore del corpo si vede, come sotto un capo di quel taglio. Cambia solo ciò "
+        "che vedi: adattamenti e controlli usano sempre il corpo standard"
+    ),
+    "garment.prop.arms": "Braccia",
+    "garment.prop.arms.desc": "Come si vedono le braccia del corpo. Cambia solo ciò che vedi",
+    "garment.prop.legs": "Gambe",
+    "garment.prop.legs.desc": "Come si vedono le gambe del corpo. Cambia solo ciò che vedi",
+    "garment.view.solid": "Solido",
+    "garment.view.solid.desc": "Mostrato come sempre",
+    "garment.view.wire": "Wireframe",
+    "garment.view.wire.desc": "Mostrato in wireframe, così l'abbigliamento si vede attraverso",
+    "garment.view.hidden": "Nascosto",
+    "garment.view.hidden.desc": "Non mostrato",
+    "garment.cut.full_body": "Corpo intero",
+    "garment.cut.bare_arms": "Braccia scoperte",
+    "garment.cut.bare_arms_open_neck": "Braccia scoperte, collo scoperto",
+    "garment.cut.short_sleeves": "Maniche corte",
+    "garment.cut.short_sleeves_open_neck": "Maniche corte, collo scoperto",
+    "garment.cut.long_sleeves": "Maniche lunghe",
+    "garment.cut.long_sleeves_open_neck": "Maniche lunghe, collo scoperto",
+    "garment.cut.other": "Taglio {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Pelle della parte superiore del corpo dal Reference Data Pack",
+    "garment.why.no-pack": (
+        "Taglio del corpo, Braccia e Gambe richiedono il Reference Data Pack. Aggiungi corpo freemode lo porta "
+        "quando gta.clothing lo offre."
+    ),
+    "garment.view.note": "Cambia solo ciò che vedi. Adattamenti e controlli usano sempre il corpo standard.",
 }

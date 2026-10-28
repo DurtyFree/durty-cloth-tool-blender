@@ -646,6 +646,36 @@ EN: Dict[str, str] = {
     "garment.prop.garment.desc": "The garment the tools work on. Only this object is changed",
     "garment.prop.body": "Body",
     "garment.prop.body.desc": "The freemode body the garment is measured against",
+    "garment.prop.body-cut": "Body Cut",
+    "garment.prop.body-cut.desc": (
+        "Which skin of the upper body shows, as under clothing of that cut. Only what you see changes: fits and "
+        "checks always use the standard body"
+    ),
+    "garment.prop.arms": "Arms",
+    "garment.prop.arms.desc": "How the body's arms show. Only what you see changes",
+    "garment.prop.legs": "Legs",
+    "garment.prop.legs.desc": "How the body's legs show. Only what you see changes",
+    "garment.view.solid": "Solid",
+    "garment.view.solid.desc": "Shown as usual",
+    "garment.view.wire": "Wire",
+    "garment.view.wire.desc": "Shown as a wireframe, so the clothing shows through",
+    "garment.view.hidden": "Hidden",
+    "garment.view.hidden.desc": "Not shown",
+    "garment.cut.full_body": "Full Body",
+    "garment.cut.bare_arms": "Bare Arms",
+    "garment.cut.bare_arms_open_neck": "Bare Arms, Open Neck",
+    "garment.cut.short_sleeves": "Short Sleeves",
+    "garment.cut.short_sleeves_open_neck": "Short Sleeves, Open Neck",
+    "garment.cut.long_sleeves": "Long Sleeves",
+    "garment.cut.long_sleeves_open_neck": "Long Sleeves, Open Neck",
+    "garment.cut.other": "Cut {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Upper-body skin from the Reference Data Pack",
+    "garment.why.no-pack": (
+        "Body Cut, Arms and Legs need the Reference Data Pack. Add Freemode Body brings it when gta.clothing offers "
+        "it."
+    ),
+    "garment.view.note": "Only what you see changes. Fits and checks always use the standard body.",
     "garment.prop.gender": "Gender",
     "garment.prop.gender.desc": "Which freemode ped the garment is for",
     "garment.prop.slot": "Slot",

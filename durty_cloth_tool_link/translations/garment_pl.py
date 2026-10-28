@@ -871,4 +871,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Umieszczanie obrazów",
     "garment.stage.pack-fill": "Wypełnianie przerw między obrazami",
+    "garment.prop.body-cut": "Krój ciała",
+    "garment.prop.body-cut.desc": (
+        "Która skóra górnej części ciała jest widoczna, jak pod ubraniem o tym kroju. Zmienia się tylko to, co "
+        "widzisz: dopasowania i sprawdzenia zawsze używają standardowego ciała"
+    ),
+    "garment.prop.arms": "Ręce",
+    "garment.prop.arms.desc": "Jak wyświetlane są ręce ciała. Zmienia się tylko to, co widzisz",
+    "garment.prop.legs": "Nogi",
+    "garment.prop.legs.desc": "Jak wyświetlane są nogi ciała. Zmienia się tylko to, co widzisz",
+    "garment.view.solid": "Pełne",
+    "garment.view.solid.desc": "Wyświetlane jak zwykle",
+    "garment.view.wire": "Siatka",
+    "garment.view.wire.desc": "Wyświetlane jako siatka, aby ubranie było widać przez nie",
+    "garment.view.hidden": "Ukryte",
+    "garment.view.hidden.desc": "Niewyświetlane",
+    "garment.cut.full_body": "Całe ciało",
+    "garment.cut.bare_arms": "Odsłonięte ramiona",
+    "garment.cut.bare_arms_open_neck": "Odsłonięte ramiona, odsłonięta szyja",
+    "garment.cut.short_sleeves": "Krótkie rękawy",
+    "garment.cut.short_sleeves_open_neck": "Krótkie rękawy, odsłonięta szyja",
+    "garment.cut.long_sleeves": "Długie rękawy",
+    "garment.cut.long_sleeves_open_neck": "Długie rękawy, odsłonięta szyja",
+    "garment.cut.other": "Krój {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Skóra górnej części ciała z Reference Data Pack",
+    "garment.why.no-pack": (
+        "Krój ciała, ręce i nogi wymagają Reference Data Pack. Dodaj ciało freemode pobiera go, gdy gta.clothing go "
+        "udostępnia."
+    ),
+    "garment.view.note": "Zmienia się tylko to, co widzisz. Dopasowania i sprawdzenia zawsze używają standardowego ciała.",
 }

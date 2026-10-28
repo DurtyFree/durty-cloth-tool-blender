@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
+# Copyright (c) 2026 muto
 """The Reference Data Pack: reference data for the local garment tools that comes only with the hosted freemode body.
 
 A hosted body version may list a ``reference`` folder: an index (``reference.json``), the notice that names who owns
@@ -243,6 +244,73 @@ def remove_withdrawn(body_root: pathlib.Path, current: Optional[str]) -> List[st
         except OSError:
             continue  # tried again with the next body download
     return removed
+
+
+# --------------------------------------------------------------------------------------------------
+# The body view: Body Cut, Arms and Legs
+# --------------------------------------------------------------------------------------------------
+
+# The body view (a cut's torso, its arms solid, as a wireframe or hidden, and the legs alike) follows Muto
+# Cloth's reference body view by muto.
+
+#: How the body's arms and its legs can show.
+VIEW_MODES = ("solid", "wire", "hidden")
+#: The part the Legs setting shows.
+LEGS_PART = "lowr"
+
+
+class CutChoice(NamedTuple):
+    """One Body Cut choice: the cut, the plain name of what skin shows (``other`` for a name the add-on does not
+    know), and its number when several cuts show the same skin (``None`` otherwise)."""
+
+    id: str
+    display: str
+    number: Optional[int]
+
+
+def cut_choices(index: Optional[ReferenceIndex], gender: str) -> List[CutChoice]:
+    """Body Cut's choices for a gender in the pack's order (the full body first); none without a pack."""
+    entry = index.genders.get(gender) if index is not None else None
+    if entry is None:
+        return []
+    shared: Dict[str, int] = {}
+    for cut in entry.upper_body:
+        shared[cut.display] = shared.get(cut.display, 0) + 1
+    return [CutChoice(cut.id, cut.display if cut.display in DISPLAY_KEYS else "other",
+                      cut.display_index if shared[cut.display] > 1 else None) for cut in entry.upper_body]
+
+
+class ViewParts(NamedTuple):
+    """The pack's nodes a view shows solid and as a wireframe."""
+
+    solid: Tuple[str, ...]
+    wire: Tuple[str, ...]
+
+
+def _cut_of(entry: GenderPack, cut_id: str) -> Cut:
+    for cut in entry.upper_body:
+        if cut.id == cut_id:
+            return cut
+    return next(cut for cut in entry.upper_body if cut.id == entry.default_cut)
+
+
+def standard_view(entry: GenderPack, cut_id: str, arms: str, legs: str) -> bool:
+    """Whether the settings ask for the body as it is: the default cut (or none chosen yet), arms and legs solid."""
+    return _cut_of(entry, cut_id).id == entry.default_cut and arms == "solid" and legs == "solid"
+
+
+def view_parts(entry: GenderPack, cut_id: str, arms: str, legs: str) -> ViewParts:
+    """Which nodes show for a Body Cut (an unknown one is the default cut) and the Arms and Legs settings: the parts
+    and the cut's torso with its hands always solid, its arms and the legs as their setting says."""
+    if arms not in VIEW_MODES or legs not in VIEW_MODES:
+        raise ValueError("unknown view mode")
+    cut = _cut_of(entry, cut_id)
+    solid = [part for part in entry.parts if part != LEGS_PART] + [cut.node]
+    wire: List[str] = []
+    for node, mode in ((cut.arms_node, arms), (LEGS_PART if LEGS_PART in entry.parts else None, legs)):
+        if node is not None and mode != "hidden":
+            (solid if mode == "solid" else wire).append(node)
+    return ViewParts(tuple(solid), tuple(wire))
 
 
 # --------------------------------------------------------------------------------------------------

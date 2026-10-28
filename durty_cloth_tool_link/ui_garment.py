@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
+# Copyright (c) 2026 muto
 """Garment Fitting (Experimental) in the DCT tab: the settings, operators and panel of the local garment tools.
 
 The panel is the DCT tab's Garment Fitting view (Work On), with the next step in its first line and five numbered
@@ -29,7 +30,8 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Menu, Operator, Panel, PropertyGroup
 
-from . import garment, garment_add, garment_atlas, garment_avatars, garment_body, garment_fit, host, link, state
+from . import garment, garment_add, garment_atlas, garment_avatars, garment_body, garment_fit, garment_reference
+from . import host, link, state
 from . import strings, ui
 from . import settings as addon_settings
 from . import garment_dct as gdct
@@ -177,6 +179,8 @@ CATEGORY_ITEMS = [None if c is None else (c, EN[f"garment.category.{c}"], EN[f"g
 #: The slots each type offers.
 TYPE_SLOT_ITEMS = {c: [SLOT_ITEMS[slot] for slot in garment.slots_for(c)] for c in garment.CATEGORIES}
 SIZE_ITEMS = (("2048", "2048", EN["garment.size.desc"]), ("4096", "4096", EN["garment.size.desc"]))
+#: How the body's arms and legs show (Body Cut's choices come from the Reference Data Pack, see :func:`_cut_items`).
+VIEW_ITEMS = tuple((m, EN[f"garment.view.{m}"], EN[f"garment.view.{m}.desc"]) for m in garment_reference.VIEW_MODES)
 COMBINE_METHOD_ITEMS = tuple((m, EN[f"garment.combine-method.{m}"], EN[f"garment.combine-method.{m}.desc"])
                              for m in garment_atlas.METHODS)
 #: The ped shader's vertex colours most clothing uses (as Sollumz's clothing tutorial gives them): Color 1 #FF8000,
@@ -188,6 +192,65 @@ DEFAULT_COLOUR_2 = (0.0, 0.0, 0.0, 0.0)
 
 def _category_items(self: Any, context: Any) -> list:
     return CATEGORY_ITEMS
+
+
+_PACKS: Dict[str, Any] = {"at": 0.0, "key": None, "pack": None}
+
+
+def body_pack(context: Any, fresh: bool = False) -> Tuple[Optional[garment_reference.Pack], str]:
+    """The Reference Data Pack kept with the hosted body in use, and the body's gender. Looked up at most every few
+    seconds (panels redraw often) unless ``fresh``; ``None`` for a body from a file or a version without the pack."""
+    body = valid_body(context)
+    gender = body_gender(context, body)
+    version = body.get(gh.BODY_VERSION) if body is not None else None
+    if not isinstance(version, str) or state.controller is None:
+        return None, gender
+    now = time.monotonic()
+    if fresh or _PACKS["key"] != version or now - _PACKS["at"] > 3.0:
+        try:
+            pack = garment_body.kept_pack(host.data_dir(state.PACKAGE), version, verify=fresh)
+        except (OSError, ValueError, TypeError):
+            pack = None
+        _PACKS.update(at=now, key=version, pack=pack)
+    pack = _PACKS["pack"]
+    return (pack if pack is not None and gender in pack.index.genders else None), gender
+
+
+def cut_label(choice: garment_reference.CutChoice) -> str:
+    """Body Cut's name for a cut: what skin shows, numbered when several cuts show the same."""
+    name = t("garment.cut.other", name=choice.id) if choice.display == "other" else t(f"garment.cut.{choice.display}")
+    return t("garment.cut.numbered", cut=name, number=choice.number) if choice.number else name
+
+
+#: Body Cut's choices as Blender shows them (Blender keeps a dynamic enum's strings only while they are referenced).
+_CUT_ITEMS: List[tuple] = []
+
+
+def _cut_items(self: Any, context: Any) -> list:
+    pack, gender = body_pack(context) if context is not None else (None, "male")
+    choices = garment_reference.cut_choices(pack.index if pack is not None else None, gender)
+    items = [(choice.id, cut_label(choice), t("garment.cut.desc"), number) for number, choice in enumerate(choices)]
+    _CUT_ITEMS[:] = items or [(garment_reference.FULL_CUT, t("garment.cut.full_body"), t("garment.cut.desc"), 0)]
+    return _CUT_ITEMS
+
+
+def apply_body_view(context: Any) -> None:
+    """Shows the body as Body Cut, Arms and Legs ask (only the view: the tools keep measuring the body itself)."""
+    settings_ = props(context)
+    pack, gender = body_pack(context, fresh=True)
+    args = (context.scene, context.view_layer, valid_body(context))
+    try:
+        gh.show_body_view(*args, pack, gender, settings_.body_cut, settings_.body_arms, settings_.body_legs)
+    except (garment_reference.PackError, OSError):
+        gh.show_body_view(*args, None, gender, "", "solid", "solid")
+        notify("WARNING", msg("garment.why.no-pack"))
+
+
+def _view_changed(self: Any, context: Any) -> None:
+    try:
+        apply_body_view(context)
+    except Exception:  # noqa: BLE001 - a property update that raises leaves Blender in a bad state; report it
+        traceback.print_exc()
 
 
 def _slot_items(self: Any, context: Any) -> list:
@@ -252,11 +315,11 @@ def _marker_size_changed(self: Any, context: Any) -> None:
 
 
 def _poll_mesh(self: Any, obj: Any) -> bool:
-    return obj.type == "MESH" and not obj.get(gh.BODY_TAG)
+    return obj.type == "MESH" and not obj.get(gh.BODY_TAG) and not obj.get(gh.VIEW_TAG)
 
 
 def _poll_body(self: Any, obj: Any) -> bool:
-    return obj.type == "MESH"
+    return obj.type == "MESH" and not obj.get(gh.VIEW_TAG)  # the view of the body is never measured
 
 
 def _garment_changed(self: Any, context: Any) -> None:
@@ -304,7 +367,14 @@ class DCTLINK_PG_garment(PropertyGroup):
                              update=_garment_changed,
                              description=EN["garment.prop.garment.desc"], translation_context=CONTEXT)
     body: PointerProperty(name=EN["garment.prop.body"], type=bpy.types.Object, poll=_poll_body,
-                          description=EN["garment.prop.body.desc"], translation_context=CONTEXT)
+                          update=_view_changed, description=EN["garment.prop.body.desc"],
+                          translation_context=CONTEXT)
+    body_cut: EnumProperty(name=EN["garment.prop.body-cut"], items=_cut_items, default=0, update=_view_changed,
+                           description=EN["garment.prop.body-cut.desc"], translation_context=CONTEXT)
+    body_arms: EnumProperty(name=EN["garment.prop.arms"], items=VIEW_ITEMS, default="solid", update=_view_changed,
+                            description=EN["garment.prop.arms.desc"], translation_context=CONTEXT)
+    body_legs: EnumProperty(name=EN["garment.prop.legs"], items=VIEW_ITEMS, default="solid", update=_view_changed,
+                            description=EN["garment.prop.legs.desc"], translation_context=CONTEXT)
     gender: EnumProperty(name=EN["garment.prop.gender"], items=GENDER_ITEMS, default="male",
                          description=EN["garment.prop.gender.desc"], translation_context=CONTEXT)
     slot: EnumProperty(name=EN["garment.prop.slot"], items=_slot_items, default=garment.SLOTS.index("jbib"),
@@ -661,7 +731,7 @@ def _use_reason(context: Any) -> Optional[Msg]:
         return msg("notice.not-ready")
     if obj is None or obj.type != "MESH":
         return msg("garment.why.select-mesh")
-    if obj.get(gh.BODY_TAG):
+    if obj.get(gh.BODY_TAG) or obj.get(gh.VIEW_TAG):
         return msg("garment.why.is-body")
     return None
 
@@ -2862,6 +2932,27 @@ def draw_setup(layout: Any, context: Any) -> None:
     step(layout, context, DCTLINK_OT_fit_add_body.bl_idname, "garment.op.add-body", "IMPORT")
     reason_text(layout, context, _download_reason(context))
     operator(layout, DCTLINK_OT_fit_body_file.bl_idname, "garment.op.body-file", "FILEBROWSER")
+    if body is not None and gh.body_problem(context, body) is None:
+        draw_body_view(layout, context)
+
+
+def draw_body_view(layout: Any, context: Any) -> None:
+    """The body's Options: Body Cut, Arms and Legs, which change only how the body shows. They need the Reference
+    Data Pack; without it they stay off and say why."""
+    body = options(layout, context, "body")
+    if body is None:
+        return
+    settings_ = props(context)
+    pack, _gender = body_pack(context)
+    column = body.column()
+    column.enabled = pack is not None
+    labelled(column, context, settings_, "body_cut", "garment.prop.body-cut")
+    labelled(column, context, settings_, "body_arms", "garment.prop.arms")
+    labelled(column, context, settings_, "body_legs", "garment.prop.legs")
+    if pack is None:
+        reason_text(body, context, msg("garment.why.no-pack"))
+    else:
+        subtext(body, context, "garment.view.note")
 
 
 def draw_anchor(layout: Any, context: Any) -> None:

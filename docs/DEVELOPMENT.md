@@ -44,7 +44,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `garment_atlas.py` | Combine Materials without baking: which Method Automatic picks, the power-of-two atlas grid, each material's image placed in its square, the gaps filled from neighbouring colours, the UVs moved into their squares |
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
 | `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version, with the Reference Data Pack when that version lists it, and deleting a pack the current version no longer lists |
-| `garment_reference.py` | The Reference Data Pack: checking its files against their limits, keeping it whole with a record of every file's size and SHA-256, reading its index, its upper-body cuts and its poses |
+| `garment_reference.py` | The Reference Data Pack: checking its files against their limits, keeping it whole with a record of every file's size and SHA-256, reading its index, its upper-body cuts and its poses, Body Cut's choices and which of its parts each Body Cut, Arms and Legs setting shows |
 | `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today |
 | `garment_add.py` | Add to Project rules: the skeleton template's bones, the checks before anything is sent, the variation pictures, Durty Cloth Tool's answer |
 | `ped.py` | Custom Ped maths: markers (click guide, Auto Markers, from an old rig), character checks, the rig result as an armature plan, test poses, local checks |
@@ -58,7 +58,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `state.py` | The single link controller and helpers the panels, operators and timers share |
 | `host.py` | Blender I/O: the add-on's user folder, reading images, detecting paint strokes, Sollumz export and import, redraws |
 | `ui.py` | The **DCT** tab: the Durty Cloth Tool, Get Connected, Linked Cloth, Live Preview, Model and Settings panels and their operators |
-| `ui_garment.py`, `garment_host.py`, `garment_dct.py` | Garment Fitting's panel and operators, its mesh work in Blender, and the Sollumz setup and export for Add to Project with what Validate measures of it (shaders, diffuse size, armature placement) |
+| `ui_garment.py`, `garment_host.py`, `garment_dct.py` | Garment Fitting's panel and operators, its mesh work in Blender (the freemode body's view objects for Body Cut, Arms and Legs among it: separate objects that are never measured, while the body itself stays the object every tool uses), and the Sollumz setup and export for Add to Project with what Validate measures of it (shaders, diffuse size, armature placement) |
 | `ui_ped.py`, `ped_host.py` | Custom Ped's panel and operators, and its work on the character in Blender (markers, ray casts, applying a rig, GLB export) |
 | `preferences.py` | The add-on preferences, mirroring the sidebar's Settings |
 

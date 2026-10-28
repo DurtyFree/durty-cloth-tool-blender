@@ -848,4 +848,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "กำลังวางภาพ",
     "garment.stage.pack-fill": "กำลังเติมช่องว่างระหว่างภาพ",
+    "garment.prop.body-cut": "ทรงตัดของร่างกาย",
+    "garment.prop.body-cut.desc": (
+        "ผิวส่วนบนของร่างกายส่วนใดที่มองเห็น เหมือนอยู่ใต้เสื้อผ้าทรงตัดนั้น เปลี่ยนเฉพาะสิ่งที่คุณเห็น: "
+        "การฟิตและการตรวจสอบใช้ร่างกายมาตรฐานเสมอ"
+    ),
+    "garment.prop.arms": "แขน",
+    "garment.prop.arms.desc": "วิธีแสดงแขนของร่างกาย เปลี่ยนเฉพาะสิ่งที่คุณเห็น",
+    "garment.prop.legs": "ขา",
+    "garment.prop.legs.desc": "วิธีแสดงขาของร่างกาย เปลี่ยนเฉพาะสิ่งที่คุณเห็น",
+    "garment.view.solid": "ทึบ",
+    "garment.view.solid.desc": "แสดงตามปกติ",
+    "garment.view.wire": "โครงลวด",
+    "garment.view.wire.desc": "แสดงเป็นโครงลวด เพื่อให้มองเห็นเสื้อผ้าทะลุผ่าน",
+    "garment.view.hidden": "ซ่อน",
+    "garment.view.hidden.desc": "ไม่แสดง",
+    "garment.cut.full_body": "ทั้งตัว",
+    "garment.cut.bare_arms": "แขนเปลือย",
+    "garment.cut.bare_arms_open_neck": "แขนเปลือย คอเปิด",
+    "garment.cut.short_sleeves": "แขนสั้น",
+    "garment.cut.short_sleeves_open_neck": "แขนสั้น คอเปิด",
+    "garment.cut.long_sleeves": "แขนยาว",
+    "garment.cut.long_sleeves_open_neck": "แขนยาว คอเปิด",
+    "garment.cut.other": "ทรงตัด {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "ผิวส่วนบนของร่างกายจาก Reference Data Pack",
+    "garment.why.no-pack": (
+        "ทรงตัดของร่างกาย แขน และขาต้องใช้ Reference Data Pack เพิ่มร่างกาย freemode จะนำมาด้วยเมื่อ gta.clothing "
+        "มีให้"
+    ),
+    "garment.view.note": "เปลี่ยนเฉพาะสิ่งที่คุณเห็น การฟิตและการตรวจสอบใช้ร่างกายมาตรฐานเสมอ",
 }

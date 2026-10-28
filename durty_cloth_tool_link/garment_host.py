@@ -24,7 +24,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from . import garment, garment_add, garment_atlas, garment_avatars, garment_fit
+from . import garment, garment_add, garment_atlas, garment_avatars, garment_fit, garment_reference
 from .strings import UserError, msg
 
 #: Custom properties the add-on keeps on the garment (and the .blend file keeps with it).
@@ -58,6 +58,8 @@ MARKER_TAG = "dct_marker"
 MARKER_OWNER = "dct_marker_of"
 MARKER_COLLECTION = "DCT Garment Markers"
 BODY_COLLECTION = "DCT Freemode Body"
+#: The objects that show the body as Body Cut, Arms and Legs ask (never measured: every tool uses the body itself).
+VIEW_TAG = "dct_body_view"
 MARKER_PREFIX = "DCT_"
 #: The problem colours (a colour attribute the panel adds and removes; Prepare removes it too).
 PROBLEMS = "DCT Problems"
@@ -660,7 +662,7 @@ def import_body(context: Any, path: pathlib.Path, gender: str, version: Optional
     mesh = _merged_mesh(meshes, f"DCT Body ({gender})")
     _remove_objects(new)
     for obj in list(bpy.data.objects):
-        if obj.get(BODY_TAG) and scene.objects.get(obj.name) is not None:
+        if (obj.get(BODY_TAG) or obj.get(VIEW_TAG)) and scene.objects.get(obj.name) is not None:
             _remove_objects([obj])
     body = bpy.data.objects.new(f"DCT_Body_{gender}", mesh)
     body[BODY_TAG] = gender
@@ -671,6 +673,75 @@ def import_body(context: Any, path: pathlib.Path, gender: str, version: Optional
     _collection(scene, BODY_COLLECTION).objects.link(body)
     _TREE["key"] = None
     return body
+
+
+_CUTS: Dict[str, Any] = {"key": None, "meshes": None}
+
+
+def _cuts(path: pathlib.Path) -> Dict[str, Tuple[np.ndarray, np.ndarray]]:
+    """The pack's cuts of one gender, read once while the file stays the same."""
+    stat = path.stat()
+    key = (str(path), stat.st_size, stat.st_mtime_ns)
+    if _CUTS["key"] != key:
+        _CUTS["meshes"] = garment_reference.read_cuts(path.read_bytes())
+        _CUTS["key"] = key
+    return _CUTS["meshes"]
+
+
+def view_objects(scene: Any) -> List[Any]:
+    return [obj for obj in scene.objects if obj.get(VIEW_TAG)]
+
+
+def _view_object(scene: Any, body: Any, name: str, parts: Sequence[Tuple[np.ndarray, np.ndarray]],
+                 wire: bool) -> Any:
+    offset = 0
+    positions, triangles = [], []
+    for points, faces in parts:
+        positions.append(points)
+        triangles.append(faces + offset)
+        offset += len(points)
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(np.concatenate(positions).tolist(), [], np.concatenate(triangles).tolist())
+    mesh.update()
+    for polygon in mesh.polygons:
+        polygon.use_smooth = True
+    if body.data.materials:
+        mesh.materials.append(body.data.materials[0])
+    obj = bpy.data.objects.new(name, mesh)
+    obj[VIEW_TAG] = 1
+    obj.matrix_world = body.matrix_world.copy()
+    obj.hide_select = True
+    if wire:
+        obj.display_type = "WIRE"
+    _collection(scene, BODY_COLLECTION).objects.link(obj)
+    return obj
+
+
+def show_body_view(scene: Any, layer: Any, body: Optional[Any], pack: Optional[Any], gender: str, cut: str,
+                   arms: str, legs: str) -> bool:
+    """Shows the body as Body Cut, Arms and Legs ask: the pack's parts for that cut as objects of their own (the
+    wire ones drawn as a wireframe), with the body itself hidden. The standard view, or no pack, shows the body
+    itself again. Only the view changes: the body stays the object every fit and check measures. Returns whether a
+    view other than the body itself shows."""
+    for obj in view_objects(scene):
+        _remove_objects([obj])
+    entry = pack.index.genders.get(gender) if pack is not None else None
+    standard = body is None or entry is None or garment_reference.standard_view(entry, cut, arms, legs)
+    view = None if standard else garment_reference.view_parts(entry, cut, arms, legs)
+    meshes = _cuts(pack.folder / entry.cuts) if view is not None else {}
+    if view is not None and not all(node in meshes for node in (*view.solid, *view.wire)):
+        view = None  # a cuts file without the nodes its index names shows the body itself
+    if view is not None:
+        if view.solid:
+            _view_object(scene, body, "DCT_Body_View", [meshes[node] for node in view.solid], wire=False)
+        if view.wire:
+            _view_object(scene, body, "DCT_Body_View_Wire", [meshes[node] for node in view.wire], wire=True)
+    if body is not None:
+        try:
+            body.hide_set(view is not None, view_layer=layer)
+        except RuntimeError:
+            pass  # the body is not in this view layer: nothing of it shows anyway
+    return view is not None
 
 
 #: How far below the ped's origin its soles are (metres): the freemode body stands with its soles at z -1.
@@ -1567,6 +1638,7 @@ def check_tears(context: Any, obj: Any, threshold: float = 0.005, seam: float = 
         group.add(sorted(torn_vertices), 1.0, "REPLACE")
     return {"poses": results, "pairs": int(len(pairs)), "vertices": len(torn_vertices),
             "skipped": sum(1 for pose in results if pose.get("skipped"))}
+
 
 
 # --------------------------------------------------------------------------------------------------

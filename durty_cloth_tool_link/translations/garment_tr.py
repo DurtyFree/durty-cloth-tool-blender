@@ -860,4 +860,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Resimler yerleştiriliyor",
     "garment.stage.pack-fill": "Resimler arasındaki boşluklar dolduruluyor",
+    "garment.prop.body-cut": "Beden Kesimi",
+    "garment.prop.body-cut.desc": (
+        "Üst bedenin hangi teninin göründüğü, o kesimdeki bir giysinin altındaki gibi. Yalnızca gördüğün değişir: "
+        "oturtmalar ve kontroller her zaman standart bedeni kullanır"
+    ),
+    "garment.prop.arms": "Kollar",
+    "garment.prop.arms.desc": "Bedenin kollarının nasıl göründüğü. Yalnızca gördüğün değişir",
+    "garment.prop.legs": "Bacaklar",
+    "garment.prop.legs.desc": "Bedenin bacaklarının nasıl göründüğü. Yalnızca gördüğün değişir",
+    "garment.view.solid": "Katı",
+    "garment.view.solid.desc": "Her zamanki gibi gösterilir",
+    "garment.view.wire": "Tel Kafes",
+    "garment.view.wire.desc": "Tel kafes olarak gösterilir, giysi içinden görünür",
+    "garment.view.hidden": "Gizli",
+    "garment.view.hidden.desc": "Gösterilmez",
+    "garment.cut.full_body": "Tam Beden",
+    "garment.cut.bare_arms": "Çıplak Kollar",
+    "garment.cut.bare_arms_open_neck": "Çıplak Kollar, Açık Boyun",
+    "garment.cut.short_sleeves": "Kısa Kollu",
+    "garment.cut.short_sleeves_open_neck": "Kısa Kollu, Açık Boyun",
+    "garment.cut.long_sleeves": "Uzun Kollu",
+    "garment.cut.long_sleeves_open_neck": "Uzun Kollu, Açık Boyun",
+    "garment.cut.other": "Kesim {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Reference Data Pack'ten üst beden teni",
+    "garment.why.no-pack": (
+        "Beden Kesimi, Kollar ve Bacaklar için Reference Data Pack gerekir. gta.clothing sunduğunda Freemode bedeni "
+        "ekle onu da getirir."
+    ),
+    "garment.view.note": "Yalnızca gördüğün değişir. Oturtmalar ve kontroller her zaman standart bedeni kullanır.",
 }

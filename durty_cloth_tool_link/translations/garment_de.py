@@ -1600,4 +1600,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Bilder werden platziert",
     "garment.stage.pack-fill": "Lücken zwischen den Bildern werden gefüllt",
+    "garment.prop.body-cut": "Körperschnitt",
+    "garment.prop.body-cut.desc": (
+        "Welche Haut des Oberkörpers sichtbar ist, wie unter Kleidung mit diesem Schnitt. Es ändert sich nur, was "
+        "du siehst: Fits und Prüfungen nutzen immer den Standardkörper"
+    ),
+    "garment.prop.arms": "Arme",
+    "garment.prop.arms.desc": "Wie die Arme des Körpers erscheinen. Es ändert sich nur, was du siehst",
+    "garment.prop.legs": "Beine",
+    "garment.prop.legs.desc": "Wie die Beine des Körpers erscheinen. Es ändert sich nur, was du siehst",
+    "garment.view.solid": "Massiv",
+    "garment.view.solid.desc": "Wie gewohnt angezeigt",
+    "garment.view.wire": "Drahtgitter",
+    "garment.view.wire.desc": "Als Drahtgitter angezeigt, damit die Kleidung durchscheint",
+    "garment.view.hidden": "Ausgeblendet",
+    "garment.view.hidden.desc": "Nicht angezeigt",
+    "garment.cut.full_body": "Ganzer Körper",
+    "garment.cut.bare_arms": "Nackte Arme",
+    "garment.cut.bare_arms_open_neck": "Nackte Arme, offener Hals",
+    "garment.cut.short_sleeves": "Kurze Ärmel",
+    "garment.cut.short_sleeves_open_neck": "Kurze Ärmel, offener Hals",
+    "garment.cut.long_sleeves": "Lange Ärmel",
+    "garment.cut.long_sleeves_open_neck": "Lange Ärmel, offener Hals",
+    "garment.cut.other": "Schnitt {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Haut des Oberkörpers aus dem Reference Data Pack",
+    "garment.why.no-pack": (
+        "Körperschnitt, Arme und Beine brauchen das Reference Data Pack. Freemode-Körper hinzufügen bringt es mit, "
+        "wenn gta.clothing es anbietet."
+    ),
+    "garment.view.note": "Es ändert sich nur, was du siehst. Fits und Prüfungen nutzen immer den Standardkörper.",
 }

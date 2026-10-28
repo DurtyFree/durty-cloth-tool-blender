@@ -1266,4 +1266,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "وضع الصور",
     "garment.stage.pack-fill": "ملء الفراغات بين الصور",
+    "garment.prop.body-cut": "قصة الجسم",
+    "garment.prop.body-cut.desc": (
+        "أي جلد من الجزء العلوي للجسم يظهر، كما تحت ملابس بهذه القصة. يتغير ما تراه فقط: الملاءمة والفحوص تستخدم "
+        "الجسم القياسي دائمًا"
+    ),
+    "garment.prop.arms": "الذراعان",
+    "garment.prop.arms.desc": "كيف تظهر ذراعا الجسم. يتغير ما تراه فقط",
+    "garment.prop.legs": "الساقان",
+    "garment.prop.legs.desc": "كيف تظهر ساقا الجسم. يتغير ما تراه فقط",
+    "garment.view.solid": "مصمت",
+    "garment.view.solid.desc": "يُعرض كالمعتاد",
+    "garment.view.wire": "سلكي",
+    "garment.view.wire.desc": "يُعرض كإطار سلكي لتظهر الملابس من خلاله",
+    "garment.view.hidden": "مخفي",
+    "garment.view.hidden.desc": "لا يُعرض",
+    "garment.cut.full_body": "الجسم كاملًا",
+    "garment.cut.bare_arms": "ذراعان عاريتان",
+    "garment.cut.bare_arms_open_neck": "ذراعان عاريتان، رقبة مكشوفة",
+    "garment.cut.short_sleeves": "أكمام قصيرة",
+    "garment.cut.short_sleeves_open_neck": "أكمام قصيرة، رقبة مكشوفة",
+    "garment.cut.long_sleeves": "أكمام طويلة",
+    "garment.cut.long_sleeves_open_neck": "أكمام طويلة، رقبة مكشوفة",
+    "garment.cut.other": "القصة {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "جلد الجزء العلوي للجسم من Reference Data Pack",
+    "garment.why.no-pack": (
+        "تحتاج قصة الجسم والذراعان والساقان إلى Reference Data Pack. تجلبه إضافة جسم freemode عندما يوفره "
+        "gta.clothing."
+    ),
+    "garment.view.note": "يتغير ما تراه فقط. الملاءمة والفحوص تستخدم الجسم القياسي دائمًا.",
 }

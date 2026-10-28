@@ -873,4 +873,34 @@ TEXT = {
     ),
     "garment.stage.pack-images": "Menempatkan gambar",
     "garment.stage.pack-fill": "Mengisi celah di antara gambar",
+    "garment.prop.body-cut": "Potongan Tubuh",
+    "garment.prop.body-cut.desc": (
+        "Kulit tubuh bagian atas mana yang terlihat, seperti di bawah pakaian dengan potongan itu. Hanya tampilan "
+        "yang berubah: pemasangan dan pemeriksaan selalu memakai tubuh standar"
+    ),
+    "garment.prop.arms": "Lengan",
+    "garment.prop.arms.desc": "Cara lengan tubuh ditampilkan. Hanya tampilan yang berubah",
+    "garment.prop.legs": "Tungkai",
+    "garment.prop.legs.desc": "Cara tungkai tubuh ditampilkan. Hanya tampilan yang berubah",
+    "garment.view.solid": "Padat",
+    "garment.view.solid.desc": "Ditampilkan seperti biasa",
+    "garment.view.wire": "Rangka",
+    "garment.view.wire.desc": "Ditampilkan sebagai rangka kawat, sehingga pakaian terlihat menembusnya",
+    "garment.view.hidden": "Tersembunyi",
+    "garment.view.hidden.desc": "Tidak ditampilkan",
+    "garment.cut.full_body": "Seluruh Tubuh",
+    "garment.cut.bare_arms": "Lengan Terbuka",
+    "garment.cut.bare_arms_open_neck": "Lengan Terbuka, Leher Terbuka",
+    "garment.cut.short_sleeves": "Lengan Pendek",
+    "garment.cut.short_sleeves_open_neck": "Lengan Pendek, Leher Terbuka",
+    "garment.cut.long_sleeves": "Lengan Panjang",
+    "garment.cut.long_sleeves_open_neck": "Lengan Panjang, Leher Terbuka",
+    "garment.cut.other": "Potongan {name}",
+    "garment.cut.numbered": "{cut} {number}",
+    "garment.cut.desc": "Kulit tubuh bagian atas dari Reference Data Pack",
+    "garment.why.no-pack": (
+        "Potongan Tubuh, Lengan, dan Tungkai memerlukan Reference Data Pack. Tambah Tubuh Freemode membawanya saat "
+        "gta.clothing menyediakannya."
+    ),
+    "garment.view.note": "Hanya tampilan yang berubah. Pemasangan dan pemeriksaan selalu memakai tubuh standar.",
 }

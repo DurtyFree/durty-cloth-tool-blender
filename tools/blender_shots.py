@@ -393,7 +393,8 @@ class Shots:
         props.garment = tee
         props.gender = "female"
         glb = garment_smoke.body_glb(folder)
-        api.body_files = {"freemode_female.glb": glb.read_bytes()}
+        api.body_files = {"freemode_female.glb": glb.read_bytes(),
+                          **garment_smoke.synthetic_pack.body_files(("female",))}  # no game data
         garment_ui.BODY_ORIGIN["url"] = api.base_url
         self.operator(lambda: bpy.ops.dct_link.fit_add_body())
         yield from self.wait(lambda: garment_ui.RUNTIME.download is None and props.body is not None, 30,
@@ -405,6 +406,19 @@ class Shots:
         self.show_garment(garment_ui)
         yield from self.wait(lambda: True, 5)
         self.shot("garment-next-stage")
+
+        # The body's Options with the Reference Data Pack: another Body Cut, the arms as a wireframe, no legs.
+        props.body_cut = "heist_00"
+        props.body_arms = "wire"
+        props.body_legs = "hidden"
+        self.show_garment(garment_ui, "setup", options=("body",))
+        self.scroll(1, page=False, ticks=12)
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-body-view")
+        props.body_cut = "full"
+        props.body_arms = "solid"
+        props.body_legs = "solid"
+        self.show_garment(garment_ui)
 
         # 3. Fit: the markers placed.
         props.category = "tshirt"

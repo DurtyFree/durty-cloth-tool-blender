@@ -422,6 +422,37 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           "Usual" in labels and "19 (5 to 32)" in labels, labels[-600:])
     RESULT = {"check": "fit check (synthetic tee)", "ok": True,
               "detail": ", ".join(f"{r.region} {r.p50}" for r in report.rows) + f"; inside {report.inside}"}
+
+    # Body Cut, Arms and Legs (from the synthetic Reference Data Pack) change only what shows: every tool keeps
+    # measuring the standard body.
+    cuts = ui_garment._cut_items(props, bpy.context)
+    check("Body Cut offers the pack's cuts by what skin shows, numbered where they show the same",
+          [item[0] for item in cuts] == [cut[0] for cut in synthetic_pack.CUTS]
+          and [item[1] for item in cuts[:4]] == ["Full Body", "Bare Arms", "Short Sleeves 1", "Short Sleeves 2"],
+          cuts)
+    log = draw_everything(package, state, "the body's view options")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the body's Options show Body Cut, Arms and Legs as view only",
+          {("prop", "body_cut"), ("prop", "body_arms"), ("prop", "body_legs")} <= set(log)
+          and "Only what you see changes" in labels, labels[-300:])
+    standard = props.body
+    standard_shape = positions(standard)
+    report_json = tee.get(gh.FIT_REPORT, "")
+    props.body_cut = "heist_00"
+    props.body_arms = "wire"
+    props.body_legs = "hidden"
+    views = {obj.name: obj for obj in gh.view_objects(scene)}
+    check("the view shows the cut solid and its arms as a wireframe, with the body itself hidden",
+          sorted(views) == ["DCT_Body_View", "DCT_Body_View_Wire"] and views["DCT_Body_View_Wire"].display_type
+          == "WIRE" and not standard.visible_get() and all(obj.hide_select for obj in views.values()),
+          (sorted(views), standard.visible_get()))
+    check("Run Fit Check runs while the body shows another cut", "FINISHED" in bpy.ops.dct_link.fit_check())
+    check("the fitting body stays the standard one and measures the same",
+          props.body == standard and ui_garment.valid_body(bpy.context) == standard
+          and np.allclose(positions(standard), standard_shape) and tee.get(gh.FIT_REPORT, "") == report_json)
+    check("a view object can be neither the garment nor the body",
+          not ui_garment._poll_body(props, views["DCT_Body_View"])
+          and not ui_garment._poll_mesh(props, views["DCT_Body_View"]))
     check("Show Problems runs", "FINISHED" in bpy.ops.dct_link.fit_show_problems())
     attribute = tee.data.color_attributes.get(gh.PROBLEMS)
     colours = np.empty(len(tee.data.vertices) * 4, dtype=np.float32)
@@ -447,6 +478,10 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           int((signed < -0.001).sum()))
     # Push Out of Body by region: a sleeve vertex pressed into the arm stays with Torso Only and comes out with Torso
     # and Arms.
+    props.body_cut = "full"
+    props.body_arms = "solid"
+    props.body_legs = "solid"
+    check("the standard view shows the body itself again", not gh.view_objects(scene) and body.visible_get())
     check("Push Out of Body works on the whole garment unless asked", props.push_region == "whole")
     data = gh.measure(scene, tee, body, ui_garment.joints(bpy.context)[0])
     groups = garment.stacked_groups(data["positions"])
