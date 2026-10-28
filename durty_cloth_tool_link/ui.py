@@ -1242,7 +1242,6 @@ class DCTLINK_OT_about(_Op):
         else:
             layout.label(text=title, icon="INFO", translate=False)
         wrapped(layout, context, t("settings.licence"), dim=True, width=360)
-        wrapped(layout, context, t("about.credits"), dim=True, width=360)
         layout.separator(factor=GAP_SMALL)
         wrapped(layout, context, t("info.privacy"), width=360)
 

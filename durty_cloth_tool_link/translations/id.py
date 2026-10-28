@@ -3,7 +3,6 @@
 
 TEXT = {
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
-    "about.credits": "Alat pakaian berdasarkan Muto Cloth karya muto, yang membagikan kode sumbernya kepada kami.",
     "bundle.bad-name": "'{name}' tidak dapat dikirim: nama berkas hanya boleh menggunakan huruf, angka, '_', '-', dan '.', tidak boleh dimulai dengan '.' atau memuat '..', serta harus paling banyak 128 karakter. Ganti nama tekstur atau model dalam Blender.",
     "bundle.duplicate": "Dua tekstur bernama '{name}'. Berikan nama berbeda untuk setiap tekstur.",
     "bundle.empty-file": "'{name}' kosong. Ekspor model kembali.",

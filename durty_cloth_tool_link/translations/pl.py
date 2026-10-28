@@ -3,7 +3,6 @@
 
 TEXT = {
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
-    "about.credits": "Narzędzia do ubrań oparte na Muto Cloth autorstwa muto, z kodem źródłowym udostępnionym nam przez muto.",
     "bundle.bad-name": "Nie można wysłać „{name}”: nazwy plików mogą zawierać tylko litery, cyfry, „_”, „-” i „.”, nie mogą zaczynać się od „.” ani zawierać „..” i mogą mieć najwyżej 128 znaków. Zmień nazwę tekstury lub modelu w Blender.",
     "bundle.duplicate": "Dwie tekstury mają nazwę „{name}”. Nadaj każdej inną nazwę.",
     "bundle.empty-file": "Plik „{name}” jest pusty. Ponownie wyeksportuj model.",
