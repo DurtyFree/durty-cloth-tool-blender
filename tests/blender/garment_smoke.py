@@ -6,7 +6,8 @@ Body and the tools that wait for it, the fit check and the problem colours, push
 T-pose to A-pose without tearing a seam, the tear check, prepare, combine materials (with transparency and a normal
 map), levels of detail, validate, backups, adding the coat to the project open in the fake Durty Cloth Tool (a
 128-bone skeleton template, the checks, the export, the add, an add that fails after the garment changed, Cancel and
-the free limit), a one-material garment whose levels of detail keep their UVs, the garment types (an open jacket, a
+the free limit), a one-material garment whose levels of detail keep their UVs, a two-material garment packed without
+baking while Cycles is turned off, the garment types (an open jacket, a
 skirt's bridged weights, a dress split at its waist, a mask aligned from an avatar, a thick export's walls, a hat added
 as a prop), with the real Sollumz a skinned shirt opened from Durty Cloth Tool on its lent skeleton that is pushed and
 added back still facing the front, and that nothing else in the scene changes.
@@ -753,6 +754,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
                                   real))
         results.append(add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real,
                                         draw_everything))
+    results.append(pack_smoke(package, check, draw_everything))
     results.append(types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, real))
     if dct is not None and real:
         results.append(round_trip_from_dct(package, addon, state, ctrl, dct, check, pump, draw_everything, folder))
@@ -793,6 +795,74 @@ def tube(name, levels, radius, segments=32):
                  np.array([(radius(z), radius(z) * 0.75) for z in levels]), np.array([1.0, 0, 0]),
                  np.array([0, 1.0, 0]), segments=segments)
     return mesh_object(name, builder.mesh({}))
+
+
+def engines():
+    return {item.identifier for item in bpy.types.RenderSettings.bl_rna.properties["engine"].enum_items}
+
+
+def pack_smoke(package, check, draw_everything):
+    """Combine Materials on a top of two materials, each with one image: Automatic packs both images into one texture
+    without baking, which works with Cycles turned off; the UVs move into their image's square and the gaps between
+    the images take the colours next to them."""
+    ui_garment = sys.modules[package + ".ui_garment"]
+    gh = sys.modules[package + ".garment_host"]
+    props = bpy.context.scene.dct_garment
+    top = mesh_object("smoke_pack", synthetic.top("short", 45.0))
+    mesh = top.data
+    mesh.materials.append(textured_material("smoke_pack_front", (0.8, 0.2, 0.2)))
+    mesh.materials.append(textured_material("smoke_pack_back", (0.2, 0.3, 0.8)))
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    uv = bm.loops.layers.uv.new("UVMap")
+    for face in bm.faces:
+        face.material_index = 0 if face.calc_center_median().y < 0 else 1
+        for loop in face.loops:
+            co = loop.vert.co
+            loop[uv].uv = (min(1.0, max(0.0, co.x * 0.5 + 0.5)), min(1.0, max(0.0, co.z * 0.5 + 0.5)))
+    bm.to_mesh(mesh)
+    bm.free()
+    choose(top)
+    check("Combine Materials decides by itself unless asked", props.combine_method == "auto")
+    bpy.ops.preferences.addon_disable(module="cycles")
+    try:
+        check("Cycles is turned off for the pack", "CYCLES" not in engines(), sorted(engines()))
+        check("Combine Materials packs the two materials without Cycles",
+              "FINISHED" in bpy.ops.dct_link.fit_combine_materials())
+    finally:
+        bpy.ops.preferences.addon_enable(module="cycles")
+    notice = ui_garment.RUNTIME.notice
+    material = mesh.materials[0] if len(mesh.materials) == 1 else None
+    image = next((n.image for n in material.node_tree.nodes if n.type == "TEX_IMAGE"), None) if material else None
+    side = image.size[0] if image is not None else 0
+    check("Automatic packed one square power-of-two texture onto one material, keeping DCT Source UV",
+          notice is not None and notice.message.key == "garment.done.combine-packed" and image is not None
+          and image.size[0] == image.size[1] and side & (side - 1) == 0 and side <= 2048
+          and image.packed_file is not None and mesh.uv_layers.active.name == "UVMap 0"
+          and mesh.uv_layers.get("DCT Source UV") is not None and gh.combined(top), notice)
+    packed = gh.read_uv(mesh, gh.PACKED_UV)
+    faces = np.empty(len(mesh.polygons), dtype=np.int64)
+    mesh.polygons.foreach_get("loop_total", faces)
+    source_uv = gh.read_uv(mesh, "DCT Source UV")
+    front = np.repeat([p.center.y < 0 for p in mesh.polygons], faces)
+    pad = sys.modules[package + ".garment_atlas"].atlas_layout([(64, 64)] * 2, 2048).pad
+    # Two images: a grid of two by two squares, the front's at the lower left and the back's at the lower right.
+    check("the UVs moved into their image's square",
+          (packed[front] <= 0.5).all() and (packed[~front, 0] >= 0.5).all() and (packed[~front, 1] <= 0.5).all()
+          and np.allclose(packed[front], source_uv[front] * (0.5 - 2 * pad / side) + pad / side, atol=1e-3),
+          (packed[front].max(axis=0), packed[~front].min(axis=0)))
+    pixels = np.empty(side * side * 4, dtype=np.float32)
+    image.pixels.foreach_get(pixels)
+    pixels = pixels.reshape(side, side, 4)
+    half = side // 2
+    front_tile, back_tile, gap = pixels[:half, :half], pixels[:half, half:], pixels[half:]
+    check("each square holds its image and the gaps take the colours next to them",
+          front_tile[..., 0].mean() > front_tile[..., 2].mean() and back_tile[..., 2].mean() > back_tile[..., 0].mean()
+          and float(gap[..., :3].sum(axis=2).min()) > 0.3,
+          (front_tile[..., :3].mean(axis=(0, 1)), back_tile[..., :3].mean(axis=(0, 1)), gap[..., :3].min()))
+    draw_everything(package, sys.modules[package + ".state"], "garment packed")
+    detail = f"{side} px, {notice.message.fields['density']} px per cm" if notice is not None else ""
+    return {"check": "combine materials (packed without baking, synthetic)", "ok": True, "detail": detail}
 
 
 def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, real):

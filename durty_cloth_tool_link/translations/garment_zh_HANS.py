@@ -195,7 +195,7 @@ TEXT = {
     "garment.op.prepare": "准备服装",
     "garment.op.prepare.desc": "合并版片接缝，移除松散部分，三角化，平滑着色，并添加 ped 顶点色",
     "garment.op.combine": "合并材质",
-    "garment.op.combine.desc": "把所有 UV 岛打包进一个布局，并把所有材质烘焙为一个：带透明度的颜色，以及在有的情况下的法线、高光和自发光贴图",
+    "garment.op.combine.desc": "把所有材质变成一个只有一张贴图的材质：用 Cycles 烘焙，或不烘焙把每个材质的图像打包进各自的方格。由 选项 中的 方式 决定",
     "garment.combine.nothing": "无需合并：服装只有一个材质。",
     "garment.op.lods": "生成 LOD",
     "garment.op.lods.desc": "在 Sollumz 的 LOD 槽中生成中、低细节级别，并使用高细节级别的权重",
@@ -381,7 +381,8 @@ TEXT = {
         "Color 1 和 Color 2。 当服装位于身体上时，其面会转为朝外背离身体（衬里的面朝向身体）。选项中的厚度可为单层布料添加背面。"
     ),
     "garment.info.combine": (
-        "把所有 UV 岛打包进一个正方形，并把所有材质烘焙为一个：带透明度的颜色，以及材质具有的法线、高光和自发光贴图。它将成为服装唯一的材质。原始 UV 贴图保留为 DCT Source UV。"
+        "把所有 UV 岛打包进一个正方形，并把所有材质烘焙为一个：带透明度的颜色，以及材质具有的法线、高光和自发光贴图。它将成为服装唯一的材质。原始 UV 贴图保留为 DCT Source UV。选项 中的 方式 "
+        "也可以不烘焙，把每个材质的图像放进贴图中各自的方格，这样不需要 Cycles。每个材质恰好有一张图像时，自动 会这样做。"
     ),
     "garment.info.lods": (
         "把服装的副本减面到各个三角面预算，放入 Sollumz 的 Medium 和 Low LOD 槽位，并尽量保留开放边和 UV 接缝。每个级别都沿用 High 的权重（每个顶点四根骨骼），并被推出身体。 "
@@ -616,7 +617,7 @@ TEXT = {
     "garment.done.sculpt-mirror-off": "雕刻会话已开始。镜像 X 以服装自身的中心为镜像中心，而不是 ped 的中心：请先应用服装的变换，才能以 ped 为中心镜像。",
     "garment.sculpt.broken": "雕刻会话丢失了起始形状（Dyntopo 或重建网格会这样）。接受会保留形状并结束会话。",
     "garment.tears.pose-skipped": "{pose}：已跳过，骨架中没有对应的骨骼",
-    "garment.error.cycles": "合并材质使用 Cycles 烘焙。请在 编辑 > 偏好设置 > 插件 中启用 Cycles，然后重试。",
+    "garment.error.cycles": "合并材质使用 Cycles 烘焙。请在 编辑 > 偏好设置 > 插件 中启用 Cycles，然后重试。或在 选项 中选择 不烘焙直接打包。",
     "garment.body.compressed": "此 Blender 无法读取压缩的 freemode 身体。请使用 Blender 5.2 或更新版本，或使用身体文件，直到 gta.clothing 提供未压缩的身体。",
     "garment.finding.triangles": "{level}细节级别有 {count} 个三角面，超过了 Durty Cloth Tool 建议的 {budget} 个。",
     "garment.finding.placement": "服装中部距离身体 {distance} 厘米，说明它没有套在身体上。请检查导入设置（单位、模特站在地面上）并使用对齐到身体。",
@@ -925,4 +926,19 @@ TEXT = {
     "garment.prop.thickness.desc": "在单层布料后方这么多毫米处为其添加背面，使其从背后看不透明。0 表示保持单层",
     "garment.stage.lod-medium": "正在生成 Medium 级别",
     "garment.stage.lod-low": "正在生成 Low 级别",
+    "garment.prop.combine-method": "方式",
+    "garment.prop.combine-method.desc": "合并材质如何生成服装唯一的贴图",
+    "garment.combine-method.auto": "自动",
+    "garment.combine-method.auto.desc": "每个材质恰好有一张图像时不烘焙直接打包，否则烘焙",
+    "garment.combine-method.bake": "烘焙",
+    "garment.combine-method.bake.desc": "把 UV 岛打包进一个布局，并用 Cycles 烘焙每个材质，包括其透明度以及已有的法线、高光和自发光贴图",
+    "garment.combine-method.pack": "不烘焙直接打包",
+    "garment.combine-method.pack.desc": "把每个材质的颜色图像放进同一张贴图中属于它的方格，并把它的 UV 移到那里。不需要 Cycles；其他贴图不会保留",
+    "garment.done.combine-packed": "已不烘焙把 {count} 个材质打包进一张 {size} 像素的贴图，服装上每厘米 {density} 像素。",
+    "garment.done.combine-packed-outside": (
+        "已不烘焙把 {count} 个材质打包进一张 {size} 像素的贴图，但有 {points} 个 UV 点位于其图像之外（重复的贴图），已移到图像边缘。要保留重复，请在 选项 中选择 烘焙。"
+    ),
+    "garment.error.pack-missing": "不烘焙直接打包需要每张图像的像素，但找不到这些图像：{names}。请把图像文件放到材质期望的位置（或打包它们），然后重新合并。",
+    "garment.stage.pack-images": "正在放置图像",
+    "garment.stage.pack-fill": "正在填充图像之间的空隙",
 }

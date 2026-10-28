@@ -340,7 +340,10 @@ TEXT = {
     "garment.done.tpose-none": "Ręce są już ustawione pod wybranym kątem.",
     "garment.done.use": "Praca nad: {name}.",
     "garment.error.bake": "Wypalanie nie powiodło się: {detail}",
-    "garment.error.cycles": "Opcja Połącz materiały wypala za pomocą Cycles. Włącz Cycles w Edit > Preferences > Add-ons i spróbuj ponownie.",
+    "garment.error.cycles": (
+        "Opcja Połącz materiały wypala za pomocą Cycles. Włącz Cycles w Edit > Preferences > Add-ons i spróbuj "
+        "ponownie. Albo wybierz Upakuj bez wypalania w Opcjach."
+    ),
     "garment.error.import": "Nie udało się zaimportować pliku: {detail}",
     "garment.error.mode": "Nie udało się uruchomić Sculpt Mode: {detail}",
     "garment.error.no-mesh": "Plik nie zawiera siatki.",
@@ -387,7 +390,13 @@ TEXT = {
     "garment.info.backups": "Przed każdym krokiem zmieniającym ubranie w pliku .blend zachowywana jest kopia jego siatki (pierwsza i najnowsze). Opcja Cofnij jeden krok przywraca najnowszą, a Przywróć sprzed dopasowania pierwszą. Kopie są usuwane razem z ubraniem lub po dodaniu go do Durty Cloth Tool.",
     "garment.info.body": "Ciało freemode jest pobierane z gta.clothing raz dla każdej wersji i przechowywane w folderze dodatku. Jest dodawane do sceny jako osobny obiekt i narzędzia nigdy go nie zmieniają.",
     "garment.info.check": "Mierzy odległość każdego obszaru ubrania od ciała: wartość środkową i zakres obejmujący większość jego wierzchołków, w milimetrach. Wartości ujemne oznaczają położenie wewnątrz ciała.",
-    "garment.info.combine": "Upakowuje wszystkie wyspy UV w jednym kwadracie i wypala wszystkie materiały w jeden: kolor z przezroczystością oraz mapy normalnych, odbić i emisji, jeśli materiał je ma. Staje się on jedynym materiałem ubrania. Oryginalna mapa UV zostaje zachowana jako DCT Source UV.",
+    "garment.info.combine": (
+        "Upakowuje wszystkie wyspy UV w jednym kwadracie i wypala wszystkie materiały w jeden: kolor z "
+        "przezroczystością oraz mapy normalnych, odbić i emisji, jeśli materiał je ma. Staje się on jedynym materiałem "
+        "ubrania. Oryginalna mapa UV zostaje zachowana jako DCT Source UV. Metoda w Opcjach może zamiast tego umieścić "
+        "obraz każdego materiału w jego własnym kwadracie tekstury bez wypalania, co nie wymaga Cycles. Automatyczne "
+        "robi tak, gdy każdy materiał ma dokładnie jeden obraz."
+    ),
     "garment.info.garment": "Narzędzia zmieniają tylko ten obiekt. Opcja Importuj ubranie przelicza centymetry i milimetry (używane przy eksporcie przez Marvelous Designer) na metry. Każdy krok zmieniający ubranie zachowuje kopię zapasową, a Ctrl+Z go cofa.",
     "garment.info.lods": (
         "Upraszcza kopię ubrania do każdego limitu trójkątów i umieszcza ją w slotach LOD Medium i Low w Sollumz, w "
@@ -488,7 +497,10 @@ TEXT = {
     "garment.op.check": "Uruchom kontrolę dopasowania",
     "garment.op.check.desc": "Zmierz odległość każdego obszaru ubrania od ciała",
     "garment.op.combine": "Połącz materiały",
-    "garment.op.combine.desc": "Upakuj wszystkie wyspy UV w jednym układzie i wypal wszystkie materiały w jeden: kolor z przezroczystością oraz mapy normalnych, odbić i emisji, jeśli występują",
+    "garment.op.combine.desc": (
+        "Zamień wszystkie materiały w jeden z jedną teksturą: wypalony za pomocą Cycles albo z obrazem każdego "
+        "materiału upakowanym bez wypalania w jego własnym kwadracie. Decyduje Metoda w Opcjach"
+    ),
     "garment.op.import": "Importuj ubranie",
     "garment.op.import.desc": "Zaimportuj ubranie z pliku FBX, OBJ lub glTF (na przykład z Marvelous Designer), w metrach i jako jeden obiekt",
     "garment.op.load-preset": "Wczytaj zestaw pozy",
@@ -826,4 +838,35 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Tworzenie poziomu Medium",
     "garment.stage.lod-low": "Tworzenie poziomu Low",
+    "garment.prop.combine-method": "Metoda",
+    "garment.prop.combine-method.desc": "Jak Połącz materiały tworzy jedną teksturę ubrania",
+    "garment.combine-method.auto": "Automatyczne",
+    "garment.combine-method.auto.desc": (
+        "Upakuj bez wypalania, gdy każdy materiał ma dokładnie jeden obraz, w przeciwnym razie Wypal"
+    ),
+    "garment.combine-method.bake": "Wypal",
+    "garment.combine-method.bake.desc": (
+        "Upakuj wyspy UV w jednym układzie i wypal każdy materiał za pomocą Cycles, z przezroczystością i ewentualnymi "
+        "mapami normalnych, odbić i emisji"
+    ),
+    "garment.combine-method.pack": "Upakuj bez wypalania",
+    "garment.combine-method.pack.desc": (
+        "Umieść obraz koloru każdego materiału w jego własnym kwadracie jednej tekstury i przenieś tam jego UV. Nie "
+        "wymaga Cycles; inne mapy są pomijane"
+    ),
+    "garment.done.combine-packed": (
+        "Upakowano materiały (liczba: {count}) bez wypalania w jedną teksturę o rozmiarze {size} pikseli, {density} "
+        "pikseli na centymetr ubrania."
+    ),
+    "garment.done.combine-packed-outside": (
+        "Upakowano materiały (liczba: {count}) bez wypalania w jedną teksturę o rozmiarze {size} pikseli, ale część "
+        "punktów UV (liczba: {points}) leżała poza swoim obrazem (powtarzana tekstura) i przeniesiono je na jego "
+        "krawędź. Wybierz Wypal w Opcjach, aby zachować powtórzenie."
+    ),
+    "garment.error.pack-missing": (
+        "Upakuj bez wypalania potrzebuje pikseli każdego obrazu, a tych nie odnaleziono: {names}. Umieść pliki obrazów "
+        "tam, gdzie oczekują ich materiały (lub spakuj je), a następnie połącz ponownie."
+    ),
+    "garment.stage.pack-images": "Umieszczanie obrazów",
+    "garment.stage.pack-fill": "Wypełnianie przerw między obrazami",
 }

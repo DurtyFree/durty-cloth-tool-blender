@@ -244,8 +244,8 @@ TEXT = {
     ),
     "garment.op.combine": "Combinar materiales",
     "garment.op.combine.desc": (
-        "Empaquetar todas las islas UV en una distribución y hornear todos los materiales en uno: el color con su "
-        "transparencia, y mapas de normales, specular y emisión donde los haya"
+        "Convertir todos los materiales en uno con una sola textura: horneado con Cycles, o la imagen de cada material "
+        "empaquetada en su propio cuadrado sin hornear. Lo decide Método en Opciones"
     ),
     "garment.combine.nothing": "Nada que combinar: la prenda tiene un solo material.",
     "garment.op.lods": "Generar LODs",
@@ -510,7 +510,9 @@ TEXT = {
     "garment.info.combine": (
         "Empaqueta todas las islas UV en un cuadrado y hornea todos los materiales en uno: el color con su "
         "transparencia, y un mapa de normales, specular y emisión donde un material lo tenga. Ese pasa a ser el único "
-        "material de la prenda. El mapa UV original se conserva como DCT Source UV."
+        "material de la prenda. El mapa UV original se conserva como DCT Source UV. Método en Opciones puede, en su "
+        "lugar, poner la imagen de cada material en su propio cuadrado de la textura sin hornear, lo que no necesita "
+        "Cycles. Automática lo hace cuando cada material tiene exactamente una imagen."
     ),
     "garment.info.lods": (
         "Reduce una copia de la prenda a cada presupuesto de triángulos y la pone en las ranuras de LOD Medium y Low "
@@ -901,7 +903,7 @@ TEXT = {
     "garment.tears.pose-skipped": "{pose}: omitida, la armadura no tiene un hueso para ella",
     "garment.error.cycles": (
         "Combinar materiales hornea con Cycles. Activa Cycles en Editar > Preferencias > Complementos y vuelve a "
-        "intentarlo."
+        "intentarlo. O elige Empaquetar sin hornear en Opciones."
     ),
     "garment.body.compressed": (
         "Este Blender no puede leer el cuerpo freemode comprimido. Usa Blender 5.2 o posterior, o un archivo de "
@@ -1478,4 +1480,35 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Creando el nivel Medium",
     "garment.stage.lod-low": "Creando el nivel Low",
+    "garment.prop.combine-method": "Método",
+    "garment.prop.combine-method.desc": "Cómo Combinar materiales crea la única textura de la prenda",
+    "garment.combine-method.auto": "Automática",
+    "garment.combine-method.auto.desc": (
+        "Empaquetar sin hornear cuando cada material tiene exactamente una imagen; si no, Hornear"
+    ),
+    "garment.combine-method.bake": "Hornear",
+    "garment.combine-method.bake.desc": (
+        "Empaquetar las islas UV en una distribución y hornear cada material con Cycles, con su transparencia y los "
+        "mapas de normales, specular y emisión que tenga"
+    ),
+    "garment.combine-method.pack": "Empaquetar sin hornear",
+    "garment.combine-method.pack.desc": (
+        "Poner la imagen de color de cada material en su propio cuadrado de una textura y mover allí sus UV. No "
+        "necesita Cycles; los demás mapas se omiten"
+    ),
+    "garment.done.combine-packed": (
+        "Se empaquetaron {count} materiales sin hornear en una textura de {size} píxeles, {density} píxeles por "
+        "centímetro en la prenda."
+    ),
+    "garment.done.combine-packed-outside": (
+        "Se empaquetaron {count} materiales sin hornear en una textura de {size} píxeles, pero {points} puntos UV "
+        "quedaban fuera de su imagen (una textura que se repite) y se llevaron a su borde. Elige Hornear en Opciones "
+        "para conservar la repetición."
+    ),
+    "garment.error.pack-missing": (
+        "Empaquetar sin hornear necesita los píxeles de cada imagen, y estas no se encontraron: {names}. Pon los "
+        "archivos de imagen donde los esperan los materiales (o empaquétalos) y vuelve a combinar."
+    ),
+    "garment.stage.pack-images": "Colocando las imágenes",
+    "garment.stage.pack-fill": "Rellenando los huecos entre las imágenes",
 }

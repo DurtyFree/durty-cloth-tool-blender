@@ -29,7 +29,8 @@ from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProp
                        PointerProperty, StringProperty)
 from bpy.types import Menu, Operator, Panel, PropertyGroup
 
-from . import garment, garment_add, garment_avatars, garment_body, garment_fit, host, link, state, strings, ui
+from . import garment, garment_add, garment_atlas, garment_avatars, garment_body, garment_fit, host, link, state
+from . import strings, ui
 from . import settings as addon_settings
 from . import garment_dct as gdct
 from . import garment_host as gh
@@ -176,6 +177,8 @@ CATEGORY_ITEMS = [None if c is None else (c, EN[f"garment.category.{c}"], EN[f"g
 #: The slots each type offers.
 TYPE_SLOT_ITEMS = {c: [SLOT_ITEMS[slot] for slot in garment.slots_for(c)] for c in garment.CATEGORIES}
 SIZE_ITEMS = (("2048", "2048", EN["garment.size.desc"]), ("4096", "4096", EN["garment.size.desc"]))
+COMBINE_METHOD_ITEMS = tuple((m, EN[f"garment.combine-method.{m}"], EN[f"garment.combine-method.{m}.desc"])
+                             for m in garment_atlas.METHODS)
 #: The ped shader's vertex colours most clothing uses (as Sollumz's clothing tutorial gives them): Color 1 #FF8000,
 #: full ambient light and a medium reflection; Color 2 black with no alpha, no vertex wind and no sweat. Both can be
 #: changed under Prepare Garment.
@@ -360,6 +363,8 @@ class DCTLINK_PG_garment(PropertyGroup):
                                description=EN["garment.size.desc"], translation_context=CONTEXT)
     cut_strips: BoolProperty(name=EN["garment.prop.cut"], default=True, description=EN["garment.prop.cut.desc"],
                              translation_context=CONTEXT)
+    combine_method: EnumProperty(name=EN["garment.prop.combine-method"], items=COMBINE_METHOD_ITEMS, default="auto",
+                                 description=EN["garment.prop.combine-method.desc"], translation_context=CONTEXT)
     fit_clearance: FloatProperty(name=EN["garment.prop.clearance"], default=3.0, min=0.0, max=20.0, precision=1,
                                  description=EN["garment.prop.clearance.desc"], translation_context=CONTEXT)
     fit_push: BoolProperty(name=EN["garment.prop.service-push"], default=True,
@@ -1766,9 +1771,16 @@ class DCTLINK_OT_fit_combine(_SteppedOp):
 
     def steps(self, context):
         settings_ = props(context)
-        return gh.combine_steps(context, current_garment(context), int(settings_.texture_size), settings_.cut_strips)
+        return gh.combine_steps(context, current_garment(context), int(settings_.texture_size), settings_.cut_strips,
+                                settings_.combine_method)
 
     def finished(self, context, result):
+        if result["method"] == "pack":
+            if result["outside"]:
+                return "WARNING", msg("garment.done.combine-packed-outside", count=result["materials"],
+                                      size=result["size"], points=result["outside"])
+            return msg("garment.done.combine-packed", count=result["materials"], size=result["size"],
+                       density=result["density"])
         if result["missing"]:
             return "WARNING", msg("garment.done.combine-missing", count=len(result["missing"]),
                                   names=", ".join(result["missing"][:4]))
@@ -3171,6 +3183,7 @@ def draw_ready(layout: Any, context: Any) -> None:
         subtext(layout, context, "garment.combine.nothing")
     body = options(layout, context, "combine")
     if body is not None:
+        labelled(body, context, settings_, "combine_method", "garment.prop.combine-method")
         row = body.row(align=True)
         row.prop(settings_, "texture_size", expand=True)
         ui.checkbox(body, context, settings_, "cut_strips", "garment.prop.cut")

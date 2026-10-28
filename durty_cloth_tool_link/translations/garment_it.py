@@ -340,7 +340,10 @@ TEXT = {
     "garment.done.tpose-none": "Le braccia sono già all'angolo impostato.",
     "garment.done.use": "Gli strumenti ora agiscono su {name}.",
     "garment.error.bake": "Bake non riuscito: {detail}",
-    "garment.error.cycles": "Combina i materiali esegue il bake con Cycles. Attiva Cycles in Edit > Preferences > Add-ons, poi riprova.",
+    "garment.error.cycles": (
+        "Combina i materiali esegue il bake con Cycles. Attiva Cycles in Edit > Preferences > Add-ons, poi riprova. "
+        "Oppure scegli Compatta senza bake in Opzioni."
+    ),
     "garment.error.import": "Non è stato possibile importare il file: {detail}",
     "garment.error.mode": "Non è stato possibile avviare Sculpt Mode: {detail}",
     "garment.error.no-mesh": "Il file non contiene mesh.",
@@ -387,7 +390,13 @@ TEXT = {
     "garment.info.backups": "Prima di ogni passaggio che modifica il capo viene conservata una copia della sua mesh nel file .blend (la prima e le più recenti). Indietro di un passaggio ripristina la più recente, Ripristina prima dell'adattamento la prima. Le copie vengono eliminate insieme al capo quando viene eliminato o aggiunto a Durty Cloth Tool.",
     "garment.info.body": "Il corpo freemode viene scaricato da gta.clothing una volta per versione e conservato nella cartella dell'add-on. Viene aggiunto alla scena come oggetto separato e gli strumenti non lo modificano mai.",
     "garment.info.check": "Misura quanto ogni zona del capo è distante dal corpo: il valore mediano e l'intervallo della maggior parte dei suoi vertici, in millimetri. I valori negativi indicano punti all'interno del corpo.",
-    "garment.info.combine": "Compatta tutte le isole UV in un quadrato ed esegue il bake di tutti i materiali in uno solo: il colore con la sua trasparenza e le mappe delle normali, speculare e di emissione, se presenti nei materiali. Questo diventa l'unico materiale del capo. La mappa UV originale viene conservata come DCT Source UV.",
+    "garment.info.combine": (
+        "Compatta tutte le isole UV in un quadrato ed esegue il bake di tutti i materiali in uno solo: il colore con "
+        "la sua trasparenza e le mappe delle normali, speculare e di emissione, se presenti nei materiali. Questo "
+        "diventa l'unico materiale del capo. La mappa UV originale viene conservata come DCT Source UV. Metodo in "
+        "Opzioni può invece mettere l'immagine di ogni materiale nel suo quadrato della texture senza bake, e così non "
+        "serve Cycles. Automatico lo fa quando ogni materiale ha esattamente un'immagine."
+    ),
     "garment.info.garment": "Gli strumenti modificano solo questo oggetto. Importa capo converte centimetri e millimetri, come esportati da Marvelous Designer, in metri. Ogni passaggio che modifica il capo conserva un backup e Ctrl+Z lo annulla.",
     "garment.info.lods": (
         "Decima una copia del capo fino al limite di triangoli di ciascun livello e la inserisce negli slot LOD "
@@ -488,7 +497,10 @@ TEXT = {
     "garment.op.check": "Controlla vestibilità",
     "garment.op.check.desc": "Misura quanto ogni zona del capo è distante dal corpo",
     "garment.op.combine": "Combina i materiali",
-    "garment.op.combine.desc": "Compatta tutte le isole UV in una disposizione ed esegui il bake di tutti i materiali in uno solo: il colore con la sua trasparenza e le mappe delle normali, speculare e di emissione, se presenti",
+    "garment.op.combine.desc": (
+        "Trasforma tutti i materiali in uno con un'unica texture: con il bake in Cycles, oppure compattando l'immagine "
+        "di ogni materiale nel suo quadrato senza bake. Lo decide Metodo in Opzioni"
+    ),
     "garment.op.import": "Importa capo",
     "garment.op.import.desc": "Importa un capo da un file FBX, OBJ o glTF (ad esempio da Marvelous Designer), in metri e come unico oggetto",
     "garment.op.load-preset": "Carica preset di posa",
@@ -819,4 +831,35 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Creazione del livello Medium",
     "garment.stage.lod-low": "Creazione del livello Low",
+    "garment.prop.combine-method": "Metodo",
+    "garment.prop.combine-method.desc": "Come Combina i materiali crea l'unica texture del capo",
+    "garment.combine-method.auto": "Automatico",
+    "garment.combine-method.auto.desc": (
+        "Compatta senza bake quando ogni materiale ha esattamente un'immagine, altrimenti Bake"
+    ),
+    "garment.combine-method.bake": "Bake",
+    "garment.combine-method.bake.desc": (
+        "Compatta le isole UV in una disposizione ed esegui il bake di ogni materiale con Cycles, con la sua "
+        "trasparenza e le eventuali mappe delle normali, speculare e di emissione"
+    ),
+    "garment.combine-method.pack": "Compatta senza bake",
+    "garment.combine-method.pack.desc": (
+        "Metti l'immagine del colore di ogni materiale nel suo quadrato di un'unica texture e sposta lì le sue UV. Non "
+        "serve Cycles; le altre mappe vengono tralasciate"
+    ),
+    "garment.done.combine-packed": (
+        "Compattati {count} materiali senza bake in un'unica texture da {size} pixel, con {density} pixel per "
+        "centimetro sul capo."
+    ),
+    "garment.done.combine-packed-outside": (
+        "Compattati {count} materiali senza bake in un'unica texture da {size} pixel, ma {points} punti UV erano fuori "
+        "dalla loro immagine (una texture ripetuta) e sono stati spostati sul suo bordo. Scegli Bake in Opzioni per "
+        "mantenere la ripetizione."
+    ),
+    "garment.error.pack-missing": (
+        "Compatta senza bake ha bisogno dei pixel di ogni immagine, e queste non sono state trovate: {names}. "
+        "Posiziona i file immagine dove sono previsti dai materiali, oppure incorporali, poi combina di nuovo."
+    ),
+    "garment.stage.pack-images": "Posizionamento delle immagini",
+    "garment.stage.pack-fill": "Riempimento degli spazi tra le immagini",
 }

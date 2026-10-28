@@ -340,7 +340,10 @@ TEXT = {
     "garment.done.tpose-none": "Kollar zaten kol açısında.",
     "garment.done.use": "Üzerinde çalışılıyor: {name}.",
     "garment.error.bake": "Bake işlemi başarısız oldu: {detail}",
-    "garment.error.cycles": "Malzemeleri birleştir, Cycles ile bake uygular. Edit > Preferences > Add-ons altından Cycles özelliğini açıp yeniden deneyin.",
+    "garment.error.cycles": (
+        "Malzemeleri birleştir, Cycles ile bake uygular. Edit > Preferences > Add-ons altından Cycles özelliğini açıp "
+        "yeniden deneyin. Ya da Seçenekler altında Bake uygulamadan paketle seçin."
+    ),
     "garment.error.import": "Dosya içe aktarılamadı: {detail}",
     "garment.error.mode": "Sculpt Mode başlatılamadı: {detail}",
     "garment.error.no-mesh": "Dosyada ağ yok.",
@@ -387,7 +390,13 @@ TEXT = {
     "garment.info.backups": "Kıyafeti değiştiren her adımdan önce ağının kopyası .blend dosyasında tutulur (ilk ve en yeni kopyalar). Bir adım geri en yenisini, Uyarlama öncesine dön ilkini geri getirir. Kıyafet silindiğinde veya Durty Cloth Tool uygulamasına eklendiğinde kopyalar da kaldırılır.",
     "garment.info.body": "Freemode bedeni her sürüm için gta.clothing üzerinden bir kez indirilip eklentinin klasöründe tutulur. Sahneye kendi nesnesi olarak eklenir; araçlar onu asla değiştirmez.",
     "garment.info.check": "Kıyafetin her bölgesinin bedenden ne kadar uzakta durduğunu ölçer: köşelerinin orta değeri ve çoğunu kapsayan aralık, milimetre cinsinden. Negatif değerler bedenin içindedir.",
-    "garment.info.combine": "Tüm UV adalarını tek kareye paketleyip her malzemeye bake uygulayarak tek malzemede birleştirir: saydamlığıyla renk ve malzemede varsa normal, yansıtma ve yayım haritası. Bu, kıyafetin tek malzemesi olur. Özgün UV haritası DCT Source UV olarak korunur.",
+    "garment.info.combine": (
+        "Tüm UV adalarını tek kareye paketleyip her malzemeye bake uygulayarak tek malzemede birleştirir: "
+        "saydamlığıyla renk ve malzemede varsa normal, yansıtma ve yayım haritası. Bu, kıyafetin tek malzemesi olur. "
+        "Özgün UV haritası DCT Source UV olarak korunur. Seçenekler altındaki Yöntem bunun yerine her malzemenin "
+        "resmini bake uygulamadan dokunun kendi karesine koyabilir; bunun için Cycles gerekmez. Her malzemede tam bir "
+        "resim varsa Otomatik bunu yapar."
+    ),
     "garment.info.garment": "Araçlar yalnızca bu nesneyi değiştirir. Kıyafet içe aktar, santimetre ve milimetreyi (Marvelous Designer dışa aktarımındaki gibi) metreye dönüştürür. Kıyafeti değiştiren her adım yedek tutar ve Ctrl+Z ile geri alınabilir.",
     "garment.info.lods": (
         "Kıyafetin bir kopyasının çokgen sayısını her üçgen bütçesine göre azaltıp Sollumz içindeki Medium ve Low LOD "
@@ -487,7 +496,10 @@ TEXT = {
     "garment.op.check": "Uyum kontrolünü çalıştır",
     "garment.op.check.desc": "Kıyafetin her bölgesinin bedenden ne kadar uzakta durduğunu ölçer",
     "garment.op.combine": "Malzemeleri birleştir",
-    "garment.op.combine.desc": "Tüm UV adalarını tek yerleşime paketleyip her malzemeye bake uygulayarak birleştirir: saydamlığıyla renk ve varsa normal, yansıtma ve yayım haritaları",
+    "garment.op.combine.desc": (
+        "Tüm malzemeleri tek dokulu tek malzemeye dönüştürür: Cycles ile bake uygulanarak ya da her malzemenin resmi "
+        "bake uygulanmadan kendi karesine paketlenerek. Seçenekler altındaki Yöntem karar verir"
+    ),
     "garment.op.import": "Kıyafet içe aktar",
     "garment.op.import.desc": "Örneğin Marvelous Designer kaynaklı FBX, OBJ veya glTF dosyasından kıyafeti metre cinsinden tek nesne olarak içe aktarır",
     "garment.op.load-preset": "Poz hazır ayarı yükle",
@@ -818,4 +830,32 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Medium seviyesi oluşturuluyor",
     "garment.stage.lod-low": "Low seviyesi oluşturuluyor",
+    "garment.prop.combine-method": "Yöntem",
+    "garment.prop.combine-method.desc": "Malzemeleri birleştir, kıyafetin tek dokusunu nasıl oluşturur",
+    "garment.combine-method.auto": "Otomatik",
+    "garment.combine-method.auto.desc": "Her malzemede tam bir resim varsa Bake uygulamadan paketle, yoksa Bake",
+    "garment.combine-method.bake": "Bake",
+    "garment.combine-method.bake.desc": (
+        "UV adalarını tek yerleşime paketleyip her malzemeye Cycles ile bake uygular; saydamlığı ve varsa normal, "
+        "yansıtma ve yayım haritalarıyla"
+    ),
+    "garment.combine-method.pack": "Bake uygulamadan paketle",
+    "garment.combine-method.pack.desc": (
+        "Her malzemenin renk resmini tek dokunun kendi karesine koyar ve UV'lerini oraya taşır. Cycles gerekmez; diğer "
+        "haritalar alınmaz"
+    ),
+    "garment.done.combine-packed": (
+        "{count} malzeme bake uygulanmadan {size} piksellik tek dokuya paketlendi; kıyafette santimetre başına "
+        "{density} piksel."
+    ),
+    "garment.done.combine-packed-outside": (
+        "{count} malzeme bake uygulanmadan {size} piksellik tek dokuya paketlendi, ancak {points} UV noktası resminin "
+        "dışındaydı (tekrarlanan doku) ve kenarına taşındı. Tekrarı korumak için Seçenekler altında Bake seçin."
+    ),
+    "garment.error.pack-missing": (
+        "Bake uygulamadan paketle her resmin piksellerine ihtiyaç duyar ve bunlar bulunamadı: {names}. Resim "
+        "dosyalarını malzemelerin beklediği yere koyun (veya paketleyin), ardından yeniden birleştirin."
+    ),
+    "garment.stage.pack-images": "Resimler yerleştiriliyor",
+    "garment.stage.pack-fill": "Resimler arasındaki boşluklar dolduruluyor",
 }

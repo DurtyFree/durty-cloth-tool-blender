@@ -24,7 +24,7 @@ import numpy as np
 from mathutils import Matrix, Vector
 from mathutils.bvhtree import BVHTree
 
-from . import garment, garment_add, garment_avatars, garment_fit
+from . import garment, garment_add, garment_atlas, garment_avatars, garment_fit
 from .strings import UserError, msg
 
 #: Custom properties the add-on keeps on the garment (and the .blend file keeps with it).
@@ -2052,45 +2052,101 @@ def missing_textures(materials: Sequence[Any]) -> List[str]:
     return missing
 
 
-def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
-                      progress: Optional[Progress] = None) -> Dict[str, Any]:
-    """:func:`combine_steps` at once."""
-    steps = combine_steps(context, obj, size, cut_strips)
-    while True:
-        try:
-            next(steps)
-        except StopIteration as stop:
-            return stop.value
-        if progress is not None:
-            progress.step()
+def _colour_image(material: Any) -> Optional[Any]:
+    """The image node that gives a material its colour: the one linked to the shader's Base Color, otherwise the
+    material's only image node, otherwise ``None``."""
+    textures = _texture_nodes(material)
+    colour = _input(_principled(material), "Base Color")
+    if colour is not None and colour.is_linked and colour.links[0].from_node in textures:
+        return colour.links[0].from_node
+    return textures[0] if len(textures) == 1 else None
 
 
-def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
-    """Packs every UV island of the garment into one 0 to 1 layout (long thin strips cut into pieces first) and
-    bakes all its materials into one material of ``size`` pixels: the colour with the see-through parts in its alpha,
-    and a normal, a specular and an emission map where a material has one. The original UV layout is kept as
-    ``DCT Source UV``. A generator: it yields ``(stage text key, done, total)`` before each stage (one per bake), so a
-    modal operator can show the progress and stop between stages (a stopped run puts the scene's bake settings and
-    the materials back; the garment's backup puts its mesh back). Returns what it did, with ``missing``, the textures
-    that could not be found and were baked without their pixels."""
-    mesh = obj.data
-    materials = []
+def _reads_plainly(node: Any, source: str) -> bool:
+    """Whether an image node reads the garment's UV map ``source`` as it is: nothing linked to its Vector, or a UV Map
+    node of that map (or of the active one), or the UV of a Texture Coordinate node. A UDIM image never does."""
+    if node.image.source == "TILED":
+        return False
+    vector = node.inputs["Vector"]
+    if not vector.is_linked:
+        return True
+    link = vector.links[0]
+    if link.from_node.type == "UVMAP":
+        return link.from_node.uv_map in ("", source)
+    return link.from_node.type == "TEX_COORD" and link.from_socket.name == "UV"
+
+
+def _pack_source(material: Any) -> Any:
+    """What :func:`garment_atlas.place_image` puts into a material's square: its colour image's pixels in the combined
+    texture's sRGB encoding, the alpha from the image where the shader's Alpha reads it and from the shader's Alpha
+    value otherwise; or the shader's colour for a material without an image."""
+    shader = _principled(material)
+    alpha = _input(shader, "Alpha")
+    node = _colour_image(material)
+    if node is None or tuple(node.image.size)[0] == 0:
+        colour = _input(shader, "Base Color")
+        rgba = list(colour.default_value) if colour is not None else list(material.diffuse_color)
+        rgba = [*garment_atlas.linear_to_srgb(rgba[:3]).tolist(), 1.0]
+        if alpha is not None and not alpha.is_linked:
+            rgba[3] = float(alpha.default_value)
+        return rgba
+    image = node.image
+    width, height = image.size
+    channels = image.channels
+    pixels = np.empty(width * height * channels, dtype=np.float32)
+    image.pixels.foreach_get(pixels)
+    pixels = pixels.reshape(height, width, channels)
+    rgba = np.ones((height, width, 4), dtype=np.float32)
+    rgba[..., :3] = pixels[..., :3] if channels >= 3 else pixels[..., :1]
+    if image.is_float and image.colorspace_settings.name != "Non-Color":
+        rgba[..., :3] = garment_atlas.linear_to_srgb(rgba[..., :3])
+    if alpha is not None and alpha.is_linked and alpha.links[0].from_node == node and channels == 4:
+        rgba[..., 3] = pixels[..., 3]
+    elif alpha is not None and not alpha.is_linked:
+        rgba[..., 3] = float(alpha.default_value)
+    return rgba
+
+
+def _garment_materials(obj: Any) -> List[Any]:
+    """The garment's materials, each once, in the order of its material slots."""
+    materials: List[Any] = []
     for slot in obj.material_slots:
         if slot.material is not None and slot.material not in materials:
             materials.append(slot.material)
-    maps = _maps_present(materials)
-    total = 5 + sum(1 for key in ("alpha", "specular", "normal", "emission") if maps.get(key))
-    missing = missing_textures(materials)
-    yield "garment.stage.pack-cut", 0, total
-    if not mesh.uv_layers:
+    return materials
+
+
+def combine_method(obj: Any, method: str) -> str:
+    """``"pack"`` or ``"bake"``: what Combine Materials' ``method`` (:data:`garment_atlas.METHODS`) does with the
+    garment (:func:`garment_atlas.choose_method`). Under Automatic, an image that cannot be found, or one read through
+    a mapping, another UV map or UDIM tiles, bakes."""
+    mesh = obj.data
+    materials = _garment_materials(obj)
+    counts = [len(_texture_nodes(material)) for material in materials]
+    if method != "auto" or not materials or not mesh.uv_layers:
+        return garment_atlas.choose_method(method, counts, plain=False)
+    source = mesh.uv_layers.active.name if mesh.uv_layers.active is not None else mesh.uv_layers[0].name
+    plain = all(_reads_plainly(node, source) for material in materials for node in _texture_nodes(material))
+    plain = plain and not missing_textures(materials)
+    return garment_atlas.choose_method(method, counts, plain=plain,
+                                       outside=garment_atlas.outside_count(read_uv(mesh, source)))
+
+
+def _combine_checks(obj: Any) -> None:
+    """Raises :class:`UserError` for a garment Combine Materials cannot work on."""
+    if not obj.data.uv_layers:
         raise fail("garment.why.no-uv")
     if any(slot.material is None for slot in obj.material_slots) or not obj.material_slots:
         raise fail("garment.why.empty-slot")
     if any(getattr(slot.material, "sollum_type", None) == "sollumz_material_shader" for slot in obj.material_slots):
         raise fail("garment.why.ped-material")
-    hide_problems(obj)
+
+
+def _source_to_dct_uv(mesh: Any) -> Tuple[str, np.ndarray]:
+    """Keeps the garment's UV map (the active one) as :data:`SOURCE_UV` and adds an empty :data:`PACKED_UV`; returns
+    the map's old name and its UVs, read before the layer is added (the Blender 5.2 crash)."""
     source = mesh.uv_layers.active.name if mesh.uv_layers.active is not None else mesh.uv_layers[0].name
-    source_uv = read_uv(mesh, source)  # before a layer is added (the Blender 5.2 crash)
+    source_uv = read_uv(mesh, source)
     if source != SOURCE_UV:
         if mesh.uv_layers.get(SOURCE_UV) is not None:
             mesh.uv_layers[SOURCE_UV].name = SOURCE_UV + " (old)"
@@ -2100,6 +2156,95 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
     if len(mesh.uv_layers) >= 8:
         raise fail("garment.why.uv-full")
     mesh.uv_layers.new(name=PACKED_UV)
+    return source, source_uv
+
+
+def pack_steps(context: Any, obj: Any, size: int) -> Any:
+    """Combine Materials without baking: each material's colour image goes into its own square of one texture of at
+    most ``size`` pixels (:func:`garment_atlas.atlas_layout`), the gaps between them take the colours next to them,
+    and each face's UVs move into its material's square. No Cycles is needed. The original UV layout is kept as
+    ``DCT Source UV``. A generator like :func:`combine_steps`, which runs it; the garment's mesh changes only after
+    the last stage."""
+    _combine_checks(obj)
+    mesh = obj.data
+    materials = _garment_materials(obj)
+    missing = missing_textures(materials)
+    if missing:
+        raise fail("garment.error.pack-missing", names=", ".join(missing[:4]))
+    total = len(materials) + 2
+    sizes = []
+    for material in materials:
+        node = _colour_image(material)
+        sizes.append(tuple(node.image.size) if node is not None and node.image.size[0] else (0, 0))
+    layout = garment_atlas.atlas_layout(sizes, size)
+    pixels, valid = garment_atlas.blank_atlas(layout)
+    for index, material in enumerate(materials):
+        yield "garment.stage.pack-images", index, total
+        garment_atlas.place_image(pixels, valid, layout, index, _pack_source(material))
+    yield "garment.stage.pack-fill", len(materials), total
+    pixels = garment_atlas.fill_gaps(pixels, valid)
+    yield "garment.stage.material", total - 1, total
+
+    hide_problems(obj)
+    _source, source_uv = _source_to_dct_uv(mesh)
+    _loop_vertex, _start, face_total = loop_arrays(mesh)
+    face_slot = np.empty(len(mesh.polygons), dtype=np.int64)
+    mesh.polygons.foreach_get("material_index", face_slot)
+    slot_image = np.array([materials.index(slot.material) for slot in obj.material_slots], dtype=np.int64)
+    loop_image = slot_image[np.clip(np.repeat(face_slot, face_total), 0, len(slot_image) - 1)]
+    packed, outside = garment_atlas.remap_uvs(source_uv, loop_image, layout)
+    mesh.uv_layers[PACKED_UV].data.foreach_set("uv", packed.astype(np.float32).reshape(-1))
+    mesh.uv_layers.active = mesh.uv_layers[PACKED_UV]
+    mesh.uv_layers[PACKED_UV].active_render = True
+    alpha = _maps_present(materials)["alpha"]
+    image = _image(f"{obj.name}_diffuse", pixels)
+    combined_material = _combined_material(obj.name, {"diffuse": image}, alpha)
+    mesh.materials.clear()
+    mesh.materials.append(combined_material)
+    mesh.polygons.foreach_set("material_index", np.zeros(len(mesh.polygons), dtype=np.int32))
+    mesh.update()
+    triangles_uv = _triangle_uv(mesh, PACKED_UV)
+    triangles = world_positions(obj)[mesh_triangles(mesh)]
+    clear_flags(obj, "dct_validated", "dct_lods", FINDINGS)  # levels of detail made before keep the old materials
+    return {"method": "pack", "materials": len(materials), "size": layout.size, "grid": layout.grid,
+            "outside": outside, "density": garment.texel_density(triangles_uv, triangles, layout.size),
+            "image": image.name, "maps": ["alpha"] if alpha else [], "missing": []}
+
+
+def combine_materials(context: Any, obj: Any, size: int, cut_strips: bool,
+                      progress: Optional[Progress] = None, method: str = "bake") -> Dict[str, Any]:
+    """:func:`combine_steps` at once."""
+    steps = combine_steps(context, obj, size, cut_strips, method)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+        if progress is not None:
+            progress.step()
+
+
+def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool, method: str = "bake") -> Any:
+    """Combine Materials by ``method`` (:data:`garment_atlas.METHODS`, see :func:`combine_method`): Pack Without
+    Baking runs :func:`pack_steps`. Bake packs every UV island of the garment into one 0 to 1 layout (long thin
+    strips cut into pieces first) and bakes all its materials into one material of ``size`` pixels: the colour with
+    the see-through parts in its alpha, and a normal, a specular and an emission map where a material has one. The
+    original UV layout is kept as ``DCT Source UV``. A generator: it yields ``(stage text key, done, total)`` before
+    each stage (one per bake), so a modal operator can show the progress and stop between stages (a stopped run puts
+    the scene's bake settings and the materials back; the garment's backup puts its mesh back). Returns what it did,
+    with ``missing``, the textures that could not be found and were baked without their pixels, and ``method``,
+    ``"bake"`` or ``"pack"``."""
+    if combine_method(obj, method) == "pack":
+        return (yield from pack_steps(context, obj, size))
+    mesh = obj.data
+    materials = _garment_materials(obj)
+    maps = _maps_present(materials)
+    total = 5 + sum(1 for key in ("alpha", "specular", "normal", "emission") if maps.get(key))
+    missing = missing_textures(materials)
+    yield "garment.stage.pack-cut", 0, total
+    _combine_checks(obj)
+    hide_problems(obj)
+    source, source_uv = _source_to_dct_uv(mesh)
     packed = mesh.uv_layers[PACKED_UV]  # fetched again by name after adding it
     loop_vertex, start, face_total = loop_arrays(mesh)
     loop_face = np.repeat(np.arange(len(start)), face_total)
@@ -2291,7 +2436,7 @@ def combine_steps(context: Any, obj: Any, size: int, cut_strips: bool) -> Any:
     areas, _surface = garment.triangle_areas(triangles_uv, np.zeros((len(triangles_uv), 3, 3)))
     used = float((areas * halves)[chosen].sum())
     clear_flags(obj, "dct_validated", "dct_lods", FINDINGS)  # levels of detail made before keep the old materials
-    return {"materials": len(materials), "size": size, "cut": cut,
+    return {"method": "bake", "materials": len(materials), "size": size, "cut": cut,
             "used": round(100.0 * min(1.0, used), 1), "sparse": used < garment.SPARSE_LAYOUT_SHARE,
             "walls": int((~usable_face).sum()), "stray": int(stray.sum()),
             "stacked": int((usable_face & ~packed_face).sum()),

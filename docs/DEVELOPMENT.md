@@ -41,6 +41,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `pixels.py` | Reading Blender's float pixels into RGBA8 rows, change detection and dirty rectangles, in small steps per timer tick |
 | `bundle.py` | Collecting a Sollumz export (one `*.ydd.xml` and its `*.dds` files) into a model push |
 | `garment.py` | Garment Fitting maths: types and slots, the type a file name names, import units and exports normalised to 1 m, markers and their plausibility, Align to Body, regions, the fit check, problem colours, Push Out of Body by region, Fix Spikes, seam welding, faces turned away from the body and the back shell, choosing among LOD candidates by their holes, Validate's checks, pose presets, the next-step hint |
+| `garment_atlas.py` | Combine Materials without baking: which Method Automatic picks, the power-of-two atlas grid, each material's image placed in its square, the gaps filled from neighbouring colours, the UVs moved into their squares |
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
 | `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version |
 | `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today |

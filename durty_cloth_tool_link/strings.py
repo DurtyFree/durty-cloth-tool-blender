@@ -779,8 +779,8 @@ EN: Dict[str, str] = {
     ),
     "garment.op.combine": "Combine Materials",
     "garment.op.combine.desc": (
-        "Pack all UV islands into one layout and bake every material into one: the colour with its transparency, and "
-        "normal, specular and emission maps where there are any"
+        "Make every material into one with one texture: baked with Cycles, or each material's image packed into its "
+        "own square without baking. Method under Options chooses"
     ),
     "garment.combine.nothing": "Nothing to combine: the garment has one material.",
     "garment.op.lods": "Generate LODs",
@@ -1014,7 +1014,9 @@ EN: Dict[str, str] = {
     "garment.info.combine": (
         "Packs all UV islands into one square and bakes every material into one: the colour with its transparency, and "
         "a normal, specular and emission map where a material has one. That becomes the garment's only material. The "
-        "original UV map is kept as DCT Source UV."
+        "original UV map is kept as DCT Source UV. Method under Options can instead put each material's image into its "
+        "own square of the texture without baking, which needs no Cycles. Automatic does that when every material has "
+        "exactly one image."
     ),
     "garment.info.lods": (
         "Decimates a copy of the garment to each triangle budget and puts it into Sollumz's Medium and Low LOD slots, "
@@ -1517,7 +1519,8 @@ EN: Dict[str, str] = {
     ),
     "garment.tears.pose-skipped": "{pose}: skipped, the armature has no bone for it",
     "garment.error.cycles": (
-        "Combine Materials bakes with Cycles. Turn on Cycles under Edit > Preferences > Add-ons, then try again."
+        "Combine Materials bakes with Cycles. Turn on Cycles under Edit > Preferences > Add-ons, then try again. Or "
+        "choose Pack Without Baking under Options."
     ),
     "garment.body.compressed": (
         "This Blender cannot read the compressed freemode body. Use Blender 5.2 or later, or a body file, until "
@@ -1849,6 +1852,34 @@ EN: Dict[str, str] = {
     "garment.done.spikes-none": "Nothing had jumped away from the cloth around it; the garment is as it was.",
     "garment.stage.spikes": "Finding and pulling back spikes",
     "garment.stage.spikes-body": "Keeping the cloth out of the body",
+    "garment.prop.combine-method": "Method",
+    "garment.prop.combine-method.desc": "How Combine Materials makes the garment's one texture",
+    "garment.combine-method.auto": "Automatic",
+    "garment.combine-method.auto.desc": "Pack Without Baking when every material has exactly one image, Bake otherwise",
+    "garment.combine-method.bake": "Bake",
+    "garment.combine-method.bake.desc": (
+        "Pack the UV islands into one layout and bake every material with Cycles, with its transparency and any "
+        "normal, specular and emission maps"
+    ),
+    "garment.combine-method.pack": "Pack Without Baking",
+    "garment.combine-method.pack.desc": (
+        "Put each material's colour image into its own square of one texture and move its UVs there. Needs no Cycles; "
+        "other maps are left out"
+    ),
+    "garment.done.combine-packed": (
+        "Packed {count} materials into one texture of {size} pixels without baking, {density} pixels per centimetre on "
+        "the garment."
+    ),
+    "garment.done.combine-packed-outside": (
+        "Packed {count} materials into one texture of {size} pixels without baking, but {points} UV points lay outside "
+        "their image (a repeating texture) and were moved to its edge. Choose Bake under Options to keep the repeat."
+    ),
+    "garment.error.pack-missing": (
+        "Pack Without Baking needs every image's pixels, and these could not be found: {names}. Put the image files "
+        "where the materials expect them (or pack them), then combine again."
+    ),
+    "garment.stage.pack-images": "Placing the images",
+    "garment.stage.pack-fill": "Filling the gaps between the images",
 }
 # Custom Ped's texts live in their own table (translated in the ``ped_<language>`` modules of ``translations``).
 EN.update(ped_strings.EN)

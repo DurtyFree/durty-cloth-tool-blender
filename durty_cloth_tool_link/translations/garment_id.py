@@ -340,7 +340,10 @@ TEXT = {
     "garment.done.tpose-none": "Lengan sudah berada pada sudut lengan.",
     "garment.done.use": "Mengerjakan {name}.",
     "garment.error.bake": "Bake gagal: {detail}",
-    "garment.error.cycles": "Gabungkan Material menggunakan Cycles untuk bake. Aktifkan Cycles di Edit > Preferences > Add-ons, lalu coba lagi.",
+    "garment.error.cycles": (
+        "Gabungkan Material menggunakan Cycles untuk bake. Aktifkan Cycles di Edit > Preferences > Add-ons, lalu coba "
+        "lagi. Atau pilih Kemas Tanpa Bake di Opsi."
+    ),
     "garment.error.import": "File tidak dapat diimpor: {detail}",
     "garment.error.mode": "Sculpt Mode tidak dapat dimulai: {detail}",
     "garment.error.no-mesh": "File tidak memuat mesh.",
@@ -387,7 +390,13 @@ TEXT = {
     "garment.info.backups": "Sebelum setiap langkah yang mengubah pakaian, salinan mesh disimpan dalam file .blend (salinan pertama dan yang terbaru). Kembali Satu Langkah memulihkan yang terbaru, Pulihkan Sebelum Penyesuaian memulihkan yang pertama. Salinan ikut dihapus saat pakaian dihapus atau ditambahkan ke Durty Cloth Tool.",
     "garment.info.body": "Tubuh freemode diunduh dari gta.clothing sekali per versi dan disimpan di folder add-on. Tubuh ditambahkan ke adegan sebagai objek tersendiri, dan alat tidak pernah mengubahnya.",
     "garment.info.check": "Mengukur jarak setiap area pakaian dari tubuh: nilai tengah dan rentang sebagian besar vertex, dalam milimeter. Nilai negatif berada di dalam tubuh.",
-    "garment.info.combine": "Mengemas semua pulau UV ke satu persegi dan melakukan bake setiap material menjadi satu: warna beserta transparansinya, serta peta normal, spekular, dan emisi jika material memilikinya. Hasilnya menjadi satu-satunya material pakaian. Peta UV asli disimpan sebagai DCT Source UV.",
+    "garment.info.combine": (
+        "Mengemas semua pulau UV ke satu persegi dan melakukan bake setiap material menjadi satu: warna beserta "
+        "transparansinya, serta peta normal, spekular, dan emisi jika material memilikinya. Hasilnya menjadi "
+        "satu-satunya material pakaian. Peta UV asli disimpan sebagai DCT Source UV. Metode di Opsi juga dapat "
+        "meletakkan gambar setiap material di perseginya sendiri dalam tekstur tanpa bake, sehingga tidak memerlukan "
+        "Cycles. Otomatis melakukannya jika setiap material memiliki tepat satu gambar."
+    ),
     "garment.info.garment": "Alat hanya mengubah objek ini. Impor Pakaian mengonversi sentimeter dan milimeter (seperti ekspor Marvelous Designer) ke meter. Setiap langkah yang mengubah pakaian menyimpan cadangan, dan Ctrl+Z membatalkannya.",
     "garment.info.lods": (
         "Mengurangi detail salinan pakaian sesuai setiap batas segitiga dan menempatkannya di slot LOD Medium dan Low "
@@ -488,7 +497,10 @@ TEXT = {
     "garment.op.check": "Jalankan Pemeriksaan Penyesuaian",
     "garment.op.check.desc": "Ukur jarak setiap area pakaian dari tubuh",
     "garment.op.combine": "Gabungkan Material",
-    "garment.op.combine.desc": "Kemas semua pulau UV dalam satu tata letak dan lakukan bake setiap material menjadi satu: warna beserta transparansinya, serta peta normal, spekular, dan emisi jika tersedia",
+    "garment.op.combine.desc": (
+        "Jadikan semua material satu material dengan satu tekstur: di-bake dengan Cycles, atau gambar setiap material "
+        "dikemas tanpa bake di perseginya sendiri. Metode di Opsi yang menentukan"
+    ),
     "garment.op.import": "Impor Pakaian",
     "garment.op.import.desc": "Impor pakaian dari file FBX, OBJ, atau glTF (misalnya dari Marvelous Designer), dalam meter dan sebagai satu objek",
     "garment.op.load-preset": "Muat Preset Pose",
@@ -828,4 +840,35 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Membuat level Medium",
     "garment.stage.lod-low": "Membuat level Low",
+    "garment.prop.combine-method": "Metode",
+    "garment.prop.combine-method.desc": "Cara Gabungkan Material membuat satu tekstur pakaian",
+    "garment.combine-method.auto": "Otomatis",
+    "garment.combine-method.auto.desc": (
+        "Kemas Tanpa Bake jika setiap material memiliki tepat satu gambar, jika tidak Bake"
+    ),
+    "garment.combine-method.bake": "Bake",
+    "garment.combine-method.bake.desc": (
+        "Kemas pulau UV dalam satu tata letak dan lakukan bake setiap material dengan Cycles, beserta transparansinya "
+        "dan peta normal, spekular, serta emisi yang ada"
+    ),
+    "garment.combine-method.pack": "Kemas Tanpa Bake",
+    "garment.combine-method.pack.desc": (
+        "Letakkan gambar warna setiap material di perseginya sendiri dalam satu tekstur dan pindahkan UV-nya ke sana. "
+        "Tidak memerlukan Cycles; peta lain tidak disertakan"
+    ),
+    "garment.done.combine-packed": (
+        "{count} material dikemas tanpa bake menjadi satu tekstur berukuran {size} piksel, {density} piksel per "
+        "sentimeter pakaian."
+    ),
+    "garment.done.combine-packed-outside": (
+        "{count} material dikemas tanpa bake menjadi satu tekstur berukuran {size} piksel, tetapi {points} titik UV "
+        "berada di luar gambarnya (tekstur berulang) dan dipindahkan ke tepinya. Pilih Bake di Opsi agar "
+        "pengulangannya tetap."
+    ),
+    "garment.error.pack-missing": (
+        "Kemas Tanpa Bake memerlukan piksel setiap gambar, dan gambar ini tidak ditemukan: {names}. Letakkan file "
+        "gambar di lokasi yang diharapkan material (atau kemas), lalu gabungkan lagi."
+    ),
+    "garment.stage.pack-images": "Menempatkan gambar",
+    "garment.stage.pack-fill": "Mengisi celah di antara gambar",
 }

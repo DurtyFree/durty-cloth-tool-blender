@@ -248,8 +248,8 @@ TEXT = {
     ),
     "garment.op.combine": "Combiner les matériaux",
     "garment.op.combine.desc": (
-        "Regrouper tous les îlots UV dans une disposition et cuire chaque matériau en un seul : la couleur avec sa "
-        "transparence, et des normal, specular et emission maps quand il y en a"
+        "Faire de tous les matériaux un seul avec une seule texture : cuit avec Cycles, ou l'image de chaque matériau "
+        "regroupée sans cuisson dans son propre carré. Méthode sous Options décide"
     ),
     "garment.combine.nothing": "Rien à combiner : le vêtement n'a qu'un seul matériau.",
     "garment.op.lods": "Générer les LOD",
@@ -526,7 +526,9 @@ TEXT = {
     "garment.info.combine": (
         "Regroupe tous les îlots UV dans un carré et cuit chaque matériau en un seul : la couleur avec sa "
         "transparence, et une normal, specular et emission map quand un matériau en a une. Cela devient le seul "
-        "matériau du vêtement. La carte UV d'origine est conservée sous le nom DCT Source UV."
+        "matériau du vêtement. La carte UV d'origine est conservée sous le nom DCT Source UV. Méthode sous Options "
+        "peut plutôt placer l'image de chaque matériau dans son propre carré de la texture sans cuisson, ce qui ne "
+        "demande pas Cycles. Automatique le fait quand chaque matériau a exactement une image."
     ),
     "garment.info.lods": (
         "Réduit une copie du vêtement à chaque budget de triangles et la place dans les emplacements LOD Medium et "
@@ -937,7 +939,8 @@ TEXT = {
     ),
     "garment.tears.pose-skipped": "{pose} : ignorée, l'armature n'a pas d'os pour elle",
     "garment.error.cycles": (
-        "Combiner les matériaux cuit avec Cycles. Activez Cycles sous Édition > Préférences > Add-ons, puis réessayez."
+        "Combiner les matériaux cuit avec Cycles. Activez Cycles sous Édition > Préférences > Add-ons, puis réessayez. "
+        "Ou choisissez Regrouper sans cuire sous Options."
     ),
     "garment.body.compressed": (
         "Ce Blender ne peut pas lire le corps freemode compressé. Utilisez Blender 5.2 ou plus récent, ou un fichier "
@@ -1535,4 +1538,35 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Création du niveau Medium",
     "garment.stage.lod-low": "Création du niveau Low",
+    "garment.prop.combine-method": "Méthode",
+    "garment.prop.combine-method.desc": "Comment Combiner les matériaux crée la texture unique du vêtement",
+    "garment.combine-method.auto": "Automatique",
+    "garment.combine-method.auto.desc": (
+        "Regrouper sans cuire quand chaque matériau a exactement une image, sinon Cuire"
+    ),
+    "garment.combine-method.bake": "Cuire",
+    "garment.combine-method.bake.desc": (
+        "Regrouper les îlots UV dans une disposition et cuire chaque matériau avec Cycles, avec sa transparence et ses "
+        "éventuelles normal, specular et emission maps"
+    ),
+    "garment.combine-method.pack": "Regrouper sans cuire",
+    "garment.combine-method.pack.desc": (
+        "Placer l'image de couleur de chaque matériau dans son propre carré d'une texture et y déplacer ses UV. Ne "
+        "demande pas Cycles ; les autres maps sont laissées de côté"
+    ),
+    "garment.done.combine-packed": (
+        "{count} matériaux regroupés sans cuisson dans une texture de {size} pixels, {density} pixels par centimètre "
+        "sur le vêtement."
+    ),
+    "garment.done.combine-packed-outside": (
+        "{count} matériaux regroupés sans cuisson dans une texture de {size} pixels, mais {points} points UV étaient "
+        "hors de leur image (une texture répétée) et ont été placés sur son bord. Choisissez Cuire sous Options pour "
+        "garder la répétition."
+    ),
+    "garment.error.pack-missing": (
+        "Regrouper sans cuire a besoin des pixels de chaque image, et celles-ci sont introuvables : {names}. Placez "
+        "les fichiers d'image là où les matériaux les attendent (ou empaquetez-les), puis combinez à nouveau."
+    ),
+    "garment.stage.pack-images": "Placement des images",
+    "garment.stage.pack-fill": "Remplissage des espaces entre les images",
 }

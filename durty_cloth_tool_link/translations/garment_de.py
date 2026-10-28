@@ -250,8 +250,8 @@ TEXT = {
     ),
     "garment.op.combine": "Materialien zusammenfassen",
     "garment.op.combine.desc": (
-        "Alle UV-Inseln in ein Layout packen und jedes Material in eines backen: die Farbe mit ihrer Transparenz und, "
-        "wo vorhanden, Normal-, Specular- und Emissions-Maps"
+        "Alle Materialien zu einem mit einer Textur machen: mit Cycles gebacken oder das Bild jedes Materials ohne "
+        "Backen in ein eigenes Quadrat gepackt. Methode unter Optionen entscheidet"
     ),
     "garment.combine.nothing": "Nichts zusammenzufassen: Das Kleidungsstück hat nur ein Material.",
     "garment.op.lods": "LODs erzeugen",
@@ -527,7 +527,9 @@ TEXT = {
     "garment.info.combine": (
         "Packt alle UV-Inseln in ein Quadrat und backt jedes Material in eines: die Farbe mit ihrer Transparenz und "
         "eine Normal-, Specular- und Emissions-Map, wo ein Material eine hat. Das wird das einzige Material des "
-        "Kleidungsstücks. Die ursprüngliche UV-Map bleibt als DCT Source UV erhalten."
+        "Kleidungsstücks. Die ursprüngliche UV-Map bleibt als DCT Source UV erhalten. Methode unter Optionen kann "
+        "stattdessen das Bild jedes Materials ohne Backen in ein eigenes Quadrat der Textur legen, was kein Cycles "
+        "braucht. Automatisch tut das, wenn jedes Material genau ein Bild hat."
     ),
     "garment.info.lods": (
         "Reduziert eine Kopie des Kleidungsstücks auf jedes Dreiecksbudget und legt sie in die LOD-Plätze Medium und "
@@ -941,7 +943,7 @@ TEXT = {
     "garment.tears.pose-skipped": "{pose}: übersprungen, die Armature hat keinen Knochen dafür",
     "garment.error.cycles": (
         "Materialien zusammenfassen backt mit Cycles. Schalte Cycles unter Bearbeiten > Einstellungen > Add-ons ein "
-        "und versuche es erneut."
+        "und versuche es erneut. Oder wähle Ohne Backen packen unter Optionen."
     ),
     "garment.body.compressed": (
         "Dieses Blender kann den komprimierten Freemode-Körper nicht lesen. Nutze Blender 5.2 oder neuer oder eine "
@@ -1564,4 +1566,33 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Stufe Medium erzeugen",
     "garment.stage.lod-low": "Stufe Low erzeugen",
+    "garment.prop.combine-method": "Methode",
+    "garment.prop.combine-method.desc": "Wie Materialien zusammenfassen die eine Textur des Kleidungsstücks erstellt",
+    "garment.combine-method.auto": "Automatisch",
+    "garment.combine-method.auto.desc": "Ohne Backen packen, wenn jedes Material genau ein Bild hat, sonst Backen",
+    "garment.combine-method.bake": "Backen",
+    "garment.combine-method.bake.desc": (
+        "Die UV-Inseln in ein Layout packen und jedes Material mit Cycles backen, mit seiner Transparenz und "
+        "vorhandenen Normal-, Specular- und Emissions-Maps"
+    ),
+    "garment.combine-method.pack": "Ohne Backen packen",
+    "garment.combine-method.pack.desc": (
+        "Das Farbbild jedes Materials in ein eigenes Quadrat einer Textur legen und seine UVs dorthin verschieben. "
+        "Braucht kein Cycles; andere Maps entfallen"
+    ),
+    "garment.done.combine-packed": (
+        "{count} Materialien ohne Backen in eine Textur mit {size} Pixeln gepackt, {density} Pixel pro Zentimeter am "
+        "Kleidungsstück."
+    ),
+    "garment.done.combine-packed-outside": (
+        "{count} Materialien ohne Backen in eine Textur mit {size} Pixeln gepackt, aber {points} UV-Punkte lagen "
+        "außerhalb ihres Bildes (eine sich wiederholende Textur) und wurden an seinen Rand gesetzt. Wähle Backen unter "
+        "Optionen, damit die Wiederholung bleibt."
+    ),
+    "garment.error.pack-missing": (
+        "Ohne Backen packen braucht die Pixel jedes Bildes, und diese wurden nicht gefunden: {names}. Lege die "
+        "Bilddateien dorthin, wo die Materialien sie erwarten (oder packe sie), und fasse erneut zusammen."
+    ),
+    "garment.stage.pack-images": "Bilder werden platziert",
+    "garment.stage.pack-fill": "Lücken zwischen den Bildern werden gefüllt",
 }

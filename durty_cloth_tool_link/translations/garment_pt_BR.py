@@ -245,8 +245,8 @@ TEXT = {
     ),
     "garment.op.combine": "Combinar materiais",
     "garment.op.combine.desc": (
-        "Agrupar todas as ilhas UV em um layout e fazer o bake de todos os materiais em um: a cor com a transparência, "
-        "e normal, specular e emission maps onde houver"
+        "Transformar todos os materiais em um com uma única textura: com bake no Cycles, ou a imagem de cada material "
+        "agrupada em seu próprio quadrado sem bake. Método em Opções decide"
     ),
     "garment.combine.nothing": "Nada para combinar: a roupa tem um único material.",
     "garment.op.lods": "Gerar LODs",
@@ -509,7 +509,9 @@ TEXT = {
     "garment.info.combine": (
         "Agrupa todas as ilhas UV em um quadrado e faz o bake de todos os materiais em um: a cor com a transparência, "
         "e um normal, specular e emission map onde um material tiver. Esse passa a ser o único material da roupa. O "
-        "mapa UV original é mantido como DCT Source UV."
+        "mapa UV original é mantido como DCT Source UV. Método em Opções pode, em vez disso, colocar a imagem de cada "
+        "material em seu próprio quadrado da textura sem bake, o que não precisa do Cycles. Automática faz isso quando "
+        "cada material tem exatamente uma imagem."
     ),
     "garment.info.lods": (
         "Reduz uma cópia da roupa a cada limite de triângulos e a coloca nos slots de LOD Medium e Low do Sollumz, "
@@ -884,7 +886,8 @@ TEXT = {
     ),
     "garment.tears.pose-skipped": "{pose}: ignorada, a armature não tem um osso para ela",
     "garment.error.cycles": (
-        "Combinar materiais faz o bake com o Cycles. Ative o Cycles em Edit > Preferences > Add-ons e tente de novo."
+        "Combinar materiais faz o bake com o Cycles. Ative o Cycles em Edit > Preferences > Add-ons e tente de novo. "
+        "Ou escolha Agrupar sem bake em Opções."
     ),
     "garment.body.compressed": (
         "Este Blender não consegue ler o corpo freemode comprimido. Use o Blender 5.2 ou mais novo, ou um arquivo de "
@@ -1425,4 +1428,35 @@ TEXT = {
     ),
     "garment.stage.lod-medium": "Criando o nível Medium",
     "garment.stage.lod-low": "Criando o nível Low",
+    "garment.prop.combine-method": "Método",
+    "garment.prop.combine-method.desc": "Como Combinar materiais cria a única textura da roupa",
+    "garment.combine-method.auto": "Automática",
+    "garment.combine-method.auto.desc": (
+        "Agrupar sem bake quando cada material tem exatamente uma imagem; caso contrário, Bake"
+    ),
+    "garment.combine-method.bake": "Bake",
+    "garment.combine-method.bake.desc": (
+        "Agrupar as ilhas UV em um layout e fazer o bake de cada material com o Cycles, com a transparência e os "
+        "normal, specular e emission maps que houver"
+    ),
+    "garment.combine-method.pack": "Agrupar sem bake",
+    "garment.combine-method.pack.desc": (
+        "Colocar a imagem de cor de cada material em seu próprio quadrado de uma textura e mover as UVs para lá. Não "
+        "precisa do Cycles; os outros maps ficam de fora"
+    ),
+    "garment.done.combine-packed": (
+        "{count} materiais agrupados sem bake em uma textura de {size} pixels, {density} pixels por centímetro na "
+        "roupa."
+    ),
+    "garment.done.combine-packed-outside": (
+        "{count} materiais agrupados sem bake em uma textura de {size} pixels, mas {points} pontos UV estavam fora da "
+        "imagem (uma textura que se repete) e foram levados até a borda dela. Escolha Bake em Opções para manter a "
+        "repetição."
+    ),
+    "garment.error.pack-missing": (
+        "Agrupar sem bake precisa dos pixels de cada imagem, e estas não foram encontradas: {names}. Coloque os "
+        "arquivos de imagem onde os materiais os esperam (ou empacote-os) e combine de novo."
+    ),
+    "garment.stage.pack-images": "Posicionando as imagens",
+    "garment.stage.pack-fill": "Preenchendo os espaços entre as imagens",
 }
