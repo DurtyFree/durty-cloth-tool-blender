@@ -393,6 +393,10 @@ TEXT = {
         "التخطيط {used} %، وقُصّ {cut} شريطًا)."
     ),
     "garment.done.lods": "مثلثات مستويات التفاصيل: العالي {high}، المتوسط {medium}، المنخفض {low}.",
+    "garment.done.lods-over": (
+        "{done} لم يصل أي تبسيط للمستوى {level} إلى حده البالغ {budget} مثلثًا، لذا أُبقي الأصغر وفيه {triangles} "
+        "مثلثًا."
+    ),
     "garment.done.clean": "التحقق: CLEAN.",
     "garment.done.findings": "وجد التحقق أمورًا تستحق النظر: {count}.",
     "garment.info.pose": (

@@ -314,6 +314,10 @@ TEXT = {
     "garment.done.import-turned": "Importato {name} ({count} vertici) e ruotato per farlo stare in piedi come il ped.",
     "garment.done.import-unit": "Importato {name} ({count} vertici), leggendo le dimensioni in {unit}, l'unica unità che gli dà le dimensioni di un capo. Se il risultato non sembra corretto, importalo di nuovo e scegli l'Unità.",
     "garment.done.lods": "Livelli di dettaglio: Alto {high}, Medio {medium}, Basso {low} triangoli.",
+    "garment.done.lods-over": (
+        "{done} Nessuna riduzione del livello {level} ha raggiunto il limite di {budget} triangoli, quindi resta "
+        "la più piccola, con {triangles} triangoli."
+    ),
     "garment.done.markers": "Posizionati {count} marcatori. Sposta quelli fuori posto prima dell'adattamento.",
     "garment.done.markers.one": "Posizionato {count} marcatore. Se è fuori posto, spostalo prima dell'adattamento.",
     "garment.done.mirror": "Marcatori di sinistra specchiati a destra.",

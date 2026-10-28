@@ -3481,6 +3481,12 @@ def choose_lod(candidates: Sequence[LodCandidate], budget: int, tie: float = LOD
     return max(alike, key=lambda i: (candidates[i].weld, -candidates[i].hole))
 
 
+def lod_over_budget(candidates: Sequence[LodCandidate], budget: int) -> bool:
+    """Whether no candidate is within the triangle ``budget``, so :func:`choose_lod` keeps the smallest one over it
+    and Generate LODs tells the user."""
+    return bool(candidates) and all(c.triangles > budget for c in candidates)
+
+
 class Finding(NamedTuple):
     severity: str  # "error", "warning" or "info"
     code: str

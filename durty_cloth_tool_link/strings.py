@@ -1008,6 +1008,10 @@ EN: Dict[str, str] = {
         "(the layout uses {used} %, {cut} strips cut)."
     ),
     "garment.done.lods": "Levels of detail: High {high}, Medium {medium}, Low {low} triangles.",
+    "garment.done.lods-over": (
+        "{done} No reduction of the {level} level reached its budget of {budget} triangles, so the smallest, with "
+        "{triangles} triangles, is kept."
+    ),
     "garment.done.clean": "Validate: CLEAN.",
     "garment.done.findings": "Validate found things to look at: {count}.",
     # ---- garment fitting: help ----------------------------------------------------------------------------

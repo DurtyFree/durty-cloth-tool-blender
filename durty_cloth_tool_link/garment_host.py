@@ -2804,7 +2804,8 @@ def lod_steps(context: Any, obj: Any, budgets: Dict[str, int], body: Optional[An
     for each level, the High mesh welded at each of :data:`garment.LOD_WELDS` and decimated to the triangle budget
     (0: a share of High, never more than the budgets Durty Cloth Tool advises; Low never more than Medium), open edges
     and UV seams kept as far as possible, with the bone weights of High (four per vertex). The candidate whose holes
-    compared with High are smallest is kept (:func:`garment.choose_lod`) and pushed out of the body like High. The
+    compared with High are smallest is kept (:func:`garment.choose_lod`) and pushed out of the body like High; a level
+    that no candidate brings within its budget keeps the smallest and names the budget in ``<level>_over``. The
     slots change only at the end; stopped earlier, the candidates made so far go."""
     if not sollumz_lods_available():
         raise fail("garment.why.no-sollumz")
@@ -2851,6 +2852,8 @@ def lod_steps(context: Any, obj: Any, budgets: Dict[str, int], body: Optional[An
             ceiling = candidates[pick].triangles
             results[f"{short}_weld"] = round(candidates[pick].weld * 1000.0, 1)
             results[f"{short}_hole"] = round(candidates[pick].hole * 1000.0, 1)
+            if garment.lod_over_budget(candidates, budget):
+                results[f"{short}_over"] = budget  # the smallest candidate is kept: the user is told
         for level, short in LOD_LEVELS:
             lod_mesh = chosen[short]
             lod_mesh.name = f"{obj.name}_{short}"

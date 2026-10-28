@@ -407,6 +407,10 @@ TEXT = {
         "{used} % इस्तेमाल करता है, {cut} पट्टियाँ काटी गईं)।"
     ),
     "garment.done.lods": "डिटेल के स्तर: उच्च {high}, मध्यम {medium}, निम्न {low} ट्रायंगल।",
+    "garment.done.lods-over": (
+        "{done} {level} स्तर का कोई भी घटाया गया रूप {budget} ट्रायंगल की सीमा तक नहीं पहुँचा, इसलिए सबसे छोटा "
+        "रूप, {triangles} ट्रायंगल वाला, रखा गया।"
+    ),
     "garment.done.clean": "जाँचें: CLEAN।",
     "garment.done.findings": "जाँचें चलाने पर देखने लायक चीज़ें मिलीं: {count}।",
     "garment.info.pose": (

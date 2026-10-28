@@ -439,6 +439,10 @@ TEXT = {
         "prenda (la distribución usa el {used} %, {cut} tiras cortadas)."
     ),
     "garment.done.lods": "Niveles de detalle: Alto {high}, Medio {medium}, Bajo {low} triángulos.",
+    "garment.done.lods-over": (
+        "{done} Ninguna reducción del nivel {level} llegó a su límite de {budget} triángulos, así que se conserva "
+        "la más pequeña, con {triangles} triángulos."
+    ),
     "garment.done.clean": "Validar: CLEAN.",
     "garment.done.findings": "Validar encontró cosas que revisar: {count}.",
     "garment.info.pose": (

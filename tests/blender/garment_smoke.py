@@ -796,7 +796,22 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
                "detail": f"layout uses {notice.message.fields['used']} %, {notice.message.fields['cut']} strips cut"}
     props.lod_medium = 600
     props.lod_low = 150
+    # A reduction that cannot reach the budget (here none reduces at all) keeps the smallest candidate, and the user
+    # is told so.
+    reduced = gh._reduced
+    gh._reduced = lambda context, obj, mesh, budget: reduced(context, obj, mesh, 10 ** 9)
+    try:
+        check("Generate LODs runs when no reduction reaches the budget", "FINISHED" in bpy.ops.dct_link.fit_lods())
+    finally:
+        gh._reduced = reduced
+    notice = ui_garment.RUNTIME.notice
+    check("Generate LODs warns when no reduction reaches the budget",
+          notice.level == "WARNING" and notice.message.key == "garment.done.lods-over"
+          and notice.message.fields["budget"] == 150 and notice.message.fields["triangles"] > 150, notice)
     check("Generate LODs runs", "FINISHED" in bpy.ops.dct_link.fit_lods())
+    notice = ui_garment.RUNTIME.notice
+    check("Generate LODs within its budgets does not warn",
+          notice.level == "INFO" and notice.message.key == "garment.done.lods", notice)
     lods = tpose.sz_lods
     medium, low = lods.get_lod("sollumz_medium").mesh, lods.get_lod("sollumz_low").mesh
     weighted = medium is not None and sum(1 for v in medium.vertices if v.groups) == len(medium.vertices)

@@ -314,6 +314,10 @@ TEXT = {
     "garment.done.import-turned": "นำเข้า {name} แล้ว ({count} จุดยอด) และหมุนให้ยืนเหมือนตัวละคร ped",
     "garment.done.import-unit": "นำเข้า {name} แล้ว ({count} จุดยอด) โดยอ่านขนาดเป็น {unit} ซึ่งเป็นหน่วยเดียวที่ได้ขนาดเสื้อผ้า หากดูไม่ถูกต้อง ให้นำเข้าอีกครั้งแล้วเลือก หน่วย",
     "garment.done.lods": "ระดับรายละเอียด: High {high}, Medium {medium}, Low {low} สามเหลี่ยม",
+    "garment.done.lods-over": (
+        "{done} ไม่มีการลดระดับ {level} ใดที่ลงถึงงบ {budget} สามเหลี่ยม จึงเก็บแบบที่เล็กที่สุดไว้ ซึ่งมี "
+        "{triangles} สามเหลี่ยม"
+    ),
     "garment.done.markers": "วางมาร์กเกอร์ {count} อันแล้ว ย้ายอันที่ไม่ตรงก่อนปรับพอดี",
     "garment.done.markers.one": "วางมาร์กเกอร์ {count} อันแล้ว ย้ายอันที่ไม่ตรงก่อนปรับพอดี",
     "garment.done.mirror": "สะท้อนมาร์กเกอร์ซ้ายไปด้านขวาแล้ว",

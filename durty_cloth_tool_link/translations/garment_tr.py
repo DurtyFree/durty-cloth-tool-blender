@@ -314,6 +314,10 @@ TEXT = {
     "garment.done.import-turned": "İçe aktarıldı: {name} ({count} köşe). Ped gibi duracak şekilde döndürüldü.",
     "garment.done.import-unit": "İçe aktarıldı: {name} ({count} köşe). Boyutu, kıyafet boyutunu veren tek birim olan {unit} olarak okundu. Yanlış görünüyorsa yeniden içe aktarıp Birim seçin.",
     "garment.done.lods": "Ayrıntı düzeyleri: Yüksek {high}, Orta {medium}, Düşük {low} üçgen.",
+    "garment.done.lods-over": (
+        "{done} {level} düzeyinin hiçbir azaltması {budget} üçgenlik sınıra inemedi; bu yüzden {triangles} "
+        "üçgenli en küçüğü tutuldu."
+    ),
     "garment.done.markers": "{count} işaret yerleştirildi. Uyarlamadan önce yanlış yerdekileri taşıyın.",
     "garment.done.markers.one": "{count} işaret yerleştirildi. Uyarlamadan önce yanlış yerdeyse taşıyın.",
     "garment.done.mirror": "Sol işaretler sağa yansıtıldı.",

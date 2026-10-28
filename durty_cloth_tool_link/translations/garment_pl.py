@@ -314,6 +314,10 @@ TEXT = {
     "garment.done.import-turned": "Zaimportowano {name} (liczba wierzchołków: {count}) i obrócono, aby stało tak jak ped.",
     "garment.done.import-unit": "Zaimportowano {name} (liczba wierzchołków: {count}), odczytując rozmiar w jednostce {unit}, jedynej nadającej ubraniu właściwy rozmiar. Jeśli wygląda nieprawidłowo, zaimportuj ponownie i wybierz Jednostkę.",
     "garment.done.lods": "Poziomy szczegółowości: High {high}, Medium {medium}, Low {low} trójkątów.",
+    "garment.done.lods-over": (
+        "{done} Żadne uproszczenie poziomu {level} nie zmieściło się w limicie trójkątów ({budget}), więc zostaje "
+        "najmniejsze, z liczbą trójkątów {triangles}."
+    ),
     "garment.done.markers": "Dodano znaczniki. Liczba: {count}. Przed dopasowaniem popraw te, które leżą niewłaściwie.",
     "garment.done.markers.one": "Dodano znaczniki. Liczba: {count}. Przed dopasowaniem popraw te, które leżą niewłaściwie.",
     "garment.done.mirror": "Odbito lewe znaczniki na prawą stronę.",

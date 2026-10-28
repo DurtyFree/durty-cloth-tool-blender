@@ -38,6 +38,13 @@ def test_a_candidate_over_the_triangle_budget_is_never_chosen():
     assert garment.choose_lod([tight, within._replace(triangles=620)], budget=600) == 1
 
 
+def test_a_level_no_candidate_brings_within_the_budget_is_told():
+    tight = garment.LodCandidate(weld=0.0, triangles=640, hole=0.001)
+    within = garment.LodCandidate(weld=0.004, triangles=598, hole=0.02)
+    assert not garment.lod_over_budget([tight, within], budget=600)
+    assert garment.lod_over_budget([tight, within._replace(triangles=620)], budget=600)  # the smallest is kept
+
+
 def test_holes_alike_keep_the_larger_weld():
     small = garment.LodCandidate(weld=0.004, triangles=600, hole=0.0060)
     large = garment.LodCandidate(weld=0.008, triangles=600, hole=0.0070)

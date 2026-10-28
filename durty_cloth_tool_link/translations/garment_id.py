@@ -314,6 +314,10 @@ TEXT = {
     "garment.done.import-turned": "{name} diimpor ({count} vertex) dan diputar agar berdiri seperti ped.",
     "garment.done.import-unit": "{name} diimpor ({count} vertex), dengan ukuran dibaca dalam {unit}, satu-satunya satuan yang menghasilkan ukuran pakaian. Jika terlihat keliru, impor lagi dan pilih Satuan.",
     "garment.done.lods": "Tingkat detail: High {high}, Medium {medium}, Low {low} segitiga.",
+    "garment.done.lods-over": (
+        "{done} Tidak ada pengurangan tingkat {level} yang mencapai batas {budget} segitiga, jadi yang terkecil, "
+        "dengan {triangles} segitiga, dipertahankan."
+    ),
     "garment.done.markers": "{count} penanda ditempatkan. Pindahkan yang tidak tepat sebelum penyesuaian.",
     "garment.done.markers.one": "{count} penanda ditempatkan. Pindahkan yang tidak tepat sebelum penyesuaian.",
     "garment.done.mirror": "Penanda kiri dicerminkan ke kanan.",

@@ -1917,7 +1917,12 @@ class DCTLINK_OT_fit_lods(_SteppedOp):
                             settings_.push_gap / 1000.0)
 
     def finished(self, context, result):
-        return msg("garment.done.lods", high=result["high"], medium=result["medium"], low=result["low"])
+        done = msg("garment.done.lods", high=result["high"], medium=result["medium"], low=result["low"])
+        over = [short for short in ("medium", "low") if result.get(f"{short}_over")]
+        for short in over:
+            done = msg("garment.done.lods-over", done=done, level=msg(f"garment.level.{short}"),
+                       budget=result[f"{short}_over"], triangles=result[short])
+        return ("WARNING", done) if over else done
 
 
 def anchor_point(context: Any) -> Optional[Tuple[float, float, float]]:

@@ -455,6 +455,10 @@ TEXT = {
         "Kleidungsstück (das Layout nutzt {used} %, {cut} Streifen geschnitten)."
     ),
     "garment.done.lods": "Detailstufen: Hoch {high}, Mittel {medium}, Niedrig {low} Dreiecke.",
+    "garment.done.lods-over": (
+        "{done} Keine Reduzierung der Stufe {level} hat ihr Budget von {budget} Dreiecken erreicht, daher bleibt "
+        "die kleinste mit {triangles} Dreiecken."
+    ),
     "garment.done.clean": "Validieren: CLEAN.",
     "garment.done.findings": "Validieren hat Auffälligkeiten gefunden: {count}.",
     "garment.info.pose": (

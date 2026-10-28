@@ -441,6 +441,10 @@ TEXT = {
         "layout usa {used} %, {cut} faixas cortadas)."
     ),
     "garment.done.lods": "Níveis de detalhe: Alto {high}, Médio {medium}, Baixo {low} triângulos.",
+    "garment.done.lods-over": (
+        "{done} Nenhuma redução do nível {level} chegou ao limite de {budget} triângulos, então a menor, com "
+        "{triangles} triângulos, foi mantida."
+    ),
     "garment.done.clean": "Validar: CLEAN.",
     "garment.done.findings": "Validar encontrou pontos para conferir: {count}.",
     "garment.info.pose": (

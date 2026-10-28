@@ -338,6 +338,7 @@ TEXT = {
     ),
     "garment.done.combine": "已把 {count} 个材质合并为一张 {size} 像素的贴图，服装上每厘米 {density} 像素（布局使用了 {used}%，切开了 {cut} 个长条）。",
     "garment.done.lods": "细节级别：高 {high}，中 {medium}，低 {low} 个三角面。",
+    "garment.done.lods-over": "{done} {level}细节级别的所有简化结果都未能降到 {budget} 个三角面以内，因此保留了最小的结果，共 {triangles} 个三角面。",
     "garment.done.clean": "验证：CLEAN。",
     "garment.done.findings": "验证发现了 {count} 处需要查看的地方。",
     "garment.info.pose": (

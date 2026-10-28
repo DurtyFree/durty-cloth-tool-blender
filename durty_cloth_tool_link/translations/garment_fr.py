@@ -455,6 +455,10 @@ TEXT = {
         "(la disposition en utilise {used} %, {cut} bandes coupées)."
     ),
     "garment.done.lods": "Niveaux de détail : Haut {high}, Moyen {medium}, Bas {low} triangles.",
+    "garment.done.lods-over": (
+        "{done} Aucune réduction du niveau {level} n'a atteint son budget de {budget} triangles : la plus petite, "
+        "avec {triangles} triangles, est gardée."
+    ),
     "garment.done.clean": "Valider : CLEAN.",
     "garment.done.findings": "Valider a relevé des points à examiner : {count}.",
     "garment.info.pose": (
