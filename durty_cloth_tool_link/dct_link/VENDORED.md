@@ -21,7 +21,7 @@ Do not edit these files by hand. Change dct_link upstream, then run
 | `auth.py` | `d5039c4a6b13910b3a943b3c2199a14c57dc5c5845d7df8050608872e8722eee` |
 | `fit.py` | `d99e940987b2a3625b77a8fcb8636200e2282a2944424c0ac220a78f3b36d150` |
 | `ped.py` | `1fc7514bc97dc5a432c580327cfca2739d57236999dbe1e65303319ddebd4c64` |
-| `protocol.py` | `6f45c07b2d3b16cf763dcbdd7e3ae2b14b87bd02059a303cb09b29a128a1ae8d` |
-| `session.py` | `a38c93dd327aa4e0c6b9287cc3cbf4060101b1e7212a7e8c76ca0fa95328b491` |
+| `protocol.py` | `0a86b468a62ad15495535f273bfab9eb794cdde2c9deb4955fa75aee16e5573d` |
+| `session.py` | `80b0594422063bbfe1774609ce79545d8cd264384caa234f5445fea13b6697c6` |
 | `tokens.py` | `428a1fc987065afcfab7f6e4908f51efdb839ddf134d4d51c91a7a95d95c6cd1` |
 | `ws.py` | `3ae992c0ca9c97711d310f0ba001c797b0f75db9d59decace7017b7787823b05` |

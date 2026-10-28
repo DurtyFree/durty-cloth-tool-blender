@@ -334,6 +334,7 @@ CONSTANTS: Dict[str, Any] = {
         "checkoutTiers": ["advanced", "ultimate"],
         "checkoutReasons": ["upsell", "quota", "plans"],
         "garmentPlacements": ["free", "freemodeRest"],
+        "armSkins": ["base"],
         "avatarPoses": [
             "idle",
             "walk",
@@ -595,6 +596,10 @@ CHECKOUT_REASONS: Tuple[str, ...] = tuple(_V["checkoutReasons"])
 GARMENT_PLACEMENTS: Tuple[str, ...] = tuple(_V["garmentPlacements"])
 PLACEMENT_FREE = "free"
 PLACEMENT_FREEMODE_REST = "freemodeRest"
+#: The body cut whose arm skin DCT merges into gloves (``item.add.armSkin``): ``base``, the bare arms. Only with
+#: drawable type ``uppr`` and ``skin`` true, and only with ``ydd-xml``.
+ARM_SKINS: Tuple[str, ...] = tuple(_V["armSkins"])
+ARM_SKIN_BASE = "base"
 #: The poses of ``body.avatar`` and ``garment.check``, and the body regions a pose check reports.
 AVATAR_POSES: Tuple[str, ...] = tuple(_V["avatarPoses"])
 BODY_REGIONS: Tuple[str, ...] = tuple(_V["bodyRegions"])
@@ -1434,10 +1439,19 @@ def _placement_ok(placement: Any) -> bool:
     return placement is None or _one_of(placement, GARMENT_PLACEMENTS)
 
 
+def _arm_skin_ok(m: Mapping[str, Any]) -> bool:
+    """An arm skin only on an XML drawable of the arms (``uppr``) that shows skin."""
+    arm_skin = m.get("armSkin")
+    return arm_skin is None or (
+        _one_of(arm_skin, ARM_SKINS) and m.get("skin") is True and m.get("drawableType") == "uppr" and m.get("format") != MODEL_GLB
+    )
+
+
 def _item_add(m: Mapping[str, Any]) -> Optional[str]:
     """Always with an id (what ``item.addResult`` names), skin only on a component, and the file and variation rules
     of its format: :func:`item_files_reason` for an XML drawable, :func:`garment_files_reason` for a GLB, which alone
-    may say where it stands (``placement``). The lengths add up to the payload."""
+    may say where it stands (``placement``). Only an XML drawable of the arms that shows skin may name an arm skin
+    (``armSkin``). The lengths add up to the payload."""
     drawable_type, skin, fmt, placement = m.get("drawableType"), m.get("skin"), m.get("format"), m.get("placement")
     if (
         not is_id(m.get("id"))
@@ -1449,6 +1463,7 @@ def _item_add(m: Mapping[str, Any]) -> Optional[str]:
         or (skin and is_prop_type(drawable_type))
         or not is_text(m.get("name"))
         or not (_placement_ok(placement) if fmt == MODEL_GLB else placement is None)
+        or not _arm_skin_ok(m)
     ):
         return INVALID_MESSAGE
     files = m.get("files")
@@ -2085,6 +2100,7 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
             "drawableType": _STR,
             "gender": _STR,
             "skin": _BOOL,
+            "armSkin": _STR,
             "name": _STR,
             "placement": _STR,
             "variations": _ITEM_VARIATIONS,

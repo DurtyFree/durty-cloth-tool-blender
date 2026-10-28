@@ -1541,11 +1541,15 @@ def _codec_check(header: Dict[str, Any], size: int) -> None:
 
 
 def _prepare_item(
-    drawable_type: Any, gender: Any, skin: Any, name: Any, variations: Any, files: Any
+    drawable_type: Any, gender: Any, skin: Any, name: Any, variations: Any, files: Any, arm_skin: Any = None
 ) -> Tuple[Dict[str, Any], List[Tuple[str, memoryview]], int]:
     """Checks an ``item.add`` with the codec's rules before anything is sent. Returns its header (without an id), the
     files as ``(name, view)`` and the payload size; raises ``ValueError`` with the rule that failed."""
     head = _item_head(drawable_type, gender, skin, name)
+    if arm_skin is not None:
+        if arm_skin not in protocol.ARM_SKINS or drawable_type != "uppr" or not skin:
+            raise ValueError("arm_skin is one of protocol.ARM_SKINS, only for gloves: drawable_type 'uppr', skin=True")
+        head["armSkin"] = arm_skin
     prepared = _file_views(files)
     entries = [{"name": file_name, "length": view.nbytes} for file_name, view in prepared]
     chosen = [{"file": file, "name": title} for file, title in _pairs(variations, "variations", "(file, name)")]
@@ -3173,6 +3177,7 @@ class LinkSession:
         *,
         fmt: str = protocol.MODEL_YDD_XML,
         placement: Optional[str] = None,
+        arm_skin: Optional[str] = None,
     ) -> ItemAddRequest:
         """``item.add``: adds a new cloth to the open project. DCT shows the user what arrives and adds nothing unless
         the user chooses Add there, so the answer can take minutes.
@@ -3188,8 +3193,11 @@ class LinkSession:
         and unique ignoring case, and no file is empty. ``variations`` lists ``(file, name)`` per colour variation,
         1 to :data:`protocol.MAX_ITEM_VARIATIONS` (26) in order: ``file`` names that variation's diffuse among
         ``files`` (never the model, no two the same), ``name`` is its display name; every ``*.png`` is some
-        variation's diffuse. A broken rule raises ``ValueError`` before anything is sent. The data is sent as given,
-        without a copy: do not change it until the request finishes.
+        variation's diffuse. ``arm_skin`` makes the cloth gloves: DCT takes the arm skin of that body cut (one of
+        :data:`protocol.ARM_SKINS`, ``base`` for the bare arms) from the user's own game files and merges it into the
+        model; only with ``ydd-xml``, ``drawable_type`` ``uppr`` and ``skin`` True, and DCT answers ``game-required``
+        without the game files. A broken rule raises ``ValueError`` before anything is sent. The data is sent as
+        given, without a copy: do not change it until the request finishes.
 
         Resolves with an :class:`ItemAddResult`, whatever DCT decided (also when DCT answered with an error such as
         ``busy`` or ``rate-limited``). Fails with :class:`LinkError` only when no answer came: ``disconnected``, or
@@ -3199,10 +3207,12 @@ class LinkSession:
         if fmt == protocol.MODEL_YDD_XML:
             if placement is not None:
                 raise ValueError("placement says where a GLB stands; an XML drawable has none")
-            header, files_out, size = _prepare_item(drawable_type, gender, skin, name, variations, files)
+            header, files_out, size = _prepare_item(drawable_type, gender, skin, name, variations, files, arm_skin)
             return self._send_item("item.add", header, [data for _, data in files_out], size, timeout, 0)
         if fmt != protocol.MODEL_GLB:
             raise ValueError("fmt is 'ydd-xml' or 'glb'")
+        if arm_skin is not None:
+            raise ValueError("an arm skin is merged into an XML drawable only; a GLB takes none")
         head = _item_head(drawable_type, gender, skin, name)
         fields, parts, size = _prepare_garment(files, placement, variations)
         header = dict(head, type="item.add", **fields)
