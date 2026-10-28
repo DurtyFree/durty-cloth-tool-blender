@@ -343,7 +343,7 @@ class BodyDownload:
         body = manifest.get("body") if isinstance(manifest.get("body"), dict) else None
         panel = manifest.get("panel") if isinstance(manifest.get("panel"), dict) else None
         version = body.get("version") if body else None
-        # Only the current body version's pack may stay: one the signed manifest no longer names is withdrawn.
+        # Only the current body version's pack may stay: the pack of any other version is withdrawn.
         garment_reference.remove_withdrawn(self.cache_root / CACHE_FOLDER, version if valid_version(version) else None)
         if not valid_version(version):
             raise BodyError("no-body")

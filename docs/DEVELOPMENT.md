@@ -163,9 +163,9 @@ synthetic pack from scratch (`tests/support/synthetic.py`, `tests/support/manneq
 
 Each pack file has a size limit (the index 256 KiB, a notice 64 KiB, a JSON file 16 MiB, a GLB 32 MiB, the whole
 pack 128 MiB) and must be what its name says (UTF-8 text, a JSON object, a GLB without a required extension). A pack
-that breaks a limit, or that cannot be had in full, is not kept, and the body is added without it. The Worker serves
-only files the version's signed file list names and checks each against it; the add-on cannot read that list, so
-its own record guards the kept files.
+that breaks a limit, or that cannot be had in full, is not kept, and the body is added without it. The add-on cannot
+check the server's list of a pack's files, so it keeps its own record of each kept file's size and SHA-256 and checks
+the kept files against it.
 
 ## Supported Blender versions
 
