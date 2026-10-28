@@ -3772,24 +3772,93 @@ TYPE_WORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("long_sleeve", ("longsleeve", "long sleeve", "shirt", "sweater", "sweatshirt", "jumper", "pullover", "gomlek",
                      "gömlek", "kazak", "uzun kollu")),
 )
-#: A keyword at least this long also names a word that starts with it ("sneakers", "maskesi").
-TYPE_PREFIX_LENGTH = 5
+#: The Turkish forms of a keyword that also name its type: the plural and the possessive ("maskesi", "ceketler"). An
+#: English keyword also names its plural with -s or -es; no other word that starts with a keyword names its type
+#: ("watchman" names no watch, "shortcut" no shorts).
+TYPE_WORD_FORMS: Dict[str, Tuple[str, ...]] = {
+    "sandalet": ("sandaletler", "sandaleti"),
+    "terlik": ("terlikler", "terliği", "terligi"),
+    "ayakkabi": ("ayakkabilar", "ayakkabisi"),
+    "ayakkabı": ("ayakkabılar", "ayakkabısı"),
+    "bot": ("botlar", "botu"),
+    "cizme": ("cizmeler", "cizmesi"),
+    "çizme": ("çizmeler", "çizmesi"),
+    "zirh": ("zirhlar", "zirhi"),
+    "zırh": ("zırhlar", "zırhı"),
+    "canta": ("cantalar", "cantasi"),
+    "çanta": ("çantalar", "çantası"),
+    "parasut": ("parasutler", "parasutu"),
+    "paraşüt": ("paraşütler", "paraşütü"),
+    "maske": ("maskeler", "maskesi"),
+    "sapka": ("sapkalar", "sapkasi"),
+    "şapka": ("şapkalar", "şapkası"),
+    "bere": ("bereler", "beresi"),
+    "kask": ("kasklar", "kaski"),
+    "gozluk": ("gozlukler", "gozlugu"),
+    "gözlük": ("gözlükler", "gözlüğü"),
+    "kupe": ("kupeler", "kupesi"),
+    "küpe": ("küpeler", "küpesi"),
+    "saat": ("saatler", "saati"),
+    "bileklik": ("bileklikler", "bilekligi"),
+    "bilezik": ("bilezikler", "bilezigi"),
+    "kapusonlu": ("kapusonlular", "kapusonlusu"),
+    "kapüşonlu": ("kapüşonlular", "kapüşonlusu"),
+    "tisort": ("tisortler", "tisortu"),
+    "tişört": ("tişörtler", "tişörtü"),
+    "elbise": ("elbiseler", "elbisesi"),
+    "etek": ("etekler", "etegi"),
+    "sort": ("sortlar", "sortu"),
+    "şort": ("şortlar", "şortu"),
+    "palto": ("paltolar", "paltosu"),
+    "kaban": ("kabanlar", "kabani"),
+    "pardesu": ("pardesuler", "pardesusu"),
+    "pardesü": ("pardesüler", "pardesüsü"),
+    "trenckot": ("trenckotlar", "trenckotu"),
+    "trençkot": ("trençkotlar", "trençkotu"),
+    "hirka": ("hirkalar", "hirkasi"),
+    "hırka": ("hırkalar", "hırkası"),
+    "ceket": ("ceketler", "ceketi"),
+    "mont": ("montlar", "montu"),
+    "tunik": ("tunikler", "tunigi"),
+    "pantolon": ("pantolonlar", "pantolonu"),
+    "tayt": ("taytlar", "tayti"),
+    "yelek": ("yelekler", "yelegi"),
+    "atlet": ("atletler", "atleti"),
+    "gomlek": ("gomlekler", "gomlegi"),
+    "gömlek": ("gömlekler", "gömleği"),
+    "kazak": ("kazaklar", "kazagi"),
+}
 
 
 def _names_type(words: Sequence[str], joined: str, keyword: str) -> bool:
     if " " in keyword:
         return f" {keyword} " in joined
-    return any(word == keyword or word in (keyword + "s", keyword + "es")
-               or (len(keyword) >= TYPE_PREFIX_LENGTH and word.startswith(keyword)) for word in words)
+    forms = {keyword, keyword + "s", keyword + "es", *TYPE_WORD_FORMS.get(keyword, ())}
+    return any(word in forms for word in words)
+
+
+def _split_camel_case(text: str) -> str:
+    """``text`` with a space where a capital starts a new word ("ShortSleeveShirt", "TShirt"), so the words of a
+    CamelCase name are matched as whole words."""
+    out = []
+    for index, char in enumerate(text):
+        if index and char.isupper():
+            before = text[index - 1]
+            after = text[index + 1] if index + 1 < len(text) else ""
+            if before.islower() or (before.isupper() and after.islower()):
+                out.append(" ")
+        out.append(char)
+    return "".join(out)
 
 
 def guess_category(name: str, chosen: Optional[str] = None) -> Optional[str]:
-    """The garment type a file name names in whole words, whatever their case ("robot" names no boot and "baggy" no
-    bag), or ``None`` when it names none or a type was ``chosen`` already: a guess never replaces the user's choice."""
+    """The garment type a file name names in whole words, whatever their case, with a CamelCase name split into its
+    words ("robot" names no boot, "baggy" no bag and "ShortSleeveShirt" a T-shirt), or ``None`` when it names none
+    or a type was ``chosen`` already: a guess never replaces the user's choice."""
     if chosen is not None:
         return None
     # A lower-cased Turkish capital I with a dot keeps the dot as a mark of its own, which would split the word.
-    words = re.findall(r"[^\W\d_]+", str(name).lower().replace("̇", ""))
+    words = re.findall(r"[^\W\d_]+", _split_camel_case(str(name)).lower().replace("̇", ""))
     joined = " " + " ".join(words) + " "
     for category, keywords in TYPE_WORDS:
         if any(_names_type(words, joined, keyword) for keyword in keywords):

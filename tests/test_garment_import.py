@@ -23,12 +23,19 @@ from tests.support import synthetic
     ("cardigan", "open_jacket"), ("summer dress", "dress"), ("etek", "skirt"), ("skirt", "skirt"),
     ("ski mask", "mask"), ("baseball cap", "hat"), ("şapka", "hat"), ("sunglasses", "glasses"),
     ("gözlük", "glasses"), ("earrings", "ears"), ("wrist watch", "watch"), ("bracelet", "bracelet"),
+    ("ShortSleeveShirt.fbx", "tshirt"), ("ShortSleeveTee", "tshirt"), ("BlackHoodie", "hoodie"),
+    ("CargoPants", "pants"), ("LeatherJacket_v2", "long_jacket"), ("watchman_hoodie", "hoodie"),
+    ("masked_rider_jacket", "long_jacket"), ("shortcut_jacket", "long_jacket"), ("siyah maskesi", "mask"),
+    ("ayakkabılar", "shoes"), ("ceketi", "long_jacket"), ("pantolonlar", "pants"),
 ])
 def test_the_type_is_guessed_from_whole_words_of_the_file_name(name, category):
     assert garment.guess_category(name) == category
 
 
-@pytest.mark.parametrize("name", ["robot", "baggy_thing", "chatter", "upshot", "garment_01", "", "1234", "mantle"])
+@pytest.mark.parametrize("name", [
+    "robot", "baggy_thing", "chatter", "upshot", "garment_01", "", "1234", "mantle", "watchman", "masked_rider",
+    "shortcut", "Shortcut_v2", "Watchtower", "MaskedRider", "bootcamp", "capital",
+])
 def test_parts_of_words_and_unknown_names_guess_nothing(name):
     assert garment.guess_category(name) is None
 
