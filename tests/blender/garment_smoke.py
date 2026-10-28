@@ -8,9 +8,9 @@ map), levels of detail, validate, backups, adding the coat to the project open i
 128-bone skeleton template, the checks, the export, the add, an add that fails after the garment changed, Cancel and
 the free limit), a one-material garment whose levels of detail keep their UVs, a two-material garment packed without
 baking while Cycles is turned off, the garment types (an open jacket, a
-skirt's bridged weights, a dress split at its waist, a mask aligned from an avatar, a thick export's walls, a hat added
-as a prop), with the real Sollumz a skinned shirt opened from Durty Cloth Tool on its lent skeleton that is pushed and
-added back still facing the front, and that nothing else in the scene changes.
+skirt's bridged weights, a dress split at its waist, a mask aligned from an avatar, gloves, a thick export's walls, a
+hat added as a prop), with the real Sollumz a skinned shirt opened from Durty Cloth Tool on its lent skeleton that is
+pushed and added back still facing the front, and that nothing else in the scene changes.
 
 Called by ``smoke_in_blender.py`` while the add-on is signed in to the fake gta.clothing. Only for use inside
 Blender.
@@ -1088,6 +1088,8 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
           and gh.aligned(mask, scene), (positions(mask).mean(axis=0) - before, head - avatar_head))
     props.avatar = "detect"
 
+    gloves_smoke(package, state, check, draw_everything, mask)
+
     # A thick export: two sides of a panel share their UVs, and the side walls between them lie on a line.
     thick = bpy.data.meshes.new("smoke_thick")
     grid = [(x, 0.0, z) for z in np.linspace(-0.2, 0.3, 11) for x in np.linspace(-0.15, 0.15, 7)]
@@ -1197,6 +1199,79 @@ def types_smoke(package, addon, state, ctrl, dct, check, refused, pump, draw_eve
                   kept and np.allclose(again, local, atol=1e-4), (again.tolist(), local.tolist(), kept))
         detail = f"{header['drawableType']}, {len(model)} bytes of XML"
     return {"check": "garment types (" + ("real Sollumz" if real else "stand-in") + ")", "ok": True, "detail": detail}
+
+
+def gloves_smoke(package, state, check, draw_everything, other):
+    """Gloves (Experimental) on synthetic gloves: the arms slot with Shows Skin locked on, Body Cut switched to the
+    bare arms once, no Thickness or Push Out region, the fit without markers, the wrist markers that Align to Body puts
+    each glove on its hand with, and the two-gloves check of Validate. ``other`` is another garment to switch to."""
+    ui_garment = sys.modules[package + ".ui_garment"]
+    gh = sys.modules[package + ".garment_host"]
+    garment = sys.modules[package + ".garment"]
+    scene = bpy.context.scene
+    props = scene.dct_garment
+    props.body_cut = "full"
+    log = draw_everything(package, state, "a garment before gloves")
+    check("other types offer Thickness and a Push Out region", {("prop", "thickness"), ("prop", "push_region")}
+          <= set(log))
+
+    shape = synthetic.gloves()
+    gloves = mesh_object("smoke_gloves", shape)
+    choose(gloves)
+    props.category = "gloves"
+    check("gloves go into the arms slot with Shows Skin on", props.slot == "uppr" and props.skin,
+          (props.slot, props.skin))
+    check("picking Gloves shows the body with bare arms", props.body_cut == "base", props.body_cut)
+    props.body_cut = "full"
+    props.skin = False
+    choose(other)
+    choose(gloves)
+    check("Shows Skin stays on and Body Cut stays as chosen when the gloves are chosen again",
+          props.category == "gloves" and props.skin and props.body_cut == "full", (props.skin, props.body_cut))
+    log = draw_everything(package, state, "gloves")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panels describe gloves, show Shows Skin and offer neither Thickness nor a Push Out region",
+          "bare arms" in labels and "Body slot" in labels and ("prop", "skin") in log
+          and ("prop", "thickness") not in log and ("prop", "push_region") not in log and ("prop", "weld") in log,
+          labels[labels.find("Garment Type"):][:400])
+
+    # Upright gloves need no markers: the fit is next and nothing waits for Align to Body.
+    check("gloves without markers go to Fit on gta.clothing",
+          ui_garment.next_operator(bpy.context) == "dct_link.fit_service_fit"
+          and ui_garment._fit_reason(bpy.context) is None,
+          (ui_garment.next_operator(bpy.context), ui_garment._fit_reason(bpy.context)))
+
+    # Gloves on the hands: the two wrist markers start on the body's wrists; Align to Body puts each glove on its hand.
+    check("Auto Markers places the two wrist markers", "FINISHED" in bpy.ops.dct_link.fit_auto_markers()
+          and set(gh.read_markers(scene)) == {"wrist_l", "wrist_r"}, gh.read_markers(scene))
+    placed = gh.read_markers(scene)
+    shift = np.array([0.02, -0.01, 0.03])
+    gloves.location = tuple(shift)
+    bpy.context.view_layer.update()
+    gh.apply_transform(gloves)
+    gh.write_markers(scene, {name: tuple(np.asarray(point) + shift) for name, point in placed.items()},
+                     props.marker_size, gloves)
+    check("moved gloves wait for Align to Body", ui_garment.next_operator(bpy.context) == "dct_link.fit_align"
+          and ui_garment._fit_reason(bpy.context) is not None)
+    check("Align to Body runs on the gloves", "FINISHED" in bpy.ops.dct_link.fit_align())
+    check("each glove is back on its hand", np.allclose(positions(gloves), shape.positions, atol=1e-4)
+          and gh.aligned(gloves, scene), np.abs(positions(gloves) - shape.positions).max())
+
+    # Validate: a left and a right glove pass; a pair joined across the centre is one piece.
+    def two_gloves(obj):
+        return [f for f in garment.findings_from_json(obj.get(gh.FINDINGS, "")) or [] if f.code == "two-gloves"]
+
+    check("Validate finds a left and a right glove", "FINISHED" in bpy.ops.dct_link.fit_validate()
+          and not two_gloves(gloves), gloves.get(gh.FINDINGS))
+    joined = mesh_object("smoke_gloves_joined", synthetic.gloves(joined=True))
+    choose(joined)
+    check("Validate warns about gloves in one piece", props.category == "gloves"
+          and "FINISHED" in bpy.ops.dct_link.fit_validate() and len(two_gloves(joined)) == 1, joined.get(gh.FINDINGS))
+    log = draw_everything(package, state, "gloves in one piece")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the panel names the finding", "not two separate pieces" in labels, labels[-400:])
+    bpy.data.objects.remove(joined)
+    choose(other)
 
 
 ADDED_BINDING_HAT = {"clothId": "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f", "textureId": "0d1e2f3a-4b5c-4d6e-9f7a-8b9c0d1e2f3a"}

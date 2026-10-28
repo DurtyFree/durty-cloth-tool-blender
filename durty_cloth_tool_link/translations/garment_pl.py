@@ -932,4 +932,18 @@ TEXT = {
     "garment.done.tears-game": "Wierzchołki rozdzierające się w pozach z gry: {count}. Znajdują się w grupie wierzchołków DCT Tears.",
     "garment.done.tears-game.one": "Wierzchołki rozdzierające się w pozach z gry: {count}. Znajduje się w grupie wierzchołków DCT Tears.",
     "garment.done.no-tears-game": "Nic się nie rozdziera w {total} pozach z gry.",
+    "garment.slot.uppr": "Ciało (uppr)",
+    "garment.slot.uppr.desc": "Ręce i dłonie ze skórą peda, gdzie gra trzyma rękawiczki",
+    "garment.category.gloves": "Rękawiczki (eksperymentalne)",
+    "garment.category.gloves.desc": "Para rękawiczek, po jednej na każdej dłoni, noszona z gołymi rękami peda",
+    "garment.hint.gloves": (
+        "Rękawiczki w grze są częścią rąk razem ze skórą peda, więc rękawiczki trafiają do slotu Ciało, a opcja "
+        "Pokazuje skórę zostaje włączona. Wymodeluj je na dłoniach ciała freemode (Automatyczne znaczniki stawiają "
+        "dwa znaczniki nadgarstków na nadgarstkach ciała) albo zaimportuj dwie stojące rękawiczki obok siebie, "
+        "palcami w dół, bez znaczników: Dopasuj na gta.clothing zakłada każdą rękawiczkę na jej dłoń."
+    ),
+    "garment.finding.two-gloves": (
+        "Rękawiczki nie są dwiema osobnymi częściami, po jednej z każdej strony ciała. Rozdziel lewą i prawą "
+        "rękawiczkę, aby każda trafiła na swoją dłoń."
+    ),
 }

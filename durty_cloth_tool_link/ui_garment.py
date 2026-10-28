@@ -277,7 +277,9 @@ def _choice_changed(self: Any, context: Any) -> None:
 
 def _category_changed(self: Any, context: Any) -> None:
     """Another type: its usual slot (unless the slot chosen fits it too), its skin and front. A type the user picks
-    is kept by the next Import Garment instead of the type its file name names."""
+    is kept by the next Import Garment instead of the type its file name names. Gloves switch Body Cut to the bare
+    arms they are worn with, once, when the type becomes Gloves."""
+    before = _kept_type(self)  # read first: setting the slot or skin below keeps the new type on the garment
     if not RUNTIME.setting_type:
         self.category_chosen = True
     kind = garment.garment_type(self.category)
@@ -286,6 +288,29 @@ def _category_changed(self: Any, context: Any) -> None:
     self.skin = kind.skin
     self.open_front = kind.open_front
     _keep_on_garment(self)
+    if kind.family == "hand" and before != self.category:
+        show_gloves_cut(self, context)
+
+
+def _kept_type(settings_: Any) -> Optional[str]:
+    """The type the chosen garment kept before this change, ``None`` without a garment."""
+    try:
+        obj = settings_.garment
+        return obj.get(gh.TYPE_TAG) if obj is not None and obj.type == "MESH" else None
+    except (ReferenceError, AttributeError):
+        return None
+
+
+def show_gloves_cut(settings_: Any, context: Any) -> None:
+    """Body Cut on the Reference Data Pack's bare-arms cut, the skin gloves are worn with; nothing changes without
+    the pack or a bare-arms cut in it. Only the view changes, and the user can switch back."""
+    try:
+        pack, gender = body_pack(context)
+        cut = garment_reference.gloves_cut(pack.index if pack is not None else None, gender)
+        if cut is not None and settings_.body_cut != cut:
+            settings_.body_cut = cut
+    except Exception:  # noqa: BLE001 - a property update that raises leaves Blender in a bad state; report it
+        traceback.print_exc()
 
 
 def set_type(settings_: Any, category: str) -> None:
@@ -336,7 +361,7 @@ def _garment_changed(self: Any, context: Any) -> None:
         if slot in garment.slots_for(self.category):
             self.slot = slot
         if skin is not None:
-            self.skin = bool(skin)
+            self.skin = bool(skin) or garment.skin_locked(self.category)
         if open_front is not None:
             self.open_front = bool(open_front)
         # A garment without an avatar of its own never takes the last one's: its markers would come from elsewhere.
@@ -495,7 +520,10 @@ def _aligned(context: Any) -> bool:
     category = props(context).category
     if garment.is_prop(category):
         return gh.flag(obj, "dct_aligned")  # markers do not count: a prop has none
-    return not garment.markers_for(category) or gh.aligned(obj, context.scene)
+    expected = garment.markers_for(category)
+    if garment.markers_optional(category) and not any(name in gh.marker_objects(context.scene) for name in expected):
+        return True  # upright gloves without markers: gta.clothing places them as they are
+    return not expected or gh.aligned(obj, context.scene)
 
 
 def _fit_reason(context: Any, *, sculpting_ok: bool = False) -> Optional[Msg]:
@@ -1485,7 +1513,9 @@ class DCTLINK_OT_fit_push_out(_MeshOp):
         def push() -> Msg:
             settings_ = props(context)
             obj = current_garment(context)
-            within = gh.push_within(context.scene, obj, settings_.body, settings_.push_region, joints(context)[0])
+            # Gloves have only the hands: Push Out of Body works on the whole of them.
+            region = settings_.push_region if garment.offers_push_region(settings_.category) else "whole"
+            within = gh.push_within(context.scene, obj, settings_.body, region, joints(context)[0])
             progress = gh.Progress(5)
             try:
                 result = gh.push_out(obj, settings_.body, settings_.push_gap / 1000.0, progress=progress,
@@ -1845,7 +1875,8 @@ class DCTLINK_OT_fit_prepare(_SteppedOp):
         return gh.prepare_steps(context, current_garment(context), settings_.weld / 1000.0,
                                 (tuple(settings_.colour_1), tuple(settings_.colour_2)), settings_.overwrite_colours,
                                 open_front=front_centre(context) if settings_.open_front else None, body=body,
-                                thickness=settings_.thickness / 1000.0)
+                                thickness=settings_.thickness / 1000.0 if garment.offers_thickness(
+                                    settings_.category) else 0.0)
 
     def finished(self, context, result):
         least, share = OPEN_SEAMS_WARN
@@ -1943,6 +1974,8 @@ def stats(context: Any, obj: Any) -> Dict[str, Any]:
         found = gh.validate_stats(obj, valid_body(context), prop=True, anchor=anchor_point(context))
     else:
         found = gh.validate_stats(obj, valid_body(context))
+    if garment.markers_optional(props(context).category):  # gloves: a left and a right one, about the body's centre
+        found["two_gloves"] = garment.two_gloves(gh.world_positions(obj), gh.mesh_edges(obj.data))
     found.update(gdct.game_stats(obj, prop=_is_prop(context)))
     return found
 
@@ -2485,7 +2518,8 @@ class AddJob:
             host.push_undo(t("add.op.add"))
             host.redraw()
 
-        skin = bool(settings_.skin) and self.slot not in garment.PROP_SLOTS  # a prop never shows skin
+        # A prop never shows skin; gloves always do.
+        skin = (bool(settings_.skin) or garment.skin_locked(settings_.category)) and self.slot not in garment.PROP_SLOTS
         ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files, on_added=added)
         if self.changed:
             host.push_undo(t("add.op.add"))
@@ -3092,7 +3126,8 @@ def draw_fix(layout: Any, context: Any) -> None:
     draw_report(layout, context)
 
     layout.separator(factor=GAP)
-    labelled(layout, context, settings_, "push_region", "garment.prop.region")
+    if garment.offers_push_region(settings_.category):
+        labelled(layout, context, settings_, "push_region", "garment.prop.region")
     layout.prop(settings_, "push_gap", text=t("garment.prop.gap"), translate=False)
     tool(layout, context, DCTLINK_OT_fit_push_out.bl_idname, "garment.op.push", "MOD_SHRINKWRAP",
          info="garment.info.push")
@@ -3321,7 +3356,8 @@ def draw_ready(layout: Any, context: Any) -> None:
     body = options(layout, context, "prepare")
     if body is not None:
         body.prop(settings_, "weld", text=t("garment.prop.weld"), translate=False)
-        body.prop(settings_, "thickness", text=t("garment.prop.thickness"), translate=False)
+        if garment.offers_thickness(settings_.category):  # gloves: a back side would lie on the skin
+            body.prop(settings_, "thickness", text=t("garment.prop.thickness"), translate=False)
         for name, key in (("colour_1", "garment.prop.colour-1"), ("colour_2", "garment.prop.colour-2")):
             labelled(body, context, settings_, name, key)
         ui.checkbox(body, context, settings_, "overwrite_colours", "garment.prop.overwrite")
@@ -3491,7 +3527,9 @@ def draw_add(layout: Any, context: Any) -> None:
     subtext(layout, context, "add.target", slot=t(f"garment.slot.{settings_.slot}"),
             gender=t(f"gender.{settings_.gender}"))
     if not _is_prop(context):  # a prop never shows skin
-        ui.checkbox(layout, context, settings_, "skin", "add.prop.skin")
+        column = layout.column()
+        column.enabled = not garment.skin_locked(settings_.category)  # gloves carry the ped's arms: always on
+        ui.checkbox(column, context, settings_, "skin", "add.prop.skin")
 
     layout.separator(factor=GAP_SMALL)
     body = section(layout, "variations", "add.heading.variations", "IMAGE_DATA", info="add.info.variations")

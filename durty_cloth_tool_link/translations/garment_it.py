@@ -925,4 +925,18 @@ TEXT = {
     "garment.done.tears-game": "{count} vertici si strappano nelle pose del gioco. Si trovano nel gruppo di vertici DCT Tears.",
     "garment.done.tears-game.one": "{count} vertice si strappa nelle pose del gioco. Si trova nel gruppo di vertici DCT Tears.",
     "garment.done.no-tears-game": "Nulla si strappa nelle {total} pose del gioco.",
+    "garment.slot.uppr": "Corpo (uppr)",
+    "garment.slot.uppr.desc": "Le braccia e le mani con la pelle del ped, dove il gioco tiene i suoi guanti",
+    "garment.category.gloves": "Guanti (sperimentale)",
+    "garment.category.gloves.desc": "Un paio di guanti, uno per mano, indossati con le braccia nude del ped",
+    "garment.hint.gloves": (
+        "I guanti del gioco fanno parte delle braccia con la pelle del ped, quindi i guanti vanno nello slot Corpo e "
+        "Mostra la pelle resta attivo. Modellali sulle mani del corpo freemode (Marcatori automatici mette i due "
+        "marcatori dei polsi sui polsi del corpo), oppure importa due guanti in piedi uno accanto all'altro, con le "
+        "dita in giù, senza marcatori: Adatta su gta.clothing mette ogni guanto sulla sua mano."
+    ),
+    "garment.finding.two-gloves": (
+        "I guanti non sono due pezzi separati, uno per lato del corpo. Separa il guanto sinistro e quello destro in "
+        "modo che ognuno vada sulla sua mano."
+    ),
 }

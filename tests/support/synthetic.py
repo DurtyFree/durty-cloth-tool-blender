@@ -306,3 +306,31 @@ def triangles(faces: List[Tuple[int, ...]]) -> np.ndarray:
         for i in range(1, len(face) - 1):
             tris.append((face[0], face[i], face[i + 1]))
     return np.array(tris, dtype=np.int64)
+
+
+def gloves(arm_angle: float = 45.0, upright: bool = False, sides=(1.0, -1.0), joined: bool = False) -> Mesh:
+    """Two gloves, closed tubes from a cuff behind the wrist to the fingertips: on the hands of arms at ``arm_angle``
+    degrees below the horizontal (the shape of :data:`SKELETON_BONES`), or ``upright`` side by side with the fingers
+    down, as a mesh generator exports them. ``sides`` (1 for the ped's left, -1 for its right) places them, and
+    ``joined`` adds a strap across the centre that makes one piece of the two."""
+    builder = _Builder()
+    joints: Dict[str, Tuple[float, float, float]] = {}
+    for side in sides:
+        suffix = "l" if side > 0 else "r"
+        if upright:
+            wrist = np.array([side * 0.08, 0.0, 0.0])
+            direction = np.array([0.0, 0.0, -1.0])
+        else:
+            direction = _direction(side, arm_angle)
+            wrist = np.array([side * SHOULDER, 0.0, SHOULDER_Z]) + direction * 0.54
+        steps = np.linspace(-0.06, 0.19, 12)
+        normal = np.cross(np.array([0, 1.0, 0]), direction)
+        builder.tube(wrist + np.outer(steps, direction), np.full((len(steps), 2), (0.05, 0.03)), normal,
+                     np.array([0, 1.0, 0]), segments=16, closed=True)
+        joints[f"wrist_{suffix}"] = tuple(wrist)
+    if joined:
+        ends = np.array([[-0.3, 0.0, 0.1], [0.3, 0.0, 0.1]])
+        steps = np.linspace(0.0, 1.0, 8)
+        builder.tube(ends[0] + np.outer(steps, ends[1] - ends[0]), np.full((8, 2), 0.01), np.array([0, 1.0, 0]),
+                     np.array([0, 0, 1.0]), segments=8, closed=True)
+    return builder.mesh(joints)

@@ -1551,4 +1551,18 @@ TEXT = {
     "garment.done.tears-game": "{count} vértices rasgam nas poses do jogo. Eles estão no grupo de vértices DCT Tears.",
     "garment.done.tears-game.one": "{count} vértice rasga nas poses do jogo. Ele está no grupo de vértices DCT Tears.",
     "garment.done.no-tears-game": "Nada rasga nas {total} poses do jogo.",
+    "garment.slot.uppr": "Corpo (uppr)",
+    "garment.slot.uppr.desc": "Os braços e as mãos com a pele do ped, onde o jogo guarda as luvas",
+    "garment.category.gloves": "Luvas (experimental)",
+    "garment.category.gloves.desc": "Um par de luvas, uma em cada mão, usado com os braços nus do ped",
+    "garment.hint.gloves": (
+        "As luvas do jogo fazem parte dos braços com a pele do ped, então as luvas vão no slot Corpo e Mostra pele "
+        "continua ligado. Modele-as nas mãos do corpo freemode (Marcadores automáticos coloca os dois marcadores de "
+        "pulso nos pulsos do corpo) ou importe duas luvas em pé lado a lado, com os dedos para baixo, sem "
+        "marcadores: Ajustar no gta.clothing coloca cada luva na sua mão."
+    ),
+    "garment.finding.two-gloves": (
+        "As luvas não são duas peças separadas, uma de cada lado do corpo. Separe a luva esquerda e a direita para "
+        "que cada uma vá para a sua mão."
+    ),
 }

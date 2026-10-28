@@ -584,3 +584,22 @@ def test_the_densest_spot_of_open_edges_is_counted_as_gta_clothing_counts_it():
     tetra = np.array([[0, 0, 0], [0.001, 0, 0], [0, 0.001, 0], [0, 0, 0.001]], dtype=float)
     closed = np.array([[0, 2, 1], [0, 1, 3], [1, 2, 3], [0, 3, 2]])
     assert garment_fit.densest_seam_cell(tetra, closed, 1.5)[0] == 0
+
+
+@pytest.mark.parametrize("operation", ["fit", "weights"])
+def test_gloves_go_to_gta_clothing_as_the_arms_slot_with_their_own_category(tmp_path, api, operation):
+    """Gloves are part of the game's arms: they are sent as ``uppr`` with the category ``gloves``. Their two wrist
+    markers make no whole arm, so they stay home and gta.clothing places each glove on its hand."""
+    mesh = synthetic.gloves()
+    upload = garment_fit.prepare_upload(mesh.positions, synthetic.triangles(mesh.faces))
+    built = garment_fit.build_request(operation, "female", "uppr", "gloves", "1", mesh.joints,
+                                      garment_fit.fit_options(3, True, 30, 1.5, False))
+    assert built["drawableType"] == "uppr" and built["category"] == "gloves" and "markers" not in built
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    run = ctrl.fitting.start(operation, built, upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    assert run.state == "done"
+    sent_request, _mesh = api.fit.uploads[0]
+    assert (sent_request["drawableType"], sent_request["category"]) == ("uppr", "gloves")

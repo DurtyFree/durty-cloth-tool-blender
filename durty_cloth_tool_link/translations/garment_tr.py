@@ -920,4 +920,18 @@ TEXT = {
     "garment.done.tears-game": "Oyunun pozlarında {count} köşe yırtılıyor. DCT Tears köşe grubundalar.",
     "garment.done.tears-game.one": "Oyunun pozlarında {count} köşe yırtılıyor. DCT Tears köşe grubunda.",
     "garment.done.no-tears-game": "Oyunun {total} pozunda hiçbir şey yırtılmıyor.",
+    "garment.slot.uppr": "Beden (uppr)",
+    "garment.slot.uppr.desc": "Ped'in cildiyle kollar ve eller, oyunun eldivenleri tuttuğu yer",
+    "garment.category.gloves": "Eldiven (deneysel)",
+    "garment.category.gloves.desc": "Her elde bir tane olmak üzere bir çift eldiven, ped'in çıplak kollarıyla giyilir",
+    "garment.hint.gloves": (
+        "Oyunun eldivenleri ped'in cildiyle birlikte kolların parçasıdır, bu yüzden eldivenler Beden yuvasına gider "
+        "ve Cilt gösterir açık kalır. Onları freemode bedeninin elleri üzerinde modelleyin (Otomatik işaretler iki "
+        "bilek işaretini bedenin bileklerine koyar) veya yan yana, parmakları aşağıda iki dik eldiveni işaretsiz içe "
+        "aktarın: gta.clothing üzerinde uyarla her eldiveni kendi eline takar."
+    ),
+    "garment.finding.two-gloves": (
+        "Eldivenler, bedenin her iki yanında birer tane olan iki ayrı parça değil. Her biri kendi eline gidebilsin "
+        "diye sol ve sağ eldiveni ayırın."
+    ),
 }

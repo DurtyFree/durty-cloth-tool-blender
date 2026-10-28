@@ -1662,4 +1662,18 @@ TEXT = {
     "garment.done.tears-game": "{count} sommets se déchirent dans les poses du jeu. Ils sont dans le groupe de sommets DCT Tears.",
     "garment.done.tears-game.one": "{count} sommet se déchire dans les poses du jeu. Il est dans le groupe de sommets DCT Tears.",
     "garment.done.no-tears-game": "Rien ne se déchire dans les {total} poses du jeu.",
+    "garment.slot.uppr": "Corps (uppr)",
+    "garment.slot.uppr.desc": "Les bras et les mains avec la peau du ped, là où le jeu place ses gants",
+    "garment.category.gloves": "Gants (expérimental)",
+    "garment.category.gloves.desc": "Une paire de gants, un sur chaque main, portée avec les bras nus du ped",
+    "garment.hint.gloves": (
+        "Les gants du jeu font partie des bras avec la peau du ped : les gants vont donc dans l'emplacement Corps et "
+        "Peau visible reste activé. Modélisez-les sur les mains du corps freemode (Marqueurs automatiques place les "
+        "deux marqueurs de poignet sur les poignets du corps), ou importez deux gants debout côte à côte, doigts "
+        "vers le bas, sans marqueurs : Ajuster sur gta.clothing place chaque gant sur sa main."
+    ),
+    "garment.finding.two-gloves": (
+        "Les gants ne sont pas deux pièces séparées, une de chaque côté du corps. Séparez le gant gauche et le gant "
+        "droit pour que chacun aille sur sa main."
+    ),
 }

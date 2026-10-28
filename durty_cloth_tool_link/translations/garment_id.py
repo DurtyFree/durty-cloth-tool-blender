@@ -934,4 +934,20 @@ TEXT = {
     "garment.done.tears-game": "{count} vertex robek dalam pose game. Vertex tersebut berada di grup vertex DCT Tears.",
     "garment.done.tears-game.one": "{count} vertex robek dalam pose game. Vertex tersebut berada di grup vertex DCT Tears.",
     "garment.done.no-tears-game": "Tidak ada yang robek dalam {total} pose game.",
+    "garment.slot.uppr": "Tubuh (uppr)",
+    "garment.slot.uppr.desc": "Lengan dan tangan dengan kulit ped, tempat game menyimpan sarung tangannya",
+    "garment.category.gloves": "Sarung Tangan (Eksperimental)",
+    "garment.category.gloves.desc": (
+        "Sepasang sarung tangan, satu di setiap tangan, dikenakan dengan lengan ped yang terbuka"
+    ),
+    "garment.hint.gloves": (
+        "Sarung tangan game adalah bagian dari lengan bersama kulit ped, jadi sarung tangan masuk ke slot Tubuh dan "
+        "Menampilkan Kulit tetap aktif. Modelkan pada tangan tubuh freemode (Penanda Otomatis menaruh dua penanda "
+        "pergelangan di pergelangan tubuh), atau impor dua sarung tangan tegak berdampingan, jari ke bawah, tanpa "
+        "penanda: Sesuaikan pada gta.clothing memasang setiap sarung tangan di tangannya."
+    ),
+    "garment.finding.two-gloves": (
+        "Sarung tangan bukan dua bagian terpisah, satu di setiap sisi tubuh. Pisahkan sarung tangan kiri dan kanan "
+        "agar masing-masing dapat dipasang di tangannya."
+    ),
 }

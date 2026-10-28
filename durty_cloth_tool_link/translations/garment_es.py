@@ -1603,4 +1603,20 @@ TEXT = {
     "garment.done.tears-game": "{count} vértices se rompen en las poses del juego. Están en el grupo de vértices DCT Tears.",
     "garment.done.tears-game.one": "{count} vértice se rompe en las poses del juego. Está en el grupo de vértices DCT Tears.",
     "garment.done.no-tears-game": "Nada se rompe en las {total} poses del juego.",
+    "garment.slot.uppr": "Cuerpo (uppr)",
+    "garment.slot.uppr.desc": "Los brazos y las manos con la piel del ped, donde el juego guarda sus guantes",
+    "garment.category.gloves": "Guantes (experimental)",
+    "garment.category.gloves.desc": (
+        "Un par de guantes, uno en cada mano, que se llevan con los brazos desnudos del ped"
+    ),
+    "garment.hint.gloves": (
+        "Los guantes del juego forman parte de los brazos con la piel del ped, así que los guantes van en la ranura "
+        "Cuerpo y Piel visible sigue activado. Modélalos sobre las manos del cuerpo freemode (Marcadores automáticos "
+        "pone los dos marcadores de muñeca en las muñecas del cuerpo) o importa dos guantes de pie uno al lado del "
+        "otro, con los dedos hacia abajo, sin marcadores: Ajustar en gta.clothing pone cada guante en su mano."
+    ),
+    "garment.finding.two-gloves": (
+        "Los guantes no son dos piezas separadas, una a cada lado del cuerpo. Separa el guante izquierdo y el "
+        "derecho para que cada uno vaya en su mano."
+    ),
 }

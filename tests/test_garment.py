@@ -78,7 +78,7 @@ def test_type_presets():
     """The type presets: open fronts, bridged thigh weights, bare skin, and what a type hints at."""
     assert garment.garment_type("open_jacket").open_front and not garment.garment_type("hoodie").open_front
     assert {c for c in garment.CATEGORIES if garment.garment_type(c).bridge} == {"long_coat", "dress", "skirt"}
-    assert {c for c in garment.CATEGORIES if garment.garment_type(c).skin} == {"shorts", "skirt", "sandals"}
+    assert {c for c in garment.CATEGORIES if garment.garment_type(c).skin} == {"shorts", "skirt", "sandals", "gloves"}
     assert garment.garment_type("shorts").hint == garment.garment_type("skirt").hint == "garment.hint.bare-legs"
     assert garment.garment_type("dress").hint == "garment.hint.dress"
     # An unknown name falls back to a T-shirt rather than failing.

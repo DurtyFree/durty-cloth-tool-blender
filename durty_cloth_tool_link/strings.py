@@ -1127,6 +1127,8 @@ EN: Dict[str, str] = {
     "garment.slot.p_lwrist.desc": "A prop on the left wrist: watches and bracelets",
     "garment.slot.p_rwrist": "Right Wrist Prop (p_rwrist)",
     "garment.slot.p_rwrist.desc": "A prop on the right wrist: watches and bracelets",
+    "garment.slot.uppr": "Body (uppr)",
+    "garment.slot.uppr.desc": "The arms and hands with the ped's skin, where the game keeps its gloves",
     "garment.category.hoodie": "Hoodie",
     "garment.category.hoodie.desc": "A top with long sleeves and a hood",
     "garment.category.open_jacket": "Open Jacket",
@@ -1155,6 +1157,8 @@ EN: Dict[str, str] = {
     "garment.category.watch.desc": "A watch: a prop on the wrist",
     "garment.category.bracelet": "Bracelet",
     "garment.category.bracelet.desc": "A bracelet: a prop on the wrist",
+    "garment.category.gloves": "Gloves (Experimental)",
+    "garment.category.gloves.desc": "A pair of gloves, one on each hand, worn with the ped's bare arms",
     "garment.region.head": "Head",
     "garment.info.type": (
         "The type sets the slot the garment goes into, how its markers are found, the regions the tools offer and what "
@@ -1191,6 +1195,12 @@ EN: Dict[str, str] = {
     "garment.hint.prop": (
         "A prop hangs from one bone and keeps its shape: it is not fitted to the body and needs no weights. Snap to "
         "Anchor under Fit puts it in place; move it by hand from there."
+    ),
+    "garment.hint.gloves": (
+        "The game's gloves are part of the arms with the ped's skin, so gloves go into the Body slot and Shows Skin "
+        "stays on. Model them on the freemode body's hands (Auto Markers starts the two wrist markers on the body's "
+        "wrists), or import two upright gloves side by side, fingers down, without markers: Fit on gta.clothing puts "
+        "each glove on its hand."
     ),
     "garment.prop.open-front": "Open Front",
     "garment.prop.open-front.desc": "The garment is worn open: Prepare Garment never joins its two fronts",
@@ -1628,6 +1638,10 @@ EN: Dict[str, str] = {
     "garment.finding.armature-offset": (
         "The armature is {distance} cm from the origin, so the cloth sits off the ped in the game. Move the armature "
         "to the origin."
+    ),
+    "garment.finding.two-gloves": (
+        "The gloves are not two separate pieces, one on each side of the body. Separate the left and the right glove "
+        "so each can go on its hand."
     ),
     "add.result.added-late": (
         "Durty Cloth Tool added {name} after all: Add to project was chosen there before the cancel arrived. It is "

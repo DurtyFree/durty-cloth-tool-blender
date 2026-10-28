@@ -990,4 +990,14 @@ TEXT = {
     "garment.done.tears-game": "{count} 个顶点在游戏姿势中撕裂。它们位于顶点组 DCT Tears 中。",
     "garment.done.tears-game.one": "{count} 个顶点在游戏姿势中撕裂。它位于顶点组 DCT Tears 中。",
     "garment.done.no-tears-game": "在 {total} 个游戏姿势中没有任何撕裂。",
+    "garment.slot.uppr": "身体 (uppr)",
+    "garment.slot.uppr.desc": "带有 ped 皮肤的手臂和手，游戏把手套放在这里",
+    "garment.category.gloves": "手套（实验性）",
+    "garment.category.gloves.desc": "一副手套，每只手一只，与 ped 的裸露手臂一起穿戴",
+    "garment.hint.gloves": (
+        "游戏中的手套与 ped 的皮肤一起属于手臂，所以手套放入身体槽位，显示皮肤保持开启。"
+        "可以在 freemode 身体的手上建模（自动标记会把两个手腕标记放在身体的手腕上），"
+        "也可以导入两只并排直立、手指朝下的手套，不放标记：在 gta.clothing 上适配会把每只手套戴到对应的手上。"
+    ),
+    "garment.finding.two-gloves": "手套不是位于身体两侧、各自独立的两个部分。请把左手套和右手套分开，让每只都能戴到对应的手上。",
 }

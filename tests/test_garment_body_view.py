@@ -60,3 +60,13 @@ def test_each_setting_shows_its_parts(index, cut, arms, legs, solid, wire):
 def test_an_unknown_view_mode_is_refused(index):
     with pytest.raises(ValueError):
         ref.view_parts(index.genders["male"], "full", "ghost", "solid")
+
+
+def test_gloves_are_judged_against_the_bare_arms_cut_when_the_pack_has_one(index):
+    assert ref.gloves_cut(index, "male") == "base"
+    assert ref.gloves_cut(None, "male") is None  # without the pack Body Cut stays as it is
+    value = json.loads(synthetic_pack.files()["reference.json"])
+    for cut in value["genders"]["male"]["upperBody"]:
+        if cut["display"] == "bare_arms":
+            cut["display"] = "short_sleeves"
+    assert ref.gloves_cut(ref.parse_index(json.dumps(value).encode()), "male") is None

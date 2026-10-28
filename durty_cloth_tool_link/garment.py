@@ -26,7 +26,8 @@ import numpy as np
 GENDERS = ("male", "female")
 #: The slots the tools add to, with Durty Cloth Tool's drawable type names: the components first, then the props.
 #: Blender keeps the chosen slot by its place in this list, so new slots go at the end.
-SLOTS = ("jbib", "accs", "lowr", "feet", "berd", "hand", "task", "p_head", "p_eyes", "p_ears", "p_lwrist", "p_rwrist")
+SLOTS = ("jbib", "accs", "lowr", "feet", "berd", "hand", "task", "p_head", "p_eyes", "p_ears", "p_lwrist", "p_rwrist",
+         "uppr")
 #: The props among them: rigid pieces that hang from one bone (their anchor), never fitted to the body or weighted.
 PROP_SLOTS = frozenset(slot for slot in SLOTS if slot.startswith("p_"))
 #: The bone each prop slot hangs from in the game (its anchor): the head for hats, glasses and ear pieces, the
@@ -36,10 +37,10 @@ ANCHOR_BONES = {"p_head": "SKEL_Head", "p_eyes": "SKEL_Head", "p_ears": "SKEL_He
 #: The garment types (Blender keeps the chosen type by its place in this list, so new types go at the end).
 CATEGORIES = ("vest", "tshirt", "long_sleeve", "long_jacket", "pants", "shorts", "shoes", "hoodie", "open_jacket",
               "long_coat", "dress", "skirt", "sandals", "mask", "armour", "bag", "hat", "glasses", "ears", "watch",
-              "bracelet")
+              "bracelet", "gloves")
 #: The order the type picker lists them in, in groups (``None`` separates two groups).
 CATEGORY_MENU = ("tshirt", "long_sleeve", "vest", "hoodie", "open_jacket", "long_jacket", "long_coat", "dress", None,
-                 "pants", "shorts", "skirt", None, "shoes", "sandals", None, "mask", "armour", "bag", None,
+                 "pants", "shorts", "skirt", None, "shoes", "sandals", "gloves", None, "mask", "armour", "bag", None,
                  "hat", "glasses", "ears", "watch", "bracelet")
 SOURCE_POSES = ("a_pose", "t_pose", "custom")
 
@@ -52,6 +53,8 @@ LOWER_MARKERS = ("pelvis", "hip_l", "hip_r", "knee_l", "knee_r", "ankle_l", "ank
 TORSO_MARKERS = ("chest", "neck", "pelvis", "shoulder_l", "shoulder_r", "hip_l", "hip_r")
 #: The marker of a mask: the head's joint (where the head turns on the neck).
 HEAD_MARKERS = ("head",)
+#: The markers of gloves: the two wrists, where each glove's cuff meets its hand.
+HAND_MARKERS = ("wrist_l", "wrist_r")
 #: Every marker name (new ones go at the end).
 MARKERS = UPPER_MARKERS + ("knee_l", "ankle_l", "knee_r", "ankle_r", "head")
 _LEFT = ("shoulder_l", "elbow_l", "wrist_l", "hip_l", "knee_l", "ankle_l")
@@ -82,7 +85,8 @@ _LOWER_REGIONS = ("waist", "hips", "legs")
 
 class GarmentType(NamedTuple):
     """What a garment type sets up: the slots it may go into (the first is the usual one), how its markers are found
-    (``family``: ``upper``, ``lower``, ``torso``, ``head``, ``none``, or ``anchor`` for a prop), its sleeves, the
+    (``family``: ``upper``, ``lower``, ``torso``, ``head``, ``hand`` for gloves, ``none``, or ``anchor`` for a
+    prop), its sleeves, the
     regions the tools offer and those Snug to Body works on, whether its front is open (never welded across the centre
     front), whether its thigh weights are bridged across the legs (a skirt or coat tails that hang between the legs
     must not split), whether it usually shows skin, the extra hint the panel shows (a text key), the largest dimension
@@ -141,6 +145,11 @@ TYPES: Dict[str, GarmentType] = {
                          snap="wrist", height=0.05),
     "bracelet": GarmentType(("p_rwrist", "p_lwrist"), "anchor", hint="garment.hint.prop", size=(0.03, 0.25),
                             snap="wrist", height=0.04),
+    # Gloves (Experimental): the game's gloves are part of the arms with the ped's skin, so they go into the arms
+    # slot and always show skin. Their size spans a pair on the hands of an A-pose or T-pose and an upright pair side
+    # by side; their height is one upright glove's.
+    "gloves": GarmentType(("uppr",), "hand", regions=("forearms", "cuffs"), snug=("cuffs",), skin=True,
+                          hint="garment.hint.gloves", size=(0.2, 1.9), height=0.27),
 }
 #: How far the sleeves of a top reach.
 SLEEVES = {name: kind.sleeves for name, kind in TYPES.items() if kind.family == "upper"}
@@ -189,7 +198,29 @@ def markers_for(category: str) -> Tuple[str, ...]:
     """The markers a garment of this type has (none for shoes and props)."""
     family = garment_type(category).family
     return {"upper": UPPER_MARKERS, "lower": LOWER_MARKERS, "torso": TORSO_MARKERS,
-            "head": HEAD_MARKERS}.get(family, ())
+            "head": HEAD_MARKERS, "hand": HAND_MARKERS}.get(family, ())
+
+
+def markers_optional(category: str) -> bool:
+    """Whether a garment of this type may go without its markers: gloves made upright, side by side, have no wrists
+    on the body's and are sent to gta.clothing as they are, which puts each on its hand."""
+    return garment_type(category).family == "hand"
+
+
+def skin_locked(category: str) -> bool:
+    """Whether Shows Skin is on and cannot be turned off: the game's gloves carry the ped's arms with its skin."""
+    return garment_type(category).family == "hand"
+
+
+def offers_thickness(category: str) -> bool:
+    """Whether Prepare Garment offers a back shell (Thickness): never for gloves, whose back side would lie on the
+    skin they carry."""
+    return garment_type(category).family != "hand"
+
+
+def offers_push_region(category: str) -> bool:
+    """Whether Push Out of Body offers a region to work on: gloves have only the hands, so it works on the whole."""
+    return garment_type(category).family != "hand"
 
 
 def detects_markers(category: str) -> bool:
@@ -285,9 +316,11 @@ def next_step(state: FlowState) -> str:
     if not state.prepared:
         if state.prop:
             return "garment.next.prepare" if state.aligned else "garment.next.snap"
-        if state.markers < len(markers_for(state.category)):
+        if state.markers < len(markers_for(state.category)) and not (
+                markers_optional(state.category) and state.markers == 0):
             return "garment.next.markers"
-        if markers_for(state.category) and not state.aligned:
+        if markers_for(state.category) and not state.aligned and not (
+                markers_optional(state.category) and state.markers == 0):
             return "garment.next.align"
         if not state.fitted and not state.checked:
             return "garment.next.fit"
@@ -374,7 +407,7 @@ def stage_status(state: FlowState, stage: str) -> StageStatus:
             return status("garment.status.fitted")
         if state.aligned and total:
             return status("garment.status.aligned")
-        if total and not done:
+        if total and not done and not (markers_optional(state.category) and state.markers == 0):
             return status("garment.status.markers", count=min(state.markers, total), total=total)
         return status(None)
     if stage == "fix":
@@ -1005,7 +1038,9 @@ def marker_problems(markers: Mapping[str, Any], category: str) -> List[str]:
     def length(a: str, b: str) -> float:
         return float(np.linalg.norm(found[a] - found[b]))
 
-    if category in LOWER:
+    if family == "hand":
+        pass  # two wrists: only whether they mirror each other
+    elif category in LOWER:
         if not found["pelvis"][2] > max(found["hip_l"][2], found["hip_r"][2]) - 0.02:
             problems.append("order")
         for side in ("l", "r"):
@@ -1184,11 +1219,14 @@ def similarity_fit(source: Any, target: Any, weights: Any) -> Similarity:
 
 class AlignPlan(NamedTuple):
     """What Align to Body does: the garment as a whole onto the joints, then each arm (or leg) turned about its
-    shoulder (or hip) onto the body's. ``limbs`` holds ``(side, kind, pivot, axis, degrees)``."""
+    shoulder (or hip) onto the body's. ``limbs`` holds ``(side, kind, pivot, axis, degrees)``. ``sides`` holds
+    ``(side, shift)`` for gloves: everything on that side of the centre between the wrist markers moves by its
+    side's shift."""
 
     similarity: Similarity
     limbs: Tuple[Tuple[str, str, Vector, Vector, float], ...]
     residual: float  # millimetres, the weighted mean distance of the markers from their joints after the fit
+    sides: Tuple[Tuple[str, Vector], ...] = ()
 
 
 def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: str,
@@ -1206,6 +1244,8 @@ def align_plan(markers: Mapping[str, Any], joints: Mapping[str, Any], category: 
     family = garment_type(category).family
     if family == "head":
         return _head_plan(markers, joints)
+    if family == "hand":
+        return _hand_plan(markers, joints)
     kind = "lower" if family == "lower" else "upper"
     weights = ALIGN_WEIGHTS[kind]
     full = complete_joints(joints)
@@ -1266,6 +1306,25 @@ def _head_plan(markers: Mapping[str, Any], joints: Mapping[str, Any]) -> AlignPl
     return AlignPlan(Similarity(1.0, np.eye(3), shift), (), 0.0)
 
 
+#: The furthest Align to Body moves a glove onto the body's hand (metres): further means its marker is not on it.
+HAND_ALIGN_LIMIT = 0.5
+
+
+def _hand_plan(markers: Mapping[str, Any], joints: Mapping[str, Any]) -> AlignPlan:
+    """Gloves: each glove moved onto its own hand, its wrist marker onto the hand's joint, without turning or scaling
+    it (gta.clothing turns and sizes each glove on its hand)."""
+    full = complete_joints(joints)
+    shifts = []
+    for side, bone in (("l", "SKEL_L_Hand"), ("r", "SKEL_R_Hand")):
+        if f"wrist_{side}" not in markers or bone not in full:
+            raise MarkerError("align-markers")
+        shift = full[bone] - _vec(markers[f"wrist_{side}"])
+        if float(np.linalg.norm(shift)) > HAND_ALIGN_LIMIT:
+            raise MarkerError("align-markers")
+        shifts.append((side, _tuple(shift)))
+    return AlignPlan(Similarity(1.0, np.eye(3), np.zeros(3)), (), 0.0, tuple(shifts))
+
+
 def body_markers(joints: Mapping[str, Any], names: Iterable[str]) -> Dict[str, Vector]:
     """Markers on the body's own joints (``names`` of :data:`MARKER_JOINTS`): where Auto Markers starts a type it cannot
     read from the garment's shape when the avatar the garment was made on is not known."""
@@ -1318,6 +1377,14 @@ def apply_align(points: Any, markers: Mapping[str, Any], plan: AlignPlan) -> Tup
     names = list(markers)
     placed = plan.similarity.apply([markers[n] for n in names]) if names else np.zeros((0, 3))
     new_markers = {name: _tuple(placed[i]) for i, name in enumerate(names)}
+    if plan.sides:
+        cx = centre_x(new_markers)
+        on_left = moved[:, 0] > cx  # the ped's left is +X
+        for side, shift in plan.sides:
+            moved[on_left if side == "l" else ~on_left] += _vec(shift)
+            name = f"wrist_{side}"
+            if name in new_markers:
+                new_markers[name] = _tuple(_vec(new_markers[name]) + _vec(shift))
     for side, limb, pivot, axis, degrees in plan.limbs:
         weights = limb_weights(moved, new_markers, side, limb)
         moved = rotate_weighted(moved, pivot, axis, degrees, weights)
@@ -3555,6 +3622,8 @@ def validate(stats: Mapping[str, Any]) -> List[Finding]:
         add("warning", "anchor-far", distance=int(round(float(anchor) * 100)))
     if stats.get("materials", 1) > 1:
         add("info", "materials", count=int(stats["materials"]))
+    if stats.get("two_gloves") is False:
+        add("warning", "two-gloves")
     return findings
 
 
@@ -3567,6 +3636,23 @@ def weight_sum_count(weights_per_vertex: Sequence[Sequence[float]], tolerance: f
         if total > 0.0 and abs(total - 1.0) > tolerance:
             count += 1
     return count
+
+
+def two_gloves(positions: Any, edges: Any, centre: float = 0.0) -> bool:
+    """Whether gloves are two separate gloves, one each side of the body's centre (``centre``, the x of its centre
+    plane): every connected part lies wholly on one side, and both sides have one. A pair modelled as one piece, or
+    both gloves on one side, cannot be put on the two hands."""
+    points = as_points(positions)
+    if not len(points):
+        return False
+    part = components(len(points), edges)
+    count = int(part.max()) + 1
+    low = np.full(count, np.inf)
+    high = np.full(count, -np.inf)
+    np.minimum.at(low, part, points[:, 0])
+    np.maximum.at(high, part, points[:, 0])
+    left, right = low > centre, high < centre
+    return bool(np.all(left | right) and left.any() and right.any())
 
 
 def non_ped_materials(materials: Sequence[Tuple[str, str]]) -> List[str]:
@@ -3764,6 +3850,7 @@ TYPE_WORDS: Tuple[Tuple[str, Tuple[str, ...]], ...] = (
     ("ears", ("earring", "earpiece", "kupe", "küpe")),
     ("watch", ("watch", "wristwatch", "saat")),
     ("bracelet", ("bracelet", "bangle", "bileklik", "bilezik")),
+    ("gloves", ("glove", "mitten", "gauntlet", "eldiven")),
     ("hoodie", ("hoodie", "hoody", "hooded", "kapusonlu", "kapüşonlu")),
     ("tshirt", ("tshirt", "t shirt", "tee", "short sleeve", "tisort", "tişört", "kisa kollu", "kısa kollu")),
     ("dress", ("dress", "gown", "elbise")),
@@ -3807,6 +3894,7 @@ TYPE_WORD_FORMS: Dict[str, Tuple[str, ...]] = {
     "saat": ("saatler", "saati"),
     "bileklik": ("bileklikler", "bilekligi"),
     "bilezik": ("bilezikler", "bilezigi"),
+    "eldiven": ("eldivenler", "eldiveni", "eldivenleri"),
     "kapusonlu": ("kapusonlular", "kapusonlusu"),
     "kapüşonlu": ("kapüşonlular", "kapüşonlusu"),
     "tisort": ("tisortler", "tisortu"),

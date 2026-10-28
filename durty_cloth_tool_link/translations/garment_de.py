@@ -1689,4 +1689,19 @@ TEXT = {
     "garment.done.tears-game": "{count} Vertices reißen in den Posen des Spiels. Sie sind in der Punktgruppe DCT Tears.",
     "garment.done.tears-game.one": "{count} Vertex reißt in den Posen des Spiels. Er ist in der Punktgruppe DCT Tears.",
     "garment.done.no-tears-game": "In den {total} Posen des Spiels reißt nichts.",
+    "garment.slot.uppr": "Körper (uppr)",
+    "garment.slot.uppr.desc": "Die Arme und Hände mit der Haut des Peds, wo das Spiel seine Handschuhe hat",
+    "garment.category.gloves": "Handschuhe (Experimentell)",
+    "garment.category.gloves.desc": "Ein Paar Handschuhe, einer an jeder Hand, getragen mit den nackten Armen des Peds",
+    "garment.hint.gloves": (
+        "Die Handschuhe des Spiels gehören mit der Haut des Peds zu den Armen, daher kommen Handschuhe in den Slot "
+        "Körper und Haut sichtbar bleibt an. Modelliere sie an den Händen des Freemode-Körpers (Auto-Marker setzt "
+        "die beiden Handgelenk-Marker auf die Handgelenke des Körpers), oder importiere zwei aufrechte Handschuhe "
+        "nebeneinander, Finger nach unten, ohne Marker: Auf gta.clothing anpassen setzt jeden Handschuh auf seine "
+        "Hand."
+    ),
+    "garment.finding.two-gloves": (
+        "Die Handschuhe sind nicht zwei getrennte Teile, je eines auf jeder Seite des Körpers. Trenne den linken und "
+        "den rechten Handschuh, damit jeder auf seine Hand kommt."
+    ),
 }

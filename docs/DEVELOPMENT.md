@@ -44,7 +44,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `garment_atlas.py` | Combine Materials without baking: which Method Automatic picks, the power-of-two atlas grid, each material's image placed in its square, the gaps filled from neighbouring colours, the UVs moved into their squares |
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
 | `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version, with the Reference Data Pack when that version lists it, and deleting a pack the current version no longer lists |
-| `garment_reference.py` | The Reference Data Pack: checking its files against their limits, keeping it whole with a record of every file's size and SHA-256, reading its index, its upper-body cuts and its poses, Body Cut's choices and which of its parts each Body Cut, Arms and Legs setting shows |
+| `garment_reference.py` | The Reference Data Pack: checking its files against their limits, keeping it whole with a record of every file's size and SHA-256, reading its index, its upper-body cuts and its poses, Body Cut's choices (and the bare-arms cut Gloves switch to) and which of its parts each Body Cut, Arms and Legs setting shows |
 | `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today, the result's warnings (one line per region where weights were repaired, a generic line for a code the add-on does not know yet), the fit check's usual ranges and Check Tears' comparison with the game's own clothing |
 | `garment_add.py` | Add to Project rules: the skeleton template's bones, the checks before anything is sent, the variation pictures, Durty Cloth Tool's answer |
 | `ped.py` | Custom Ped maths: markers (click guide, Auto Markers, from an old rig), character checks, the rig result as an armature plan, test poses, local checks |
@@ -78,6 +78,32 @@ game's poses measures one pose per stage. While Blender's thread is busy for a w
 export), dct_link's keep-alive daemon thread (on by default) answers Durty Cloth Tool's pings on the loopback socket
 so the connection stays up; it never runs a callback, and what it read reaches the add-on with the next poll. Never
 block Blender's interface: new network or disk work goes into a background task that a timer checks.
+
+### Gloves (Experimental)
+
+The Gloves type (`gloves`) goes into the Body slot (`uppr`), where the game keeps gloves together with the ped's arm
+skin. Both ids are appended at the end of `CATEGORIES` and `SLOTS` in `garment.py`, because Blender keeps the chosen
+type and slot by their place in those lists. What the type changes, and where:
+
+- **Markers.** Its family is `hand`, whose markers are the two wrists (`HAND_MARKERS`). Auto Markers never reads them
+  from the shape (`detects_markers` is false): it starts them on the body's wrists, or takes them from the chosen
+  avatar. The markers are optional (`markers_optional`): without them the next step is Fit on gta.clothing and the
+  tools that wait for Align to Body run as they are, for two upright gloves side by side. With both markers, Align
+  to Body moves everything on each side of the centre between them by that side's shift, so each glove's wrist lands
+  on the hand joint (`AlignPlan.sides`); it never turns or scales them.
+- **Settings.** Shows Skin is on and locked (`skin_locked`): the checkbox is disabled, a garment's stored value never
+  turns it off, and Add to Project sends `skin` true. Prepare Garment shows no Thickness and adds no back shell
+  (`offers_thickness`), and Push Out of Body shows no region and works on the whole garment (`offers_push_region`).
+- **Body Cut.** When the type becomes Gloves (picked, or guessed by Import Garment), Body Cut switches to the
+  Reference Data Pack's first cut whose display name is `bare_arms` (`garment_reference.gloves_cut`). It changes
+  only the view, happens once per change of type, and does nothing without the pack or such a cut.
+- **Validate.** `two_gloves` checks that every connected part of the mesh lies wholly on one side of the body's
+  centre plane (x 0) and that both sides have one; otherwise Validate warns with `two-gloves`.
+- **Fit on gta.clothing and Transfer Weights.** The request carries the drawable type `uppr` and the category
+  `gloves` (`SERVICE_CATEGORIES` in `garment_fit.py`). Two wrists make no whole arm chain, so no markers are sent.
+  The fit check has no usual ranges of game clothing for this slot.
+- **Type guess.** `glove`, `mitten` and `gauntlet` with their plurals, and Turkish `eldiven` with `eldivenler`,
+  `eldiveni` and `eldivenleri`, as whole words.
 
 ### Texts
 
@@ -222,9 +248,9 @@ cropped screenshot of the sidebar for each:
 python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" --out <folder>
 ```
 
-`--scenario garment` or `--scenario ped` walks Garment Fitting or Custom Ped, `--expanded` opens every collapsed
-panel, `--language de_DE` and `--theme light` give variants, and `--text-size 14` shows what a narrow sidebar cuts or
-wraps. The fakes sign in as "Durty", the name the screenshots show. Tooltips are off for the run, so the pointer
+`--scenario garment`, `--scenario gloves` or `--scenario ped` walks Garment Fitting, the Gloves type or Custom Ped,
+`--expanded` opens every collapsed panel, `--language de_DE` and `--theme light` give variants, and `--text-size 14`
+shows what a narrow sidebar cuts or wraps. The fakes sign in as "Durty", the name the screenshots show. Tooltips are off for the run, so the pointer
 never covers the sidebar, and a state with an opened section is scrolled only after it has drawn.
 
 ### Measuring an avatar

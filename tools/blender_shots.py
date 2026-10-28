@@ -5,7 +5,7 @@
 
     python tools/blender_shots.py --blender <path to blender> --out <folder>
         [--source <add-on source folder>] [--prefix after] [--expanded] [--language de_DE] [--theme light]
-        [--scenario garment|ped] [--text-size 14]
+        [--scenario garment|gloves|ped] [--text-size 14]
 
 Builds the extension from ``--source`` (default: this repository's ``durty_cloth_tool_link``), starts a Blender
 window with a throw-away user folder (``BLENDER_USER_RESOURCES``), installs the build, and walks the add-on through
@@ -17,8 +17,10 @@ garment and the hosted body are added, the body's view options, Fit with markers
 weights were repaired, Fix with the fit check and the problem colours, a sculpt session, the tear check beside the
 game's own clothing, Game Ready after the local steps, and Add to Project (the skeleton missing and
 in place, what blocks an add, Durty Cloth Tool asking, the cloth added, the free limit, no project open, not
-connected). ``--scenario ped`` walks Custom Ped (Experimental) on a synthetic mannequin: no character, the character's
-checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting to be applied, the rigged
+connected). ``--scenario gloves`` walks the Gloves type (Experimental) on synthetic gloves: Setup with Body Cut on the
+bare arms, Fit without markers, Fix, Game Ready with Prepare's options and Validate's two-gloves finding, and Add to
+Project with Shows Skin locked on. ``--scenario ped`` walks Custom Ped (Experimental) on a synthetic mannequin: no
+character, the character's checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting to be applied, the rigged
 character with its checks, and the project Durty Cloth Tool created. Each state is saved as
 ``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run;
@@ -66,7 +68,7 @@ def launch(argv=None) -> int:
     parser.add_argument("--language", help="Blender's interface language for the run, for example de_DE")
     parser.add_argument("--theme", choices=("dark", "light"), default="dark")
     parser.add_argument("--size", default="1280x1600", help="the window size, WIDTHxHEIGHT")
-    parser.add_argument("--scenario", choices=("link", "garment", "ped"), default="link",
+    parser.add_argument("--scenario", choices=("link", "garment", "gloves", "ped"), default="link",
                         help="which states to walk")
     parser.add_argument("--text-size", type=float, default=0.0,
                         help="the interface text size in points (default: Blender's own)")
@@ -266,6 +268,8 @@ class Shots:
         try:
             if args.scenario == "garment":
                 yield from self.garment_states(package, ctrl, dct, api, ui, sollumz_stub)
+            elif args.scenario == "gloves":
+                yield from self.gloves_states(package, ctrl, dct, api, sollumz_stub)
             elif args.scenario == "ped":
                 yield from self.ped_states(package, ctrl, dct, api)
             else:
@@ -615,6 +619,79 @@ class Shots:
         ctrl.disconnect()
         yield from self.wait(lambda: not ctrl.ready, 10, "the disconnect")
         yield from show("garment-add-not-connected", pages=-20)
+
+    # ---- the gloves states (--scenario gloves) -----------------------------------------------------------
+
+    def gloves_states(self, package, ctrl, dct, api, stub):
+        from tests.blender import garment_smoke
+        from tests.support import synthetic
+
+        garment_ui = sys.modules[package + ".ui_garment"]
+        stub.register()
+        ctrl.shutdown()
+        ctrl.port_override = dct.port
+        dct.on_assist = api.approve
+        dct.focused = None
+        ctrl.connect()
+        yield from self.wait(lambda: ctrl.state == "signing-in" or ctrl.ready, 30, "the sign-in")
+        if not ctrl.ready:
+            ctrl.sign_in()
+        yield from self.wait(lambda: ctrl.ready, 30, "the connection")
+        scene = bpy.context.scene
+        for obj in list(scene.objects):
+            bpy.data.objects.remove(obj)  # the default cube, camera and light
+        props = scene.dct_garment
+
+        # 1. Gloves on the hands of the hosted body (with the synthetic Reference Data Pack): picking the type shows
+        # the body with bare arms.
+        folder = pathlib.Path(tempfile.mkdtemp(prefix="dct_shots_gloves_", dir=os.environ["BLENDER_USER_RESOURCES"]))
+        gloves = garment_smoke.mesh_object("gloves", synthetic.gloves())
+        props.garment = gloves
+        props.gender = "male"
+        glb = garment_smoke.body_glb(folder)
+        api.body_files = {"freemode_male.glb": glb.read_bytes(),
+                          **garment_smoke.synthetic_pack.body_files(("male",))}  # no game data
+        garment_ui.BODY_ORIGIN["url"] = api.base_url
+        self.operator(lambda: bpy.ops.dct_link.fit_add_body())
+        yield from self.wait(lambda: garment_ui.RUNTIME.download is None and props.body is not None, 30,
+                             "the hosted body")
+        props.category = "gloves"
+        self.frame_all()
+        self.show_garment(garment_ui, "setup", options=("body",))
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-setup")
+        self.scroll(3)
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-setup-body-cut")
+
+        # 2. Fit: no markers needed; Fit on gta.clothing is next.
+        self.show_garment(garment_ui, "fit")
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-fit")
+
+        # 3. Fix: Push Out of Body without a region.
+        self.show_garment(garment_ui, "fix")
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-fix")
+
+        # 4. Game Ready: Prepare's options without Thickness, and Validate on a pair joined across the centre.
+        joined = garment_smoke.mesh_object("gloves_joined", synthetic.gloves(joined=True))
+        gloves.hide_set(True)
+        props.garment = joined
+        self.operator(lambda: bpy.ops.dct_link.fit_validate())
+        self.show_garment(garment_ui, "ready", options=("prepare",))
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-ready")
+        self.scroll(2)
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-ready-validate")
+
+        # 5. Add to Project: Shows Skin on and locked.
+        self.show_garment(garment_ui, "add")
+        yield from self.wait(lambda: True, 5)
+        self.scroll(2)
+        yield from self.wait(lambda: True, 5)
+        self.shot("gloves-add")
 
     # ---- the custom ped states (--scenario ped) -----------------------------------------------------------
 

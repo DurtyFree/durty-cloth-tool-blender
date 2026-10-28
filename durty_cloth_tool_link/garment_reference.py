@@ -285,6 +285,16 @@ def cut_choices(index: Optional[ReferenceIndex], gender: str) -> List[CutChoice]
                       cut.display_index if shared[cut.display] > 1 else None) for cut in entry.upper_body]
 
 
+#: The plain name of the cut gloves are judged against: the bare arms they carry in the game.
+GLOVES_DISPLAY = "bare_arms"
+
+
+def gloves_cut(index: Optional[ReferenceIndex], gender: str) -> Optional[str]:
+    """The Body Cut picking Gloves switches to: the pack's first bare-arms cut of the gender, or ``None`` (no pack, or
+    none in it), when Body Cut stays as it is."""
+    return next((choice.id for choice in cut_choices(index, gender) if choice.display == GLOVES_DISPLAY), None)
+
+
 class ViewParts(NamedTuple):
     """The pack's nodes a view shows solid and as a wireframe."""
 

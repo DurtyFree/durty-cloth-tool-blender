@@ -43,6 +43,8 @@ SERVICE_MARKERS = {
 }
 #: The game clothing a slot is compared with in the fit check (gta.clothing's reference categories).
 REFERENCE_CATEGORIES = {"jbib": "top", "accs": "undershirt", "lowr": "legs", "feet": "shoes"}
+#: The garment types gta.clothing fits as a category of their own (gloves, in the arms slot), by the add-on's type.
+SERVICE_CATEGORIES = {"gloves": "gloves"}
 #: The body regions of gta.clothing's reference behind each region of the fit check.
 REFERENCE_REGIONS = {
     "shoulders": ("shoulderL", "shoulderR"),
@@ -198,13 +200,14 @@ def fit_options(clearance: float, push_out: bool, max_push: float, seam_weld: fl
 def build_request(operation: str, gender: str, slot: str, category: str, body_version: str,
                   markers: Dict[str, Sequence[float]], options: Dict[str, Any]) -> Dict[str, Any]:
     """The request part of a run: the garment sits on the body (Align to Body put it in the game's pose), so the source
-    pose is the rest pose, and the markers tell the service where its joints are. Raises :class:`UserError`."""
+    pose is the rest pose, and the markers tell the service where its joints are. The category is the slot's kind of
+    game clothing, or the type's own for a type gta.clothing fits by itself (gloves). Raises :class:`UserError`."""
     if operation not in OPERATIONS:
         raise ValueError(operation)
     chosen = dict(options) if operation == "fit" else {"seamWeldMm": options.get("seamWeldMm", 1.5)}
     try:
         return fit.fit_request(operation, gender, slot, body_version, source_pose="rest",
-                               category=REFERENCE_CATEGORIES.get(slot),
+                               category=SERVICE_CATEGORIES.get(category, REFERENCE_CATEGORIES.get(slot)),
                                markers=service_markers(markers) if operation == "fit" else None, options=chosen)
     except ValueError as exc:
         raise UserError(msg("fit.input.marker-far")) from exc

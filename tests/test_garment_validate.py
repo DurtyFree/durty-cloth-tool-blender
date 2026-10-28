@@ -82,6 +82,6 @@ def test_an_armature_away_from_the_origin_is_warned_about():
 
 def test_every_new_finding_has_words():
     stats = {**CLEAN, "weight_sum": 2, "unweighted_medium": 1, "non_ped": ["Glass"], "diffuse_size": (100, 50),
-             "armature_offset": 1.0}
+             "armature_offset": 1.0, "two_gloves": False}
     for finding in garment.validate(stats):
         assert f"garment.finding.{finding.code}" in strings.EN, finding.code
