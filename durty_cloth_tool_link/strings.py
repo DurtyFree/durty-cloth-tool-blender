@@ -900,6 +900,9 @@ EN: Dict[str, str] = {
     "garment.why.empty": "The garment has no geometry.",
     "garment.why.no-body": "Add the freemode body under Setup first.",
     "garment.why.no-markers": "This garment type needs no markers.",
+    "garment.why.gloves-auto-markers": (
+        "Auto Markers does not run for gloves: Fit on gta.clothing puts each glove on its hand without markers."
+    ),
     "garment.why.downloading": "The body is being downloaded.",
     "garment.why.sign-in": "Sign in with gta.clothing first (Get Connected), or use a body file.",
     "garment.why.select-mesh": "Select a mesh object first.",
@@ -1198,9 +1201,8 @@ EN: Dict[str, str] = {
     ),
     "garment.hint.gloves": (
         "The game's gloves are part of the arms with the ped's skin, so gloves go into the Body slot and Shows Skin "
-        "stays on. Model them on the freemode body's hands (Auto Markers starts the two wrist markers on the body's "
-        "wrists), or import two upright gloves side by side, fingers down, without markers: Fit on gta.clothing puts "
-        "each glove on its hand."
+        "stays on. Model them on the freemode body's hands, or import two upright gloves side by side, fingers down. "
+        "Either way they need no markers: Fit on gta.clothing puts each glove on its hand."
     ),
     "garment.prop.open-front": "Open Front",
     "garment.prop.open-front.desc": "The garment is worn open: Prepare Garment never joins its two fronts",
@@ -1862,6 +1864,10 @@ EN: Dict[str, str] = {
     "fit.warning.weights-repaired-legs": (
         "Weights at the knees, calves and feet tore the garment in common poses and were repaired. Check that area in "
         "motion."
+    ),
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing could not put the gloves on the hands and fitted them as an ordinary garment. Check that the "
+        "garment is one glove on each side of the body, with nothing joining them in the middle."
     ),
     "fit.warning.other": (
         "gta.clothing noticed something about the result ({code}). A newer version of the add-on explains it."

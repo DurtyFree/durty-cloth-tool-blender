@@ -340,6 +340,10 @@ TEXT = {
     "garment.why.empty": "A roupa não tem geometria.",
     "garment.why.no-body": "Adicione o corpo freemode em Configuração primeiro.",
     "garment.why.no-markers": "Este tipo de roupa não precisa de marcadores.",
+    "garment.why.gloves-auto-markers": (
+        "Marcadores automáticos não roda para luvas: Ajustar no gta.clothing coloca cada luva na sua mão sem "
+        "marcadores."
+    ),
     "garment.why.downloading": "O corpo está sendo baixado.",
     "garment.why.sign-in": "Entre com o gta.clothing primeiro (Conectar) ou use um arquivo de corpo.",
     "garment.why.select-mesh": "Selecione um objeto de malha primeiro.",
@@ -1152,6 +1156,10 @@ TEXT = {
         "Os pesos dos joelhos, das panturrilhas e dos pés rasgavam a roupa em poses comuns e foram reparados. Confira "
         "essa área em movimento."
     ),
+    "fit.warning.gloves-not-placed": (
+        "O gta.clothing não conseguiu colocar as luvas nas mãos e as ajustou como uma roupa comum. Confira se a "
+        "roupa é uma luva de cada lado do corpo, sem nada ligando as duas no meio."
+    ),
     "fit.warning.other": (
         "O gta.clothing notou algo no resultado ({code}). Uma versão mais recente do add-on explica isso."
     ),
@@ -1565,9 +1573,9 @@ TEXT = {
     "garment.category.gloves.desc": "Um par de luvas, uma em cada mão, usado com os braços nus do ped",
     "garment.hint.gloves": (
         "As luvas do jogo fazem parte dos braços com a pele do ped, então as luvas vão no slot Corpo e Mostra pele "
-        "continua ligado. Modele-as nas mãos do corpo freemode (Marcadores automáticos coloca os dois marcadores de "
-        "pulso nos pulsos do corpo) ou importe duas luvas em pé lado a lado, com os dedos para baixo, sem "
-        "marcadores: Ajustar no gta.clothing coloca cada luva na sua mão."
+        "continua ligado. Modele-as nas mãos do corpo freemode ou importe duas luvas em pé lado a lado, com os dedos "
+        "para baixo. Nos dois casos elas não precisam de marcadores: Ajustar no gta.clothing coloca cada luva na sua "
+        "mão."
     ),
     "garment.finding.two-gloves": (
         "As luvas não são duas peças separadas, uma de cada lado do corpo. Separe a luva esquerda e a direita para "

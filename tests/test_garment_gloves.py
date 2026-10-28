@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from durty_cloth_tool_link import garment
+from durty_cloth_tool_link.dct_link import protocol
 from tests.support import synthetic
 
 
@@ -27,9 +28,11 @@ def test_gloves_go_into_the_arms_slot_appended_after_every_saved_type_and_slot()
     assert "gloves" in garment.CATEGORY_MENU and not garment.is_prop("gloves")
 
 
-def test_gloves_have_the_two_wrist_markers_only_and_auto_markers_never_reads_them():
+def test_gloves_have_the_two_wrist_markers_only_and_auto_markers_never_runs_for_them():
     assert garment.markers_for("gloves") == ("wrist_l", "wrist_r")
-    assert not garment.detects_markers("gloves")
+    assert not garment.detects_markers("gloves") and not garment.runs_auto_markers("gloves")
+    for category in ("tshirt", "pants", "mask", "bag"):
+        assert garment.runs_auto_markers(category)
     with pytest.raises(garment.MarkerError):
         garment.auto_markers(synthetic.gloves().positions, "gloves")
 
@@ -40,6 +43,18 @@ def test_gloves_show_skin_locked_on_without_thickness_or_a_push_out_region():
     for category in ("tshirt", "pants", "shorts", "shoes", "bag"):
         assert not garment.skin_locked(category)
         assert garment.offers_thickness(category) and garment.offers_push_region(category)
+
+
+def test_only_gloves_are_a_pair_and_carry_the_bare_arms_skin():
+    assert garment.is_pair("gloves") and garment.garment_type("gloves").arm_skin in protocol.ARM_SKINS
+    for category in garment.TYPES:
+        if category != "gloves":
+            assert not garment.is_pair(category) and garment.garment_type(category).arm_skin is None, category
+
+
+def test_a_garment_goes_without_markers_only_when_its_type_may_and_none_is_placed():
+    assert garment.markers_skipped("gloves", 0)
+    assert not garment.markers_skipped("gloves", 1) and not garment.markers_skipped("tshirt", 0)
 
 
 # ---- the type guess ------------------------------------------------------------------------------------------

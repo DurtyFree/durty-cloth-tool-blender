@@ -210,6 +210,10 @@ TEXT = {
     "fit.warning.weights-repaired-torso": "Göğüs ve sırttaki ağırlıklar kıyafeti yaygın pozlarda yırtıyordu ve onarıldı. Bu bölgeyi hareket halinde kontrol edin.",
     "fit.warning.weights-repaired-hips": "Kalça ve uyluklardaki ağırlıklar kıyafeti yaygın pozlarda yırtıyordu ve onarıldı. Bu bölgeyi hareket halinde kontrol edin.",
     "fit.warning.weights-repaired-legs": "Diz, baldır ve ayaklardaki ağırlıklar kıyafeti yaygın pozlarda yırtıyordu ve onarıldı. Bu bölgeyi hareket halinde kontrol edin.",
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing eldivenleri ellere takamadı ve onları sıradan bir giysi gibi uyarladı. Giysinin bedenin her "
+        "iki yanında birer eldiven olduğunu ve ortada onları birleştiren bir şey olmadığını kontrol edin."
+    ),
     "fit.warning.other": "gta.clothing sonuçta bir şey fark etti ({code}). Eklentinin daha yeni bir sürümü bunu açıklar.",
     "fit.why.hosted-body": "Uyarlama için gta.clothing freemode bedeni gerekir: Kurulum altındaki Freemode bedeni ekle seçeneğini kullanın.",
     "fit.why.no-fits": "Bugün başka uyarlama başlatılamaz. Yeni hakların kullanılabileceği zaman: {wait}.",
@@ -762,6 +766,10 @@ TEXT = {
     "garment.why.no-garment": "Önce kıyafet içe aktarın veya Kurulum altından birini seçin.",
     "garment.why.no-leg-weights": "Kıyafette henüz köprülenecek uyluk ağırlıkları yok. Önce gta.clothing üzerinde uyarlayın veya ağırlıkları aktarın.",
     "garment.why.no-markers": "Bu kıyafet türü işaret gerektirmez.",
+    "garment.why.gloves-auto-markers": (
+        "Otomatik işaretler eldivenler için çalışmaz: gta.clothing üzerinde uyarla her eldiveni işaret olmadan kendi "
+        "eline takar."
+    ),
     "garment.why.no-session": "Çalışan yontma oturumu yok.",
     "garment.why.no-sollumz": "LOD oluşturmak için Sollumz gerekir.",
     "garment.why.no-uv": "Kıyafetin UV haritası yok.",
@@ -934,9 +942,9 @@ TEXT = {
     "garment.category.gloves.desc": "Her elde bir tane olmak üzere bir çift eldiven, ped'in çıplak kollarıyla giyilir",
     "garment.hint.gloves": (
         "Oyunun eldivenleri ped'in cildiyle birlikte kolların parçasıdır, bu yüzden eldivenler Beden yuvasına gider "
-        "ve Cilt gösterir açık kalır. Onları freemode bedeninin elleri üzerinde modelleyin (Otomatik işaretler iki "
-        "bilek işaretini bedenin bileklerine koyar) veya yan yana, parmakları aşağıda iki dik eldiveni işaretsiz içe "
-        "aktarın: gta.clothing üzerinde uyarla her eldiveni kendi eline takar."
+        "ve Cilt gösterir açık kalır. Onları freemode bedeninin elleri üzerinde modelleyin veya yan yana, parmakları "
+        "aşağıda iki dik eldiveni içe aktarın. Her iki durumda da işaret gerekmez: gta.clothing üzerinde uyarla her "
+        "eldiveni kendi eline takar."
     ),
     "garment.finding.two-gloves": (
         "Eldivenler, bedenin her iki yanında birer tane olan iki ayrı parça değil. Her biri kendi eline gidebilsin "

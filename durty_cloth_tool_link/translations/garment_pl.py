@@ -210,6 +210,10 @@ TEXT = {
     "fit.warning.weights-repaired-torso": "Wagi klatki piersiowej i pleców rozdzierały ubranie w typowych pozach i zostały naprawione. Sprawdź ten obszar w ruchu.",
     "fit.warning.weights-repaired-hips": "Wagi bioder i ud rozdzierały ubranie w typowych pozach i zostały naprawione. Sprawdź ten obszar w ruchu.",
     "fit.warning.weights-repaired-legs": "Wagi kolan, łydek i stóp rozdzierały ubranie w typowych pozach i zostały naprawione. Sprawdź ten obszar w ruchu.",
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing nie udało się założyć rękawiczek na dłonie i dopasowało je jak zwykłe ubranie. Sprawdź, czy "
+        "ubranie to jedna rękawiczka po każdej stronie ciała, bez niczego, co łączy je pośrodku."
+    ),
     "fit.warning.other": "gta.clothing zauważyło coś w wyniku ({code}). Nowsza wersja dodatku to wyjaśnia.",
     "fit.why.hosted-body": "Dopasowywanie wymaga ciała freemode z gta.clothing: wybierz Dodaj ciało freemode w sekcji Przygotowanie.",
     "fit.why.no-fits": "Nie można już rozpocząć kolejnego dopasowania dzisiaj. Następne będą dostępne {wait}.",
@@ -764,6 +768,10 @@ TEXT = {
     "garment.why.no-garment": "Najpierw zaimportuj ubranie lub wybierz je w sekcji Przygotowanie.",
     "garment.why.no-leg-weights": "Ubranie nie ma jeszcze wag ud do połączenia. Najpierw dopasuj je na gta.clothing lub przenieś wagi.",
     "garment.why.no-markers": "Ten typ ubrania nie potrzebuje znaczników.",
+    "garment.why.gloves-auto-markers": (
+        "Automatyczne znaczniki nie działają dla rękawiczek: Dopasuj na gta.clothing zakłada każdą rękawiczkę na jej "
+        "dłoń bez znaczników."
+    ),
     "garment.why.no-session": "Nie trwa żadna sesja rzeźbienia.",
     "garment.why.no-sollumz": "Generowanie LOD wymaga Sollumz.",
     "garment.why.no-uv": "Ubranie nie ma mapy UV.",
@@ -946,9 +954,9 @@ TEXT = {
     "garment.category.gloves.desc": "Para rękawiczek, po jednej na każdej dłoni, noszona z gołymi rękami peda",
     "garment.hint.gloves": (
         "Rękawiczki w grze są częścią rąk razem ze skórą peda, więc rękawiczki trafiają do slotu Ciało, a opcja "
-        "Pokazuje skórę zostaje włączona. Wymodeluj je na dłoniach ciała freemode (Automatyczne znaczniki stawiają "
-        "dwa znaczniki nadgarstków na nadgarstkach ciała) albo zaimportuj dwie stojące rękawiczki obok siebie, "
-        "palcami w dół, bez znaczników: Dopasuj na gta.clothing zakłada każdą rękawiczkę na jej dłoń."
+        "Pokazuje skórę zostaje włączona. Wymodeluj je na dłoniach ciała freemode albo zaimportuj dwie stojące "
+        "rękawiczki obok siebie, palcami w dół. W obu przypadkach nie potrzebują znaczników: Dopasuj na gta.clothing "
+        "zakłada każdą rękawiczkę na jej dłoń."
     ),
     "garment.finding.two-gloves": (
         "Rękawiczki nie są dwiema osobnymi częściami, po jednej z każdej strony ciała. Rozdziel lewą i prawą "

@@ -269,6 +269,7 @@ TEXT = {
     "garment.why.empty": "服装没有几何体。",
     "garment.why.no-body": "请先在初始设置面板中添加 freemode 身体。",
     "garment.why.no-markers": "这种服装类型不需要标记。",
+    "garment.why.gloves-auto-markers": "自动标记不适用于手套：在 gta.clothing 上适配会在没有标记的情况下把每只手套戴到对应的手上。",
     "garment.why.downloading": "正在下载身体。",
     "garment.why.sign-in": "请先用 gta.clothing 登录（开始连接），或使用身体文件。",
     "garment.why.select-mesh": "请先选择一个网格对象。",
@@ -748,6 +749,7 @@ TEXT = {
     "fit.warning.weights-repaired-torso": "胸部和背部的权重会在常见姿势中撕裂服装，已修复。请在运动中检查这个区域。",
     "fit.warning.weights-repaired-hips": "臀部和大腿的权重会在常见姿势中撕裂服装，已修复。请在运动中检查这个区域。",
     "fit.warning.weights-repaired-legs": "膝盖、小腿和脚部的权重会在常见姿势中撕裂服装，已修复。请在运动中检查这个区域。",
+    "fit.warning.gloves-not-placed": "gta.clothing 无法把手套戴到手上，已按普通服装贴合。请检查服装是否在身体两侧各有一只手套，中间没有任何连接。",
     "fit.warning.other": "gta.clothing 在结果中注意到了一些情况（{code}）。更新版本的插件会说明它的含义。",
     "fit.done.fit": "已适配到身体：处于游戏姿势，带有 {bones} 根骨骼的权重。",
     "fit.done.review": "已适配到身体，带有 {bones} 根骨骼的权重。请检查 gta.clothing 发现的问题：",
@@ -1000,8 +1002,8 @@ TEXT = {
     "garment.category.gloves.desc": "一副手套，每只手一只，与 ped 的裸露手臂一起穿戴",
     "garment.hint.gloves": (
         "游戏中的手套与 ped 的皮肤一起属于手臂，所以手套放入身体槽位，显示皮肤保持开启。"
-        "可以在 freemode 身体的手上建模（自动标记会把两个手腕标记放在身体的手腕上），"
-        "也可以导入两只并排直立、手指朝下的手套，不放标记：在 gta.clothing 上适配会把每只手套戴到对应的手上。"
+        "可以在 freemode 身体的手上建模，也可以导入两只并排直立、手指朝下的手套。"
+        "两种方式都不需要标记：在 gta.clothing 上适配会把每只手套戴到对应的手上。"
     ),
     "garment.finding.two-gloves": "手套不是位于身体两侧、各自独立的两个部分。请把左手套和右手套分开，让每只都能戴到对应的手上。",
 }

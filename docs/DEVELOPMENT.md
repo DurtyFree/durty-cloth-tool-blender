@@ -85,30 +85,40 @@ The Gloves type (`gloves`) goes into the Body slot (`uppr`), where the game keep
 skin. Both ids are appended at the end of `CATEGORIES` and `SLOTS` in `garment.py`, because Blender keeps the chosen
 type and slot by their place in those lists. What the type changes, and where:
 
-- **Markers.** Its family is `hand`, whose markers are the two wrists (`HAND_MARKERS`). Auto Markers never reads them
-  from the shape (`detects_markers` is false): it starts them on the body's wrists, or takes them from the chosen
-  avatar. The markers are optional (`markers_optional`): without them the next step is Fit on gta.clothing and the
-  tools that wait for Align to Body run as they are, for two upright gloves side by side. With both markers, Align
-  to Body moves everything on each side of the centre between them by that side's shift, so each glove's wrist lands
-  on the hand joint (`AlignPlan.sides`); it never turns or scales them.
-- **Settings.** Shows Skin is on and locked (`skin_locked`): the checkbox is disabled, a garment's stored value never
-  turns it off, and Add to Project sends `skin` true. Prepare Garment shows no Thickness and adds no back shell
-  (`offers_thickness`), and Push Out of Body shows no region and works on the whole garment (`offers_push_region`).
+- **Flags.** What sets gloves apart is held on their `GarmentType` in `garment.py` (`markers_optional`,
+  `auto_markers`, `skin_locked`, `thickness`, `push_region`, `pair`, `arm_skin`), read through `markers_optional`,
+  `markers_skipped`, `runs_auto_markers`, `skin_locked`, `offers_thickness`, `offers_push_region`, `is_pair` and
+  `garment_add.arm_skin`; no tool asks for the `hand` family to decide them.
+- **Markers.** Its family is `hand`, whose markers are the two wrists (`HAND_MARKERS`). Auto Markers does not run for
+  it (`runs_auto_markers` is false; the button is disabled with the reason `garment.why.gloves-auto-markers`), since
+  gta.clothing puts gloves made on the hands and upright gloves side by side on the hands without markers. The
+  markers are optional (`markers_optional`): without them (`markers_skipped`) the next step is Fit on gta.clothing
+  and the tools that wait for Align to Body run as they are. With both wrist markers (from a preset, or placed by
+  hand), Align to Body moves everything on each side of the centre between them by that side's shift, so each
+  glove's wrist lands on the hand joint (`AlignPlan.sides`); it never turns or scales them.
+- **Settings.** Shows Skin is on and locked (`skin_locked`): the checkbox is disabled, the stored value of the cloth
+  never turns it off, and Add to Project sends `skin` true. Prepare Garment shows no Thickness and adds no back
+  shell (`offers_thickness`), and Push Out of Body shows no region and works on the whole cloth
+  (`offers_push_region`).
 - **Body Cut.** When the type becomes Gloves (picked, or guessed by Import Garment), Body Cut switches to the
   Reference Data Pack's first cut whose display name is `bare_arms` (`garment_reference.gloves_cut`). It changes
   only the view, happens once per change of type, and does nothing without the pack or such a cut.
-- **Validate.** `two_gloves` checks that every connected part of the mesh lies wholly on one side of the body's
+- **Validate.** For a pair (`is_pair`), `two_gloves` checks that every connected part of the mesh lies wholly on one side of the body's
   centre plane (x 0) and that both sides have one; otherwise Validate warns with `two-gloves`.
 - **Fit on gta.clothing and Transfer Weights.** The request carries the drawable type `uppr` and the category
   `gloves` (`SERVICE_CATEGORIES` in `garment_fit.py`). Two wrists make no whole arm chain, so no markers are sent.
-  The fit check has no usual ranges of game clothing for this slot.
+  The fit check has no usual ranges of game clothing for this slot. When gta.clothing cannot put the gloves on the
+  hands (not one glove on each side, or a part such as a strap between them), it fits them as ordinary clothing and
+  warns with `gloves_not_placed` (`fit.warning.gloves-not-placed`).
 - **Type guess.** `glove`, `mitten` and `gauntlet` with their plurals, and Turkish `eldiven` with `eldivenler`,
   `eldiveni` and `eldivenleri`, as whole words.
-- **Add to Project.** The add carries `armSkin` `base` with `uppr` and `skin` true (`garment_add.arm_skin`, passed
-  by `ItemAdd.start` in `link.py`); no other type sends it. Durty Cloth Tool takes the bare arms' skin from the
+- **Add to Project.** The add carries `armSkin` `base` with `uppr` and `skin` true (`garment_add.arm_skin` of the
+  type the add started with, which `AddJob` keeps like the slot and gender, passed as `arm_skin` to `ItemAdd.start`
+  in `link.py`); no other type sends it. Durty Cloth Tool takes the bare arms' skin from the
   user's own game files and merges it into the gloves; the add-on sends no game data. Durty Cloth Tool answers
   `game-required` when it cannot read that skin (no GTA V folder, or one without it) and `invalid-message` when it
-  does not take the field; for gloves the panel explains both in their own words (`GLOVES_RESULT_KEYS`).
+  does not take the field. The link layer only remembers that the add asked for an arm skin; `garment_add`'s
+  `result_message` and `failure_message` then explain both refusals in the words for gloves (`GLOVES_RESULT_KEYS`).
 
 ### Texts
 
@@ -255,8 +265,9 @@ python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Ble
 
 `--scenario garment`, `--scenario gloves` or `--scenario ped` walks Garment Fitting, the Gloves type or Custom Ped,
 `--expanded` opens every collapsed panel, `--language de_DE` and `--theme light` give variants, and `--text-size 14`
-shows what a narrow sidebar cuts or wraps. The fakes sign in as "Durty", the name the screenshots show. Tooltips are off for the run, so the pointer
-never covers the sidebar, and a state with an opened section is scrolled only after it has drawn.
+shows what a narrow sidebar cuts or wraps. The fakes sign in as "Durty", the name the screenshots show. Tooltips are
+off for the run, so the pointer never covers the sidebar, and a state with an opened section is scrolled only after
+it has drawn.
 
 ### Measuring an avatar
 

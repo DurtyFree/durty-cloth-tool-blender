@@ -211,6 +211,10 @@ TEXT = {
     "fit.warning.weights-repaired-torso": "I pesi di petto e schiena strappavano il capo nelle pose comuni e sono stati riparati. Controlla quella zona in movimento.",
     "fit.warning.weights-repaired-hips": "I pesi di fianchi e cosce strappavano il capo nelle pose comuni e sono stati riparati. Controlla quella zona in movimento.",
     "fit.warning.weights-repaired-legs": "I pesi di ginocchia, polpacci e piedi strappavano il capo nelle pose comuni e sono stati riparati. Controlla quella zona in movimento.",
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing non è riuscito a mettere i guanti sulle mani e li ha adattati come un capo normale. Controlla "
+        "che il capo sia un guanto per lato del corpo, senza nulla che li unisca al centro."
+    ),
     "fit.warning.other": "gta.clothing ha notato qualcosa nel risultato ({code}). Una versione più recente dell'add-on lo spiega.",
     "fit.why.hosted-body": "L'adattamento richiede il corpo freemode di gta.clothing: Aggiungi corpo freemode in Configurazione.",
     "fit.why.no-fits": "Oggi non è possibile avviare altri adattamenti. Ne saranno disponibili altri {wait}.",
@@ -765,6 +769,10 @@ TEXT = {
     "garment.why.no-garment": "Prima importa un capo o scegline uno in Configurazione.",
     "garment.why.no-leg-weights": "Il capo non ha ancora pesi delle cosce da collegare. Prima adattalo su gta.clothing o trasferisci i pesi.",
     "garment.why.no-markers": "Questo tipo di capo non richiede marcatori.",
+    "garment.why.gloves-auto-markers": (
+        "Marcatori automatici non si esegue per i guanti: Adatta su gta.clothing mette ogni guanto sulla sua mano "
+        "senza marcatori."
+    ),
     "garment.why.no-session": "Non è in corso alcuna sessione di scultura.",
     "garment.why.no-sollumz": "La generazione dei LOD richiede Sollumz.",
     "garment.why.no-uv": "Il capo non ha una mappa UV.",
@@ -940,9 +948,9 @@ TEXT = {
     "garment.category.gloves.desc": "Un paio di guanti, uno per mano, indossati con le braccia nude del ped",
     "garment.hint.gloves": (
         "I guanti del gioco fanno parte delle braccia con la pelle del ped, quindi i guanti vanno nello slot Corpo e "
-        "Mostra la pelle resta attivo. Modellali sulle mani del corpo freemode (Marcatori automatici mette i due "
-        "marcatori dei polsi sui polsi del corpo), oppure importa due guanti in piedi uno accanto all'altro, con le "
-        "dita in giù, senza marcatori: Adatta su gta.clothing mette ogni guanto sulla sua mano."
+        "Mostra la pelle resta attivo. Modellali sulle mani del corpo freemode oppure importa due guanti in piedi "
+        "uno accanto all'altro, con le dita in giù. In entrambi i casi non servono marcatori: Adatta su gta.clothing "
+        "mette ogni guanto sulla sua mano."
     ),
     "garment.finding.two-gloves": (
         "I guanti non sono due pezzi separati, uno per lato del corpo. Separa il guanto sinistro e quello destro in "

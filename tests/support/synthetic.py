@@ -308,7 +308,8 @@ def triangles(faces: List[Tuple[int, ...]]) -> np.ndarray:
     return np.array(tris, dtype=np.int64)
 
 
-def gloves(arm_angle: float = 45.0, upright: bool = False, sides=(1.0, -1.0), joined: bool = False) -> Mesh:
+def gloves(arm_angle: float = 45.0, upright: bool = False, sides: Tuple[float, ...] = (1.0, -1.0),
+           joined: bool = False) -> Mesh:
     """Two gloves, closed tubes from a cuff behind the wrist to the fingertips: on the hands of arms at ``arm_angle``
     degrees below the horizontal (the shape of :data:`SKELETON_BONES`), or ``upright`` side by side with the fingers
     down, as a mesh generator exports them. ``sides`` (1 for the ped's left, -1 for its right) places them, and

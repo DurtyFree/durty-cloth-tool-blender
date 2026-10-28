@@ -1242,10 +1242,16 @@ def gloves_smoke(package, addon, state, ctrl, dct, check, pump, draw_everything,
           and ui_garment._fit_reason(bpy.context) is None,
           (ui_garment.next_operator(bpy.context), ui_garment._fit_reason(bpy.context)))
 
-    # Gloves on the hands: the two wrist markers start on the body's wrists; Align to Body puts each glove on its hand.
-    check("Auto Markers places the two wrist markers", "FINISHED" in bpy.ops.dct_link.fit_auto_markers()
-          and set(gh.read_markers(scene)) == {"wrist_l", "wrist_r"}, gh.read_markers(scene))
+    # Auto Markers does not run for gloves; the panel says why.
+    check("Auto Markers is refused for gloves with the reason",
+          not bpy.ops.dct_link.fit_auto_markers.poll()
+          and ui_garment._auto_markers_reason(bpy.context).key == "garment.why.gloves-auto-markers",
+          ui_garment._auto_markers_reason(bpy.context))
+    # Wrist markers placed by hand on the body's wrists: Align to Body puts each glove on its hand.
+    names = garment.markers_for("gloves")
+    gh.write_markers(scene, garment.body_markers(ui_garment.joints(bpy.context)[0], names), props.marker_size, gloves)
     placed = gh.read_markers(scene)
+    check("the two wrist markers are placed", set(placed) == {"wrist_l", "wrist_r"}, placed)
     shift = np.array([0.02, -0.01, 0.03])
     gloves.location = tuple(shift)
     bpy.context.view_layer.update()
@@ -1292,9 +1298,11 @@ def gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, g
     props.gender, props.item_name = "male", "Smoke Gloves"
     pump(addon, lambda: ctrl.ready and ctrl.project is not None, timeout=60, what="the link before the gloves")
 
-    def add(what):
+    def add(what, meanwhile=None):
         adds = len(dct.item_adds)
         check(f"the gloves' add starts ({what})", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+        if meanwhile is not None:
+            meanwhile()  # while the add prepares, before it sends
         pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
              what=f"the gloves' add ({what})")
         pump(addon, lambda: len(dct.item_adds) > adds and not ctrl.item_add.adding, timeout=30,
@@ -1309,18 +1317,23 @@ def gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, g
     log = draw_everything(package, state, "gloves refused without the game")
     labels = " ".join(entry[1] for entry in log if entry[0] == "label")
     check("gloves refused without the game say why in the panel",
-          ctrl.item_add.status is not None and ctrl.item_add.status.message.key == "add.result.gloves-game-required"
+          ctrl.item_add.status is not None
+          and ctrl.item_add.status.message.key == "add.result.gloves-game-required"
           and "could not take the arm skin" in labels and ctrl.item_add.added is None,
           (ctrl.item_add.status, labels[-400:]))
     dct.add_result = {"ok": True, "binding": dict(ADDED_BINDING_GLOVES), "findings": []}
-    header = add("with the game")
-    check("gloves go in as Body (uppr) with Shows Skin and the bare arms' skin",
+    # The type changed while the add prepares: the add still sends what it started with.
+    header = add("with the game", meanwhile=lambda: setattr(props, "category", "tshirt"))
+    check("gloves go in as Body (uppr) with Shows Skin and the bare arms' skin, whatever the type became meanwhile",
           (header["drawableType"], header["skin"], header.get("armSkin")) == ("uppr", True, "base")
           and ctrl.item_add.added is not None, (header, ctrl.item_add.status))
+    props.category = "gloves"
 
 
-ADDED_BINDING_GLOVES = {"clothId": "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b", "textureId": "2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c"}
-ADDED_BINDING_HAT = {"clothId": "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f", "textureId": "0d1e2f3a-4b5c-4d6e-9f7a-8b9c0d1e2f3a"}
+ADDED_BINDING_GLOVES = {"clothId": "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b",
+                        "textureId": "2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c"}
+ADDED_BINDING_HAT = {"clothId": "9c0d1e2f-3a4b-4c5d-8e6f-7a8b9c0d1e2f",
+                     "textureId": "0d1e2f3a-4b5c-4d6e-9f7a-8b9c0d1e2f3a"}
 
 
 def add_one_material(package, addon, state, ctrl, dct, check, pump, folder, real, draw_everything):

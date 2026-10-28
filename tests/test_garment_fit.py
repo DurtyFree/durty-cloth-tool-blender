@@ -14,7 +14,7 @@ from typing import Callable
 import numpy as np
 import pytest
 
-from durty_cloth_tool_link import garment_fit, strings
+from durty_cloth_tool_link import garment_fit, strings, translations
 from durty_cloth_tool_link.dct_link import auth, fit
 from durty_cloth_tool_link.strings import EN
 from tests.support import synthetic
@@ -174,6 +174,21 @@ def test_the_report_says_where_weights_that_tore_the_cloth_were_repaired(tmp_pat
     # A note this add-on does not know yet still says that gta.clothing noticed something.
     assert lines[5] == ("WARNING", strings.msg("fit.warning.other", code="weights_repaired_tail"))
     assert "neck and collar" in str(lines[0][1]).lower() and "knees" in str(lines[4][1]).lower()
+
+
+def test_gloves_the_service_could_not_put_on_the_hands_say_so_in_every_language(tmp_path, api):
+    api.fit.warnings = ["gloves_not_placed"]
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    upload, mesh = garment_upload()
+    run = ctrl.fitting.start("fit", request("fit", mesh=mesh), upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    key = "fit.warning.gloves-not-placed"
+    assert garment_fit.warning_lines(run.result) == [("WARNING", strings.msg(key))]
+    assert "one glove on each side" in EN[key]
+    for language in translations.LOCALES:
+        assert translations.table(language)[key] not in ("", EN[key]), language
 
 
 @pytest.mark.parametrize("match, strength, sent", [

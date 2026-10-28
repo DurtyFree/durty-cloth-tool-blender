@@ -354,6 +354,10 @@ TEXT = {
     "garment.why.empty": "Le vêtement n'a pas de géométrie.",
     "garment.why.no-body": "Ajoutez d'abord le corps freemode sous Configuration.",
     "garment.why.no-markers": "Ce type de vêtement n'a pas besoin de marqueurs.",
+    "garment.why.gloves-auto-markers": (
+        "Marqueurs automatiques ne s'exécute pas pour les gants : Ajuster sur gta.clothing place chaque gant sur sa "
+        "main sans marqueurs."
+    ),
     "garment.why.downloading": "Le corps est en cours de téléchargement.",
     "garment.why.sign-in": (
         "Connectez-vous d'abord avec gta.clothing (Se connecter), ou utilisez un fichier de corps."
@@ -1231,6 +1235,10 @@ TEXT = {
         "Les poids des genoux, des mollets et des pieds déchiraient le vêtement dans les poses courantes et ont été "
         "réparés. Vérifiez cette zone en mouvement."
     ),
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing n'a pas pu placer les gants sur les mains et les a ajustés comme un vêtement ordinaire. "
+        "Vérifiez que le vêtement est un gant de chaque côté du corps, sans rien qui les relie au milieu."
+    ),
     "fit.warning.other": (
         "gta.clothing a remarqué quelque chose dans le résultat ({code}). Une version plus récente de l'add-on "
         "l'explique."
@@ -1676,9 +1684,9 @@ TEXT = {
     "garment.category.gloves.desc": "Une paire de gants, un sur chaque main, portée avec les bras nus du ped",
     "garment.hint.gloves": (
         "Les gants du jeu font partie des bras avec la peau du ped : les gants vont donc dans l'emplacement Corps et "
-        "Peau visible reste activé. Modélisez-les sur les mains du corps freemode (Marqueurs automatiques place les "
-        "deux marqueurs de poignet sur les poignets du corps), ou importez deux gants debout côte à côte, doigts "
-        "vers le bas, sans marqueurs : Ajuster sur gta.clothing place chaque gant sur sa main."
+        "Peau visible reste activé. Modélisez-les sur les mains du corps freemode, ou importez deux gants debout "
+        "côte à côte, doigts vers le bas. Dans les deux cas, ils n'ont pas besoin de marqueurs : Ajuster sur "
+        "gta.clothing place chaque gant sur sa main."
     ),
     "garment.finding.two-gloves": (
         "Les gants ne sont pas deux pièces séparées, une de chaque côté du corps. Séparez le gant gauche et le gant "

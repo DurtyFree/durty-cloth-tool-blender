@@ -210,6 +210,11 @@ TEXT = {
     "fit.warning.weights-repaired-torso": "Bobot di dada dan punggung merobek pakaian dalam pose umum dan sudah diperbaiki. Periksa area itu saat bergerak.",
     "fit.warning.weights-repaired-hips": "Bobot di pinggul dan paha merobek pakaian dalam pose umum dan sudah diperbaiki. Periksa area itu saat bergerak.",
     "fit.warning.weights-repaired-legs": "Bobot di lutut, betis, dan kaki merobek pakaian dalam pose umum dan sudah diperbaiki. Periksa area itu saat bergerak.",
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing tidak dapat memasang sarung tangan di tangan dan menyesuaikannya seperti pakaian biasa. "
+        "Periksa bahwa pakaian ini satu sarung tangan di setiap sisi tubuh, tanpa apa pun yang menyambungkannya di "
+        "tengah."
+    ),
     "fit.warning.other": "gta.clothing memperhatikan sesuatu pada hasilnya ({code}). Versi add-on yang lebih baru menjelaskannya.",
     "fit.why.hosted-body": "Penyesuaian memerlukan tubuh freemode dari gta.clothing: Tambah Tubuh Freemode di bagian Persiapan.",
     "fit.why.no-fits": "Tidak ada lagi penyesuaian yang dapat dimulai hari ini. Jatah berikutnya tersedia {wait}.",
@@ -764,6 +769,10 @@ TEXT = {
     "garment.why.no-garment": "Impor pakaian atau pilih di bagian Persiapan terlebih dahulu.",
     "garment.why.no-leg-weights": "Pakaian belum memiliki bobot paha untuk dijembatani. Sesuaikan pada gta.clothing atau transfer bobot terlebih dahulu.",
     "garment.why.no-markers": "Jenis pakaian ini tidak memerlukan penanda.",
+    "garment.why.gloves-auto-markers": (
+        "Penanda Otomatis tidak berjalan untuk sarung tangan: Sesuaikan pada gta.clothing memasang setiap sarung "
+        "tangan di tangannya tanpa penanda."
+    ),
     "garment.why.no-session": "Tidak ada sesi sculpt yang berjalan.",
     "garment.why.no-sollumz": "Pembuatan LOD memerlukan Sollumz.",
     "garment.why.no-uv": "Pakaian tidak memiliki peta UV.",
@@ -950,9 +959,9 @@ TEXT = {
     ),
     "garment.hint.gloves": (
         "Sarung tangan game adalah bagian dari lengan bersama kulit ped, jadi sarung tangan masuk ke slot Tubuh dan "
-        "Menampilkan Kulit tetap aktif. Modelkan pada tangan tubuh freemode (Penanda Otomatis menaruh dua penanda "
-        "pergelangan di pergelangan tubuh), atau impor dua sarung tangan tegak berdampingan, jari ke bawah, tanpa "
-        "penanda: Sesuaikan pada gta.clothing memasang setiap sarung tangan di tangannya."
+        "Menampilkan Kulit tetap aktif. Modelkan pada tangan tubuh freemode, atau impor dua sarung tangan tegak "
+        "berdampingan, jari ke bawah. Keduanya tidak memerlukan penanda: Sesuaikan pada gta.clothing memasang setiap "
+        "sarung tangan di tangannya."
     ),
     "garment.finding.two-gloves": (
         "Sarung tangan bukan dua bagian terpisah, satu di setiap sisi tubuh. Pisahkan sarung tangan kiri dan kanan "

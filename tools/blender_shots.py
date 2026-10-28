@@ -20,8 +20,8 @@ in place, what blocks an add, Durty Cloth Tool asking, the cloth added, the free
 connected). ``--scenario gloves`` walks the Gloves type (Experimental) on synthetic gloves: Setup with Body Cut on the
 bare arms, Fit without markers, Fix, Game Ready with Prepare's options and Validate's two-gloves finding, and Add to
 Project with Shows Skin locked on. ``--scenario ped`` walks Custom Ped (Experimental) on a synthetic mannequin: no
-character, the character's checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting to be applied, the rigged
-character with its checks, and the project Durty Cloth Tool created. Each state is saved as
+character, the character's checks, the markers (with the 3D view), the click guide (with the 3D view), a rig waiting
+to be applied, the rigged character with its checks, and the project Durty Cloth Tool created. Each state is saved as
 ``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run;
 ``--text-size`` sets the interface text size in points (Blender's is 11): larger text in the same sidebar shows what

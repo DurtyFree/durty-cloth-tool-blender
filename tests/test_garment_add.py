@@ -503,7 +503,8 @@ def test_the_payload_is_estimated_before_any_picture_is_written():
 def test_gloves_ask_durty_cloth_tool_for_the_bare_arms_skin(tmp_path, dct, api):
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
-    ctrl.item_add.start("uppr", "female", True, "Leather Gloves", variations, files, category="gloves")
+    ctrl.item_add.start("uppr", "female", True, "Leather Gloves", variations, files,
+                        arm_skin=garment_add.arm_skin("gloves"))
     drive(ctrl, lambda: not ctrl.item_add.adding)
     header, _ = dct.item_adds[-1]
     assert (header["drawableType"], header["skin"], header["armSkin"]) == ("uppr", True, "base")
@@ -514,9 +515,10 @@ def test_gloves_ask_durty_cloth_tool_for_the_bare_arms_skin(tmp_path, dct, api):
 @pytest.mark.parametrize("slot, skin, category", [("jbib", False, "tshirt"), ("lowr", True, "pants"),
                                                   ("p_head", False, "hat"), ("jbib", True, None)])
 def test_no_other_type_asks_for_an_arm_skin(tmp_path, dct, api, slot, skin, category):
+    assert garment_add.arm_skin(category) is None
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
-    ctrl.item_add.start(slot, "male", skin, "Cloth", variations, files, category=category)
+    ctrl.item_add.start(slot, "male", skin, "Cloth", variations, files, arm_skin=garment_add.arm_skin(category))
     drive(ctrl, lambda: not ctrl.item_add.adding)
     assert "armSkin" not in dct.item_adds[-1][0]
     ctrl.disconnect()
@@ -529,7 +531,7 @@ def test_gloves_durty_cloth_tool_refuses_say_why_in_every_language(tmp_path, dct
     files, variations = add_files()
     linked = []
     dct.fail["item.add"] = code
-    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, category="gloves", on_added=linked.append)
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skin="base", on_added=linked.append)
     drive(ctrl, lambda: not ctrl.item_add.adding)
     status = ctrl.item_add.status
     assert (status.level, status.message.key) == ("ERROR", key)
@@ -543,7 +545,7 @@ def test_another_cloth_without_the_game_keeps_the_general_reason(tmp_path, dct, 
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
     dct.fail["item.add"] = "game-required"
-    ctrl.item_add.start("jbib", "male", False, "Jacket", variations, files, category="tshirt")
+    ctrl.item_add.start("jbib", "male", False, "Jacket", variations, files)
     drive(ctrl, lambda: not ctrl.item_add.adding)
     assert ctrl.item_add.status.message.key == "error.game-required"
     ctrl.disconnect()

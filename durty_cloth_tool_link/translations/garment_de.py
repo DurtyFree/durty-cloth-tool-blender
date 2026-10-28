@@ -360,6 +360,10 @@ TEXT = {
     "garment.why.empty": "Das Kleidungsstück hat keine Geometrie.",
     "garment.why.no-body": "Füge zuerst unter Einrichtung den Freemode-Körper hinzu.",
     "garment.why.no-markers": "Diese Kleidungsart braucht keine Marker.",
+    "garment.why.gloves-auto-markers": (
+        "Auto-Marker läuft nicht für Handschuhe: Auf gta.clothing anpassen setzt jeden Handschuh ohne Marker auf "
+        "seine Hand."
+    ),
     "garment.why.downloading": "Der Körper wird heruntergeladen.",
     "garment.why.sign-in": "Melde dich zuerst mit gta.clothing an (Verbinden) oder nutze eine Körperdatei.",
     "garment.why.select-mesh": "Wähle zuerst ein Mesh-Objekt aus.",
@@ -1243,6 +1247,11 @@ TEXT = {
         "Gewichte an Knien, Waden und Füßen haben das Kleidungsstück in üblichen Posen zerrissen und wurden repariert. "
         "Prüfe diesen Bereich in Bewegung."
     ),
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing konnte die Handschuhe nicht auf die Hände setzen und hat sie wie ein gewöhnliches "
+        "Kleidungsstück angepasst. Prüfe, ob das Kleidungsstück ein Handschuh auf jeder Seite des Körpers ist, ohne "
+        "Verbindung in der Mitte."
+    ),
     "fit.warning.other": (
         "gta.clothing ist am Ergebnis etwas aufgefallen ({code}). Eine neuere Version des Add-ons erklärt es."
     ),
@@ -1703,10 +1712,9 @@ TEXT = {
     "garment.category.gloves.desc": "Ein Paar Handschuhe, einer an jeder Hand, getragen mit den nackten Armen des Peds",
     "garment.hint.gloves": (
         "Die Handschuhe des Spiels gehören mit der Haut des Peds zu den Armen, daher kommen Handschuhe in den Slot "
-        "Körper und Haut sichtbar bleibt an. Modelliere sie an den Händen des Freemode-Körpers (Auto-Marker setzt "
-        "die beiden Handgelenk-Marker auf die Handgelenke des Körpers), oder importiere zwei aufrechte Handschuhe "
-        "nebeneinander, Finger nach unten, ohne Marker: Auf gta.clothing anpassen setzt jeden Handschuh auf seine "
-        "Hand."
+        "Körper und Haut sichtbar bleibt an. Modelliere sie an den Händen des Freemode-Körpers oder importiere zwei "
+        "aufrechte Handschuhe nebeneinander, Finger nach unten. In beiden Fällen brauchen sie keine Marker: Auf "
+        "gta.clothing anpassen setzt jeden Handschuh auf seine Hand."
     ),
     "garment.finding.two-gloves": (
         "Die Handschuhe sind nicht zwei getrennte Teile, je eines auf jeder Seite des Körpers. Trenne den linken und "

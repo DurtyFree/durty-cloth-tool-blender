@@ -288,7 +288,7 @@ def _category_changed(self: Any, context: Any) -> None:
     self.skin = kind.skin
     self.open_front = kind.open_front
     _keep_on_garment(self)
-    if kind.family == "hand" and before != self.category:
+    if kind.arm_skin is not None and before != self.category:  # gloves: show the bare arms whose skin they carry
         show_gloves_cut(self, context)
 
 
@@ -544,6 +544,15 @@ def _markers_reason(context: Any) -> Optional[Msg]:
         reason = msg("garment.why.no-markers")
     if reason is None and settings_.avatar == "detect" and not garment.detects_markers(settings_.category):
         reason = _body_reason(context)  # the markers start on the body's joints
+    return reason
+
+
+def _auto_markers_reason(context: Any) -> Optional[Msg]:
+    """Why Auto Markers cannot run: as for the markers, and never for gloves, which gta.clothing puts on the hands
+    without markers (Align to Body still uses wrist markers placed another way)."""
+    reason = _markers_reason(context)
+    if reason is None and not garment.runs_auto_markers(props(context).category):
+        reason = msg("garment.why.gloves-auto-markers")
     return reason
 
 
@@ -1049,7 +1058,7 @@ class DCTLINK_OT_fit_auto_markers(_MeshOp):
 
     @classmethod
     def poll(cls, context):
-        return _refuse(cls, _markers_reason(context) or _avatar_moved_reason(context))
+        return _refuse(cls, _auto_markers_reason(context) or _avatar_moved_reason(context))
 
     def execute(self, context):
         def place() -> Msg:
@@ -1974,7 +1983,7 @@ def stats(context: Any, obj: Any) -> Dict[str, Any]:
         found = gh.validate_stats(obj, valid_body(context), prop=True, anchor=anchor_point(context))
     else:
         found = gh.validate_stats(obj, valid_body(context))
-    if garment.markers_optional(props(context).category):  # gloves: a left and a right one, about the body's centre
+    if garment.is_pair(props(context).category):  # gloves: a left and a right one, about the body's centre
         found["two_gloves"] = garment.two_gloves(gh.world_positions(obj), gh.mesh_edges(obj.data))
     found.update(gdct.game_stats(obj, prop=_is_prop(context)))
     return found
@@ -2389,11 +2398,12 @@ class AddJob:
 
     STAGES = ("checks", "skeleton", "prepare", "export", "pictures", "send")
 
-    def __init__(self, scene: str, garment_uid: int, gender: str, slot: str) -> None:
+    def __init__(self, scene: str, garment_uid: int, gender: str, slot: str, category: str) -> None:
         self.scene = scene
         self.garment = garment_uid
         self.gender = gender
         self.slot = slot
+        self.category = category  # what the add sends is fixed when it starts, like the slot and gender
         self.stage = "checks"
         self.cancelled = False
         self.changed = False  # the garment was changed for the add (an undo step was pushed before)
@@ -2519,9 +2529,9 @@ class AddJob:
             host.redraw()
 
         # A prop never shows skin; gloves always do, and Durty Cloth Tool merges the arm skin into them.
-        skin = (bool(settings_.skin) or garment.skin_locked(settings_.category)) and self.slot not in garment.PROP_SLOTS
-        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files, category=settings_.category,
-                            on_added=added)
+        skin = (bool(settings_.skin) or garment.skin_locked(self.category)) and self.slot not in garment.PROP_SLOTS
+        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files,
+                            arm_skin=garment_add.arm_skin(self.category), on_added=added)
         if self.changed:
             host.push_undo(t("add.op.add"))
         self.result = {"sent": msg("add.sent", name=name, count=len(chosen))}
@@ -2547,7 +2557,8 @@ def _run_step(context: Any, kind: str, op: Optional[Operator] = None) -> set:
     if kind == "add":
         settings_ = props(context)
         obj = current_garment(context)
-        RUNTIME.add_job = AddJob(context.scene.name, obj.session_uid, settings_.gender, settings_.slot)
+        RUNTIME.add_job = AddJob(context.scene.name, obj.session_uid, settings_.gender, settings_.slot,
+                                 settings_.category)
         RUNTIME.notice = None  # the add's own status, under Game Ready, follows it from here
         if not bpy.app.timers.is_registered(job_tick):
             bpy.app.timers.register(job_tick, first_interval=0.05)
@@ -3045,7 +3056,7 @@ def draw_fit(layout: Any, context: Any) -> None:
     else:
         heading(layout, context, "garment.heading.markers", "EMPTY_DATA", info="garment.info.markers")
         step(layout, context, DCTLINK_OT_fit_auto_markers.bl_idname, "garment.op.auto-markers", "EMPTY_DATA")
-        reason_text(layout, context, _markers_reason(context))
+        reason_text(layout, context, _auto_markers_reason(context))
         markers = gh.read_markers(context.scene) if obj is not None else {}
         placed = len([name for name in expected if name in markers])
         subtext(layout, context, "garment.markers.count", count=placed, total=len(expected))

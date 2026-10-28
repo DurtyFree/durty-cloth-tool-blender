@@ -91,7 +91,11 @@ class GarmentType(NamedTuple):
     front), whether its thigh weights are bridged across the legs (a skirt or coat tails that hang between the legs
     must not split), whether it usually shows skin, the extra hint the panel shows (a text key), the largest dimension
     it has (metres, for the units of an import), how a prop is snapped to its anchor and how tall it usually is on the
-    body (metres, for an export normalised to 1 m)."""
+    body (metres, for an export normalised to 1 m). The flags after that say how the tools treat it: whether it may
+    go without its markers, whether Auto Markers runs for it, whether Shows Skin is locked on, whether Prepare Garment
+    offers a back shell (Thickness) and Push Out of Body a region, whether it is a pair whose left and right pieces
+    Validate checks, and the body cut whose arm skin Durty Cloth Tool merges into it (``item.add``'s ``armSkin``, one
+    of ``dct_link.protocol.ARM_SKINS``)."""
 
     slots: Tuple[str, ...]
     family: str
@@ -105,6 +109,13 @@ class GarmentType(NamedTuple):
     size: Tuple[float, float] = (0.3, 1.8)
     snap: str = ""
     height: float = 0.7
+    markers_optional: bool = False
+    auto_markers: bool = True
+    skin_locked: bool = False
+    thickness: bool = True
+    push_region: bool = True
+    pair: bool = False
+    arm_skin: Optional[str] = None
 
 
 _TOPS = ("jbib", "accs")
@@ -146,10 +157,14 @@ TYPES: Dict[str, GarmentType] = {
     "bracelet": GarmentType(("p_rwrist", "p_lwrist"), "anchor", hint="garment.hint.prop", size=(0.03, 0.25),
                             snap="wrist", height=0.04),
     # Gloves (Experimental): the game's gloves are part of the arms with the ped's skin, so they go into the arms
-    # slot and always show skin. Their size spans a pair on the hands of an A-pose or T-pose and an upright pair side
-    # by side; their height is one upright glove's.
+    # slot, always show skin and carry the bare arms' skin. Their size spans a pair on the hands of an A-pose or
+    # T-pose and an upright pair side by side; their height is one upright glove's. gta.clothing puts them on the
+    # hands without markers, so Auto Markers does not run for them; a back shell would lie on the skin they carry and
+    # they have only the hands to push out.
     "gloves": GarmentType(("uppr",), "hand", regions=("forearms", "cuffs"), snug=("cuffs",), skin=True,
-                          hint="garment.hint.gloves", size=(0.2, 1.9), height=0.27),
+                          hint="garment.hint.gloves", size=(0.2, 1.9), height=0.27, markers_optional=True,
+                          auto_markers=False, skin_locked=True, thickness=False, push_region=False, pair=True,
+                          arm_skin="base"),
 }
 #: How far the sleeves of a top reach.
 SLEEVES = {name: kind.sleeves for name, kind in TYPES.items() if kind.family == "upper"}
@@ -204,23 +219,40 @@ def markers_for(category: str) -> Tuple[str, ...]:
 def markers_optional(category: str) -> bool:
     """Whether a garment of this type may go without its markers: gloves made upright, side by side, have no wrists
     on the body's and are sent to gta.clothing as they are, which puts each on its hand."""
-    return garment_type(category).family == "hand"
+    return garment_type(category).markers_optional
+
+
+def markers_skipped(category: str, markers: int) -> bool:
+    """Whether the garment goes without its markers: its type may (:func:`markers_optional`) and none is placed, so
+    nothing waits for the markers or Align to Body."""
+    return markers_optional(category) and markers == 0
+
+
+def runs_auto_markers(category: str) -> bool:
+    """Whether Auto Markers runs for the type: not for gloves, which gta.clothing puts on the hands without markers."""
+    return garment_type(category).auto_markers
 
 
 def skin_locked(category: str) -> bool:
     """Whether Shows Skin is on and cannot be turned off: the game's gloves carry the ped's arms with its skin."""
-    return garment_type(category).family == "hand"
+    return garment_type(category).skin_locked
 
 
 def offers_thickness(category: str) -> bool:
     """Whether Prepare Garment offers a back shell (Thickness): never for gloves, whose back side would lie on the
     skin they carry."""
-    return garment_type(category).family != "hand"
+    return garment_type(category).thickness
 
 
 def offers_push_region(category: str) -> bool:
     """Whether Push Out of Body offers a region to work on: gloves have only the hands, so it works on the whole."""
-    return garment_type(category).family != "hand"
+    return garment_type(category).push_region
+
+
+def is_pair(category: str) -> bool:
+    """Whether the type is a pair, a left and a right piece about the body's centre (gloves): Validate checks that
+    the mesh is those two pieces."""
+    return garment_type(category).pair
 
 
 def detects_markers(category: str) -> bool:
@@ -316,11 +348,10 @@ def next_step(state: FlowState) -> str:
     if not state.prepared:
         if state.prop:
             return "garment.next.prepare" if state.aligned else "garment.next.snap"
-        if state.markers < len(markers_for(state.category)) and not (
-                markers_optional(state.category) and state.markers == 0):
+        skipped = markers_skipped(state.category, state.markers)
+        if state.markers < len(markers_for(state.category)) and not skipped:
             return "garment.next.markers"
-        if markers_for(state.category) and not state.aligned and not (
-                markers_optional(state.category) and state.markers == 0):
+        if markers_for(state.category) and not state.aligned and not skipped:
             return "garment.next.align"
         if not state.fitted and not state.checked:
             return "garment.next.fit"
@@ -407,7 +438,7 @@ def stage_status(state: FlowState, stage: str) -> StageStatus:
             return status("garment.status.fitted")
         if state.aligned and total:
             return status("garment.status.aligned")
-        if total and not done and not (markers_optional(state.category) and state.markers == 0):
+        if total and not done and not markers_skipped(state.category, state.markers):
             return status("garment.status.markers", count=min(state.markers, total), total=total)
         return status(None)
     if stage == "fix":

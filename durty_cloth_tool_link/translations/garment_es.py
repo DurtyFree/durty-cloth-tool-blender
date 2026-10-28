@@ -342,6 +342,10 @@ TEXT = {
     "garment.why.empty": "La prenda no tiene geometría.",
     "garment.why.no-body": "Primero añade el cuerpo freemode en Configuración.",
     "garment.why.no-markers": "Este tipo de prenda no necesita marcadores.",
+    "garment.why.gloves-auto-markers": (
+        "Marcadores automáticos no se ejecuta para guantes: Ajustar en gta.clothing pone cada guante en su mano sin "
+        "marcadores."
+    ),
     "garment.why.downloading": "Se está descargando el cuerpo.",
     "garment.why.sign-in": "Primero inicia sesión con gta.clothing (Conectar) o usa un archivo de cuerpo.",
     "garment.why.select-mesh": "Selecciona primero un objeto de malla.",
@@ -1181,6 +1185,10 @@ TEXT = {
         "Los pesos de las rodillas, las pantorrillas y los pies rompían la prenda en poses habituales y se repararon. "
         "Revisa esa zona en movimiento."
     ),
+    "fit.warning.gloves-not-placed": (
+        "gta.clothing no pudo poner los guantes en las manos y los ajustó como una prenda normal. Comprueba que la "
+        "prenda sea un guante a cada lado del cuerpo, sin nada que los una en el centro."
+    ),
     "fit.warning.other": (
         "gta.clothing notó algo en el resultado ({code}). Una versión más reciente del add-on lo explica."
     ),
@@ -1619,9 +1627,9 @@ TEXT = {
     ),
     "garment.hint.gloves": (
         "Los guantes del juego forman parte de los brazos con la piel del ped, así que los guantes van en la ranura "
-        "Cuerpo y Piel visible sigue activado. Modélalos sobre las manos del cuerpo freemode (Marcadores automáticos "
-        "pone los dos marcadores de muñeca en las muñecas del cuerpo) o importa dos guantes de pie uno al lado del "
-        "otro, con los dedos hacia abajo, sin marcadores: Ajustar en gta.clothing pone cada guante en su mano."
+        "Cuerpo y Piel visible sigue activado. Modélalos sobre las manos del cuerpo freemode o importa dos guantes "
+        "de pie uno al lado del otro, con los dedos hacia abajo. En ambos casos no necesitan marcadores: Ajustar en "
+        "gta.clothing pone cada guante en su mano."
     ),
     "garment.finding.two-gloves": (
         "Los guantes no son dos piezas separadas, una a cada lado del cuerpo. Separa el guante izquierdo y el "
