@@ -427,7 +427,12 @@ TEXT = {
     "garment.info.service": "Adatta su gta.clothing adatta il capo così come si trova dopo Allinea al corpo. Lo restituisce nella posa del gioco, con i pesi del corpo freemode, spostando all'esterno le parti che erano dentro il corpo. Il capo conserva un backup, quindi Indietro di un passaggio lo ripristina. Ogni adattamento usa uno degli adattamenti di oggi.",
     "garment.info.snap": "Nel gioco un prop si aggancia a un solo osso: la testa per cappelli, occhiali e accessori per orecchie; l'avambraccio all'altezza del polso per orologi e braccialetti. Aggancia al punto di ancoraggio lo porta dove si trova di solito sul corpo freemode; da lì, spostalo, ruotalo o ridimensionalo a mano. Quando viene aggiunto, mantiene la posizione rispetto al punto di ancoraggio.",
     "garment.info.split": "Un vestito entra nel gioco come un unico capo nello slot Parte superiore, oppure come parte superiore e gonna. Dividi alla vita lo taglia nel punto più stretto sopra il bacino: il vestito mantiene la parte superiore, mentre un nuovo capo con un nome derivato riceve la gonna, configurata per lo slot Gambe. Dividi dopo Adatta su gta.clothing, così entrambi i pezzi conservano l'adattamento e i pesi, poi scegli ciascun pezzo in Configurazione per completarlo e aggiungerlo.",
-    "garment.info.tears": "Richiede un'armatura e pesi sul capo. Il capo viene mosso attraverso alcune pose di prova (braccia in alto, braccia avanti, gambe avanti, una torsione) e vengono segnalate le cuciture che si aprono.",
+    "garment.info.tears": (
+        "Richiede un'armatura e pesi sul capo. Con il Reference Data Pack il capo viene mosso attraverso le pose "
+        "del gioco stesso (in piedi, camminata, corsa, seduto, arrampicata e altre); senza, attraverso alcune pose "
+        "di prova (braccia in alto, braccia avanti, gambe avanti, una torsione). Vengono segnalate le cuciture che "
+        "si aprono e il tessuto che si allunga fino a strapparsi."
+    ),
     "garment.info.tpose": "Ruota le braccia di un capo creato in posa T fino all'angolo impostato (o sulle braccia del corpo quando le articolazioni sono note). Ogni parte del capo segue in base alla propria posizione, quindi le cuciture restano chiuse. Anche Allinea al corpo esegue questa operazione.",
     "garment.info.type": "Il tipo determina lo slot del capo, come vengono individuati i marcatori, le zone disponibili negli strumenti e i controlli eseguiti. I prop (cappelli, occhiali, accessori per orecchie, orologi e braccialetti) vengono agganciati al punto di ancoraggio anziché adattati al corpo.",
     "garment.info.validate": "Controlli locali rapidi: pesi, più di quattro ossa per vertice, coordinate non valide, posizione del capo, normali invertite, disposizione UV, colori dei vertici, triangoli di ogni livello di dettaglio e porzione all'interno del corpo.",
@@ -539,7 +544,10 @@ TEXT = {
     "garment.op.split": "Dividi alla vita",
     "garment.op.split.desc": "Taglia il vestito alla vita in una parte superiore e una gonna: la gonna diventa un capo separato per lo slot Gambe",
     "garment.op.tears": "Controlla strappi",
-    "garment.op.tears.desc": "Muovi l'armatura del capo attraverso alcune pose di prova e mostra dove si aprono le cuciture",
+    "garment.op.tears.desc": (
+        "Muovi il capo attraverso le pose del gioco, o alcune pose di prova senza il Reference Data Pack, e mostra "
+        "dove si strappa"
+    ),
     "garment.op.tpose": "Da posa T a posa A",
     "garment.op.tpose.desc": "Abbassa le braccia di un capo creato in posa T fino all'angolo impostato, usando i marcatori",
     "garment.op.use": "Usa selezione",
@@ -894,4 +902,12 @@ TEXT = {
         "quando gta.clothing lo offre."
     ),
     "garment.view.note": "Cambia solo ciò che vedi. Adattamenti e controlli usano sempre il corpo standard.",
+    "garment.stage.game-poses": "Il capo viene messo nelle pose del gioco",
+    "garment.stage.test-poses": "Il capo viene messo nelle pose di prova",
+    "garment.tears.game-summary": "{clean} pose del gioco su {total} non strappano nulla.",
+    "garment.tears.game-pose": "{pose}: {count} punti si strappano, allungati fino a {stretch} volte",
+    "garment.tears.game-pose.one": "{pose}: {count} punto si strappa, allungato fino a {stretch} volte",
+    "garment.done.tears-game": "{count} vertici si strappano nelle pose del gioco. Si trovano nel gruppo di vertici DCT Tears.",
+    "garment.done.tears-game.one": "{count} vertice si strappa nelle pose del gioco. Si trova nel gruppo di vertici DCT Tears.",
+    "garment.done.no-tears-game": "Nulla si strappa nelle {total} pose del gioco.",
 }

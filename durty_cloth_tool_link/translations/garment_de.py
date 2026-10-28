@@ -241,7 +241,8 @@ TEXT = {
     "garment.op.cancel-sculpt.desc": "Die Form von vor der Sitzung wiederherstellen und die Sitzung beenden",
     "garment.op.tears": "Risse prüfen",
     "garment.op.tears.desc": (
-        "Die Armature des Kleidungsstücks durch einige Testposen bewegen und zeigen, wo Nähte aufgehen"
+        "Das Kleidungsstück durch die Posen des Spiels bewegen, ohne das Reference Data Pack durch einige "
+        "Testposen, und zeigen, wo es reißt"
     ),
     "garment.op.prepare": "Kleidungsstück vorbereiten",
     "garment.op.prepare.desc": (
@@ -514,8 +515,10 @@ TEXT = {
         "vorherige Form wieder her."
     ),
     "garment.info.tears": (
-        "Braucht eine Armature und Gewichte am Kleidungsstück. Das Kleidungsstück wird durch einige Testposen bewegt "
-        "(Arme hoch, Arme nach vorn, Beine nach vorn, eine Drehung), und die Nähte, die aufgehen, werden gemeldet."
+        "Braucht eine Armature und Gewichte am Kleidungsstück. Mit dem Reference Data Pack wird das Kleidungsstück "
+        "durch die Posen des Spiels bewegt (Stehen, Gehen, Rennen, Sitzen, Klettern und mehr), ohne es durch einige "
+        "Testposen (Arme hoch, Arme nach vorn, Beine nach vorn, eine Drehung). Die Nähte, die aufgehen, und der "
+        "Stoff, der sich bis zum Reißen dehnt, werden gemeldet."
     ),
     "garment.info.prepare": (
         "Verbindet die Nähte zwischen den Teilen (nie einen Saum mit sich selbst und nie ein Futter mit seiner "
@@ -1630,4 +1633,12 @@ TEXT = {
         "wenn gta.clothing es anbietet."
     ),
     "garment.view.note": "Es ändert sich nur, was du siehst. Fits und Prüfungen nutzen immer den Standardkörper.",
+    "garment.stage.game-poses": "Kleidungsstück wird in die Posen des Spiels gebracht",
+    "garment.stage.test-poses": "Kleidungsstück wird in die Testposen gebracht",
+    "garment.tears.game-summary": "{clean} von {total} Posen des Spiels reißen nichts.",
+    "garment.tears.game-pose": "{pose}: {count} Punkte reißen, bis zum {stretch}-Fachen gedehnt",
+    "garment.tears.game-pose.one": "{pose}: {count} Punkt reißt, bis zum {stretch}-Fachen gedehnt",
+    "garment.done.tears-game": "{count} Vertices reißen in den Posen des Spiels. Sie sind in der Punktgruppe DCT Tears.",
+    "garment.done.tears-game.one": "{count} Vertex reißt in den Posen des Spiels. Er ist in der Punktgruppe DCT Tears.",
+    "garment.done.no-tears-game": "In den {total} Posen des Spiels reißt nichts.",
 }

@@ -687,7 +687,32 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     bpy.context.view_layer.objects.active = rig
     bpy.ops.object.parent_set(type="ARMATURE_AUTO")
     split_weights(tpose)
+    # With the hosted body's Reference Data Pack, Check Tears runs through the pack's poses, one pose per stage.
+    check("the hosted body in use has the synthetic pack", ui_garment.game_poses(bpy.context) is not None)
+    stages = [stage for stage, _done, _total in gh.check_tears_steps(bpy.context, tpose,
+                                                                      ui_garment.game_poses(bpy.context))]
+    check("Check Tears in the game's poses goes one pose per stage",
+          stages == ["garment.stage.game-poses"] * len(synthetic_pack.POSES), stages)
+    check("Check Tears runs in the game's poses", "FINISHED" in bpy.ops.dct_link.fit_check_tears())
+    tears = ui_garment.RUNTIME.tears
+    by_pose = {pose["pose"]: pose for pose in tears["poses"]} if tears else {}
+    check("the game's poses find where the garment tears when the arm climbs, and nothing standing",
+          tears is not None and tears.get("game") and tears["total"] == len(synthetic_pack.POSES)
+          and by_pose["climb@0.5"]["torn"] > 0 and by_pose["idle@0"]["torn"] == 0
+          and tpose.vertex_groups.get(gh.TEARS_GROUP) is not None
+          and ui_garment.RUNTIME.notice.message.key == "garment.done.tears-game", tears)
+    log = draw_everything(package, state, "tears in the game's poses")
+    labels = " ".join(entry[1] for entry in log if entry[0] == "label")
+    check("the Tears section names the game poses that tear", "game poses tear nothing" in labels
+          and "climb@0.5:" in labels, labels[-400:])
+    RESULT_GAME = {"check": "tears (synthetic pack poses)", "ok": True,
+                   "detail": "; ".join(f"{p['pose']}: {p['torn']} torn, stretch {p['stretch']}"
+                                       for p in tears["poses"])}
+    # Without the pack (here: no hosted body in use) the test poses run as before.
+    hosted = props.body
+    props.body = None
     check("Check Tears runs", "FINISHED" in bpy.ops.dct_link.fit_check_tears())
+    props.body = hosted
     tears = ui_garment.RUNTIME.tears
     torn = {pose["pose"]: pose["torn"] for pose in tears["poses"]} if tears else {}
     check("the tear check poses the garment, finds the seams that open and names the pose it skipped",
@@ -804,7 +829,7 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
     check("the Game Ready panel shows the result of Validate",
           any(entry[0] == "label" and ("CLEAN" in entry[1] or "Validate" in entry[1]) for entry in log))
 
-    results = [RESULT, RESULT_TPOSE, RESULT2, RESULT3, RESULT4]
+    results = [RESULT, RESULT_TPOSE, RESULT_GAME, RESULT2, RESULT3, RESULT4]
     if dct is not None:
         results.append(add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_everything, tpose,
                                   real))
@@ -1472,7 +1497,8 @@ def add_to_dct(package, addon, state, ctrl, dct, check, refused, pump, draw_ever
     del dct.fail["skeleton.template"]
 
     # The skeleton: imported with Sollumz, checked, the coat parented to it with its weights kept.
-    groups_before = sorted(g.name for g in coat.vertex_groups)
+    # Its bone weights stay; the add-on's own groups (DCT Tears from the tear check) are left out.
+    groups_before = sorted(g.name for g in coat.vertex_groups if g.name not in gh.TOOL_GROUPS)
     check("Use Durty Cloth Tool Skeleton runs again", "FINISHED" in bpy.ops.dct_link.fit_use_skeleton())
     finish_job("the skeleton")
     skeleton = gdct.skeleton_of(coat)

@@ -235,7 +235,8 @@ TEXT = {
     "garment.op.cancel-sculpt.desc": "Recuperar la forma de antes de la sesión y terminarla",
     "garment.op.tears": "Comprobar desgarros",
     "garment.op.tears.desc": (
-        "Poner el esqueleto de la prenda en unas cuantas poses de prueba y mostrar dónde se abren las costuras"
+        "Poner la prenda en las poses del juego, o en unas cuantas poses de prueba sin el Reference Data Pack, y "
+        "mostrar dónde se rompe"
     ),
     "garment.op.prepare": "Preparar prenda",
     "garment.op.prepare.desc": (
@@ -497,8 +498,10 @@ TEXT = {
         "recupera la forma anterior."
     ),
     "garment.info.tears": (
-        "Necesita un esqueleto y pesos en la prenda. La prenda se pone en unas cuantas poses de prueba (brazos arriba, "
-        "brazos hacia delante, piernas hacia delante, una torsión) y se informa de las costuras que se abren."
+        "Necesita un esqueleto y pesos en la prenda. Con el Reference Data Pack, la prenda se pone en las poses del "
+        "propio juego (de pie, caminando, corriendo, sentado, trepando y más); sin él, en unas cuantas poses de "
+        "prueba (brazos arriba, brazos hacia delante, piernas hacia delante, una torsión). Se informa de las "
+        "costuras que se abren y de la tela que se estira hasta romperse."
     ),
     "garment.info.prepare": (
         "Une las costuras entre piezas (nunca un dobladillo consigo mismo ni un forro con su tela exterior: pon un "
@@ -1546,4 +1549,12 @@ TEXT = {
         "gta.clothing lo ofrece."
     ),
     "garment.view.note": "Solo cambia lo que ves. Los ajustes y las comprobaciones siempre usan el cuerpo estándar.",
+    "garment.stage.game-poses": "Poniendo la prenda en las poses del juego",
+    "garment.stage.test-poses": "Poniendo la prenda en las poses de prueba",
+    "garment.tears.game-summary": "{clean} de {total} poses del juego no rompen nada.",
+    "garment.tears.game-pose": "{pose}: {count} puntos se rompen, estirados hasta {stretch} veces",
+    "garment.tears.game-pose.one": "{pose}: {count} punto se rompe, estirado hasta {stretch} veces",
+    "garment.done.tears-game": "{count} vértices se rompen en las poses del juego. Están en el grupo de vértices DCT Tears.",
+    "garment.done.tears-game.one": "{count} vértice se rompe en las poses del juego. Está en el grupo de vértices DCT Tears.",
+    "garment.done.no-tears-game": "Nada se rompe en las {total} poses del juego.",
 }

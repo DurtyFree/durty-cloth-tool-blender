@@ -803,7 +803,10 @@ EN: Dict[str, str] = {
     "garment.op.accept.desc": "Keep the sculpted shape and end the session",
     "garment.op.cancel-sculpt.desc": "Put back the shape from before the session and end it",
     "garment.op.tears": "Check Tears",
-    "garment.op.tears.desc": "Pose the garment's armature through a few test poses and show where seams open up",
+    "garment.op.tears.desc": (
+        "Pose the garment through the game's poses, or a few test poses without the Reference Data Pack, and show "
+        "where it tears"
+    ),
     "garment.op.prepare": "Prepare Garment",
     "garment.op.prepare.desc": (
         "Join the panel seams, remove loose parts, triangulate, shade smooth and add the ped vertex colours"
@@ -961,6 +964,14 @@ EN: Dict[str, str] = {
     "garment.done.tears": "{count} seam vertices open up in a test pose. They are in the vertex group DCT Tears.",
     "garment.done.tears.one": "{count} seam vertex opens up in a test pose. It is in the vertex group DCT Tears.",
     "garment.done.no-tears": "No seam opens in the test poses.",
+    "garment.stage.game-poses": "Posing the garment in the game's poses",
+    "garment.stage.test-poses": "Posing the garment in the test poses",
+    "garment.tears.game-summary": "{clean} of {total} game poses tear nothing.",
+    "garment.tears.game-pose": "{pose}: {count} points tear, stretched up to {stretch} times",
+    "garment.tears.game-pose.one": "{pose}: {count} point tears, stretched up to {stretch} times",
+    "garment.done.tears-game": "{count} vertices tear in the game's poses. They are in the vertex group DCT Tears.",
+    "garment.done.tears-game.one": "{count} vertex tears in the game's poses. It is in the vertex group DCT Tears.",
+    "garment.done.no-tears-game": "Nothing tears in the game's {total} poses.",
     "garment.done.tears-welded": (
         "The seams are joined, so none can open here. Check the cloth moving on the ped in Durty Cloth Tool's 3D "
         "Preview."
@@ -1032,8 +1043,10 @@ EN: Dict[str, str] = {
         "the body back out when Keep Out of Body is on); Cancel puts back the shape from before."
     ),
     "garment.info.tears": (
-        "Needs an armature and weights on the garment. The garment is posed through a few test poses (arms up, arms "
-        "forward, legs forward, a twist), and the seams that open are reported."
+        "Needs an armature and weights on the garment. With the Reference Data Pack, the garment is posed through "
+        "the game's own poses (standing, walking, running, sitting, climbing and more); without it, through a few "
+        "test poses (arms up, arms forward, legs forward, a twist). The seams that open and the cloth that "
+        "stretches until it tears are reported."
     ),
     "garment.info.prepare": (
         "Joins the seams between panels (never a hem onto itself, and never a lining onto its shell: put a lining "

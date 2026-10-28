@@ -426,7 +426,11 @@ TEXT = {
     "garment.info.service": "gta.clothing üzerinde uyarla, kıyafeti Bedene hizala sonrasındaki haliyle uyarlar. Oyun pozunda, freemode bedeninin ağırlıklarıyla ve içeride kaldığı yerlerde bedenin dışına taşınmış olarak döner. Kıyafet yedek tuttuğu için Bir adım geri önceki haline döndürür. Her uyarlama bugünkü haklardan birini kullanır.",
     "garment.info.snap": "Prop oyunda tek kemikten asılır: şapka, gözlük ve kulak aksesuarları için baş; saat ve bilezikler için el bileğinde ön kol. Bağlantı noktasına yerleştir, freemode bedeninde olağan konumuna koyar; oradan elle taşıyın, döndürün veya ölçekleyin. Eklendiğinde bağlantı noktasına göre konumunu korur.",
     "garment.info.split": "Elbise oyuna Üst kıyafet yuvasında tek kıyafet veya üst kıyafet ve etek olarak girer. Belden ayır, leğen kemiğinin üzerindeki en dar yerden keser: elbise üst kıyafeti korur, onun adıyla yeni kıyafet Bacaklar yuvası için ayarlanmış eteği alır. İki parça da uyarlamayı ve ağırlıklarını korusun diye gta.clothing üzerinde uyarla sonrasında ayırın; ardından tamamlayıp eklemek için Kurulum altında her parçayı seçin.",
-    "garment.info.tears": "Kıyafette iskelet ve ağırlıklar gerekir. Kıyafet birkaç test pozuna getirilir (kollar yukarı, kollar ileri, bacaklar ileri, dönme) ve açılan dikişler bildirilir.",
+    "garment.info.tears": (
+        "Kıyafette iskelet ve ağırlıklar gerekir. Reference Data Pack ile kıyafet oyunun kendi pozlarına getirilir "
+        "(ayakta durma, yürüme, koşma, oturma, tırmanma ve diğerleri); onsuz birkaç test pozuna (kollar yukarı, "
+        "kollar ileri, bacaklar ileri, dönme). Açılan dikişler ve yırtılana kadar gerilen kumaş bildirilir."
+    ),
     "garment.info.tpose": "T pozunda yapılmış kıyafetin kollarını kol açısına getirir (veya eklemleri biliniyorsa bedenin kollarına). Kıyafetin her kısmı konumuna göre izler; böylece dikişler kapalı kalır. Bedene hizala da bunu yapar.",
     "garment.info.type": "Tür, kıyafetin yerleşeceği yuvayı, işaretlerinin nasıl bulunacağını, araçların sunduğu bölgeleri ve nelerin kontrol edileceğini belirler. Prop öğeleri (şapka, gözlük, kulak aksesuarı, saat ve bilezik) bedene uyarlanmak yerine bağlantı noktalarına yerleştirilir.",
     "garment.info.validate": "Hızlı yerel kontroller: ağırlıklar, köşe başına dörtten fazla kemik, bozuk koordinatlar, kıyafetin konumu, ters normaller, UV yerleşimi, köşe renkleri, her ayrıntı düzeyindeki üçgenler ve bedenin içinde kalan miktar.",
@@ -538,7 +542,10 @@ TEXT = {
     "garment.op.split": "Belden ayır",
     "garment.op.split.desc": "Elbiseyi belinden üst kıyafet ve eteğe ayırır: etek Bacaklar yuvası için ayrı kıyafet olur",
     "garment.op.tears": "Açılan dikişleri kontrol et",
-    "garment.op.tears.desc": "Kıyafetin iskeletini birkaç test pozuna getirip dikişlerin nerede açıldığını gösterir",
+    "garment.op.tears.desc": (
+        "Kıyafeti oyunun pozlarına, Reference Data Pack yoksa birkaç test pozuna getirip nerede yırtıldığını "
+        "gösterir"
+    ),
     "garment.op.tpose": "T pozundan A pozuna",
     "garment.op.tpose.desc": "İşaretleri kullanarak T pozunda yapılmış kıyafetin kollarını kol açısına indirir",
     "garment.op.use": "Seçileni kullan",
@@ -890,4 +897,12 @@ TEXT = {
         "ekle onu da getirir."
     ),
     "garment.view.note": "Yalnızca gördüğün değişir. Oturtmalar ve kontroller her zaman standart bedeni kullanır.",
+    "garment.stage.game-poses": "Kıyafet oyunun pozlarına getiriliyor",
+    "garment.stage.test-poses": "Kıyafet test pozlarına getiriliyor",
+    "garment.tears.game-summary": "{total} oyun pozundan {clean} tanesinde hiçbir şey yırtılmıyor.",
+    "garment.tears.game-pose": "{pose}: {count} nokta yırtılıyor, {stretch} katına kadar geriliyor",
+    "garment.tears.game-pose.one": "{pose}: {count} nokta yırtılıyor, {stretch} katına kadar geriliyor",
+    "garment.done.tears-game": "Oyunun pozlarında {count} köşe yırtılıyor. DCT Tears köşe grubundalar.",
+    "garment.done.tears-game.one": "Oyunun pozlarında {count} köşe yırtılıyor. DCT Tears köşe grubunda.",
+    "garment.done.no-tears-game": "Oyunun {total} pozunda hiçbir şey yırtılmıyor.",
 }

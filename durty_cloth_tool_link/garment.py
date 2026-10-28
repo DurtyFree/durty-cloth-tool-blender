@@ -2501,6 +2501,109 @@ def tears(pairs: np.ndarray, posed: Any, threshold: float) -> Tuple[np.ndarray, 
     return separation > threshold, separation
 
 
+# Tears in the game's poses (Check Tears with the Reference Data Pack): the garment skinned with each pose's
+# skinning matrices, linear blend skinning with the four heaviest bones as the game does. Besides the seams that
+# open, an edge stretched past TEAR_STRETCH times its rest length tears; edges shorter than TEAR_MIN_EDGE (the walls
+# of a thick export) do not count. Ported from Muto Cloth by muto.
+TEAR_STRETCH = 1.8
+TEAR_MIN_EDGE = 0.003
+#: The share of the garment's bone weights that must lie on bones the poses know before they are used.
+TEAR_KNOWN_WEIGHT = 0.95
+
+
+def skin_weights(table: Any, names: Sequence[str], bones: Sequence[str],
+                 limit: int = 4) -> Tuple[np.ndarray, np.ndarray]:
+    """Each vertex's heaviest ``limit`` bones among ``bones`` (indices into it) and their weights, normalised to one;
+    a weight table column (``names``) for a bone the poses do not know is left out, and a vertex without weights
+    keeps all zeros (it stays where it is)."""
+    table = np.asarray(table, dtype=np.float64).reshape(-1, len(names))
+    column = {name: i for i, name in enumerate(bones)}
+    known = np.array([column.get(name, -1) for name in names], dtype=np.int64)
+    weights = np.where(np.isfinite(table), np.maximum(table, 0.0), 0.0) * (known >= 0)[None, :]
+    count = min(limit, len(names))
+    top = np.argsort(-weights, axis=1, kind="stable")[:, :count]
+    chosen = np.take_along_axis(weights, top, 1)
+    total = chosen.sum(axis=1, keepdims=True)
+    chosen = np.where(total > 0, chosen / np.maximum(total, 1e-12), 0.0)
+    return np.where(chosen > 0, known[top], 0), chosen
+
+
+def skinned(positions: Any, bones: Any, weights: Any, matrices: Any) -> np.ndarray:
+    """Rest positions moved by linear blend skinning: each vertex by its bones' skinning matrices ``(B, 4, 4)``,
+    blended by its weights (a vertex without weights stays where it is)."""
+    points = as_points(positions)
+    bones = np.asarray(bones, dtype=np.int64).reshape(len(points), -1)
+    weights = np.asarray(weights, dtype=np.float64).reshape(len(points), -1)
+    matrices = np.asarray(matrices, dtype=np.float64)
+    out = points * (1.0 - weights.sum(axis=1, keepdims=True))
+    for k in range(bones.shape[1]):
+        m = matrices[bones[:, k]]
+        moved = np.einsum("nij,nj->ni", m[:, :3, :3], points) + m[:, :3, 3]
+        out += weights[:, k, None] * moved
+    return out
+
+
+def tear_poses_for(poses: Optional[Any], names: Sequence[str], table: Any) -> Optional[Any]:
+    """The pack's poses when the garment's weights lie on their bones (at least :data:`TEAR_KNOWN_WEIGHT` of the
+    weight), else ``None``: another rig, or no pack, keeps the test poses."""
+    if poses is None or not len(names):
+        return None
+    table = np.abs(np.asarray(table, dtype=np.float64).reshape(-1, len(names)))
+    known = np.array([name in set(poses.bones) for name in names])
+    total = float(table.sum())
+    if not known.any() or total <= 0 or float(table[:, known].sum()) < TEAR_KNOWN_WEIGHT * total:
+        return None
+    return poses
+
+
+class PoseTears(NamedTuple):
+    """Check Tears in the game's poses: one row per pose (``torn`` vertices, the widest seam ``gap`` in millimetres,
+    the ``stretched`` edges and the largest ``stretch``), and every vertex that tore in any pose."""
+
+    rows: List[Dict[str, Any]]
+    torn: np.ndarray
+
+
+def pose_tear_steps(rest: Any, pairs: Any, edges: Any, bones: Any, weights: Any, matrices: Any,
+                    threshold: float) -> Any:
+    """Check Tears through poses ``(P, B, 4, 4)`` as a generator: it yields each pose's number after measuring it,
+    so a timer can keep Blender's interface running between poses, and returns :class:`PoseTears`. A seam pair
+    further apart than ``threshold`` metres tears, and so does an edge past :data:`TEAR_STRETCH`."""
+    points = as_points(rest)
+    pairs = np.asarray(pairs, dtype=np.int64).reshape(-1, 2)
+    edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)
+    lengths = np.linalg.norm(points[edges[:, 1]] - points[edges[:, 0]], axis=1)
+    edges, lengths = edges[lengths >= TEAR_MIN_EDGE], lengths[lengths >= TEAR_MIN_EDGE]
+    torn_any = np.zeros(len(points), dtype=bool)
+    rows: List[Dict[str, Any]] = []
+    for number, matrix in enumerate(np.asarray(matrices, dtype=np.float64)):
+        posed = skinned(points, bones, weights, matrix)
+        torn = np.zeros(len(points), dtype=bool)
+        opened, separation = tears(pairs, posed, threshold)
+        torn[pairs[opened].ravel()] = True
+        ratio = np.linalg.norm(posed[edges[:, 1]] - posed[edges[:, 0]], axis=1) / lengths if len(edges) else \
+            np.zeros(0)
+        stretched = ratio > TEAR_STRETCH
+        torn[edges[stretched].ravel()] = True
+        torn_any |= torn
+        rows.append({"torn": int(torn.sum()),
+                     "gap": round(float(separation.max() * 1000.0), 1) if len(separation) else 0.0,
+                     "stretched": int(stretched.sum()), "stretch": round(float(ratio.max()), 2) if len(ratio)
+                     else 1.0})
+        yield number
+    return PoseTears(rows, torn_any)
+
+
+def run_tear_steps(*args: Any, **kwargs: Any) -> PoseTears:
+    """:func:`pose_tear_steps` at once."""
+    steps = pose_tear_steps(*args, **kwargs)
+    while True:
+        try:
+            next(steps)
+        except StopIteration as stop:
+            return stop.value
+
+
 def components(count: int, edges: Any) -> np.ndarray:
     """The connected part (panel) each vertex belongs to."""
     edges = np.asarray(edges, dtype=np.int64).reshape(-1, 2)

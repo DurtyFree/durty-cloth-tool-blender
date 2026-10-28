@@ -239,7 +239,8 @@ TEXT = {
     "garment.op.cancel-sculpt.desc": "Rétablir la forme d'avant la session et terminer celle-ci",
     "garment.op.tears": "Vérifier les déchirures",
     "garment.op.tears.desc": (
-        "Faire passer l'armature du vêtement par quelques poses de test et montrer où les coutures s'ouvrent"
+        "Faire passer le vêtement par les poses du jeu, ou par quelques poses de test sans le Reference Data Pack, "
+        "et montrer où il se déchire"
     ),
     "garment.op.prepare": "Préparer le vêtement",
     "garment.op.prepare.desc": (
@@ -512,8 +513,10 @@ TEXT = {
         "est entré dans le corps quand Garder hors du corps est activé) ; Annuler rétablit la forme d'avant."
     ),
     "garment.info.tears": (
-        "Nécessite une armature et des poids sur le vêtement. Le vêtement passe par quelques poses de test (bras "
-        "levés, bras en avant, jambes en avant, une torsion), et les coutures qui s'ouvrent sont signalées."
+        "Nécessite une armature et des poids sur le vêtement. Avec le Reference Data Pack, le vêtement passe par "
+        "les poses du jeu (debout, marche, course, assis, escalade et d'autres) ; sans lui, par quelques poses de "
+        "test (bras levés, bras en avant, jambes en avant, une torsion). Les coutures qui s'ouvrent et le tissu qui "
+        "s'étire jusqu'à se déchirer sont signalés."
     ),
     "garment.info.prepare": (
         "Joint les coutures entre les pièces (jamais un ourlet sur lui-même, et jamais une doublure sur son tissu "
@@ -1604,4 +1607,12 @@ TEXT = {
         "quand gta.clothing le propose."
     ),
     "garment.view.note": "Seul l'affichage change. Les ajustements et les vérifications utilisent toujours le corps standard.",
+    "garment.stage.game-poses": "Mise du vêtement dans les poses du jeu",
+    "garment.stage.test-poses": "Mise du vêtement dans les poses de test",
+    "garment.tears.game-summary": "{clean} poses du jeu sur {total} ne déchirent rien.",
+    "garment.tears.game-pose": "{pose} : {count} points se déchirent, étirés jusqu'à {stretch} fois",
+    "garment.tears.game-pose.one": "{pose} : {count} point se déchire, étiré jusqu'à {stretch} fois",
+    "garment.done.tears-game": "{count} sommets se déchirent dans les poses du jeu. Ils sont dans le groupe de sommets DCT Tears.",
+    "garment.done.tears-game.one": "{count} sommet se déchire dans les poses du jeu. Il est dans le groupe de sommets DCT Tears.",
+    "garment.done.no-tears-game": "Rien ne se déchire dans les {total} poses du jeu.",
 }

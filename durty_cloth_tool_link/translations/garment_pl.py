@@ -427,7 +427,12 @@ TEXT = {
     "garment.info.service": "Opcja Dopasuj na gta.clothing dopasowuje ubranie w jego położeniu po użyciu Wyrównaj do ciała. Wynik ma pozę gry i wagi ciała freemode, a części, które były wewnątrz ciała, zostają wypchnięte na zewnątrz. Ubranie zachowuje kopię zapasową, więc Cofnij jeden krok przywraca poprzedni stan. Każde dopasowanie zużywa jedno z dzisiejszego limitu.",
     "garment.info.snap": "Prop w grze wisi na jednej kości: głowie dla nakryć głowy, okularów i ozdób uszu, a przedramieniu przy nadgarstku dla zegarków i bransoletek. Opcja Przyciągnij do zaczepu umieszcza go w typowym położeniu na ciele freemode. Potem przesuń, obróć lub przeskaluj go ręcznie. Po dodaniu zachowuje pozycję względem zaczepu.",
     "garment.info.split": "Sukienka trafia do gry jako jedno ubranie w slocie Górna część lub jako górna część i spódnica. Opcja Podziel w talii rozcina ją w najwęższym miejscu nad miednicą: sukienka zachowuje górną część, a nowe ubranie o nazwie od niej otrzymuje spódnicę przygotowaną do slotu Nogi. Podziel po użyciu Dopasuj na gta.clothing, aby oba elementy zachowały dopasowanie i wagi. Następnie wybierz każdy element w sekcji Przygotowanie, aby go wykończyć i dodać.",
-    "garment.info.tears": "Wymaga armatury i wag na ubraniu. Ubranie jest ustawiane w kilku pozach testowych (ręce w górę, ręce do przodu, nogi do przodu, skręt), a otwierające się szwy są zgłaszane.",
+    "garment.info.tears": (
+        "Wymaga armatury i wag na ubraniu. Z Reference Data Pack ubranie jest ustawiane w pozach z samej gry "
+        "(stanie, chód, bieg, siedzenie, wspinanie i inne); bez niego w kilku pozach testowych (ręce w górę, ręce "
+        "do przodu, nogi do przodu, skręt). Zgłaszane są otwierające się szwy i materiał rozciągający się aż do "
+        "rozdarcia."
+    ),
     "garment.info.tpose": "Obraca ręce ubrania wykonanego w pozie T do wybranego kąta (lub do rąk ciała, jeśli znane są jego stawy). Każda część ubrania podąża zgodnie ze swoim położeniem, więc szwy pozostają zamknięte. Robi to również opcja Wyrównaj do ciała.",
     "garment.info.type": "Typ określa slot ubrania, sposób znajdowania znaczników, obszary dostępne w narzędziach i zakres kontroli. Elementy prop (nakrycia głowy, okulary, ozdoby uszu, zegarki i bransoletki) są przyciągane do zaczepu zamiast dopasowywania do ciała.",
     "garment.info.validate": "Szybkie kontrole lokalne: wagi, więcej niż cztery kości na wierzchołek, nieprawidłowe współrzędne, położenie ubrania, odwrócone normalne, układ UV, kolory wierzchołków, trójkąty każdego poziomu szczegółowości i część znajdująca się wewnątrz ciała.",
@@ -539,7 +544,10 @@ TEXT = {
     "garment.op.split": "Podziel w talii",
     "garment.op.split.desc": "Przetnij sukienkę w talii na górną część i spódnicę: spódnica staje się osobnym ubraniem do slotu Nogi",
     "garment.op.tears": "Sprawdź rozdarcia",
-    "garment.op.tears.desc": "Ustaw armaturę ubrania w kilku pozach testowych i pokaż miejsca otwierania się szwów",
+    "garment.op.tears.desc": (
+        "Ustaw ubranie w pozach z gry, a bez Reference Data Pack w kilku pozach testowych, i pokaż, gdzie się "
+        "rozdziera"
+    ),
     "garment.op.tpose": "Poza T do pozy A",
     "garment.op.tpose.desc": "Opuść ręce ubrania wykonanego w pozie T do wybranego kąta, używając znaczników",
     "garment.op.use": "Użyj zaznaczonego",
@@ -901,4 +909,12 @@ TEXT = {
         "udostępnia."
     ),
     "garment.view.note": "Zmienia się tylko to, co widzisz. Dopasowania i sprawdzenia zawsze używają standardowego ciała.",
+    "garment.stage.game-poses": "Ustawianie ubrania w pozach z gry",
+    "garment.stage.test-poses": "Ustawianie ubrania w pozach testowych",
+    "garment.tears.game-summary": "Pozy z gry bez rozdarć: {clean} z {total}.",
+    "garment.tears.game-pose": "{pose}: rozdzierające się punkty: {count}, rozciągnięcie do {stretch} razy",
+    "garment.tears.game-pose.one": "{pose}: rozdzierające się punkty: {count}, rozciągnięcie do {stretch} razy",
+    "garment.done.tears-game": "Wierzchołki rozdzierające się w pozach z gry: {count}. Znajdują się w grupie wierzchołków DCT Tears.",
+    "garment.done.tears-game.one": "Wierzchołki rozdzierające się w pozach z gry: {count}. Znajduje się w grupie wierzchołków DCT Tears.",
+    "garment.done.no-tears-game": "Nic się nie rozdziera w {total} pozach z gry.",
 }

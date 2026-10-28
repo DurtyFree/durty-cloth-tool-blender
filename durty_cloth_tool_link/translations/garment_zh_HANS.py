@@ -191,7 +191,7 @@ TEXT = {
     "garment.op.accept.desc": "保留雕刻后的形状并结束会话",
     "garment.op.cancel-sculpt.desc": "恢复会话之前的形状并结束会话",
     "garment.op.tears": "检查撕裂",
-    "garment.op.tears.desc": "让服装的骨架依次摆出几个测试姿势，并显示接缝裂开的位置",
+    "garment.op.tears.desc": "让服装依次摆出游戏的姿势（没有 Reference Data Pack 时摆出几个测试姿势），并显示撕裂的位置",
     "garment.op.prepare": "准备服装",
     "garment.op.prepare.desc": "合并版片接缝，移除松散部分，三角化，平滑着色，并添加 ped 顶点色",
     "garment.op.combine": "合并材质",
@@ -375,7 +375,10 @@ TEXT = {
         "使用抓起笔刷的雕刻模式，身体以线框显示。接受会保留形状（开启保持在身体外时，"
         "还会把进入身体的部分移回外面）；取消会恢复之前的形状。"
     ),
-    "garment.info.tears": "需要服装带有骨架和权重。服装会依次摆出几个测试姿势（手臂上举、手臂前伸、腿部前伸、扭转），并报告裂开的接缝。",
+    "garment.info.tears": (
+        "需要服装带有骨架和权重。有 Reference Data Pack "
+        "时，服装会依次摆出游戏自身的姿势（站立、行走、奔跑、坐下、攀爬等）；没有时，摆出几个测试姿势（手臂上举、手臂前伸、腿部前伸、扭转）。会报告裂开的接缝和拉伸到撕裂的布料。"
+    ),
     "garment.info.prepare": (
         "合并部件之间的接缝（绝不会把下摆与自身合并，也不会把衬里与外层面料合并：未被识别的衬里请放进顶点组 DCT Lining），移除零散部分，三角化，平滑着色，并使用选项中的值为服装添加 Sollumz 的顶点颜色 "
         "Color 1 和 Color 2。 当服装位于身体上时，其面会转为朝外背离身体（衬里的面朝向身体）。选项中的厚度可为单层布料添加背面。"
@@ -967,4 +970,12 @@ TEXT = {
     "garment.cut.desc": "来自 Reference Data Pack 的上身皮肤",
     "garment.why.no-pack": "身体剪裁、手臂和腿部需要 Reference Data Pack。当 gta.clothing 提供它时，“添加 freemode 身体”会一并下载。",
     "garment.view.note": "只改变你看到的内容。贴合和检查始终使用标准身体。",
+    "garment.stage.game-poses": "正在让服装摆出游戏的姿势",
+    "garment.stage.test-poses": "正在让服装摆出测试姿势",
+    "garment.tears.game-summary": "{total} 个游戏姿势中有 {clean} 个没有撕裂。",
+    "garment.tears.game-pose": "{pose}：{count} 个点撕裂，最多拉伸到 {stretch} 倍",
+    "garment.tears.game-pose.one": "{pose}：{count} 个点撕裂，最多拉伸到 {stretch} 倍",
+    "garment.done.tears-game": "{count} 个顶点在游戏姿势中撕裂。它们位于顶点组 DCT Tears 中。",
+    "garment.done.tears-game.one": "{count} 个顶点在游戏姿势中撕裂。它位于顶点组 DCT Tears 中。",
+    "garment.done.no-tears-game": "在 {total} 个游戏姿势中没有任何撕裂。",
 }

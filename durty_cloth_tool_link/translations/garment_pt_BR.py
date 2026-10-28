@@ -236,7 +236,8 @@ TEXT = {
     "garment.op.cancel-sculpt.desc": "Devolver a forma de antes da sessão e encerrá-la",
     "garment.op.tears": "Verificar rasgos",
     "garment.op.tears.desc": (
-        "Colocar a armature da roupa em algumas poses de teste e mostrar onde as costuras se abrem"
+        "Colocar a roupa nas poses do jogo, ou em algumas poses de teste sem o Reference Data Pack, e mostrar onde "
+        "ela rasga"
     ),
     "garment.op.prepare": "Preparar roupa",
     "garment.op.prepare.desc": (
@@ -496,8 +497,10 @@ TEXT = {
         "que entrou no corpo quando Manter fora do corpo está ligado); Cancelar devolve a forma de antes."
     ),
     "garment.info.tears": (
-        "Precisa de uma armature e de pesos na roupa. A roupa é posada em algumas poses de teste (braços para cima, "
-        "braços para a frente, pernas para a frente, uma torção), e as costuras que se abrem são informadas."
+        "Precisa de uma armature e de pesos na roupa. Com o Reference Data Pack, a roupa é posada nas poses do "
+        "próprio jogo (em pé, andando, correndo, sentado, escalando e outras); sem ele, em algumas poses de teste "
+        "(braços para cima, braços para a frente, pernas para a frente, uma torção). As costuras que se abrem e o "
+        "tecido que estica até rasgar são informados."
     ),
     "garment.info.prepare": (
         "Une as costuras entre as peças (nunca uma barra a ela mesma, nem um forro ao tecido externo: coloque um "
@@ -1494,4 +1497,12 @@ TEXT = {
         "gta.clothing o oferece."
     ),
     "garment.view.note": "Só muda o que você vê. Ajustes e verificações sempre usam o corpo padrão.",
+    "garment.stage.game-poses": "Colocando a roupa nas poses do jogo",
+    "garment.stage.test-poses": "Colocando a roupa nas poses de teste",
+    "garment.tears.game-summary": "{clean} de {total} poses do jogo não rasgam nada.",
+    "garment.tears.game-pose": "{pose}: {count} pontos rasgam, esticados até {stretch} vezes",
+    "garment.tears.game-pose.one": "{pose}: {count} ponto rasga, esticado até {stretch} vezes",
+    "garment.done.tears-game": "{count} vértices rasgam nas poses do jogo. Eles estão no grupo de vértices DCT Tears.",
+    "garment.done.tears-game.one": "{count} vértice rasga nas poses do jogo. Ele está no grupo de vértices DCT Tears.",
+    "garment.done.no-tears-game": "Nada rasga nas {total} poses do jogo.",
 }

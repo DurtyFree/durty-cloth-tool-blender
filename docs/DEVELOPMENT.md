@@ -40,7 +40,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `link.py` | `LinkController`: connecting, sign-in, Live Preview, Texture Checks, model pushes, what Durty Cloth Tool opens in Blender, the linked cloth's picture, temporary folders |
 | `pixels.py` | Reading Blender's float pixels into RGBA8 rows, change detection and dirty rectangles, in small steps per timer tick |
 | `bundle.py` | Collecting a Sollumz export (one `*.ydd.xml` and its `*.dds` files) into a model push |
-| `garment.py` | Garment Fitting maths: types and slots, the type a file name names, import units and exports normalised to 1 m, markers and their plausibility, Align to Body, regions, the fit check, problem colours, Push Out of Body by region, Fix Spikes, seam welding, faces turned away from the body and the back shell, choosing among LOD candidates by their holes, Validate's checks, pose presets, the next-step hint |
+| `garment.py` | Garment Fitting maths: types and slots, the type a file name names, import units and exports normalised to 1 m, markers and their plausibility, Align to Body, regions, the fit check, problem colours, Push Out of Body by region, Fix Spikes, seam welding, Check Tears in the game's poses (skinning with the Reference Data Pack's poses, the seams that open and the cloth stretched until it tears), faces turned away from the body and the back shell, choosing among LOD candidates by their holes, Validate's checks, pose presets, the next-step hint |
 | `garment_atlas.py` | Combine Materials without baking: which Method Automatic picks, the power-of-two atlas grid, each material's image placed in its square, the gaps filled from neighbouring colours, the UVs moved into their squares |
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
 | `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version, with the Reference Data Pack when that version lists it, and deleting a pack the current version no longer lists |
@@ -72,7 +72,9 @@ sections for rarely changed settings.
 Blender's API is single-threaded. `LinkController.poll` runs on the main thread from a `bpy.app.timers` timer and
 drives the dct_link session with bounded work per call; session callbacks run inside that call. Network calls to
 gta.clothing (sign-in, renewal, assertions, the body download, fitting) run on worker threads that never touch
-Blender, and the timer only checks whether they finished. While Blender's thread is busy for a while (a bake, a long
+Blender, and the timer only checks whether they finished. Long work on the garment (Prepare Garment, Combine
+Materials, Fix Spikes, Check Tears) runs as a modal step that a timer advances stage by stage; Check Tears in the
+game's poses measures one pose per stage. While Blender's thread is busy for a while (a bake, a long
 export), dct_link's keep-alive daemon thread (on by default) answers Durty Cloth Tool's pings on the loopback socket
 so the connection stays up; it never runs a callback, and what it read reaches the add-on with the next poll. Never
 block Blender's interface: new network or disk work goes into a background task that a timer checks.

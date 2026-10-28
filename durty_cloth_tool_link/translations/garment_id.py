@@ -427,7 +427,12 @@ TEXT = {
     "garment.info.service": "Sesuaikan pada gta.clothing menyesuaikan pakaian pada posisinya setelah Selaraskan ke Tubuh. Pakaian kembali dalam pose game, dengan bobot tubuh freemode, dan bagian yang berada di dalam tubuh dipindahkan keluar. Pakaian menyimpan cadangan, sehingga Kembali Satu Langkah memulihkannya. Setiap penyesuaian menggunakan satu jatah penyesuaian hari ini.",
     "garment.info.snap": "Prop menggantung pada satu tulang dalam game: kepala untuk topi, kacamata, dan aksesori telinga; lengan bawah di pergelangan tangan untuk jam tangan dan gelang. Tempelkan ke Jangkar menempatkannya pada posisi lazim di tubuh freemode; setelah itu pindahkan, putar, atau skalakan secara manual. Saat ditambahkan, prop mempertahankan posisi relatif terhadap jangkarnya.",
     "garment.info.split": "Gaun masuk ke game sebagai satu pakaian di slot Atasan, atau sebagai atasan dan rok. Belah pada Pinggang memotongnya di bagian tersempit di atas panggul: gaun mempertahankan atasan, dan pakaian baru dengan nama turunan mendapat roknya, disiapkan untuk slot Kaki. Belah setelah Sesuaikan pada gta.clothing agar kedua bagian mempertahankan penyesuaian dan bobotnya, lalu pilih setiap bagian di Persiapan untuk menyelesaikan dan menambahkannya.",
-    "garment.info.tears": "Memerlukan armature dan bobot pada pakaian. Pakaian digerakkan melalui beberapa pose uji (lengan ke atas, lengan ke depan, kaki ke depan, gerakan memutar), dan jahitan yang terbuka dilaporkan.",
+    "garment.info.tears": (
+        "Memerlukan armature dan bobot pada pakaian. Dengan Reference Data Pack, pakaian digerakkan melalui pose "
+        "game itu sendiri (berdiri, berjalan, berlari, duduk, memanjat, dan lainnya); tanpanya, melalui beberapa "
+        "pose uji (lengan ke atas, lengan ke depan, kaki ke depan, gerakan memutar). Jahitan yang terbuka dan kain "
+        "yang meregang sampai robek dilaporkan."
+    ),
     "garment.info.tpose": "Memutar lengan pakaian yang dibuat dalam pose T ke sudut lengan (atau ke lengan tubuh jika sendinya diketahui). Setiap bagian pakaian mengikuti berdasarkan posisinya, sehingga jahitan tetap tertutup. Selaraskan ke Tubuh juga melakukan ini.",
     "garment.info.type": "Jenis menentukan slot pakaian, cara menemukan penandanya, area yang tersedia pada alat, dan hal yang diperiksa. Prop (topi, kacamata, aksesori telinga, jam tangan, dan gelang) ditempelkan ke jangkarnya, bukan disesuaikan ke tubuh.",
     "garment.info.validate": "Pemeriksaan lokal cepat: bobot, lebih dari empat tulang per vertex, koordinat rusak, posisi pakaian, normal terbalik, tata letak UV, warna vertex, jumlah segitiga setiap tingkat detail, dan bagian di dalam tubuh.",
@@ -539,7 +544,10 @@ TEXT = {
     "garment.op.split": "Belah pada Pinggang",
     "garment.op.split.desc": "Potong gaun pada pinggang menjadi atasan dan rok: rok menjadi pakaian tersendiri untuk slot Kaki",
     "garment.op.tears": "Periksa Robekan",
-    "garment.op.tears.desc": "Gerakkan armature pakaian melalui beberapa pose uji dan tampilkan lokasi jahitan terbuka",
+    "garment.op.tears.desc": (
+        "Gerakkan pakaian melalui pose game, atau beberapa pose uji tanpa Reference Data Pack, dan tampilkan lokasi "
+        "robeknya"
+    ),
     "garment.op.tpose": "Pose T ke Pose A",
     "garment.op.tpose.desc": "Turunkan lengan pakaian yang dibuat dalam pose T ke sudut lengan dengan penanda",
     "garment.op.use": "Gunakan Pilihan",
@@ -903,4 +911,12 @@ TEXT = {
         "gta.clothing menyediakannya."
     ),
     "garment.view.note": "Hanya tampilan yang berubah. Pemasangan dan pemeriksaan selalu memakai tubuh standar.",
+    "garment.stage.game-poses": "Menggerakkan pakaian melalui pose game",
+    "garment.stage.test-poses": "Menggerakkan pakaian melalui pose uji",
+    "garment.tears.game-summary": "{clean} dari {total} pose game tidak merobek apa pun.",
+    "garment.tears.game-pose": "{pose}: {count} titik robek, meregang hingga {stretch} kali",
+    "garment.tears.game-pose.one": "{pose}: {count} titik robek, meregang hingga {stretch} kali",
+    "garment.done.tears-game": "{count} vertex robek dalam pose game. Vertex tersebut berada di grup vertex DCT Tears.",
+    "garment.done.tears-game.one": "{count} vertex robek dalam pose game. Vertex tersebut berada di grup vertex DCT Tears.",
+    "garment.done.no-tears-game": "Tidak ada yang robek dalam {total} pose game.",
 }

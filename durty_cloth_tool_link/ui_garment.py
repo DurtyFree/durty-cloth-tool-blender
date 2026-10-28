@@ -1761,10 +1761,35 @@ class DCTLINK_OT_fit_sculpt_cancel(_MeshOp):
         return self.run(context, cancel, backup=False)
 
 
-class DCTLINK_OT_fit_check_tears(_MeshOp):
+_POSES: Dict[str, Any] = {"key": None, "poses": None}
+
+
+def game_poses(context: Any) -> Optional[garment_reference.PoseSet]:
+    """The game's poses of the body's gender from the Reference Data Pack kept with the hosted body in use (read once
+    while the file stays the same); ``None`` without it, so Check Tears uses its test poses."""
+    pack, gender = body_pack(context, fresh=True)
+    if pack is None:
+        return None
+    path = pack.folder / pack.index.genders[gender].poses
+    try:
+        stat = path.stat()
+        key = (str(path), stat.st_size, stat.st_mtime_ns)
+        if _POSES["key"] != key:
+            _POSES.update(poses=garment_reference.read_poses(path.read_bytes()), key=key)
+    except (OSError, garment_reference.PackError):
+        return None
+    return _POSES["poses"]
+
+
+class DCTLINK_OT_fit_check_tears(_SteppedOp):
+    """Check Tears: run from the panel it goes pose by pose on a timer, so Blender's interface keeps running through
+    the game's poses."""
+
     bl_idname = "dct_link.fit_check_tears"
     bl_label = EN["garment.op.tears"]
     bl_description = EN["garment.op.tears.desc"]
+    title = "garment.op.tears"
+    backs_up = False  # it changes only the vertex group DCT Tears
 
     @classmethod
     def poll(cls, context):
@@ -1773,17 +1798,20 @@ class DCTLINK_OT_fit_check_tears(_MeshOp):
             reason = gh.tears_problem(current_garment(context))
         return _refuse(cls, reason)
 
-    def execute(self, context):
-        def check() -> Msg:
-            result = gh.check_tears(context, current_garment(context))
-            RUNTIME.tears = result
-            RUNTIME.tears_of = current_garment(context).name
-            torn = sum(pose["torn"] for pose in result["poses"])
-            if not result["pairs"]:
-                return msg("garment.done.tears-welded")
-            return msg("garment.done.tears", count=result["vertices"]) if torn else msg("garment.done.no-tears")
+    def steps(self, context):
+        return gh.check_tears_steps(context, current_garment(context), game_poses(context))
 
-        return self.run(context, check, backup=False)
+    def finished(self, context, result):
+        RUNTIME.tears = result
+        RUNTIME.tears_of = current_garment(context).name
+        if result.get("game"):
+            if result["vertices"]:
+                return msg("garment.done.tears-game", count=result["vertices"])
+            return msg("garment.done.no-tears-game", total=result["total"])
+        torn = sum(pose["torn"] for pose in result["poses"])
+        if not result["pairs"]:
+            return msg("garment.done.tears-welded")
+        return msg("garment.done.tears", count=result["vertices"]) if torn else msg("garment.done.no-tears")
 
 
 #: Seam vertices that may stay open before Prepare Garment warns: some, and more than a small share of the open edges.
@@ -3238,10 +3266,23 @@ def draw_sculpt_session(layout: Any, context: Any) -> None:
         draw_region_tools(layout, context, title=True)
 
 
+#: How many of the game's poses with tears the panel lists (the worst first).
+GAME_POSES_SHOWN = 5
+
+
 def draw_tears(layout: Any, context: Any) -> None:
     result = RUNTIME.tears
     obj = current_garment(context)
     if not result or obj is None or RUNTIME.tears_of != obj.name:
+        return
+    if result.get("game"):
+        clean = sum(1 for pose in result["poses"] if not pose["torn"])
+        wrapped(layout, context, t("garment.tears.game-summary", clean=clean, total=result["total"]),
+                "CHECKMARK" if clean == result["total"] else "INFO")
+        worst = sorted((pose for pose in result["poses"] if pose["torn"]), key=lambda pose: -pose["torn"])
+        for pose in worst[:GAME_POSES_SHOWN]:
+            wrapped(layout, context, t("garment.tears.game-pose", pose=pose["pose"], count=pose["torn"],
+                                       stretch=pose["stretch"]), "ERROR")
         return
     for pose in result["poses"]:
         if pose.get("skipped"):

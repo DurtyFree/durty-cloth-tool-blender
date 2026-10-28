@@ -1640,6 +1640,42 @@ def check_tears(context: Any, obj: Any, threshold: float = 0.005, seam: float = 
             "skipped": sum(1 for pose in results if pose.get("skipped"))}
 
 
+def check_tears_steps(context: Any, obj: Any, poses: Optional[Any] = None, threshold: float = 0.005,
+                      seam: float = SEAM_REACH) -> Any:
+    """Check Tears as a generator of ``(stage text key, done, total)`` for a modal step. With the Reference Data
+    Pack's poses (:class:`garment_reference.PoseSet`) and weights on their bones, the garment is skinned in each of
+    the game's poses, one pose per stage, and both the seams that open and the cloth stretched until it tears go into
+    ``DCT Tears``; otherwise the test poses of :func:`check_tears` run. Returns what :func:`check_tears` returns,
+    with ``game`` and ``total`` for the game's poses."""
+    names, table = weight_table(obj) if poses is not None else ([], None)
+    poses = garment.tear_poses_for(poses, names, table) if poses is not None else None
+    if poses is None:
+        yield "garment.stage.test-poses", 0, 1
+        return check_tears(context, obj, threshold, seam)
+    rest = world_positions(obj)
+    pairs = garment.seam_pairs(rest, seam, boundary_vertices(obj.data), **seam_rules(obj, rest))
+    bones, weights = garment.skin_weights(table, names, poses.bones)
+    total = len(poses.labels)
+    steps = garment.pose_tear_steps(rest, pairs, mesh_edges(obj.data), bones, weights, poses.matrices, threshold)
+    yield "garment.stage.game-poses", 0, total
+    while True:
+        try:
+            number = next(steps)  # one pose measured
+        except StopIteration as stop:
+            result = stop.value
+            break
+        if number + 1 < total:
+            yield "garment.stage.game-poses", number + 1, total
+    group = obj.vertex_groups.get(TEARS_GROUP)
+    if group is not None:
+        obj.vertex_groups.remove(group)
+    torn = np.nonzero(result.torn)[0]
+    if len(torn):
+        obj.vertex_groups.new(name=TEARS_GROUP).add(torn.tolist(), 1.0, "REPLACE")
+    rows = [{"pose": label, **row} for label, row in zip(poses.labels, result.rows)]
+    return {"poses": rows, "pairs": int(len(pairs)), "vertices": int(len(torn)), "skipped": 0, "game": True,
+            "total": total}
+
 
 # --------------------------------------------------------------------------------------------------
 # Game ready
