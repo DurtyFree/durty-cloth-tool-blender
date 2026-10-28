@@ -438,7 +438,6 @@ TEXT = {
     "op.about": "Sobre",
     "op.about.desc": "A versão e a licença do add-on, e o que ele envia e para onde",
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
-    "about.credits": "Ferramentas de roupas baseadas no Muto Cloth de muto, que compartilhou o código-fonte conosco.",
     "op.join-discord": "Entrar no servidor do Discord",
     "op.join-discord.desc": "Abrir o convite para o servidor Pleb Masters Community Discord no navegador",
     "prop.image": "Imagem",

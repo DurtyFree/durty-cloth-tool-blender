@@ -3,7 +3,6 @@
 
 TEXT = {
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
-    "about.credits": "Kıyafet araçları, kaynak kodunu bizimle paylaşan muto tarafından geliştirilen Muto Cloth'a dayanır.",
     "bundle.bad-name": "'{name}' gönderilemiyor: dosya adları yalnızca harf, rakam, '_', '-' ve '.' içerebilir; '.' ile başlamamalı, '..' içermemeli ve en fazla 128 karakter olmalıdır. Blender içinde dokuyu veya modeli yeniden adlandırın.",
     "bundle.duplicate": "İki dokunun adı '{name}'. Her dokuya farklı ad verin.",
     "bundle.empty-file": "'{name}' boş. Modeli yeniden dışa aktarın.",

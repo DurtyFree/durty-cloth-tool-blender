@@ -436,7 +436,6 @@ TEXT = {
     "op.about": "О дополнении",
     "op.about.desc": "Версия и лицензия дополнения, а также что и куда оно отправляет",
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
-    "about.credits": "Инструменты для одежды основаны на Muto Cloth от muto, исходный код которого muto предоставил нам.",
     "op.join-discord": "Вступить на сервер Discord",
     "op.join-discord.desc": "Открыть приглашение на сервер Pleb Masters Community Discord в браузере",
     "prop.image": "Изображение",

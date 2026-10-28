@@ -436,7 +436,6 @@ EN: Dict[str, str] = {
     "op.about": "About",
     "op.about.desc": "The add-on's version, its licence, and what it sends where",
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
-    "about.credits": "Clothing tools based on Muto Cloth by muto, who shared its source with us.",
     "op.join-discord": "Join the Discord Server",
     "op.join-discord.desc": "Open the invitation to the Pleb Masters Community Discord server in your browser",
     # ---- properties ---------------------------------------------------------------------------------------
