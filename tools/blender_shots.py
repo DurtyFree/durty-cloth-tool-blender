@@ -257,7 +257,8 @@ class Shots:
             self.expand(ui)
         dct = FakeDct(protocol=protocol)
         api = FakeLinkApi()
-        api.protocol = f"{protocol.PROTOCOL_MAJOR}.0"  # also an older build of the add-on, for comparisons
+        # The fake gta.clothing expects the protocol the installed build speaks, also an older one, for comparisons.
+        api.protocol = f"{protocol.PROTOCOL_MAJOR}.{getattr(protocol, 'PROTOCOL_MINOR', 0)}"
         ctrl.auth_base_url = api.base_url
         new = hasattr(link.LinkController, "open_map")
         try:
@@ -362,6 +363,9 @@ class Shots:
         dct.on_assist = api.approve
         dct.focused = None
         ctrl.connect()
+        yield from self.wait(lambda: ctrl.state == "signing-in" or ctrl.ready, 30, "the sign-in")
+        if not ctrl.ready:
+            ctrl.sign_in()
         yield from self.wait(lambda: ctrl.ready, 30, "the connection")
         scene = bpy.context.scene
         for obj in list(scene.objects):
