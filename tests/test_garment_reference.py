@@ -41,12 +41,25 @@ def test_the_index_names_the_files_and_the_cuts_of_each_gender(pack):
     lambda v: v["genders"]["male"]["upperBody"][1].update(displayIndex=0),
     lambda v: v["genders"]["male"]["upperBody"].append(dict(v["genders"]["male"]["upperBody"][0])),
     lambda v: v.update(genders={}),
+    # A name that is the index's or the add-on's record in another case would overwrite it on Windows.
+    lambda v: v["genders"]["male"].update(cuts="Reference.json"),
+    lambda v: v.update(skeleton="REFERENCE.json"),
+    # Two names that differ only in case are one file on Windows.
+    lambda v: v["genders"]["male"].update(poses="Poses_female.json"),
+    lambda v: v.update(notice="Skeleton.json"),
 ])
 def test_an_index_outside_format_1_is_refused(pack, change):
     value = json.loads(pack["reference.json"])
     change(value)
     with pytest.raises(ref.PackError):
         ref.parse_index(json.dumps(value).encode())
+
+
+def test_a_file_both_genders_share_by_the_same_name_is_read(pack):
+    value = json.loads(pack["reference.json"])
+    value["genders"]["male"]["poses"] = value["genders"]["female"]["poses"]
+    index = ref.parse_index(json.dumps(value).encode())
+    assert index.genders["male"].poses == index.genders["female"].poses == "poses_female.json"
 
 
 def test_the_cuts_come_back_in_ped_space_by_node(pack):

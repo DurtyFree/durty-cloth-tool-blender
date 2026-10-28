@@ -94,7 +94,8 @@ class Pack(NamedTuple):
 
 
 def _name(value: Any) -> str:
-    if not isinstance(value, str) or not _NAME.fullmatch(value) or value in (INDEX, STAMP):
+    # Windows ignores case in file names: a name that is the index's or the record's in any case would overwrite it.
+    if not isinstance(value, str) or not _NAME.fullmatch(value) or value.lower() in (INDEX.lower(), STAMP.lower()):
         raise PackError("a file name the pack may not use")
     return value
 
@@ -143,7 +144,11 @@ def parse_index(data: bytes) -> ReferenceIndex:
                                      entry["defaultCut"], cuts)
     if not genders:
         raise PackError("no gender")
-    return ReferenceIndex(_name(value.get("notice")), _name(value.get("skeleton")), genders)
+    index = ReferenceIndex(_name(value.get("notice")), _name(value.get("skeleton")), genders)
+    names = index.files()
+    if len({name.lower() for name in names}) != len(names):
+        raise PackError("two file names that differ only in case")  # one file on Windows
+    return index
 
 
 def limit_of(name: str) -> int:
