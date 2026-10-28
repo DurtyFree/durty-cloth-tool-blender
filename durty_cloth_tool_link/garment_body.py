@@ -4,8 +4,10 @@
 
 The channel manifest on gta.clothing's link origin names the current body version; the signed-in account gets a
 short-lived ticket and downloads the body with it, and the body's joints when that version has them. Each version
-is kept in ``body/<version>/`` and never downloaded again. Without online access, or when gta.clothing cannot be
-reached, the newest kept version is used. Blender before 5.2 cannot read the compressed body: it gets the plain one,
+is kept in ``body/<version>/`` and never downloaded again. A body version may also list the Reference Data Pack
+(:mod:`garment_reference`): it comes with the body behind the same ticket, into ``body/<version>/reference/``, and any
+pack the current body version no longer lists is deleted. Without online access, or when gta.clothing cannot be
+reached, the newest kept version is used, with its pack while that is still whole. Blender before 5.2 cannot read the compressed body: it gets the plain one,
 or a message, never a file its importer would fail on. The requests run on a worker thread; :meth:`BodyDownload.poll`
 never blocks. Nothing here imports Blender.
 """
@@ -26,6 +28,8 @@ import urllib.parse
 import urllib.request
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 
+from . import garment_reference
+
 #: The origin that serves the hosted body and its tickets.
 LINK_ORIGIN = "https://link.gta.clothing"
 #: The folder of the add-on's user folder that keeps the downloaded bodies.
@@ -39,6 +43,9 @@ COMPRESSED_FROM = (5, 2)
 #: The joints of both bodies (optional: earlier body versions have none).
 JOINTS_FILE = "freemode_joints.json"
 MAX_JOINTS_BYTES = 64 * 1024
+#: Kept in a body version's folder once it is known that the version lists no Reference Data Pack (a published
+#: version never changes its files, so it is not asked again).
+NO_REFERENCE = "no-reference"
 #: The glTF extension of the compressed body.
 MESHOPT = "EXT_meshopt_compression"
 MAX_BODY_BYTES = 32 * 1024 * 1024
@@ -65,6 +72,8 @@ class BodyResult(NamedTuple):
     cached: bool
     #: The joints file of that version, when it has one.
     joints: Optional[pathlib.Path] = None
+    #: The folder of the Reference Data Pack kept with that version, when it has a whole one.
+    reference: Optional[pathlib.Path] = None
 
 
 def check_origin(url: str) -> str:
@@ -161,6 +170,28 @@ def cached_body(cache_root: pathlib.Path, gender: str, version: Optional[str] = 
             except OSError:
                 continue
     return None
+
+
+def kept_pack(cache_root: pathlib.Path, version: Optional[str]) -> Optional[garment_reference.Pack]:
+    """The Reference Data Pack kept with a body version, while it is whole (``None`` without a version)."""
+    if not valid_version(version):
+        return None
+    return garment_reference.kept_pack(pathlib.Path(cache_root) / CACHE_FOLDER / str(version))
+
+
+def pack_summary(cache_root: pathlib.Path) -> str:
+    """Copy Diagnostics' line on the Reference Data Pack: whether one is kept, and with which body version (English,
+    no path)."""
+    folder = pathlib.Path(cache_root) / CACHE_FOLDER
+    try:
+        versions = sorted((p.name for p in folder.iterdir() if (p / garment_reference.FOLDER).is_dir()
+                           and valid_version(p.name)), key=_version_key, reverse=True)
+    except OSError:
+        return "none"
+    for version in versions:
+        if kept_pack(cache_root, version) is not None:
+            return f"present, body version {version}, format {garment_reference.FORMAT}"
+    return "none (a kept pack no longer matches its record)" if versions else "none"
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -294,14 +325,14 @@ class BodyDownload:
             kept = cached_body(self.cache_root, self.gender, files=files)
             if kept is None:
                 raise BodyError("offline")
-            return kept
+            return self._with_pack(kept)
         try:
             status, payload = self._request("GET", f"/link/manifest/{urllib.parse.quote(self.channel)}.json")
         except BodyError as exc:
             kept = cached_body(self.cache_root, self.gender, files=files) if exc.code == "network" else None
             if kept is None:
                 raise
-            return kept
+            return self._with_pack(kept)
         if status == 404:
             raise BodyError("no-body")
         if status != 200:
@@ -310,11 +341,15 @@ class BodyDownload:
         body = manifest.get("body") if isinstance(manifest.get("body"), dict) else None
         panel = manifest.get("panel") if isinstance(manifest.get("panel"), dict) else None
         version = body.get("version") if body else None
+        # Only the current body version's pack may stay: one the signed manifest no longer names is withdrawn.
+        garment_reference.remove_withdrawn(self.cache_root / CACHE_FOLDER, version if valid_version(version) else None)
         if not valid_version(version):
             raise BodyError("no-body")
         kept = cached_body(self.cache_root, self.gender, version, files)
         if kept is not None:
-            return kept
+            kept = self._with_pack(kept)
+            if kept.reference is not None or (self.cache_root / CACHE_FOLDER / version / NO_REFERENCE).is_file():
+                return kept
         panel_version = panel.get("version") if panel else None
         if not isinstance(panel_version, str) or not re.fullmatch(r"[0-9A-Za-z.+-]{1,64}", panel_version):
             raise BodyError("unavailable")
@@ -323,7 +358,7 @@ class BodyDownload:
         for attempt in range(2):  # a sign-in gta.clothing no longer accepts is renewed once
             token = self._token(files)
             if isinstance(token, BodyResult):
-                return token
+                return kept or self._with_pack(token)
             status, payload = self._request("POST", "/link/panel/ticket", body={"channel": self.channel,
                                                                                 "version": panel_version},
                                             authorization="Bearer " + token)
@@ -335,7 +370,11 @@ class BodyDownload:
         ticket = self._json(payload).get("ticket")
         if not isinstance(ticket, str) or not _TICKET.fullmatch(ticket):
             raise BodyError("invalid")
+        if kept is None:
+            kept = self._download_body(version, files, ticket)
+        return kept._replace(reference=self._reference(version, ticket))
 
+    def _download_body(self, version: str, files: List[str], ticket: str) -> BodyResult:
         for name in files:
             status, payload = self._request("GET", f"/link/assets/body/{version}/{name}",
                                             authorization="Ticket " + ticket, accept="model/gltf-binary",
@@ -372,6 +411,46 @@ class BodyDownload:
         try:
             return self._keep(version, JOINTS_FILE, payload)
         except BodyError:
+            return None
+
+    def _with_pack(self, result: BodyResult) -> BodyResult:
+        """The result with the pack kept for its version, when that is still whole."""
+        pack = kept_pack(self.cache_root, result.version)
+        return result._replace(reference=pack.folder if pack is not None else None)
+
+    def _reference(self, version: str, ticket: str) -> Optional[pathlib.Path]:
+        """Downloads the version's Reference Data Pack when its file list names one, and keeps it whole or not at all.
+        ``None`` when the version has none (remembered), or the pack breaks a limit or cannot be had now (asked again
+        next time); the body never fails for it."""
+        folder = self.cache_root / CACHE_FOLDER / version
+
+        def get(name: str, limit: int) -> Tuple[int, bytes]:
+            return self._request("GET", f"/link/assets/body/{version}/{garment_reference.FOLDER}/{name}",
+                                 authorization="Ticket " + ticket, accept="*/*", limit=limit)
+
+        try:
+            status, payload = get(garment_reference.INDEX, garment_reference.MAX_INDEX_BYTES)
+            if status == 404:
+                self._keep(version, NO_REFERENCE, b"")
+                return None
+            if status != 200:
+                return None
+            index = garment_reference.parse_index(payload)
+            files = {garment_reference.INDEX: payload}
+            for name in index.files():
+                status, data = get(name, garment_reference.limit_of(name))
+                if status != 200:
+                    return None
+                garment_reference.check_file(name, data)
+                files[name] = data
+                if sum(len(d) for d in files.values()) > garment_reference.MAX_PACK_BYTES:
+                    return None
+            return garment_reference.keep_pack(folder, files)
+        except BodyError as exc:
+            if exc.code == "cancelled":
+                raise
+            return None
+        except (garment_reference.PackError, OSError):
             return None
 
     def _token(self, files: List[str]) -> Any:

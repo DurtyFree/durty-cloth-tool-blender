@@ -48,8 +48,8 @@ NOT_PATHS = frozenset({"HTTP/1", "HTTP/1.1", "I/O", "application/json", "hello/c
 #: write into temporary folders or refuse because they would leave their folder.
 OUTSIDE_PATHS = frozenset({
     "brushes/essentials_brushes-mesh_sculpt.blend/Brush/Grab",
-    "a/b", "a/b.dds", "../etc", "../escape.dds", "jbib_003_u/jbib_diff_003_a_uni.dds",
-    "jbib_003_u/jbib_normal_003.dds", "smoke_open/smoke_diff_000_a_uni.dds",
+    "a/b", "a/b.dds", "../etc", "../escape.dds", "../skeleton.json", "../cuts.glb",
+    "jbib_003_u/jbib_diff_003_a_uni.dds", "jbib_003_u/jbib_normal_003.dds", "smoke_open/smoke_diff_000_a_uni.dds",
 })
 #: What is not a path into a repository: an address, an absolute path on someone's disk, a Git ref, an action a
 #: workflow uses, and a media type.

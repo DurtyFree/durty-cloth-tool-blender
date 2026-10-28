@@ -25,7 +25,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, PointerProperty, StringProperty
 from bpy.types import Operator, Panel, PropertyGroup
 
-from . import host, link, settings, state, strings
+from . import garment_body, host, link, settings, state, strings
 from .dct_link import auth, tokens
 from .dct_link.session import SIGNING_IN, LinkError
 from .strings import CONTEXT, EN, Msg, UserError, msg, t, tt, wrap_text
@@ -1190,6 +1190,7 @@ def diagnostics(context: Any) -> str:
         "language": f"{view.language}; interface translated: {getattr(view, 'use_translate_interface', None)}",
         "installed from repository": str(host.installed_from_dct_repository(state.PACKAGE)),
         "stroke detection": str(host.modal_operators_known()),
+        "reference data pack": garment_body.pack_summary(host.data_dir(state.PACKAGE)),
     }
     return state.get().diagnostics(extra)
 

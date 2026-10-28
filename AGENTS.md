@@ -66,7 +66,9 @@ commands and results you ran. Interface changes also need screenshots from `tool
 - No em dashes anywhere, in code, texts or documents (a test fails on them).
 - The tests also fail on a host that is not on the allowlist in `tests/test_settings.py`, and on any relative path or
   document name in a text file that does not exist in this repository. Do not name files of other repositories.
-- Never commit GTA V files or data taken from them. Tests build their meshes from scratch.
+- Never commit GTA V files or data taken from them. Tests build their meshes from scratch. Game-derived data reaches
+  the add-on only as the hosted Reference Data Pack that comes with the freemode body (`garment_reference.py`); it
+  is never committed, never shipped in the archive and never used by a test, which builds a synthetic pack instead.
 - Commits: a short imperative subject in plain English ("Keep the add-on's temporary files at a short path"), and a
   body that says why when it is not obvious.
 

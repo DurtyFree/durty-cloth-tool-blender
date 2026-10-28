@@ -43,7 +43,8 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 | `garment.py` | Garment Fitting maths: types and slots, the type a file name names, import units and exports normalised to 1 m, markers and their plausibility, Align to Body, regions, the fit check, problem colours, Push Out of Body by region, Fix Spikes, seam welding, faces turned away from the body and the back shell, choosing among LOD candidates by their holes, Validate's checks, pose presets, the next-step hint |
 | `garment_atlas.py` | Combine Materials without baking: which Method Automatic picks, the power-of-two atlas grid, each material's image placed in its square, the gaps filled from neighbouring colours, the UVs moved into their squares |
 | `garment_avatars.py` | Joints of known Marvelous Designer and CLO stock avatars, as markers |
-| `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version |
+| `garment_body.py` | Downloading the hosted freemode body for the signed-in account and keeping each version, with the Reference Data Pack when that version lists it, and deleting a pack the current version no longer lists |
+| `garment_reference.py` | The Reference Data Pack: checking its files against their limits, keeping it whole with a record of every file's size and SHA-256, reading its index, its upper-body cuts and its poses |
 | `garment_fit.py` | Fit on gta.clothing and Transfer Weights: preparing the upload, one run with polling and Cancel, the fits left today |
 | `garment_add.py` | Add to Project rules: the skeleton template's bones, the checks before anything is sent, the variation pictures, Durty Cloth Tool's answer |
 | `ped.py` | Custom Ped maths: markers (click guide, Auto Markers, from an old rig), character checks, the rig result as an armature plan, test poses, local checks |
@@ -127,22 +128,37 @@ repository may name (`ADD_ON_HOSTS` for what ships, `OTHER_HOSTS` for documentat
 any other. A new address needs an issue and an owner decision first.
 
 What reaches gta.clothing: the sign-in (with the computer's name unless the user turns that off), a confirmation for
-each connection, the sign-out, the hosted body download (once per body version), Blender's update checks of the
+each connection, the sign-out, the hosted body download (once per body version, with the Reference Data Pack when
+that version lists one, behind the same ticket), Blender's update checks of the
 extension repository, and, once the user agreed, clothing for Fit on gta.clothing or Transfer Weights with the
 questions for the fits left today and the usual ranges of game clothing. The add-on collects no usage data.
 
 Files the add-on keeps:
 
 - the add-on's user folder (`bpy.utils.extension_path_user`): the install id, the protected sign-in, the hosted
-  freemode body (one folder per body version) and Garment Fitting's saved pose presets (`garment-presets`);
+  freemode body (one folder per body version) and Garment Fitting's saved pose presets (`garment-presets`). A body
+  version that lists the Reference Data Pack keeps it in its own `reference` subfolder with the pack's `NOTICE.txt`
+  and the add-on's record of every file's size and SHA-256 (`.kept.json`); a file that no longer matches the record
+  makes the add-on treat the pack as missing. A version without the pack gets a `no-reference` marker, so it is not
+  asked again. Each body download with online access deletes every pack the current body version does not list
+  (a withdrawal), also when the body itself is kept or the user is signed out;
 - for a model push, a `dct_link_<random>` folder in the system's temporary folder that holds the Sollumz export only
   until it is read, and is deleted straight away;
 - folders named `dct-<kind>-<random>` in the system's temporary folder for a model opened from Durty Cloth Tool
   (`open`), the export of Add to Project (`add`) and the character Create Custom Ped sends (`ped`), kept at a short
   path because Sollumz nests a model's name twice; stale ones from a Blender that closed are removed.
 
-Never commit files from GTA V or data taken from them (models, textures, skeletons, meta files). The tests build
-their clothing, bodies and characters from scratch (`tests/support/synthetic.py`, `tests/support/mannequin.py`).
+Never commit files from GTA V or data taken from them (models, textures, skeletons, meta files). Game-derived
+reference data reaches the add-on only as the hosted Reference Data Pack, downloaded with the freemode body and
+withdrawn by a body version that no longer lists it. The tests build their clothing, bodies, characters and a
+synthetic pack from scratch (`tests/support/synthetic.py`, `tests/support/mannequin.py`,
+`tests/support/synthetic_pack.py`).
+
+Each pack file has a size limit (the index 256 KiB, a notice 64 KiB, a JSON file 16 MiB, a GLB 32 MiB, the whole
+pack 128 MiB) and must be what its name says (UTF-8 text, a JSON object, a GLB without a required extension). A pack
+that breaks a limit, or that cannot be had in full, is not kept, and the body is added without it. The Worker serves
+only files the version's signed file list names and checks each against it; the add-on cannot read that list, so
+its own record guards the kept files.
 
 ## Supported Blender versions
 

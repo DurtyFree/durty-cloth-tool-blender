@@ -29,7 +29,7 @@ import bpy
 from mathutils import Matrix
 import numpy as np
 
-from tests.support import synthetic
+from tests.support import synthetic, synthetic_pack
 
 
 def mesh_object(name, mesh_data, collection=None):
@@ -231,7 +231,8 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
 
     # The hosted body: downloaded from the fake gta.clothing for the signed-in account and kept per version.
     glb = body_glb(folder)
-    api.body_files = {"freemode_male.glb": glb.read_bytes(), "freemode_joints.json": joints_file()}
+    api.body_files = {"freemode_male.glb": glb.read_bytes(), "freemode_joints.json": joints_file(),
+                      **synthetic_pack.body_files()}  # a synthetic Reference Data Pack, no game data
     ui_garment.BODY_ORIGIN["url"] = api.base_url
     props.gender = "male"
     check("Add Freemode Body runs", "FINISHED" in bpy.ops.dct_link.fit_add_body())
@@ -246,6 +247,13 @@ def run(package, addon, state, ctrl, api, check, refused, pump, draw_everything,
           and "POST /link/panel/ticket" in api.paths(), (ui_garment.RUNTIME.notice, api.paths()[-3:]))
     check("the hosted body brought its joints", body is not None and body.get(gh.JOINTS_TAG)
           and ui_garment.joints(bpy.context)[1] == "hosted", ui_garment.joints(bpy.context)[1])
+    pack = pathlib.Path(ctrl.data_dir) / "body" / version / "reference"
+    check("the Reference Data Pack came with the body, in its own folder with its notice",
+          (pack / "NOTICE.txt").read_bytes() == synthetic_pack.NOTICE and (pack / "cuts_male.glb").is_file(),
+          sorted(p.name for p in pack.parent.iterdir()) if pack.parent.is_dir() else None)
+    diagnostics = sys.modules[package + ".ui"].diagnostics(bpy.context)
+    check("Copy Diagnostics names the pack and its body version",
+          f"reference data pack: present, body version {version}, format 1" in diagnostics, diagnostics[-300:])
     tickets = len(api.tickets)
     check("Add Freemode Body runs again", "FINISHED" in bpy.ops.dct_link.fit_add_body())
     pump(addon, lambda: ui_garment.RUNTIME.download is None or (ui_garment.body_tick() is None), timeout=30,

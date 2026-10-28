@@ -6,8 +6,10 @@ from __future__ import annotations
 
 import pytest
 
-from durty_cloth_tool_link import garment_body
+from durty_cloth_tool_link import garment_body, garment_reference
 from durty_cloth_tool_link.dct_link import auth
+from tests.support import synthetic_pack
+from tests.support.synthetic_pack import served
 from tests.support.fake_link_api import FakeLinkApi, make_jwt
 
 GLB = b"glTF" + (2).to_bytes(4, "little") + (64).to_bytes(4, "little") + bytes(52)
@@ -49,12 +51,13 @@ def test_the_body_is_downloaded_with_a_ticket_and_kept(api, tmp_path):
     paths = api.paths()
     assert paths == ["GET /link/manifest/experimental.json", "POST /link/panel/ticket",
                      "GET /link/assets/body/2026.10.03.1/freemode_male.glb",
-                     "GET /link/assets/body/2026.10.03.1/freemode_joints.json"]  # optional; this version has none
+                     "GET /link/assets/body/2026.10.03.1/freemode_joints.json",  # optional; this version has none
+                     "GET /link/assets/body/2026.10.03.1/reference/reference.json"]  # optional too
     assert first.result.joints is None
     ticket_request = next(r for r in api.requests if r["path"] == "/link/panel/ticket")
     assert ticket_request["body"] == {"channel": "experimental", "version": "1.2.0"}
     assert ticket_request["headers"]["authorization"].startswith("Bearer ")
-    body_request = api.requests[-2]
+    body_request = api.requests[2]
     assert body_request["headers"]["authorization"] == "Ticket " + api.tickets[0]
 
     again = download(api, tmp_path)
@@ -192,3 +195,109 @@ def test_the_download_runs_on_a_thread_and_can_be_cancelled(api, tmp_path):
     job.start()
     job._thread.join(10)
     assert job.poll() and job.error == "cancelled"
+
+
+# ---- the Reference Data Pack -------------------------------------------------------------------------
+
+def reference_folder(tmp_path, version="2026.10.03.1"):
+    return tmp_path / "body" / version / "reference"
+
+
+def test_the_reference_data_pack_comes_with_the_body_in_its_own_folder(api, tmp_path):
+    pack = synthetic_pack.files()
+    api.body_files.update(synthetic_pack.body_files())
+    first = download(api, tmp_path)
+    folder = reference_folder(tmp_path)
+    assert first.error is None and first.result.reference == folder
+    assert {p.name for p in folder.iterdir() if not p.name.startswith(".")} == set(pack)
+    assert (folder / "NOTICE.txt").read_bytes() == synthetic_pack.NOTICE
+    assert all((folder / name).read_bytes() == data for name, data in pack.items())
+    assert sorted(p.name for p in folder.parent.iterdir()) == ["freemode_male.glb", "reference"]  # nothing half-written
+    assert "GET /link/assets/body/2026.10.03.1/reference/reference.json" in api.paths()
+
+    tickets = len(api.tickets)
+    again = download(api, tmp_path)
+    assert again.result.cached and again.result.reference == folder and len(api.tickets) == tickets
+
+
+def test_a_body_version_without_the_pack_downloads_the_body_only(api, tmp_path):
+    first = download(api, tmp_path)
+    assert first.result is not None and first.result.reference is None
+    assert not reference_folder(tmp_path).exists()
+    tickets = len(api.tickets)
+    again = download(api, tmp_path)
+    assert again.result.cached and again.result.reference is None
+    assert len(api.tickets) == tickets  # the version's file list never changes: it is not asked again
+
+
+def test_a_kept_body_from_before_the_pack_asks_for_it_once(api, tmp_path):
+    download(api, tmp_path)
+    (tmp_path / "body" / "2026.10.03.1" / garment_body.NO_REFERENCE).unlink()  # kept by an add-on without the pack
+    api.body_files.update(synthetic_pack.body_files())
+    kept = download(api, tmp_path)
+    assert kept.result.cached and kept.result.reference == reference_folder(tmp_path)
+
+
+def test_a_withdrawn_pack_is_deleted(api, tmp_path):
+    api.body_files.update(synthetic_pack.body_files())
+    download(api, tmp_path)
+    assert reference_folder(tmp_path).is_dir()
+    api.manifest["body"]["version"] = "2026.11.01.1"  # the next body version no longer lists the pack
+    api.body_files = {name: data for name, data in api.body_files.items() if not name.startswith(served(""))}
+    newer = download(api, tmp_path)
+    assert newer.result.version == "2026.11.01.1" and newer.result.reference is None
+    assert not reference_folder(tmp_path).exists()
+    assert (tmp_path / "body" / "2026.10.03.1" / "freemode_male.glb").is_file()  # the old body itself stays
+
+
+def test_a_withdrawal_is_honoured_even_signed_out(api, tmp_path):
+    api.body_files.update(synthetic_pack.body_files())
+    download(api, tmp_path)
+    api.manifest["body"]["version"] = "2026.11.01.1"
+    kept = download(api, tmp_path, token=None).result
+    assert kept.version == "2026.10.03.1" and kept.reference is None
+    assert not reference_folder(tmp_path).exists()
+    api.manifest.pop("body")  # no body published at all: nothing names the pack either
+    download(api, tmp_path / "other")
+    assert not any((tmp_path / "other").rglob("reference"))
+
+
+def test_offline_the_kept_pack_is_used_while_it_is_whole(api, tmp_path):
+    api.body_files.update(synthetic_pack.body_files())
+    download(api, tmp_path)
+    kept = download(api, tmp_path, online=False).result
+    assert kept.cached and kept.reference == reference_folder(tmp_path)
+    unreachable = garment_body.BodyDownload(gender="male", channel="experimental", cache_root=tmp_path,
+                                            client_header=HEADER, access_token=lambda: None,
+                                            blender_version=(5, 2, 1), origin="http://127.0.0.1:9", timeout=2.0)
+    assert unreachable.run().result.reference == reference_folder(tmp_path)
+    poses = reference_folder(tmp_path) / "poses_male.json"
+    poses.write_bytes(poses.read_bytes().replace(b"climb", b"crawl"))  # changed after the download
+    assert download(api, tmp_path, online=False).result.reference is None
+
+
+@pytest.mark.parametrize("change", [
+    lambda files: files.update({served("cuts_male.glb"): b"glTF" + bytes(garment_reference.MAX_GLB_BYTES)}),
+    lambda files: files.update({served("NOTICE.txt"): b"x" * (garment_reference.MAX_TEXT_BYTES + 1)}),
+    lambda files: files.update({served("reference.json"): b'{"format": 2}'}),
+    lambda files: files.update({served("reference.json"): files[served("reference.json")].replace(
+        b'"skeleton.json"', b'"../skeleton.json"')}),
+    lambda files: files.update({served("poses_female.json"): b"[not json"}),
+    lambda files: files.pop(served("skeleton.json")),
+])
+def test_a_pack_that_breaks_the_limits_is_never_kept(api, tmp_path, change):
+    pack = synthetic_pack.body_files()
+    change(pack)
+    api.body_files.update(pack)
+    result = download(api, tmp_path).result
+    assert result is not None and not result.cached and result.reference is None  # the body still comes
+    assert [p.name for p in (tmp_path / "body" / "2026.10.03.1").iterdir()] == ["freemode_male.glb"]
+
+
+def test_copy_diagnostics_names_the_packs_presence_and_version(api, tmp_path):
+    assert garment_body.pack_summary(tmp_path) == "none"
+    api.body_files.update(synthetic_pack.body_files())
+    download(api, tmp_path)
+    assert garment_body.pack_summary(tmp_path) == "present, body version 2026.10.03.1, format 1"
+    (reference_folder(tmp_path) / "NOTICE.txt").write_bytes(b"changed")
+    assert garment_body.pack_summary(tmp_path) == "none (a kept pack no longer matches its record)"
