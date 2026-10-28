@@ -416,6 +416,7 @@ TEXT = {
     "op.about": "जानकारी",
     "op.about.desc": "ऐड-ऑन का वर्ज़न, उसका लाइसेंस, और वह क्या कहाँ भेजता है",
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
+    "about.credits": "कपड़ों के टूल muto के Muto Cloth पर आधारित हैं, जिन्होंने इसका सोर्स कोड हमारे साथ साझा किया।",
     "op.join-discord": "Discord सर्वर से जुड़ें",
     "op.join-discord.desc": "ब्राउज़र में Pleb Masters Community Discord सर्वर का आमंत्रण खोलें",
     "prop.image": "इमेज",

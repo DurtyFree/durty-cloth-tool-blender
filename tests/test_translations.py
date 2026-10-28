@@ -17,7 +17,7 @@ LANGUAGES = tuple(translations.LOCALES)
 #: Names that stay as they are in every language when the English text uses them.
 PROTECTED = ("Durty Cloth Tool", "Creator Link", "gta.clothing", "Discord", "Blender", "Sollumz", "CodeWalker",
              "YDD", "XML", "UDIM", "RGBA", "sRGB", "Non-Color", "Pleb Masters", "GTA V", "Ultimate", "ped",
-             "MiB", "URL")
+             "MiB", "URL", "Muto Cloth", "muto")
 
 
 def fields(text: str) -> set:

@@ -388,6 +388,7 @@ TEXT = {
     "op.about": "حول",
     "op.about.desc": "إصدار الإضافة وترخيصها، وما ترسله وإلى أين",
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
+    "about.credits": "أدوات الملابس مبنية على Muto Cloth من muto، الذي شاركنا شيفرته المصدرية.",
     "op.join-discord": "الانضمام إلى خادم Discord",
     "op.join-discord.desc": "فتح دعوة خادم Pleb Masters Community Discord في متصفحك",
     "prop.image": "الصورة",

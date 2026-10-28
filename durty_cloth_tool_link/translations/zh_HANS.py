@@ -333,6 +333,7 @@ TEXT = {
     "op.about": "关于",
     "op.about.desc": "插件的版本、许可证，以及它向哪里发送什么",
     "about.title": "Durty Cloth Tool Link {version}（{channel}）",
+    "about.credits": "服装工具基于 muto 的 Muto Cloth，muto 与我们分享了它的源代码。",
     "op.join-discord": "加入 Discord 服务器",
     "op.join-discord.desc": "在浏览器中打开 Pleb Masters Community Discord 服务器的邀请",
     "prop.image": "图像",

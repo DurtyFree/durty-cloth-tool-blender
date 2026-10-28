@@ -3,6 +3,7 @@
 
 TEXT = {
     "about.title": "Durty Cloth Tool Link {version} ({channel})",
+    "about.credits": "Strumenti per l'abbigliamento basati su Muto Cloth di muto, che ne ha condiviso con noi il codice sorgente.",
     "bundle.bad-name": "Non puoi inviare '{name}': i nomi dei file possono contenere solo lettere, cifre, '_', '-' e '.', non devono iniziare con '.' né contenere '..' e devono avere al massimo 128 caratteri. Rinomina la texture o il modello in Blender.",
     "bundle.duplicate": "Due texture si chiamano '{name}'. Assegna un nome diverso a ogni texture.",
     "bundle.empty-file": "'{name}' è vuoto. Esporta di nuovo il modello.",

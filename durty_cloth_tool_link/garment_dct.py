@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Copyright (c) 2026 Schmid Software Solutions (https://schmid-software.de)
+# Copyright (c) 2026 muto
 """Adding the garment to a Durty Cloth Tool project, the Blender side: the freemode skeleton Durty Cloth Tool sends,
 imported with Sollumz and checked against the template; the garment set up as a Sollumz drawable model on it (the ped
 shader with its images, its levels of detail, smooth shading); the export with Exclude Skeleton into a folder of the

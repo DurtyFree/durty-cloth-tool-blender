@@ -166,6 +166,10 @@ privately as [SECURITY.md](SECURITY.md) explains.
 Fixes, translations and ideas are welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains the setup, the checks and pull
 requests, and [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) how the add-on works inside.
 
+## 🙏 Credits
+
+Clothing tools based on Muto Cloth by muto, who shared its source with us.
+
 ## 📜 Licence
 
 Copyright (c) 2026 Schmid Software Solutions ([schmid-software.de](https://schmid-software.de)). Maintained by
