@@ -806,55 +806,150 @@ def test_a_cut_added_although_its_cancel_was_sent_counts_as_added(tmp_path, dct,
     ctrl.disconnect()
 
 
-@pytest.mark.parametrize("code, reason", [("item-limit", "add.result.item-limit"),
-                                          ("request-denied", "add.result.denied")])
-def test_a_last_cut_that_ends_the_add_still_says_why_below_the_count(tmp_path, dct, api, code, reason):
-    """The last ticked cut is refused for the whole project or cancelled after a cut was added: the count says the
-    reason is below, and it is."""
+def test_a_last_cut_refused_for_every_cut_is_counted_with_its_reason(tmp_path, dct, api):
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
-    dct.fail_arm_skins = {"004": code}
+    dct.fail_arm_skins = {"004": "item-limit"}
     ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
     finished(ctrl, dct, 2)
     status = ctrl.item_add.status
     assert (status.level, status.message.key) == ("WARNING", "add.result.gloves-some-added")
     failures = ctrl.item_add.cut_failures
     assert len(failures) == 1 and failures[0].key == "add.result.gloves-cut-failed"
-    assert failures[0].fields["cut"] == "04" and failures[0].fields["reason"].key == reason
+    assert failures[0].fields["cut"] == "04" and failures[0].fields["reason"].key == "add.result.item-limit"
     ctrl.disconnect()
 
 
-def test_a_cut_withdrawn_for_want_of_an_answer_is_not_called_cancelled(tmp_path, dct, api, monkeypatch):
-    """dct_link withdraws an add itself once it waited too long: the rest stop as for a lost link, not a cancel."""
+@pytest.mark.parametrize("code, stop", [("request-denied", "cancelled"), ("disconnected", "link")])
+def test_a_last_cut_cancelled_or_cut_off_says_how_many_were_added(tmp_path, dct, api, code, stop):
+    """A cancel or a lost link on the last cut, after a cut was added: the message counts the added cuts and never
+    says the project is unchanged or to add the garment again."""
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
-    answers = {"000": Answered(), "004": Answered(code="timeout", withdrawn=True)}
-    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
-    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
-    assert ctrl.item_add.status.message.key == "add.result.gloves-stopped-link"
+    dct.fail_arm_skins = {"004": code}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    finished(ctrl, dct, 2)
+    status = ctrl.item_add.status
+    assert status.message.key == f"add.result.gloves-stopped-{stop}" and status.message.fields["added"] == 1
+    assert ctrl.item_add.cut_failures == []
     ctrl.disconnect()
 
 
 class Refused(Answered):
     """A cut Durty Cloth Tool answered as refused, with its checks."""
 
-    def __init__(self, code, findings):
-        super().__init__()
+    def __init__(self, code, findings, withdrawn=False):
+        super().__init__(withdrawn=withdrawn)
         self._result = type("R", (), {"ok": False, "binding": None, "findings": findings, "code": code})()
 
 
-def test_a_later_cut_refused_for_its_checks_shows_them(tmp_path, dct, api, monkeypatch):
+@pytest.mark.parametrize("answer", [Answered(code="timeout", withdrawn=True),
+                                    Refused("request-denied", [], withdrawn=True)])
+def test_a_cut_withdrawn_for_want_of_an_answer_is_not_called_cancelled(tmp_path, dct, api, monkeypatch, answer):
+    """dct_link withdraws an add itself once it waited too long, and DCT may confirm it: the rest stop as for a lost
+    link, and one cut says it took too long, never that it was cancelled."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    answers = {"000": Answered(), "004": answer}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
+    assert ctrl.item_add.status.message.key == "add.result.gloves-stopped-link"
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["004"])
+    assert ctrl.item_add.status.message.key == "add.result.timeout"
+    ctrl.disconnect()
+
+
+def test_a_cancel_from_blender_on_gloves_is_still_a_cancel(tmp_path, dct, api, monkeypatch):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    held, callbacks = held_cut()
+    answers = {"000": Answered(), "004": held}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
+    assert ctrl.item_add.cancel()
+    held.done = True
+    callbacks[0](held)
+    assert ctrl.item_add.status.message.key == "add.result.gloves-stopped-cancelled"
+    ctrl.disconnect()
+
+
+def held_cut():
+    """A cut whose answer the test gives: withdrawn by the user's cancel, then confirmed as refused."""
+    held = Refused("request-denied", [], withdrawn=True)
+    held.done, callbacks = False, []
+    held.add_done_callback, held.cancel = callbacks.append, lambda: True
+    return held, callbacks
+
+
+def test_a_cancel_from_blender_on_the_last_cut_counts_the_added_ones(tmp_path, dct, api, monkeypatch):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    held, callbacks = held_cut()
+    answers = {"000": Answered(), "004": held}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    assert ctrl.item_add.cancel()
+    held.done = True
+    callbacks[0](held)
+    status = ctrl.item_add.status
+    assert status.message.key == "add.result.gloves-stopped-cancelled" and status.message.fields["added"] == 1
+    assert ctrl.item_add.cut_failures == []
+    ctrl.disconnect()
+
+
+def test_a_refusal_sent_as_the_add_timed_out_keeps_its_reason(tmp_path, dct, api, monkeypatch):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    answers = {"000": Answered(), "004": Refused("game-required", [], withdrawn=True)}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
+    assert ctrl.item_add.status.message.key == "add.result.gloves-stopped-link"
+    assert [failure.fields["cut"] for failure in ctrl.item_add.cut_failures] == ["04"]
+    ctrl.disconnect()
+
+
+@pytest.mark.parametrize("cuts, cancel, kept", [(["000", "004"], True, "add.result.gloves-stopped-cancelled"),
+                                                (["004"], False, "add.result.timeout")])
+def test_a_late_refusal_keeps_the_message_unless_it_confirms_a_cancel(tmp_path, dct, api, monkeypatch, cuts, cancel,
+                                                                      kept):
+    """A late refusal confirms only the user's own cancel of an add that added nothing: gloves with cuts in the
+    project keep their count, and an add that timed out keeps saying so."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    if cancel:
+        withdrawn, callbacks = held_cut()
+        withdrawn.error = type("E", (), {"code": "cancelled"})()  # the cancel got no answer in time
+        answers = {"000": Answered(), "004": withdrawn}
+    else:
+        withdrawn, callbacks = Answered(code="timeout", withdrawn=True), None
+        answers = {"004": withdrawn}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    adder = ctrl.item_add
+    adder.start("uppr", "male", True, "Gloves", variations, files, arm_skins=cuts)
+    if cancel:
+        assert adder.cancel()
+        withdrawn.done = True
+        callbacks[0](withdrawn)
+    assert adder.status.message.key == kept and len(adder._late) == 1
+    adder.on_late(withdrawn, type("R", (), {"ok": False, "binding": None, "findings": [], "code": "request-denied"})())
+    assert adder.status.message.key == kept
+    ctrl.disconnect()
+
+
+def test_gloves_keep_every_cuts_checks(tmp_path, dct, api, monkeypatch):
+    """A later cut refused with its checks, then another cut added: the refused cut's checks stay beside the others,
+    each once, errors first."""
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
     warning = {"code": "uv-outside", "severity": "warning"}
     error = {"code": "rig-invalid", "severity": "error"}
     added = Answered()
     added._result.findings = [warning]
-    answers = {"000": added, "004": Refused("model-rejected", [warning, error])}
+    answers = {"000": added, "004": Refused("model-rejected", [warning, error]), "011": added}
     monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
-    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
     assert ctrl.item_add.status.message.key == "add.result.gloves-some-added"
-    assert ctrl.item_add.findings == [error, warning]  # the refused cut's error first, each finding once
+    assert ctrl.item_add.findings == [error, warning]
     ctrl.disconnect()
 
 

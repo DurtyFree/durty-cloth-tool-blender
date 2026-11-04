@@ -1179,8 +1179,8 @@ class ItemAdd:
         # Why the cuts after this one are not sent: the user stopped the add, the link went away, or Durty Cloth Tool
         # would answer every further cut the same way.
         stop: Optional[str] = None
-        if code in ("disconnected", "timeout"):
-            stop = "link"  # also dct_link's own withdrawal after TIMEOUT: nobody cancelled
+        if code in ("disconnected", "timeout") or (withdrawn and not plan.get("cancelled")):
+            stop = "link"  # also dct_link's own withdrawal after TIMEOUT, answered or not: nobody cancelled
         elif withdrawn or code in ("request-denied", "cancelled"):
             stop = "cancelled"
         elif not ok and code in self.STOP_CODES:
@@ -1189,7 +1189,8 @@ class ItemAdd:
             stop = "link"
         # This cut's own refusal is listed; one that ends the cuts (stop "refused") only when cuts were added, since
         # otherwise it is the message itself.
-        refused_here = several and not ok and not withdrawn and code not in (
+        # A refusal for a reason of its own is listed, also one Durty Cloth Tool sent as dct_link withdrew the add.
+        refused_here = several and not ok and not (withdrawn and plan.get("cancelled")) and code not in (
             "request-denied", "cancelled", "disconnected", "timeout")
         listed = refused_here and stop in (None, "link")
         if listed:
@@ -1209,7 +1210,10 @@ class ItemAdd:
         if not several:
             return
         added = sum(1 for _, done in results if done)
-        if stop is not None and len(results) < len(cuts) and added > 0:
+        # A cancel or a lost link on the last cut ends the add like one with cuts left; a refusal of the last cut is
+        # counted with its reason below.
+        ended = len(results) < len(cuts) or (not ok and stop in ("cancelled", "link"))
+        if stop is not None and ended and added > 0:
             # Some cuts are in the project and the rest were not sent: say so in words for gloves, never a message
             # that says nothing was added or to add everything again.
             level = "INFO" if stop == "cancelled" else "WARNING"
@@ -1221,11 +1225,8 @@ class ItemAdd:
         elif stop is not None and added == 0:
             pass  # nothing is in the project: the stop's own message stays
         else:
-            if not ok and not listed:
-                # The last cut ended the add (a refusal for every cut, a cancel, the link): the count says its reason
-                # is below, which is this cut's own message until now.
-                self.cut_failures.append(msg("add.result.gloves-cut-failed", cut=garment_add.arm_cut_label(cut),
-                                             reason=self.status.message if self.status else msg("error.generic")))
+            if not ok and not listed:  # the last cut, refused for every cut: the count says its reason is below
+                self.cut_failures.append(garment_add.gloves_cut_failure(cut, code))
             self.status = Notice(*garment_add.gloves_outcome(results, plan.get("name") or ""))
         unlinked = plan.get("unlinked")
         if unlinked is not None:  # the first cloth is in the project, but Blender could not link it
@@ -1240,6 +1241,8 @@ class ItemAdd:
             return False
         sent = bool(request.cancel())  # type: ignore[attr-defined]
         if sent:
+            if self._plan is not None:
+                self._plan["cancelled"] = True  # the user's own cancel, unlike dct_link's withdrawal after TIMEOUT
             self.status = Notice("INFO", msg("add.withdrawing"))
             self.controller.touch()
         return sent
@@ -1271,8 +1274,11 @@ class ItemAdd:
         self._late.remove(entry)
         _, plan, on_added = entry
         if not getattr(result, "ok", False):
-            if not self.adding:
-                self.status = Notice("INFO", msg("add.result.withdrawn"))  # the withdrawal is confirmed now
+            # The user's cancel is confirmed now. A timed-out add keeps its message, as does a newer add or gloves
+            # with cuts in the project (their count stays).
+            added = any(done for _, done in plan.get("results") or ())
+            if not self.adding and request is self.request and plan.get("cancelled") and not added:
+                self.status = Notice("INFO", msg("add.result.withdrawn"))
                 self.controller.touch()
             return
         several = len(plan.get("cuts") or ()) > 1
@@ -1312,17 +1318,18 @@ class ItemAdd:
                 del self._late[:-self.MAX_LATE]
                 self._on_added = None
             self.status = Notice(*garment_add.failure_message(code, arm_skin=bool(plan.get("arm_skin"))))
-            if not self.added:
+            if not several and not self.added:
                 self.findings = []
             if plan.get("cuts"):
                 self._next_cut(plan, False, code, withdrawn)
             self.controller.touch()
             return
         result = request.result()
-        if result.ok or not several or not self.added:
+        if not several:
             self.findings = garment_add.sorted_findings(result.findings)
         elif result.findings:
-            # A later cut refused with its own checks: they say why, beside the added cut's, each finding once.
+            # Gloves on several cuts collect the checks of every cut, each finding once: a refused cut's checks say
+            # why beside the added cuts'.
             known = {tuple(sorted(f.items())) for f in self.findings}
             self.findings = garment_add.sorted_findings(
                 self.findings + [f for f in result.findings if tuple(sorted(f.items())) not in known])
@@ -1332,8 +1339,13 @@ class ItemAdd:
                 self._link(plan, on_added, dict(result.binding or {}), late=False)
         else:
             self.controller._remember_error(result.code)
-            self.status = Notice(*garment_add.result_message(result.code, withdrawn=withdrawn,
-                                                             arm_skin=bool(plan.get("arm_skin"))))
+            if withdrawn and not plan.get("cancelled") and result.code == "request-denied":
+                # dct_link withdrew the add after TIMEOUT and DCT confirmed: it took too long, nobody cancelled.
+                level_message = garment_add.failure_message("timeout")
+            else:
+                level_message = garment_add.result_message(result.code, withdrawn=withdrawn,
+                                                           arm_skin=bool(plan.get("arm_skin")))
+            self.status = Notice(*level_message)
         if plan.get("cuts"):
             self._next_cut(plan, bool(result.ok), None if result.ok else result.code, withdrawn)
         self.controller.touch()

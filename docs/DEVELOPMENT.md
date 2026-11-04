@@ -135,14 +135,18 @@ type and slot by their place in those lists. What the type changes, and where:
   `busy`) stops the cuts after it, and so does a cut that cannot be sent. With nothing added the stop's own message
   stays; once cuts were added, a message in words for gloves says how many and why the rest were not sent (cancelled,
   the connection ended, or refused with the reason below: `add.result.gloves-stopped-*`), never a message that says
-  nothing was added. dct_link's own withdrawal after `ItemAdd.TIMEOUT` stops them as a lost link, not a cancel. A cut
-  added although its cancel was sent counts as added. A late answer (`item-add-late`) for an earlier add only links
+  nothing was added; a cancel or a lost link on the last cut says the same. Only the user's Cancel in Blender
+  (`ItemAdd.cancel`, kept on the plan) is a cancel: dct_link's own withdrawal after `ItemAdd.TIMEOUT`, answered by
+  Durty Cloth Tool or not, stops the cuts with the lost-link message (there is no text of its own for a timeout of
+  several cuts), a refusal sent with it is still listed, and an add of one cut says it took too long. A cut added
+  although its cancel was sent counts as added. A late refusal (`item-add-late`) confirms only the user's cancel of
+  the current add when nothing of it was added; every other message stays. A late answer (`item-add-late`) for an earlier add only links
   its cloth in Blender while a newer add is under way, and for gloves on several cuts says one more cut was added
   after all (`add.result.gloves-late`) and, when it is the first cloth, makes it the added one. Blender links the
   first cloth Durty Cloth Tool added; when that fails, the final message stays a warning and lists it. Otherwise the
   final message counts the added and the refused cuts (`gloves_outcome`) and the panel lists each refusal below it,
-  also when the last cut ended the add (its own message is its reason). A later cut refused with its checks adds them
-  to the checks shown, each once. One cut keeps the messages of any other
+  also when the last cut was refused for every cut. Gloves on several cuts collect the checks of every cut, each
+  finding once, so a refused cut's checks stay shown. One cut keeps the messages of any other
   add. The state an answer reads is set before each add is sent, and the answer's callback is attached last,
   because a request that failed at once answers as soon as it is attached.
 
