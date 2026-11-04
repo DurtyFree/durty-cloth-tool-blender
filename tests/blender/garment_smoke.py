@@ -1285,7 +1285,7 @@ def gloves_smoke(package, addon, state, ctrl, dct, check, pump, draw_everything,
 
 def gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, gloves):
     """Add to Project for gloves: refused when Durty Cloth Tool has no game files (the panel says why), then added
-    with the bare arms' skin asked for, in the arms slot with Shows Skin."""
+    with the bare arms' skin asked for, in the arms slot with Shows Skin, then for two arm cuts ticked at once."""
     ui_garment = sys.modules[package + ".ui_garment"]
     props = bpy.context.scene.dct_garment
     choose(gloves)
@@ -1325,9 +1325,31 @@ def gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, g
     # The type changed while the add prepares: the add still sends what it started with.
     header = add("with the game", meanwhile=lambda: setattr(props, "category", "tshirt"))
     check("gloves go in as Body (uppr) with Shows Skin and the bare arms' skin, whatever the type became meanwhile",
-          (header["drawableType"], header["skin"], header.get("armSkin")) == ("uppr", True, "base")
+          (header["drawableType"], header["skin"], header.get("armSkin")) == ("uppr", True, "000")
           and ctrl.item_add.added is not None, (header, ctrl.item_add.status))
     props.category = "gloves"
+
+    # Two arm cuts ticked: the panel offers the male ped's cuts, and one add goes out per ticked cut.
+    check("gloves start with the bare arms ticked", tuple(props.arm_cuts)[0] and not any(tuple(props.arm_cuts)[1:]),
+          tuple(props.arm_cuts))
+    props.arm_cuts[4] = True
+    check("the garment keeps its ticked arm cuts", gloves.get(ui_garment.ARM_CUTS_TAG) == "000,004",
+          gloves.get(ui_garment.ARM_CUTS_TAG))
+    log = draw_everything(package, state, "gloves with two arm cuts")
+    shown = [entry for entry in log if entry[0] == "prop" and entry[1] == "arm_cuts"]
+    check("Add to Project offers the male ped's arm cuts", len(shown) == len(ui_garment.garment_add.arm_cuts("male")),
+          len(shown))
+    adds = len(dct.item_adds)
+    check("the gloves' add for two arm cuts starts", "FINISHED" in bpy.ops.dct_link.fit_add_to_dct())
+    pump(addon, lambda: ui_garment.job_tick() is None and ui_garment.RUNTIME.add_job is None, timeout=60,
+         what="the gloves' add for two arm cuts")
+    pump(addon, lambda: len(dct.item_adds) >= adds + 2 and not ctrl.item_add.adding, timeout=60,
+         what="the answers for two arm cuts")
+    sent = [header.get("armSkin") for header, _ in dct.item_adds[adds:]]
+    check("one add per ticked arm cut, and the status counts them",
+          sent == ["000", "004"] and ctrl.item_add.status.message.key == "add.result.gloves-added",
+          (sent, ctrl.item_add.status))
+    props.arm_cuts[4] = False
 
 
 ADDED_BINDING_GLOVES = {"clothId": "1e2f3a4b-5c6d-4e7f-8a9b-0c1d2e3f4a5b",

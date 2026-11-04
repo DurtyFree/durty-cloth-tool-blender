@@ -1488,6 +1488,26 @@ EN: Dict[str, str] = {
         "Durty Cloth Tool did not accept the gloves with their arm skin, so nothing was added. Update Durty Cloth Tool "
         "and this add-on, then try again."
     ),
+    "add.prop.arm-cuts": "Arm Cuts",
+    "add.prop.arm-cuts.desc": (
+        "The arms the gloves are made for: tick the arms your tops are worn with. Each ticked arm cut becomes a glove "
+        "cloth of its own"
+    ),
+    "add.arm-cut": "Arms {cut}",
+    "add.arm-cuts.subtext": (
+        "Each ticked arm cut becomes a glove cloth of its own in Durty Cloth Tool, from the same fit. Tick the arms "
+        "your tops are worn with."
+    ),
+    "add.why.no-arm-cut": "Tick at least one arm cut for the gloves.",
+    "add.result.gloves-added": "Added {name} to the project for {count} arm cuts.",
+    "add.result.gloves-added.one": "Added {name} to the project for {count} arm cut.",
+    "add.result.gloves-some-added": "Arm cuts added: {added}. Not added: {failed}. The reasons are below.",
+    "add.result.gloves-none-added": "No arm cut was added (tried: {count}). The reasons are below.",
+    "add.result.gloves-cut-failed": "Arms {cut}: {reason}",
+    "add.result.gloves-not-an-arm-cut": (
+        "Durty Cloth Tool has no such arm cut for this gender, so these gloves were not added. Update this add-on and "
+        "Durty Cloth Tool together."
+    ),
     "add.finding.rig-invalid": (
         "The weights or bone indices do not fit the freemode skeleton: the cloth would move wrongly in the game."
     ),

@@ -386,19 +386,88 @@ RESULT_KEYS = {
     "unknown-message-type": "add.dct-too-old",
 }
 #: Durty Cloth Tool's answers to gloves that say more than for another cloth: it found no arm skin in the game files
-#: (no GTA V folder, or one it cannot read the bare arms from), or it does not take gloves with their arm skin.
+#: (no GTA V folder, or one it cannot read that arm cut from), it has no such arm cut for the gender, or it does not
+#: take gloves with their arm skin.
 GLOVES_RESULT_KEYS = {
     "game-required": "add.result.gloves-game-required",
+    "item-refused": "add.result.gloves-not-an-arm-cut",
     "invalid-message": "add.result.gloves-refused",
 }
+
+#: The arm cuts gloves can be made for: the base game's arms drawables (``uppr``, component 3) with bare hands, by
+#: their three-digit number, per gender. A top is worn with one of them, and gloves are part of it, so gloves are made
+#: per arm cut. From a CodeWalker probe of PC Legacy, title build 1.0.3889.0, on 2026-10-28; the numbers left out hold
+#: no arms. Recheck after a game update. This is the only place the numbers live in the add-on; whether a number is an
+#: arm cut of a gender is checked again by Durty Cloth Tool against the creator's game files.
+ARM_CUTS: Dict[str, Tuple[str, ...]] = {
+    "male": ("000", "001", "002", "004", "005", "006", "008", "011", "012", "014", "015"),
+    "female": ("000", "001", "002", "003", "004", "005", "006", "007", "009", "011", "012", "014", "015"),
+}
+#: The bare arms, the arm cut every gender has and the one gloves start with.
+BARE_ARMS = "000"
+#: How many arm cut numbers a garment's ticks hold (``000`` to ``015``), each tick at the index of its number, so a
+#: stored tick never moves to another cut.
+ARM_CUT_SLOTS = 16
+
+
+def arm_cuts(gender: Optional[str]) -> Tuple[str, ...]:
+    """The arm cuts of a gender, in order; none for an unknown gender."""
+    return ARM_CUTS.get(gender or "", ())
+
+
+def arm_cut_label(number: str) -> str:
+    """An arm cut as creators pick a top's arms and as Durty Cloth Tool names the cloth: two digits (``04``)."""
+    return f"{int(number):02d}"
+
+
+def default_arm_cut_ticks() -> Tuple[bool, ...]:
+    """The ticks a garment starts with: the bare arms only."""
+    return tuple(index == int(BARE_ARMS) for index in range(ARM_CUT_SLOTS))
+
+
+def ticked_arm_cuts(ticks: Sequence[bool], gender: Optional[str]) -> List[str]:
+    """The arm cuts of ``gender`` whose tick is set, in order. A tick on a number the gender has no arms for (kept
+    from the other gender) is not sent."""
+    return [cut for cut in arm_cuts(gender) if int(cut) < len(ticks) and ticks[int(cut)]]
+
+
+def arm_cut_ticks_text(ticks: Sequence[bool]) -> str:
+    """The ticks as a garment keeps them in the .blend: the ticked numbers, comma separated (``000,004``)."""
+    return ",".join(f"{index:03d}" for index, ticked in enumerate(ticks) if ticked and index < ARM_CUT_SLOTS)
+
+
+def arm_cut_ticks_from_text(text: Any) -> Tuple[bool, ...]:
+    """The ticks a garment kept (:func:`arm_cut_ticks_text`); anything unreadable gives the bare arms only."""
+    if not isinstance(text, str):
+        return default_arm_cut_ticks()
+    numbers = {part.strip() for part in text.split(",")}
+    return tuple(f"{index:03d}" in numbers for index in range(ARM_CUT_SLOTS))
+
+
+def gloves_cut_failure(cut: str, code: Optional[str]) -> Msg:
+    """One arm cut Durty Cloth Tool did not add: its number and the reason, in the words for gloves."""
+    return msg("add.result.gloves-cut-failed", cut=arm_cut_label(cut), reason=result_message(code, arm_skin=True)[1])
+
+
+def gloves_outcome(results: Sequence[Tuple[str, bool]], name: str) -> Tuple[str, Msg]:
+    """``(level, message)`` once every arm cut of an add has its answer (``(cut, added)`` each): how many cuts were
+    added and how many were not; the panel lists the reasons below it."""
+    added = sum(1 for _, ok in results if ok)
+    failed = len(results) - added
+    if failed == 0:
+        return "INFO", msg("add.result.gloves-added", name=name, count=added)
+    if added == 0:
+        return "ERROR", msg("add.result.gloves-none-added", count=failed)
+    return "WARNING", msg("add.result.gloves-some-added", added=added, failed=failed)
 #: The level each answer is shown with.
 RESULT_LEVELS = {"request-denied": "INFO", "item-limit": "WARNING", "busy": "WARNING", "rate-limited": "WARNING"}
 
 
 def arm_skin(category: Optional[str]) -> Optional[str]:
-    """The body cut whose arm skin Durty Cloth Tool merges into the cloth (``item.add``'s ``armSkin``, one of
-    ``protocol.ARM_SKINS``): the bare arms for gloves, which the game makes part of the arms with the ped's skin, so a
-    glove without it would hide the arms. ``None`` for every other type (and for no type)."""
+    """The arm cut a type's cloth starts with, whose arm skin Durty Cloth Tool merges into it (``item.add``'s
+    ``armSkin``): the bare arms (:data:`BARE_ARMS`) for gloves, which the game makes part of the arms with the ped's
+    skin, so a glove without it would hide the arms. ``None`` for every other type (and for no type): only a type with
+    an arm skin offers arm cuts."""
     return garment.garment_type(category).arm_skin if category else None
 
 

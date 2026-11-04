@@ -25,7 +25,7 @@ import stat
 import tempfile
 import time
 import traceback
-from typing import Any, Callable, Deque, Dict, List, NamedTuple, Optional, Protocol, Set
+from typing import Any, Callable, Deque, Dict, List, NamedTuple, Optional, Protocol, Sequence, Set
 
 from . import bundle, garment_add, garment_fit, settings
 from .dct_link import auth, protocol, tokens
@@ -1092,8 +1092,11 @@ class ItemAdd:
         self.status: Optional[Notice] = None
         #: DCT's checks of the model and the variations from the last answer, errors first.
         self.findings: List[Dict[str, str]] = []
-        #: The cloth the last add made: its name, slot (drawable type) and binding.
+        #: The cloth the last add made: its name, slot (drawable type) and binding. For gloves on several arm cuts, the
+        #: first cut DCT added.
         self.added: Optional[Dict[str, Any]] = None
+        #: For gloves on several arm cuts: each cut DCT did not add, with its number and reason, for the panel.
+        self.cut_failures: List[Msg] = []
         self._plan: Optional[Dict[str, Any]] = None
         self._on_added: Optional[Callable[[Dict[str, str]], None]] = None
         #: Withdrawn adds that ended without an answer and may still be answered: ``(request, plan, on_added)``.
@@ -1118,29 +1121,67 @@ class ItemAdd:
         return self.controller.feature_problem(settings.FEATURE_ADD_ITEM)
 
     def start(self, drawable_type: str, gender: str, skin: bool, name: str, variations: List[Any], files: List[Any],
-              *, arm_skin: Optional[str] = None,
+              *, arm_skins: Sequence[str] = (),
               on_added: Optional[Callable[[Dict[str, str]], None]] = None) -> Request:
-        """Sends the add. ``arm_skin`` asks DCT to merge the arm skin of that body cut from the user's game files
-        (``item.add``'s ``armSkin``, :func:`garment_add.arm_skin` for gloves). ``on_added(binding)`` runs once DCT
-        added the cloth. Raises :class:`strings.UserError` when it cannot be sent now, with what to do."""
-        session = self.controller.ready_session()
+        """Sends the add. ``arm_skins`` makes it gloves: DCT merges the arm skin of each of these arm cuts from the
+        user's game files (``item.add``'s ``armSkin``), one ``item.add`` per cut, one after the other, from the same
+        files; a cut DCT does not add is kept in :attr:`cut_failures` and the next one is sent. ``on_added(binding)``
+        runs once, for the first cloth DCT added. Raises :class:`strings.UserError` when it cannot be sent now, with
+        what to do."""
         problem = self.problem()
         if problem is not None:
             raise UserError(problem)
-        try:
-            request = session.add_item(drawable_type, gender, skin, name, variations, files, timeout=self.TIMEOUT,
-                                       arm_skin=arm_skin)
-        except ValueError as exc:
-            raise UserError(msg("add.invalid", detail=str(exc))) from exc
-        self.request = request
-        self._plan = {"name": name, "slot": drawable_type, "gender": gender, "arm_skin": arm_skin is not None}
+        cuts = list(arm_skins)
+        plan: Dict[str, Any] = {"name": name, "slot": drawable_type, "gender": gender, "arm_skin": bool(cuts),
+                                "cuts": cuts, "results": [],
+                                "send": (drawable_type, gender, skin, name, variations, files)}
+        request = self._send(plan)
+        self._plan = plan
         self._on_added = on_added
         self.findings = []
         self.added = None
+        self.cut_failures = []
         self.status = Notice("INFO", msg("add.waiting"))
-        request.add_done_callback(self._on_done)
         self.controller.touch()
         return request
+
+    def _send(self, plan: Dict[str, Any]) -> Request:
+        """Sends the plan's add for its next arm cut (or the one add of any other cloth)."""
+        session = self.controller.ready_session()
+        cuts, done = plan["cuts"], len(plan["results"])
+        try:
+            request = session.add_item(*plan["send"], timeout=self.TIMEOUT,
+                                       arm_skin=cuts[done] if cuts else None)
+        except ValueError as exc:
+            raise UserError(msg("add.invalid", detail=str(exc))) from exc
+        self.request = request
+        request.add_done_callback(self._on_done)
+        return request
+
+    def _next_cut(self, plan: Dict[str, Any], ok: bool, code: Optional[str], withdrawn: bool) -> bool:
+        """Records the answer for the plan's current arm cut and sends the next one. True when one was sent; False
+        when the plan is done (or stopped: a withdrawn add, or a link that went away, ends the remaining cuts too),
+        and then the panel's message counts the cuts when there were several."""
+        cuts, results = plan["cuts"], plan["results"]
+        cut = cuts[len(results)]
+        results.append((cut, ok))
+        if not ok:
+            self.cut_failures.append(garment_add.gloves_cut_failure(cut, code))
+        stopped = withdrawn or code in ("cancelled", "timeout", "disconnected", "request-denied")
+        if len(results) < len(cuts) and not stopped and self.controller.ready:
+            try:
+                self._send(plan)
+            except UserError as exc:
+                self.status = Notice("ERROR", exc.message)
+                return False
+            self.status = Notice("INFO", msg("add.waiting"))
+            return True
+        if len(cuts) > 1:
+            name = plan.get("name") or ""
+            if stopped:
+                results.extend((later, False) for later in cuts[len(results):])
+            self.status = Notice(*garment_add.gloves_outcome(results, name))
+        return False
 
     def cancel(self) -> bool:
         """Withdraws the add while DCT's dialog is open. DCT answers it as refused, unless the user chose Add at that
@@ -1193,25 +1234,36 @@ class ItemAdd:
             return
         withdrawn = bool(getattr(request, "withdrawn", False))
         plan = self._plan or {}
-        on_added, self._on_added = self._on_added, None
+        several = len(plan.get("cuts") or ()) > 1
+        # Gloves on several arm cuts link the first cloth DCT adds; until then the callback waits for the next cut.
+        on_added = self._on_added
         if request.error is not None:
             code = request.error.code
             self.controller._remember_error(code)
             if withdrawn and code in ("cancelled", "timeout"):
                 self._late.append((request, plan, on_added))  # DCT may still answer it (item-add-late)
                 del self._late[:-self.MAX_LATE]
+                self._on_added = None
             self.status = Notice(*garment_add.failure_message(code, arm_skin=bool(plan.get("arm_skin"))))
-            self.findings = []
+            if not self.added:
+                self.findings = []
+            if plan.get("cuts"):
+                self._next_cut(plan, False, code, withdrawn)
             self.controller.touch()
             return
         result = request.result()
-        self.findings = garment_add.sorted_findings(result.findings)
+        if result.ok or not several or not self.added:
+            self.findings = garment_add.sorted_findings(result.findings)
         if result.ok:
-            self._link(plan, on_added, dict(result.binding or {}), late=False)
+            if self.added is None:
+                self._on_added = None
+                self._link(plan, on_added, dict(result.binding or {}), late=False)
         else:
             self.controller._remember_error(result.code)
             self.status = Notice(*garment_add.result_message(result.code, withdrawn=withdrawn,
                                                              arm_skin=bool(plan.get("arm_skin"))))
+        if plan.get("cuts"):
+            self._next_cut(plan, bool(result.ok), None if result.ok else result.code, withdrawn)
         self.controller.touch()
 
     def forget(self) -> None:
@@ -1220,6 +1272,7 @@ class ItemAdd:
             self.status = None
             self.findings = []
             self.added = None
+            self.cut_failures = []
 
 
 # --------------------------------------------------------------------------------------------------

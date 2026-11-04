@@ -112,13 +112,27 @@ type and slot by their place in those lists. What the type changes, and where:
   warns with `gloves_not_placed` (`fit.warning.gloves-not-placed`).
 - **Type guess.** `glove`, `mitten` and `gauntlet` with their plurals, and Turkish `eldiven` with `eldivenler`,
   `eldiveni` and `eldivenleri`, as whole words.
-- **Add to Project.** The add carries `armSkin` `base` with `uppr` and `skin` true (`garment_add.arm_skin` of the
-  type the add started with, which `AddJob` keeps like the slot and gender, passed as `arm_skin` to `ItemAdd.start`
-  in `link.py`); no other type sends it. Durty Cloth Tool takes the bare arms' skin from the
-  user's own game files and merges it into the gloves; the add-on sends no game data. Durty Cloth Tool answers
-  `game-required` when it cannot read that skin (no GTA V folder, or one without it) and `invalid-message` when it
-  does not take the field. The link layer only remembers that the add asked for an arm skin; `garment_add`'s
-  `result_message` and `failure_message` then explain both refusals in the words for gloves (`GLOVES_RESULT_KEYS`).
+- **Arm cuts.** In GTA V a top is worn with one of the base game's arms drawables, and gloves are part of it, so
+  gloves are made per **arm cut**: the three-digit number of a base-game arms drawable with bare hands, `000` for the
+  bare arms. `garment_add.ARM_CUTS` is the dated list per gender (a CodeWalker probe of PC Legacy, title build
+  1.0.3889.0, on 2026-10-28; the numbers left out hold no arms), the only place the numbers live in the add-on. Add
+  to Project for Gloves shows the gender's cuts as toggles labelled `Arms NN` (`add.arm-cut`), from the
+  `DCTLINK_PG_garment.arm_cuts` ticks: a `BoolVectorProperty` of `ARM_CUT_SLOTS` (16) entries, each at the index of
+  its cut's number, so a stored tick never moves to another cut. The garment keeps its ticks as the numbers in the
+  `dct_arm_cuts` tag (`arm_cut_ticks_text`); a garment without them starts with the bare arms. A tick the gender has
+  no arms for (kept from the other gender) is not sent, and the add's checks refuse gloves with no cut ticked
+  (`add.why.no-arm-cut`). Ticking never changes Body Cut.
+- **Add to Project.** One `item.add` per ticked cut, one after the other from the same files and the one fit, each
+  with `armSkin` set to its number and `uppr` and `skin` true (`AddJob.arm_cuts`, fixed when the add starts like the
+  slot and gender, passed as `arm_skins` to `ItemAdd.start` in `link.py`); no other type sends it. Durty Cloth Tool
+  takes that cut's arm skin from the user's own game files and merges it into the gloves; the add-on sends no game
+  data. Durty Cloth Tool answers `item-refused` for a number that is no arm cut of the gender, `game-required` when
+  it cannot read that cut (no GTA V folder, or a game without a usable one) and `invalid-message` when it does not
+  take the field. A refused cut goes to `ItemAdd.cut_failures` with its number and reason
+  (`garment_add.gloves_cut_failure`, in the words for gloves of `GLOVES_RESULT_KEYS`), and the next cut is sent; a
+  cancel, a withdrawal or a lost link stops the cuts after it. Blender links the first cloth Durty Cloth Tool added.
+  With several cuts the final message counts the added and the refused ones (`gloves_outcome`) and the panel lists
+  each refusal below it; one cut keeps the messages of any other add.
 
 ### Texts
 

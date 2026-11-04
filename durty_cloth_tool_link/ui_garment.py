@@ -22,12 +22,12 @@ import shutil
 import threading
 import time
 import traceback
-from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
+from typing import Any, Callable, Dict, List, NamedTuple, Optional, Sequence, Tuple
 
 import bpy
 import numpy as np
-from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty, FloatVectorProperty, IntProperty,
-                       PointerProperty, StringProperty)
+from bpy.props import (BoolProperty, BoolVectorProperty, CollectionProperty, EnumProperty, FloatProperty,
+                       FloatVectorProperty, IntProperty, PointerProperty, StringProperty)
 from bpy.types import Menu, Operator, Panel, PropertyGroup
 
 from . import garment, garment_add, garment_atlas, garment_avatars, garment_body, garment_fit, garment_reference
@@ -267,6 +267,7 @@ def _keep_on_garment(settings_: Any) -> None:
             obj[AVATAR_TAG] = settings_.avatar
             obj[SKIN_TAG] = bool(settings_.skin)
             obj[OPEN_FRONT_TAG] = bool(settings_.open_front)
+            obj[ARM_CUTS_TAG] = garment_add.arm_cut_ticks_text(tuple(settings_.arm_cuts))
     except (ReferenceError, AttributeError, TypeError):
         pass  # the garment is gone, or this property is set while Blender reads a file
 
@@ -329,10 +330,12 @@ def _avatar_changed(self: Any, context: Any) -> None:
     _keep_on_garment(self)
 
 
-#: On the garment: the avatar chosen for it, whether it shows skin and whether its front is worn open.
+#: On the garment: the avatar chosen for it, whether it shows skin, whether its front is worn open and, for gloves, the
+#: arm cuts ticked for it (their numbers, comma separated).
 AVATAR_TAG = "dct_avatar"
 SKIN_TAG = "dct_skin"
 OPEN_FRONT_TAG = "dct_open_front"
+ARM_CUTS_TAG = "dct_arm_cuts"
 
 
 def _marker_size_changed(self: Any, context: Any) -> None:
@@ -364,6 +367,8 @@ def _garment_changed(self: Any, context: Any) -> None:
             self.skin = bool(skin) or garment.skin_locked(self.category)
         if open_front is not None:
             self.open_front = bool(open_front)
+        # A garment without ticks of its own starts with the bare arms, never with the last garment's cuts.
+        self.arm_cuts = garment_add.arm_cut_ticks_from_text(obj.get(ARM_CUTS_TAG))
         # A garment without an avatar of its own never takes the last one's: its markers would come from elsewhere.
         self.avatar = avatar if avatar in AVATAR_IDS else ("file" if obj.get(gh.AVATAR_MARKERS) else "detect")
         _keep_on_garment(self)
@@ -485,6 +490,10 @@ class DCTLINK_PG_garment(PropertyGroup):
     first_title: StringProperty(name=EN["add.prop.variation-name"], maxlen=protocol.MAX_TEXT_LENGTH,
                                 description=EN["add.prop.first-name.desc"], translation_context=CONTEXT)
     variations: CollectionProperty(type=DCTLINK_PG_variation)
+    # Gloves: the arm cuts they are made for, one tick at the index of each cut's number (appended 2026-11-04).
+    arm_cuts: BoolVectorProperty(name=EN["add.prop.arm-cuts"], size=garment_add.ARM_CUT_SLOTS,
+                                 default=garment_add.default_arm_cut_ticks(), update=_choice_changed,
+                                 description=EN["add.prop.arm-cuts.desc"], translation_context=CONTEXT)
 
 
 # --------------------------------------------------------------------------------------------------
@@ -2306,6 +2315,10 @@ def add_checks(context: Any, bones: Optional[List[str]] = None) -> Tuple[List[Ms
     name_problem = garment_add.name_problem(item_name(context))
     if name_problem is not None:
         problems.append(name_problem)
+    settings_ = props(context)
+    if garment_add.arm_skin(settings_.category) is not None and not garment_add.ticked_arm_cuts(
+            tuple(settings_.arm_cuts), settings_.gender):
+        problems.append(msg("add.why.no-arm-cut"))  # gloves are made for at least one arm cut
     materials = gh.material_count(obj)
     if materials > 1:
         problems.append(msg("add.why.combine", count=materials))
@@ -2398,12 +2411,14 @@ class AddJob:
 
     STAGES = ("checks", "skeleton", "prepare", "export", "pictures", "send")
 
-    def __init__(self, scene: str, garment_uid: int, gender: str, slot: str, category: str) -> None:
+    def __init__(self, scene: str, garment_uid: int, gender: str, slot: str, category: str,
+                 arm_cuts: Sequence[str] = ()) -> None:
         self.scene = scene
         self.garment = garment_uid
         self.gender = gender
         self.slot = slot
         self.category = category  # what the add sends is fixed when it starts, like the slot and gender
+        self.arm_cuts = list(arm_cuts)  # gloves: the ticked arm cuts, one add each
         self.stage = "checks"
         self.cancelled = False
         self.changed = False  # the garment was changed for the add (an undo step was pushed before)
@@ -2530,8 +2545,8 @@ class AddJob:
 
         # A prop never shows skin; gloves always do, and Durty Cloth Tool merges the arm skin into them.
         skin = (bool(settings_.skin) or garment.skin_locked(self.category)) and self.slot not in garment.PROP_SLOTS
-        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files,
-                            arm_skin=garment_add.arm_skin(self.category), on_added=added)
+        ctrl.item_add.start(self.slot, self.gender, skin, name, chosen, files, arm_skins=self.arm_cuts,
+                            on_added=added)
         if self.changed:
             host.push_undo(t("add.op.add"))
         self.result = {"sent": msg("add.sent", name=name, count=len(chosen))}
@@ -2557,8 +2572,10 @@ def _run_step(context: Any, kind: str, op: Optional[Operator] = None) -> set:
     if kind == "add":
         settings_ = props(context)
         obj = current_garment(context)
+        cuts = (garment_add.ticked_arm_cuts(tuple(settings_.arm_cuts), settings_.gender)
+                if garment_add.arm_skin(settings_.category) is not None else [])
         RUNTIME.add_job = AddJob(context.scene.name, obj.session_uid, settings_.gender, settings_.slot,
-                                 settings_.category)
+                                 settings_.category, cuts)
         RUNTIME.notice = None  # the add's own status, under Game Ready, follows it from here
         if not bpy.app.timers.is_registered(job_tick):
             bpy.app.timers.register(job_tick, first_interval=0.05)
@@ -3542,6 +3559,16 @@ def draw_add(layout: Any, context: Any) -> None:
         column = layout.column()
         column.enabled = not garment.skin_locked(settings_.category)  # gloves carry the ped's arms: always on
         ui.checkbox(column, context, settings_, "skin", "add.prop.skin")
+    if garment_add.arm_skin(settings_.category) is not None:
+        # Gloves: the arm cuts of the garment's gender, each ticked one a cloth of its own. Ticking never changes the
+        # body view, which shows the bare arms the fit places the gloves on.
+        layout.separator(factor=GAP_SMALL)
+        wrapped(layout, context, t("add.prop.arm-cuts"))
+        grid = layout.grid_flow(row_major=True, columns=4, even_columns=True, align=True)
+        for cut in garment_add.arm_cuts(settings_.gender):
+            grid.prop(settings_, "arm_cuts", index=int(cut), toggle=True,
+                      text=t("add.arm-cut", cut=garment_add.arm_cut_label(cut)))
+        subtext(layout, context, "add.arm-cuts.subtext")
 
     layout.separator(factor=GAP_SMALL)
     body = section(layout, "variations", "add.heading.variations", "IMAGE_DATA", info="add.info.variations")
@@ -3608,6 +3635,8 @@ def draw_add_outcome(layout: Any, context: Any, obj: Optional[Any]) -> None:
         return  # while Durty Cloth Tool asks, the step above says it
     layout.separator(factor=GAP_SMALL)
     ui.draw_notice(layout, context, status)
+    for failure in ctrl.item_add.cut_failures:  # gloves: each arm cut Durty Cloth Tool did not add, and why
+        wrapped(layout, context, strings.text(failure), "ERROR", indent=True)
     findings = ctrl.item_add.findings
     if findings:
         wrapped(layout, context, t("add.findings", count=len(findings)), "INFO")

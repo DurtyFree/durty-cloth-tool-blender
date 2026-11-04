@@ -956,4 +956,28 @@ TEXT = {
         "I guanti non sono due pezzi separati, uno per lato del corpo. Separa il guanto sinistro e quello destro in "
         "modo che ognuno vada sulla sua mano."
     ),
+    "add.prop.arm-cuts": "Tagli delle braccia",
+    "add.prop.arm-cuts.desc": (
+        "Le braccia per cui sono fatti i guanti: spunta le braccia con cui si indossano i tuoi capi superiori. Ogni "
+        "taglio delle braccia spuntato diventa un capo di guanti a sé"
+    ),
+    "add.arm-cut": "Braccia {cut}",
+    "add.arm-cuts.subtext": (
+        "Ogni taglio delle braccia spuntato diventa un capo di guanti a sé in Durty Cloth Tool, dallo stesso "
+        "adattamento. Spunta le braccia con cui si indossano i tuoi capi superiori."
+    ),
+    "add.why.no-arm-cut": "Spunta almeno un taglio delle braccia per i guanti.",
+    "add.result.gloves-added": "{name} è stato aggiunto al progetto per {count} tagli delle braccia.",
+    "add.result.gloves-added.one": "{name} è stato aggiunto al progetto per {count} taglio delle braccia.",
+    "add.result.gloves-some-added": (
+        "Tagli delle braccia aggiunti: {added}. Non aggiunti: {failed}. I motivi sono qui sotto."
+    ),
+    "add.result.gloves-none-added": (
+        "Nessun taglio delle braccia è stato aggiunto (provati: {count}). I motivi sono qui sotto."
+    ),
+    "add.result.gloves-cut-failed": "Braccia {cut}: {reason}",
+    "add.result.gloves-not-an-arm-cut": (
+        "Durty Cloth Tool non ha questo taglio delle braccia per questo genere, quindi questi guanti non sono stati "
+        "aggiunti. Aggiorna insieme questo add-on e Durty Cloth Tool."
+    ),
 }

@@ -164,7 +164,7 @@ TYPES: Dict[str, GarmentType] = {
     "gloves": GarmentType(("uppr",), "hand", regions=("forearms", "cuffs"), snug=("cuffs",), skin=True,
                           hint="garment.hint.gloves", size=(0.2, 1.9), height=0.27, markers_optional=True,
                           auto_markers=False, skin_locked=True, thickness=False, push_region=False, pair=True,
-                          arm_skin="base"),
+                          arm_skin="000"),
 }
 #: How far the sleeves of a top reach.
 SLEEVES = {name: kind.sleeves for name, kind in TYPES.items() if kind.family == "upper"}

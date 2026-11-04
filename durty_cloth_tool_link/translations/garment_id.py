@@ -967,4 +967,28 @@ TEXT = {
         "Sarung tangan bukan dua bagian terpisah, satu di setiap sisi tubuh. Pisahkan sarung tangan kiri dan kanan "
         "agar masing-masing dapat dipasang di tangannya."
     ),
+    "add.prop.arm-cuts": "Potongan Lengan",
+    "add.prop.arm-cuts.desc": (
+        "Lengan yang menjadi dasar sarung tangan: centang lengan yang dipakai bersama atasan Anda. Setiap potongan "
+        "lengan yang dicentang menjadi pakaian sarung tangan tersendiri"
+    ),
+    "add.arm-cut": "Lengan {cut}",
+    "add.arm-cuts.subtext": (
+        "Setiap potongan lengan yang dicentang menjadi pakaian sarung tangan tersendiri di Durty Cloth Tool, dari "
+        "penyesuaian yang sama. Centang lengan yang dipakai bersama atasan Anda."
+    ),
+    "add.why.no-arm-cut": "Centang setidaknya satu potongan lengan untuk sarung tangan.",
+    "add.result.gloves-added": "{name} ditambahkan ke proyek untuk {count} potongan lengan.",
+    "add.result.gloves-added.one": "{name} ditambahkan ke proyek untuk {count} potongan lengan.",
+    "add.result.gloves-some-added": (
+        "Potongan lengan yang ditambahkan: {added}. Tidak ditambahkan: {failed}. Alasannya ada di bawah."
+    ),
+    "add.result.gloves-none-added": (
+        "Tidak ada potongan lengan yang ditambahkan (dicoba: {count}). Alasannya ada di bawah."
+    ),
+    "add.result.gloves-cut-failed": "Lengan {cut}: {reason}",
+    "add.result.gloves-not-an-arm-cut": (
+        "Durty Cloth Tool tidak memiliki potongan lengan itu untuk gender ini, jadi sarung tangan ini tidak "
+        "ditambahkan. Perbarui add-on ini dan Durty Cloth Tool bersamaan."
+    ),
 }

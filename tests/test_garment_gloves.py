@@ -46,7 +46,8 @@ def test_gloves_show_skin_locked_on_without_thickness_or_a_push_out_region():
 
 
 def test_only_gloves_are_a_pair_and_carry_the_bare_arms_skin():
-    assert garment.is_pair("gloves") and garment.garment_type("gloves").arm_skin in protocol.ARM_SKINS
+    assert garment.is_pair("gloves") and garment.garment_type("gloves").arm_skin == "000"
+    assert protocol.is_arm_skin(garment.garment_type("gloves").arm_skin)
     for category in garment.TYPES:
         if category != "gloves":
             assert not garment.is_pair(category) and garment.garment_type(category).arm_skin is None, category
