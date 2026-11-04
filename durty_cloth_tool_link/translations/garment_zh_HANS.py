@@ -1008,16 +1008,25 @@ TEXT = {
     "garment.finding.two-gloves": "手套不是位于身体两侧、各自独立的两个部分。请把左手套和右手套分开，让每只都能戴到对应的手上。",
     "add.arm-cut": "手臂 {cut}",
     "add.arm-cuts.subtext": "每个勾选的手臂剪裁都会在 Durty Cloth Tool 中成为一件独立的手套服装，来自同一次适配。勾选你的上衣所搭配的手臂。",
+    "add.arm-cut": "手臂 {cut}",
+    "add.arm-cuts.subtext": "每个勾选的手臂剪裁都会在 Durty Cloth Tool 中成为一件独立的手套服装，来自同一次适配。勾选你的上衣所搭配的手臂。",
     "add.prop.arm-cuts": "手臂剪裁",
     "add.prop.arm-cuts.desc": "手套所适配的手臂：勾选你的上衣所搭配的手臂。每个勾选的手臂剪裁都会成为一件独立的手套服装",
     "add.result.gloves-added": "已将 {name} 添加到项目中，共 {count} 个手臂剪裁。",
     "add.result.gloves-added.one": "已将 {name} 添加到项目中，共 {count} 个手臂剪裁。",
     "add.result.gloves-cut-failed": "手臂 {cut}：{reason}",
+    "add.result.gloves-late": "Durty Cloth Tool 在添加结束后仍添加了一个手臂剪裁。请检查项目中的手套。",
     "add.result.gloves-none-added": "没有添加任何手臂剪裁（尝试：{count}）。原因见下方。",
     "add.result.gloves-not-an-arm-cut": (
         "Durty Cloth Tool 未接受该手臂剪裁的手套：打开的项目不以这种方式接受来自 Blender 的服装，或该性别没有这个手臂剪裁。如果反复出现，请同时更新此附加组件和 Durty Cloth Tool。"
     ),
     "add.result.gloves-some-added": "已添加的手臂剪裁：{added}。未添加：{failed}。原因见下方。",
-    "add.result.gloves-stopped": "{reason} 此前已添加的手臂剪裁：{added}/{total}。",
+    "add.result.gloves-stopped-cancelled": "已添加的手臂剪裁：{added}/{total}。添加已取消，因此其余的未发送。要添加它们，请只勾选这些手臂剪裁后再次添加。",
+    "add.result.gloves-stopped-link": (
+        "已添加的手臂剪裁：{added}/{total}。与 Durty Cloth Tool 的连接已断开，因此其余的未发送。要添加它们，请只勾选这些手臂剪裁后再次添加。"
+    ),
+    "add.result.gloves-stopped-refused": (
+        "已添加的手臂剪裁：{added}/{total}。Durty Cloth Tool 未接受下一个手臂剪裁，因此其余的未发送；原因见下方。要添加它们，请只勾选这些手臂剪裁后再次添加。"
+    ),
     "add.why.no-arm-cut": "请为手套至少勾选一个手臂剪裁。",
 }

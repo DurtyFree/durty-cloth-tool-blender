@@ -1493,6 +1493,11 @@ EN: Dict[str, str] = {
         "Each ticked arm cut becomes a glove cloth of its own in Durty Cloth Tool, from the same fit. Tick the arms "
         "your tops are worn with."
     ),
+    "add.arm-cut": "Arms {cut}",
+    "add.arm-cuts.subtext": (
+        "Each ticked arm cut becomes a glove cloth of its own in Durty Cloth Tool, from the same fit. Tick the arms "
+        "your tops are worn with."
+    ),
     "add.prop.arm-cuts": "Arm Cuts",
     "add.prop.arm-cuts.desc": (
         "The arms the gloves are made for: tick the arms your tops are worn with. Each ticked arm cut becomes a glove "
@@ -1501,6 +1506,9 @@ EN: Dict[str, str] = {
     "add.result.gloves-added": "Added {name} to the project for {count} arm cuts.",
     "add.result.gloves-added.one": "Added {name} to the project for {count} arm cut.",
     "add.result.gloves-cut-failed": "Arms {cut}: {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool added one more arm cut after all, after the add had ended. Check the gloves in the project."
+    ),
     "add.result.gloves-none-added": "No arm cut was added (tried: {count}). The reasons are below.",
     "add.result.gloves-not-an-arm-cut": (
         "Durty Cloth Tool did not take the gloves for this arm cut: the open project takes no clothing from Blender "
@@ -1508,7 +1516,18 @@ EN: Dict[str, str] = {
         "it keeps happening."
     ),
     "add.result.gloves-some-added": "Arm cuts added: {added}. Not added: {failed}. The reasons are below.",
-    "add.result.gloves-stopped": "{reason} Arm cuts added before that: {added} of {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Arm cuts added: {added} of {total}. The add was cancelled, so the rest were not sent. To add them, tick only "
+        "those arm cuts and add again."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Arm cuts added: {added} of {total}. The connection to Durty Cloth Tool ended, so the rest were not sent. To "
+        "add them, tick only those arm cuts and add again."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Arm cuts added: {added} of {total}. Durty Cloth Tool did not take the next arm cut, so the rest were not "
+        "sent; the reason is below. To add them, tick only those arm cuts and add again."
+    ),
     "add.why.no-arm-cut": "Tick at least one arm cut for the gloves.",
     "add.finding.rig-invalid": (
         "The weights or bone indices do not fit the freemode skeleton: the cloth would move wrongly in the game."

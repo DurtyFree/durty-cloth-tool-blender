@@ -132,9 +132,13 @@ type and slot by their place in those lists. What the type changes, and where:
   cuts, a refused cut goes to `ItemAdd.cut_failures` with its number and reason (`garment_add.gloves_cut_failure`,
   in the words for gloves of `GLOVES_RESULT_KEYS`) and the next cut is sent. An answer in `ItemAdd.STOP_CODES` (the
   user's Cancel, a withdrawal, a lost link, or one Durty Cloth Tool would give every cut, such as `item-limit` or
-  `busy`) stops the cuts after it, and so does a cut that cannot be sent; its own message stays, with how many cuts
-  were added before (`add.result.gloves-stopped`). Blender links the first cloth Durty Cloth Tool added; when that
-  fails, the final message stays a warning and lists it. Otherwise the final message counts the added and the
+  `busy`) stops the cuts after it, and so does a cut that cannot be sent. With nothing added the stop's own message
+  stays; once cuts were added, a message in words for gloves says how many and why the rest were not sent (cancelled,
+  the connection ended, or refused with the reason below: `add.result.gloves-stopped-*`), never a message that says
+  nothing was added. A cut added although its cancel was sent counts as added. A late answer (`item-add-late`) for an
+  earlier add only links its cloth in Blender while a newer add is under way, and for gloves on several cuts says one
+  more cut was added after all (`add.result.gloves-late`). Blender links the first cloth Durty Cloth Tool added; when
+  that fails, the final message stays a warning and lists it. Otherwise the final message counts the added and the
   refused cuts (`gloves_outcome`) and the panel lists each refusal below it. One cut keeps the messages of any other
   add. The state an answer reads is set before each add is sent, and the answer's callback is attached last,
   because a request that failed at once answers as soon as it is attached.
