@@ -658,8 +658,9 @@ def test_a_cancel_after_an_added_cut_says_how_many_were_added_before(tmp_path, d
                         on_added=linked.append)
     finished(ctrl, dct, 2)
     status = ctrl.item_add.status
-    assert (status.level, status.message.key) == ("INFO", "add.result.gloves-stopped")
-    assert strings.english(status.message).endswith("Arm cuts added before that: 1 of 3.")
+    assert (status.level, status.message.key) == ("INFO", "add.result.gloves-stopped-cancelled")
+    assert strings.english(status.message).startswith("Arm cuts added: 1 of 3. The add was cancelled")
+    assert "unchanged" not in strings.english(status.message)
     assert linked == [dict(ADDED_BINDING)] and ctrl.item_add.cut_failures == []
     ctrl.disconnect()
 
@@ -750,7 +751,79 @@ def test_a_cut_that_cannot_be_sent_ends_the_add_with_why(tmp_path, dct, api, mon
     ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
     finished(ctrl, dct, 1)
     status = ctrl.item_add.status
-    assert (status.level, status.message.key) == ("ERROR", "add.result.gloves-stopped") and not ctrl.item_add.adding
+    assert (status.level, status.message.key) == ("WARNING", "add.result.gloves-stopped-link") and not ctrl.item_add.adding
+    assert [failure.key for failure in ctrl.item_add.cut_failures] == ["add.invalid"]  # why the cut could not go out
+    ctrl.disconnect()
+
+
+class Answered:
+    """A request dct_link has answered already, as when the link was closed while it was sent: its callback runs at
+    once, as soon as it is attached (the add-on sets no dispatcher)."""
+
+    def __init__(self, code=None, binding=None, withdrawn=False):
+        self.done, self.withdrawn = True, withdrawn
+        self.error = None if code is None else type("E", (), {"code": code})()
+        self._result = type("R", (), {"ok": True, "binding": binding or dict(ADDED_BINDING), "findings": [],
+                                      "code": None})()
+
+    def add_done_callback(self, callback):
+        callback(self)
+
+    def result(self):
+        return self._result
+
+    def cancel(self):
+        return False
+
+
+def test_a_cut_answered_at_once_never_leaves_the_add_waiting(tmp_path, dct, api, monkeypatch):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    answers = {"000": Answered(), "004": Answered(code="disconnected")}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    linked = []
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"],
+                        on_added=linked.append)
+    status = ctrl.item_add.status
+    assert not ctrl.item_add.adding and status.message.key == "add.result.gloves-stopped-link"
+    assert linked == [dict(ADDED_BINDING)]
+    # One cut answered at once keeps the message of any other add.
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["004"])
+    assert not ctrl.item_add.adding and ctrl.item_add.status.message.key == "add.result.disconnected"
+    ctrl.disconnect()
+
+
+def test_a_cut_added_although_its_cancel_was_sent_counts_as_added(tmp_path, dct, api, monkeypatch):
+    """The user cancelled the last cut just as Add was chosen in Durty Cloth Tool: it is in the project."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    answers = {"000": Answered(), "004": Answered(withdrawn=True)}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("INFO", "add.result.gloves-added")
+    assert strings.english(status.message) == "Added Gloves to the project for 2 arm cuts."
+    ctrl.disconnect()
+
+
+def test_a_late_answer_never_takes_over_a_newer_add(tmp_path, dct, api):
+    """An old add Durty Cloth Tool answers late, while a new one waits: the new one keeps its state and is linked
+    when it is added."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    old_linked, new_linked = [], []
+    adder = ctrl.item_add
+    old = Answered(code="cancelled", withdrawn=True)
+    adder._late.append((old, {"name": "Old", "slot": "jbib", "cuts": [], "results": []}, old_linked.append))
+    dct.hold_adds = True
+    adder.start("jbib", "male", False, "New", variations, files, on_added=new_linked.append)
+    drive(ctrl, lambda: len(dct.item_adds) == 1)
+    adder.on_late(old, type("R", (), {"ok": True, "binding": dict(GLOVES_04), "findings": []})())
+    assert old_linked == [GLOVES_04] and adder.added is None and adder.status.message.key == "add.waiting"
+    dct.hold_adds = False
+    dct.release_adds()
+    drive(ctrl, lambda: not adder.adding)
+    assert new_linked == [dict(ADDED_BINDING)] and adder.added["name"] == "New"
     ctrl.disconnect()
 
 

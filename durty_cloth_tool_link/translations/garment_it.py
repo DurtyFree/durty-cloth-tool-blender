@@ -961,6 +961,11 @@ TEXT = {
         "Ogni taglio delle braccia spuntato diventa un capo di guanti a sé in Durty Cloth Tool, dallo stesso "
         "adattamento. Spunta le braccia con cui si indossano i tuoi capi superiori."
     ),
+    "add.arm-cut": "Braccia {cut}",
+    "add.arm-cuts.subtext": (
+        "Ogni taglio delle braccia spuntato diventa un capo di guanti a sé in Durty Cloth Tool, dallo stesso "
+        "adattamento. Spunta le braccia con cui si indossano i tuoi capi superiori."
+    ),
     "add.prop.arm-cuts": "Tagli delle braccia",
     "add.prop.arm-cuts.desc": (
         "Le braccia per cui sono fatti i guanti: spunta le braccia con cui si indossano i tuoi capi superiori. Ogni "
@@ -969,6 +974,10 @@ TEXT = {
     "add.result.gloves-added": "{name} è stato aggiunto al progetto per {count} tagli delle braccia.",
     "add.result.gloves-added.one": "{name} è stato aggiunto al progetto per {count} taglio delle braccia.",
     "add.result.gloves-cut-failed": "Braccia {cut}: {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool ha comunque aggiunto un altro taglio delle braccia dopo la fine dell'aggiunta. Controlla i "
+        "guanti nel progetto."
+    ),
     "add.result.gloves-none-added": (
         "Nessun taglio delle braccia è stato aggiunto (provati: {count}). I motivi sono qui sotto."
     ),
@@ -980,6 +989,19 @@ TEXT = {
     "add.result.gloves-some-added": (
         "Tagli delle braccia aggiunti: {added}. Non aggiunti: {failed}. I motivi sono qui sotto."
     ),
-    "add.result.gloves-stopped": "{reason} Tagli delle braccia aggiunti prima: {added} su {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Tagli delle braccia aggiunti: {added} su {total}. L'aggiunta è stata annullata, quindi gli altri non sono "
+        "stati inviati. Per aggiungerli, spunta solo quei tagli delle braccia e aggiungi di nuovo."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Tagli delle braccia aggiunti: {added} su {total}. La connessione con Durty Cloth Tool si è interrotta, "
+        "quindi gli altri non sono stati inviati. Per aggiungerli, spunta solo quei tagli delle braccia e aggiungi di "
+        "nuovo."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Tagli delle braccia aggiunti: {added} su {total}. Durty Cloth Tool non ha accettato il taglio delle braccia "
+        "successivo, quindi gli altri non sono stati inviati; il motivo è qui sotto. Per aggiungerli, spunta solo "
+        "quei tagli delle braccia e aggiungi di nuovo."
+    ),
     "add.why.no-arm-cut": "Spunta almeno un taglio delle braccia per i guanti.",
 }

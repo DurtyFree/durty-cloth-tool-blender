@@ -1697,6 +1697,11 @@ TEXT = {
         "Chaque coupe de bras cochée devient un vêtement de gants à part entière dans Durty Cloth Tool, à partir du "
         "même ajustement. Cochez les bras avec lesquels vos hauts sont portés."
     ),
+    "add.arm-cut": "Bras {cut}",
+    "add.arm-cuts.subtext": (
+        "Chaque coupe de bras cochée devient un vêtement de gants à part entière dans Durty Cloth Tool, à partir du "
+        "même ajustement. Cochez les bras avec lesquels vos hauts sont portés."
+    ),
     "add.prop.arm-cuts": "Coupes de bras",
     "add.prop.arm-cuts.desc": (
         "Les bras pour lesquels les gants sont faits : cochez les bras avec lesquels vos hauts sont portés. Chaque "
@@ -1705,6 +1710,10 @@ TEXT = {
     "add.result.gloves-added": "{name} a été ajouté au projet pour {count} coupes de bras.",
     "add.result.gloves-added.one": "{name} a été ajouté au projet pour {count} coupe de bras.",
     "add.result.gloves-cut-failed": "Bras {cut} : {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool a finalement ajouté une coupe de bras de plus, après la fin de l'ajout. Vérifiez les gants "
+        "dans le projet."
+    ),
     "add.result.gloves-none-added": (
         "Aucune coupe de bras n'a été ajoutée (essayées : {count}). Les raisons sont ci-dessous."
     ),
@@ -1716,6 +1725,18 @@ TEXT = {
     "add.result.gloves-some-added": (
         "Coupes de bras ajoutées : {added}. Non ajoutées : {failed}. Les raisons sont ci-dessous."
     ),
-    "add.result.gloves-stopped": "{reason} Coupes de bras ajoutées avant cela : {added} sur {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Coupes de bras ajoutées : {added} sur {total}. L'ajout a été annulé, donc les autres n'ont pas été envoyées. "
+        "Pour les ajouter, cochez seulement ces coupes de bras et ajoutez à nouveau."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Coupes de bras ajoutées : {added} sur {total}. La connexion à Durty Cloth Tool s'est terminée, donc les "
+        "autres n'ont pas été envoyées. Pour les ajouter, cochez seulement ces coupes de bras et ajoutez à nouveau."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Coupes de bras ajoutées : {added} sur {total}. Durty Cloth Tool n'a pas accepté la coupe de bras suivante, "
+        "donc les autres n'ont pas été envoyées ; la raison est ci-dessous. Pour les ajouter, cochez seulement ces "
+        "coupes de bras et ajoutez à nouveau."
+    ),
     "add.why.no-arm-cut": "Cochez au moins une coupe de bras pour les gants.",
 }

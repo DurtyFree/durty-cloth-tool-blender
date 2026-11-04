@@ -967,6 +967,11 @@ TEXT = {
         "Każdy zaznaczony krój ramion staje się w Durty Cloth Tool osobnym ubraniem z rękawiczkami, z tego samego "
         "dopasowania. Zaznacz ramiona, z którymi noszone są twoje górne części ubrania."
     ),
+    "add.arm-cut": "Ramiona {cut}",
+    "add.arm-cuts.subtext": (
+        "Każdy zaznaczony krój ramion staje się w Durty Cloth Tool osobnym ubraniem z rękawiczkami, z tego samego "
+        "dopasowania. Zaznacz ramiona, z którymi noszone są twoje górne części ubrania."
+    ),
     "add.prop.arm-cuts": "Kroje ramion",
     "add.prop.arm-cuts.desc": (
         "Ramiona, dla których zrobiono rękawiczki: zaznacz ramiona, z którymi noszone są twoje górne części ubrania. "
@@ -975,6 +980,10 @@ TEXT = {
     "add.result.gloves-added": "Dodano {name} do projektu dla krojów ramion: {count}.",
     "add.result.gloves-added.one": "Dodano {name} do projektu dla krojów ramion: {count}.",
     "add.result.gloves-cut-failed": "Ramiona {cut}: {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool jednak dodało jeszcze jeden krój ramion po zakończeniu dodawania. Sprawdź rękawiczki w "
+        "projekcie."
+    ),
     "add.result.gloves-none-added": "Nie dodano żadnego kroju ramion (próby: {count}). Powody są poniżej.",
     "add.result.gloves-not-an-arm-cut": (
         "Durty Cloth Tool nie przyjęło rękawiczek dla tego kroju ramion: otwarty projekt nie przyjmuje w ten sposób "
@@ -982,6 +991,17 @@ TEXT = {
         "dodatek i Durty Cloth Tool razem."
     ),
     "add.result.gloves-some-added": "Dodane kroje ramion: {added}. Niedodane: {failed}. Powody są poniżej.",
-    "add.result.gloves-stopped": "{reason} Wcześniej dodane kroje ramion: {added} z {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Dodane kroje ramion: {added} z {total}. Dodawanie anulowano, więc pozostałych nie wysłano. Aby je dodać, "
+        "zaznacz tylko te kroje ramion i dodaj ponownie."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Dodane kroje ramion: {added} z {total}. Połączenie z Durty Cloth Tool zostało przerwane, więc pozostałych "
+        "nie wysłano. Aby je dodać, zaznacz tylko te kroje ramion i dodaj ponownie."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Dodane kroje ramion: {added} z {total}. Durty Cloth Tool nie przyjęło następnego kroju ramion, więc "
+        "pozostałych nie wysłano; powód jest poniżej. Aby je dodać, zaznacz tylko te kroje ramion i dodaj ponownie."
+    ),
     "add.why.no-arm-cut": "Zaznacz co najmniej jeden krój ramion dla rękawiczek.",
 }

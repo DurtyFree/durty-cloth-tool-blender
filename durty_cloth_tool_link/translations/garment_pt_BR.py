@@ -1586,6 +1586,11 @@ TEXT = {
         "Cada corte de braços marcado vira uma roupa de luvas própria no Durty Cloth Tool, a partir do mesmo ajuste. "
         "Marque os braços com que suas partes de cima são usadas."
     ),
+    "add.arm-cut": "Braços {cut}",
+    "add.arm-cuts.subtext": (
+        "Cada corte de braços marcado vira uma roupa de luvas própria no Durty Cloth Tool, a partir do mesmo ajuste. "
+        "Marque os braços com que suas partes de cima são usadas."
+    ),
     "add.prop.arm-cuts": "Cortes de braços",
     "add.prop.arm-cuts.desc": (
         "Os braços para os quais as luvas são feitas: marque os braços com que suas partes de cima são usadas. Cada "
@@ -1594,6 +1599,10 @@ TEXT = {
     "add.result.gloves-added": "{name} foi adicionado ao projeto para {count} cortes de braços.",
     "add.result.gloves-added.one": "{name} foi adicionado ao projeto para {count} corte de braços.",
     "add.result.gloves-cut-failed": "Braços {cut}: {reason}",
+    "add.result.gloves-late": (
+        "O Durty Cloth Tool acabou adicionando mais um corte de braços depois que a adição terminou. Confira as luvas "
+        "no projeto."
+    ),
     "add.result.gloves-none-added": (
         "Nenhum corte de braços foi adicionado (tentados: {count}). Os motivos estão abaixo."
     ),
@@ -1605,6 +1614,18 @@ TEXT = {
     "add.result.gloves-some-added": (
         "Cortes de braços adicionados: {added}. Não adicionados: {failed}. Os motivos estão abaixo."
     ),
-    "add.result.gloves-stopped": "{reason} Cortes de braços adicionados antes disso: {added} de {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Cortes de braços adicionados: {added} de {total}. A adição foi cancelada, então os demais não foram "
+        "enviados. Para adicioná-los, marque só esses cortes de braços e adicione de novo."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Cortes de braços adicionados: {added} de {total}. A conexão com o Durty Cloth Tool terminou, então os demais "
+        "não foram enviados. Para adicioná-los, marque só esses cortes de braços e adicione de novo."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Cortes de braços adicionados: {added} de {total}. O Durty Cloth Tool não aceitou o próximo corte de braços, "
+        "então os demais não foram enviados; o motivo está abaixo. Para adicioná-los, marque só esses cortes de "
+        "braços e adicione de novo."
+    ),
     "add.why.no-arm-cut": "Marque pelo menos um corte de braços para as luvas.",
 }

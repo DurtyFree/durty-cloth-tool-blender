@@ -955,6 +955,11 @@ TEXT = {
         "İşaretlenen her kol kesimi, aynı uyarlamadan Durty Cloth Tool'da kendi eldiven kıyafeti olur. Üstlerinizin "
         "birlikte giyildiği kolları işaretleyin."
     ),
+    "add.arm-cut": "Kollar {cut}",
+    "add.arm-cuts.subtext": (
+        "İşaretlenen her kol kesimi, aynı uyarlamadan Durty Cloth Tool'da kendi eldiven kıyafeti olur. Üstlerinizin "
+        "birlikte giyildiği kolları işaretleyin."
+    ),
     "add.prop.arm-cuts": "Kol Kesimleri",
     "add.prop.arm-cuts.desc": (
         "Eldivenlerin yapıldığı kollar: üstlerinizin birlikte giyildiği kolları işaretleyin. İşaretlenen her kol "
@@ -963,6 +968,10 @@ TEXT = {
     "add.result.gloves-added": "{name}, {count} kol kesimi için projeye eklendi.",
     "add.result.gloves-added.one": "{name}, {count} kol kesimi için projeye eklendi.",
     "add.result.gloves-cut-failed": "Kollar {cut}: {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool, ekleme bittikten sonra yine de bir kol kesimi daha ekledi. Projedeki eldivenleri kontrol "
+        "edin."
+    ),
     "add.result.gloves-none-added": "Hiçbir kol kesimi eklenmedi (denenen: {count}). Nedenleri aşağıda.",
     "add.result.gloves-not-an-arm-cut": (
         "Durty Cloth Tool bu kol kesimi için eldivenleri kabul etmedi: açık proje Blender'dan bu şekilde kıyafet "
@@ -970,6 +979,18 @@ TEXT = {
         "güncelleyin."
     ),
     "add.result.gloves-some-added": "Eklenen kol kesimleri: {added}. Eklenmeyen: {failed}. Nedenleri aşağıda.",
-    "add.result.gloves-stopped": "{reason} Öncesinde eklenen kol kesimleri: {added} / {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Eklenen kol kesimleri: {added} / {total}. Ekleme iptal edildi, bu yüzden kalanlar gönderilmedi. Onları "
+        "eklemek için yalnızca bu kol kesimlerini işaretleyip yeniden ekleyin."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Eklenen kol kesimleri: {added} / {total}. Durty Cloth Tool ile bağlantı sona erdi, bu yüzden kalanlar "
+        "gönderilmedi. Onları eklemek için yalnızca bu kol kesimlerini işaretleyip yeniden ekleyin."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Eklenen kol kesimleri: {added} / {total}. Durty Cloth Tool sonraki kol kesimini kabul etmedi, bu yüzden "
+        "kalanlar gönderilmedi; nedeni aşağıda. Onları eklemek için yalnızca bu kol kesimlerini işaretleyip yeniden "
+        "ekleyin."
+    ),
     "add.why.no-arm-cut": "Eldivenler için en az bir kol kesimi işaretleyin.",
 }

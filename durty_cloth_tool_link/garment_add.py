@@ -459,6 +459,8 @@ def gloves_outcome(results: Sequence[Tuple[str, bool]], name: str) -> Tuple[str,
     if added == 0:
         return "ERROR", msg("add.result.gloves-none-added", count=failed)
     return "WARNING", msg("add.result.gloves-some-added", added=added, failed=failed)
+
+
 #: The level each answer is shown with.
 RESULT_LEVELS = {"request-denied": "INFO", "item-limit": "WARNING", "busy": "WARNING", "rate-limited": "WARNING"}
 

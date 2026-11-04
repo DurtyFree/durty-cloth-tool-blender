@@ -1176,18 +1176,31 @@ class ItemAdd:
         cut = cuts[len(results)]
         results.append((cut, ok))
         several = len(cuts) > 1
-        stopped = withdrawn or (not ok and code in self.STOP_CODES)
-        reason = self.status
-        if ok and len(results) < len(cuts) and not self.controller.ready:
-            stopped, reason = True, Notice(*garment_add.failure_message("disconnected", arm_skin=True))
-        if several and not ok and not stopped:
+        # Why the cuts after this one are not sent: the user stopped the add, the link went away, or Durty Cloth Tool
+        # would answer every further cut the same way.
+        stop: Optional[str] = None
+        if withdrawn or code in ("request-denied", "cancelled"):
+            stop = "cancelled"
+        elif code in ("disconnected", "timeout"):
+            stop = "link"
+        elif not ok and code in self.STOP_CODES:
+            stop = "refused"
+        elif len(results) < len(cuts) and not self.controller.ready:
+            stop = "link"
+        # This cut's own refusal is listed; one that ends the cuts (stop "refused") only when cuts were added, since
+        # otherwise it is the message itself.
+        refused_here = several and not ok and not withdrawn and code not in (
+            "request-denied", "cancelled", "disconnected", "timeout")
+        if refused_here and stop in (None, "link"):
             self.cut_failures.append(garment_add.gloves_cut_failure(cut, code))
-        if len(results) < len(cuts) and not stopped:
+        send_error: Optional[Msg] = None
+        if len(results) < len(cuts) and stop is None:
             self.status = Notice("INFO", msg("add.waiting"))
             try:
                 request = self._send(plan)
             except UserError as exc:
-                stopped, reason = True, Notice("ERROR", exc.message)
+                stop, send_error = "link", exc.message
+                self.status = Notice("ERROR", exc.message)
             else:
                 self.request = request
                 request.add_done_callback(self._on_done)
@@ -1195,9 +1208,17 @@ class ItemAdd:
         if not several:
             return
         added = sum(1 for _, done in results if done)
-        if stopped and reason is not None:
-            self.status = reason if added == 0 else Notice(
-                reason.level, msg("add.result.gloves-stopped", reason=reason.message, added=added, total=len(cuts)))
+        if stop is not None and len(results) < len(cuts) and added > 0:
+            # Some cuts are in the project and the rest were not sent: say so in words for gloves, never a message
+            # that says nothing was added or to add everything again.
+            level = "INFO" if stop == "cancelled" else "WARNING"
+            self.status = Notice(level, msg(f"add.result.gloves-stopped-{stop}", added=added, total=len(cuts)))
+            if send_error is not None:
+                self.cut_failures.append(send_error)  # why the next cut could not go out
+            if stop == "refused":
+                self.cut_failures.append(garment_add.gloves_cut_failure(cut, code))  # the reason "below"
+        elif stop is not None and added == 0:
+            pass  # nothing is in the project: the stop's own message stays
         else:
             self.status = Notice(*garment_add.gloves_outcome(results, plan.get("name") or ""))
         unlinked = plan.get("unlinked")
@@ -1247,6 +1268,19 @@ class ItemAdd:
             if not self.adding:
                 self.status = Notice("INFO", msg("add.result.withdrawn"))  # the withdrawal is confirmed now
                 self.controller.touch()
+            return
+        several = len(plan.get("cuts") or ()) > 1
+        if self.adding or several or request is not self.request:
+            # A newer add is under way, or this was one cut of gloves on several: its state and message stay. The
+            # cloth is still linked in Blender when it was the first one added.
+            if on_added is not None:
+                try:
+                    on_added(dict(result.binding or {}))
+                except Exception:  # noqa: BLE001 - the cloth is added; only the link in Blender failed
+                    traceback.print_exc()
+            if several and not self.adding and request is self.request:
+                self.status = Notice("WARNING", msg("add.result.gloves-late"))
+            self.controller.touch()
             return
         self.findings = garment_add.sorted_findings(result.findings)
         self._link(plan, on_added, dict(result.binding or {}), late=True)

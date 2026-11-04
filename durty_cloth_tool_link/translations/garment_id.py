@@ -972,6 +972,11 @@ TEXT = {
         "Setiap potongan lengan yang dicentang menjadi pakaian sarung tangan tersendiri di Durty Cloth Tool, dari "
         "penyesuaian yang sama. Centang lengan yang dipakai bersama atasan Anda."
     ),
+    "add.arm-cut": "Lengan {cut}",
+    "add.arm-cuts.subtext": (
+        "Setiap potongan lengan yang dicentang menjadi pakaian sarung tangan tersendiri di Durty Cloth Tool, dari "
+        "penyesuaian yang sama. Centang lengan yang dipakai bersama atasan Anda."
+    ),
     "add.prop.arm-cuts": "Potongan Lengan",
     "add.prop.arm-cuts.desc": (
         "Lengan yang menjadi dasar sarung tangan: centang lengan yang dipakai bersama atasan Anda. Setiap potongan "
@@ -980,6 +985,10 @@ TEXT = {
     "add.result.gloves-added": "{name} ditambahkan ke proyek untuk {count} potongan lengan.",
     "add.result.gloves-added.one": "{name} ditambahkan ke proyek untuk {count} potongan lengan.",
     "add.result.gloves-cut-failed": "Lengan {cut}: {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool ternyata menambahkan satu potongan lengan lagi setelah penambahan selesai. Periksa sarung "
+        "tangan di proyek."
+    ),
     "add.result.gloves-none-added": (
         "Tidak ada potongan lengan yang ditambahkan (dicoba: {count}). Alasannya ada di bawah."
     ),
@@ -991,6 +1000,18 @@ TEXT = {
     "add.result.gloves-some-added": (
         "Potongan lengan yang ditambahkan: {added}. Tidak ditambahkan: {failed}. Alasannya ada di bawah."
     ),
-    "add.result.gloves-stopped": "{reason} Potongan lengan yang ditambahkan sebelumnya: {added} dari {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Potongan lengan yang ditambahkan: {added} dari {total}. Penambahan dibatalkan, jadi sisanya tidak dikirim. "
+        "Untuk menambahkannya, centang hanya potongan lengan itu lalu tambahkan lagi."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Potongan lengan yang ditambahkan: {added} dari {total}. Koneksi ke Durty Cloth Tool berakhir, jadi sisanya "
+        "tidak dikirim. Untuk menambahkannya, centang hanya potongan lengan itu lalu tambahkan lagi."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Potongan lengan yang ditambahkan: {added} dari {total}. Durty Cloth Tool tidak menerima potongan lengan "
+        "berikutnya, jadi sisanya tidak dikirim; alasannya ada di bawah. Untuk menambahkannya, centang hanya potongan "
+        "lengan itu lalu tambahkan lagi."
+    ),
     "add.why.no-arm-cut": "Centang setidaknya satu potongan lengan untuk sarung tangan.",
 }

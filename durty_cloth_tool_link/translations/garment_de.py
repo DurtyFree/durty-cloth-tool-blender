@@ -1725,6 +1725,11 @@ TEXT = {
         "Jeder angehakte Armschnitt wird in Durty Cloth Tool ein eigenes Handschuh-Kleidungsstück, aus derselben "
         "Anpassung. Hake die Arme an, mit denen deine Oberteile getragen werden."
     ),
+    "add.arm-cut": "Arme {cut}",
+    "add.arm-cuts.subtext": (
+        "Jeder angehakte Armschnitt wird in Durty Cloth Tool ein eigenes Handschuh-Kleidungsstück, aus derselben "
+        "Anpassung. Hake die Arme an, mit denen deine Oberteile getragen werden."
+    ),
     "add.prop.arm-cuts": "Armschnitte",
     "add.prop.arm-cuts.desc": (
         "Die Arme, für die die Handschuhe gemacht sind: Hake die Arme an, mit denen deine Oberteile getragen werden. "
@@ -1733,6 +1738,10 @@ TEXT = {
     "add.result.gloves-added": "{name} wurde für {count} Armschnitte zum Projekt hinzugefügt.",
     "add.result.gloves-added.one": "{name} wurde für {count} Armschnitt zum Projekt hinzugefügt.",
     "add.result.gloves-cut-failed": "Arme {cut}: {reason}",
+    "add.result.gloves-late": (
+        "Durty Cloth Tool hat nach dem Ende des Hinzufügens doch noch einen Armschnitt hinzugefügt. Prüfe die "
+        "Handschuhe im Projekt."
+    ),
     "add.result.gloves-none-added": "Kein Armschnitt wurde hinzugefügt (versucht: {count}). Die Gründe stehen unten.",
     "add.result.gloves-not-an-arm-cut": (
         "Durty Cloth Tool hat die Handschuhe für diesen Armschnitt nicht angenommen: Das offene Projekt nimmt auf "
@@ -1742,6 +1751,18 @@ TEXT = {
     "add.result.gloves-some-added": (
         "Hinzugefügte Armschnitte: {added}. Nicht hinzugefügt: {failed}. Die Gründe stehen unten."
     ),
-    "add.result.gloves-stopped": "{reason} Davor hinzugefügte Armschnitte: {added} von {total}.",
+    "add.result.gloves-stopped-cancelled": (
+        "Hinzugefügte Armschnitte: {added} von {total}. Das Hinzufügen wurde abgebrochen, daher wurden die übrigen "
+        "nicht gesendet. Um sie hinzuzufügen, hake nur diese Armschnitte an und füge erneut hinzu."
+    ),
+    "add.result.gloves-stopped-link": (
+        "Hinzugefügte Armschnitte: {added} von {total}. Die Verbindung zu Durty Cloth Tool wurde beendet, daher "
+        "wurden die übrigen nicht gesendet. Um sie hinzuzufügen, hake nur diese Armschnitte an und füge erneut hinzu."
+    ),
+    "add.result.gloves-stopped-refused": (
+        "Hinzugefügte Armschnitte: {added} von {total}. Durty Cloth Tool hat den nächsten Armschnitt nicht "
+        "angenommen, daher wurden die übrigen nicht gesendet; der Grund steht unten. Um sie hinzuzufügen, hake nur "
+        "diese Armschnitte an und füge erneut hinzu."
+    ),
     "add.why.no-arm-cut": "Hake mindestens einen Armschnitt für die Handschuhe an.",
 }
