@@ -1547,8 +1547,8 @@ def _prepare_item(
     files as ``(name, view)`` and the payload size; raises ``ValueError`` with the rule that failed."""
     head = _item_head(drawable_type, gender, skin, name)
     if arm_skin is not None:
-        if arm_skin not in protocol.ARM_SKINS or drawable_type != "uppr" or not skin:
-            raise ValueError("arm_skin is one of protocol.ARM_SKINS, only for gloves: drawable_type 'uppr', skin=True")
+        if not protocol.is_arm_skin(arm_skin) or drawable_type != "uppr" or not skin:
+            raise ValueError("arm_skin is a three-digit arm cut number, only for gloves: drawable_type 'uppr', skin=True")
         head["armSkin"] = arm_skin
     prepared = _file_views(files)
     entries = [{"name": file_name, "length": view.nbytes} for file_name, view in prepared]
@@ -3193,10 +3193,11 @@ class LinkSession:
         and unique ignoring case, and no file is empty. ``variations`` lists ``(file, name)`` per colour variation,
         1 to :data:`protocol.MAX_ITEM_VARIATIONS` (26) in order: ``file`` names that variation's diffuse among
         ``files`` (never the model, no two the same), ``name`` is its display name; every ``*.png`` is some
-        variation's diffuse. ``arm_skin`` makes the cloth gloves: DCT takes the arm skin of that body cut (one of
-        :data:`protocol.ARM_SKINS`, ``base`` for the bare arms) from the user's own game files and merges it into the
-        model; only with ``ydd-xml``, ``drawable_type`` ``uppr`` and ``skin`` True, and DCT answers ``game-required``
-        without the game files. A broken rule raises ``ValueError`` before anything is sent. The data is sent as
+        variation's diffuse. ``arm_skin`` makes the cloth gloves: DCT takes the arm skin of that arm cut (its three-digit
+        number, :func:`protocol.is_arm_skin`, ``000`` for the bare arms) from the user's own game files and merges it
+        into the model; only with ``ydd-xml``, ``drawable_type`` ``uppr`` and ``skin`` True. DCT answers
+        ``item-refused`` for a number that is no arm cut of the cloth's gender, and ``game-required`` without usable
+        game files. A broken rule raises ``ValueError`` before anything is sent. The data is sent as
         given, without a copy: do not change it until the request finishes.
 
         Resolves with an :class:`ItemAddResult`, whatever DCT decided (also when DCT answered with an error such as
