@@ -1697,11 +1697,6 @@ TEXT = {
         "Chaque coupe de bras cochée devient un vêtement de gants à part entière dans Durty Cloth Tool, à partir du "
         "même ajustement. Cochez les bras avec lesquels vos hauts sont portés."
     ),
-    "add.arm-cut": "Bras {cut}",
-    "add.arm-cuts.subtext": (
-        "Chaque coupe de bras cochée devient un vêtement de gants à part entière dans Durty Cloth Tool, à partir du "
-        "même ajustement. Cochez les bras avec lesquels vos hauts sont portés."
-    ),
     "add.prop.arm-cuts": "Coupes de bras",
     "add.prop.arm-cuts.desc": (
         "Les bras pour lesquels les gants sont faits : cochez les bras avec lesquels vos hauts sont portés. Chaque "

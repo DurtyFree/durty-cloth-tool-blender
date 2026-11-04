@@ -1008,8 +1008,6 @@ TEXT = {
     "garment.finding.two-gloves": "手套不是位于身体两侧、各自独立的两个部分。请把左手套和右手套分开，让每只都能戴到对应的手上。",
     "add.arm-cut": "手臂 {cut}",
     "add.arm-cuts.subtext": "每个勾选的手臂剪裁都会在 Durty Cloth Tool 中成为一件独立的手套服装，来自同一次适配。勾选你的上衣所搭配的手臂。",
-    "add.arm-cut": "手臂 {cut}",
-    "add.arm-cuts.subtext": "每个勾选的手臂剪裁都会在 Durty Cloth Tool 中成为一件独立的手套服装，来自同一次适配。勾选你的上衣所搭配的手臂。",
     "add.prop.arm-cuts": "手臂剪裁",
     "add.prop.arm-cuts.desc": "手套所适配的手臂：勾选你的上衣所搭配的手臂。每个勾选的手臂剪裁都会成为一件独立的手套服装",
     "add.result.gloves-added": "已将 {name} 添加到项目中，共 {count} 个手臂剪裁。",

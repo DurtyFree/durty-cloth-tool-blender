@@ -1725,11 +1725,6 @@ TEXT = {
         "Jeder angehakte Armschnitt wird in Durty Cloth Tool ein eigenes Handschuh-Kleidungsstück, aus derselben "
         "Anpassung. Hake die Arme an, mit denen deine Oberteile getragen werden."
     ),
-    "add.arm-cut": "Arme {cut}",
-    "add.arm-cuts.subtext": (
-        "Jeder angehakte Armschnitt wird in Durty Cloth Tool ein eigenes Handschuh-Kleidungsstück, aus derselben "
-        "Anpassung. Hake die Arme an, mit denen deine Oberteile getragen werden."
-    ),
     "add.prop.arm-cuts": "Armschnitte",
     "add.prop.arm-cuts.desc": (
         "Die Arme, für die die Handschuhe gemacht sind: Hake die Arme an, mit denen deine Oberteile getragen werden. "

@@ -972,11 +972,6 @@ TEXT = {
         "Setiap potongan lengan yang dicentang menjadi pakaian sarung tangan tersendiri di Durty Cloth Tool, dari "
         "penyesuaian yang sama. Centang lengan yang dipakai bersama atasan Anda."
     ),
-    "add.arm-cut": "Lengan {cut}",
-    "add.arm-cuts.subtext": (
-        "Setiap potongan lengan yang dicentang menjadi pakaian sarung tangan tersendiri di Durty Cloth Tool, dari "
-        "penyesuaian yang sama. Centang lengan yang dipakai bersama atasan Anda."
-    ),
     "add.prop.arm-cuts": "Potongan Lengan",
     "add.prop.arm-cuts.desc": (
         "Lengan yang menjadi dasar sarung tangan: centang lengan yang dipakai bersama atasan Anda. Setiap potongan "

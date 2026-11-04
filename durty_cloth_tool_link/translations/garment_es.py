@@ -1640,11 +1640,6 @@ TEXT = {
         "Cada corte de brazos marcado se convierte en una prenda de guantes propia en Durty Cloth Tool, a partir del "
         "mismo ajuste. Marca los brazos con los que se llevan tus prendas superiores."
     ),
-    "add.arm-cut": "Brazos {cut}",
-    "add.arm-cuts.subtext": (
-        "Cada corte de brazos marcado se convierte en una prenda de guantes propia en Durty Cloth Tool, a partir del "
-        "mismo ajuste. Marca los brazos con los que se llevan tus prendas superiores."
-    ),
     "add.prop.arm-cuts": "Cortes de brazos",
     "add.prop.arm-cuts.desc": (
         "Los brazos para los que están hechos los guantes: marca los brazos con los que se llevan tus prendas "
