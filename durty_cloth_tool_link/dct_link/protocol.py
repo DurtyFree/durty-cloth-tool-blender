@@ -334,7 +334,6 @@ CONSTANTS: Dict[str, Any] = {
         "checkoutTiers": ["advanced", "ultimate"],
         "checkoutReasons": ["upsell", "quota", "plans"],
         "garmentPlacements": ["free", "freemodeRest"],
-        "armSkins": ["base"],
         "avatarPoses": [
             "idle",
             "walk",
@@ -596,10 +595,9 @@ CHECKOUT_REASONS: Tuple[str, ...] = tuple(_V["checkoutReasons"])
 GARMENT_PLACEMENTS: Tuple[str, ...] = tuple(_V["garmentPlacements"])
 PLACEMENT_FREE = "free"
 PLACEMENT_FREEMODE_REST = "freemodeRest"
-#: The body cut whose arm skin DCT merges into gloves (``item.add.armSkin``): ``base``, the bare arms. Only with
-#: drawable type ``uppr`` and ``skin`` true, and only with ``ydd-xml``.
-ARM_SKINS: Tuple[str, ...] = tuple(_V["armSkins"])
-ARM_SKIN_BASE = "base"
+#: The arm cut whose arm skin DCT merges into gloves (``item.add.armSkin``) is the three-digit number of the base
+#: game's arms drawable of that cut, ``000`` for the bare arms (:func:`is_arm_skin`). Only with drawable type ``uppr``
+#: and ``skin`` true, and only with ``ydd-xml``. Whether the number is an arm cut of the cloth's gender is DCT's check.
 #: The poses of ``body.avatar`` and ``garment.check``, and the body regions a pose check reports.
 AVATAR_POSES: Tuple[str, ...] = tuple(_V["avatarPoses"])
 BODY_REGIONS: Tuple[str, ...] = tuple(_V["bodyRegions"])
@@ -651,6 +649,7 @@ class BinaryMessage(NamedTuple):
 # --------------------------------------------------------------------------------------------------
 
 _ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+_ARM_SKIN_RE = re.compile(r"[0-9]{3}", re.ASCII)
 _GUID_RE = re.compile(r"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}")
 _BYTES32_RE = re.compile(r"[A-Za-z0-9_-]{43}")
 _USER_CODE_RE = re.compile(r"[BCDFGHJKLMNPQRSTVWXZ]{8}")
@@ -671,6 +670,11 @@ _NEW_PED_MODEL_RE = re.compile(r"[a-z][a-z0-9_]{2,31}")
 _PED_TYPE_RE = re.compile(r"[A-Za-z0-9_]{1,32}")
 _BONE_NAME_RE = re.compile(r"[!-~]{1,64}")
 _SHA256_RE = re.compile(r"[0-9a-f]{64}")
+
+
+def is_arm_skin(value: Any) -> bool:
+    """An arm cut number as ``item.add.armSkin`` carries it: three digits, such as ``000`` or ``004``."""
+    return isinstance(value, str) and _ARM_SKIN_RE.fullmatch(value) is not None
 
 
 def is_id(value: Any) -> bool:
@@ -1443,7 +1447,7 @@ def _arm_skin_ok(m: Mapping[str, Any]) -> bool:
     """An arm skin only on an XML drawable of the arms (``uppr``) that shows skin."""
     arm_skin = m.get("armSkin")
     return arm_skin is None or (
-        _one_of(arm_skin, ARM_SKINS) and m.get("skin") is True and m.get("drawableType") == "uppr" and m.get("format") != MODEL_GLB
+        is_arm_skin(arm_skin) and m.get("skin") is True and m.get("drawableType") == "uppr" and m.get("format") != MODEL_GLB
     )
 
 
