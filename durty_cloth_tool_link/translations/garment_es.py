@@ -1635,28 +1635,30 @@ TEXT = {
         "Los guantes no son dos piezas separadas, una a cada lado del cuerpo. Separa el guante izquierdo y el "
         "derecho para que cada uno vaya en su mano."
     ),
-    "add.prop.arm-cuts": "Cortes de brazos",
-    "add.prop.arm-cuts.desc": (
-        "Los brazos para los que están hechos los guantes: marca los brazos con los que se llevan tus prendas "
-        "superiores. Cada corte de brazos marcado se convierte en una prenda de guantes propia"
-    ),
     "add.arm-cut": "Brazos {cut}",
     "add.arm-cuts.subtext": (
         "Cada corte de brazos marcado se convierte en una prenda de guantes propia en Durty Cloth Tool, a partir del "
         "mismo ajuste. Marca los brazos con los que se llevan tus prendas superiores."
     ),
-    "add.why.no-arm-cut": "Marca al menos un corte de brazos para los guantes.",
+    "add.prop.arm-cuts": "Cortes de brazos",
+    "add.prop.arm-cuts.desc": (
+        "Los brazos para los que están hechos los guantes: marca los brazos con los que se llevan tus prendas "
+        "superiores. Cada corte de brazos marcado se convierte en una prenda de guantes propia"
+    ),
     "add.result.gloves-added": "Se añadió {name} al proyecto para {count} cortes de brazos.",
     "add.result.gloves-added.one": "Se añadió {name} al proyecto para {count} corte de brazos.",
-    "add.result.gloves-some-added": (
-        "Cortes de brazos añadidos: {added}. No añadidos: {failed}. Los motivos están abajo."
-    ),
+    "add.result.gloves-cut-failed": "Brazos {cut}: {reason}",
     "add.result.gloves-none-added": (
         "No se añadió ningún corte de brazos (intentados: {count}). Los motivos están abajo."
     ),
-    "add.result.gloves-cut-failed": "Brazos {cut}: {reason}",
     "add.result.gloves-not-an-arm-cut": (
-        "Durty Cloth Tool no tiene ese corte de brazos para este género, así que estos guantes no se añadieron. "
-        "Actualiza este complemento y Durty Cloth Tool a la vez."
+        "Durty Cloth Tool no aceptó los guantes para este corte de brazos: el proyecto abierto no acepta ropa de "
+        "Blender de esta forma, o ese corte de brazos no existe para este género. Actualiza este complemento y Durty "
+        "Cloth Tool a la vez si vuelve a pasar."
     ),
+    "add.result.gloves-some-added": (
+        "Cortes de brazos añadidos: {added}. No añadidos: {failed}. Los motivos están abajo."
+    ),
+    "add.result.gloves-stopped": "{reason} Cortes de brazos añadidos antes: {added} de {total}.",
+    "add.why.no-arm-cut": "Marca al menos un corte de brazos para los guantes.",
 }

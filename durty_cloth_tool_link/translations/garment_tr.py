@@ -950,24 +950,26 @@ TEXT = {
         "Eldivenler, bedenin her iki yanında birer tane olan iki ayrı parça değil. Her biri kendi eline gidebilsin "
         "diye sol ve sağ eldiveni ayırın."
     ),
-    "add.prop.arm-cuts": "Kol Kesimleri",
-    "add.prop.arm-cuts.desc": (
-        "Eldivenlerin yapıldığı kollar: üstlerinizin birlikte giyildiği kolları işaretleyin. İşaretlenen her kol "
-        "kesimi kendi eldiven kıyafeti olur"
-    ),
     "add.arm-cut": "Kollar {cut}",
     "add.arm-cuts.subtext": (
         "İşaretlenen her kol kesimi, aynı uyarlamadan Durty Cloth Tool'da kendi eldiven kıyafeti olur. Üstlerinizin "
         "birlikte giyildiği kolları işaretleyin."
     ),
-    "add.why.no-arm-cut": "Eldivenler için en az bir kol kesimi işaretleyin.",
+    "add.prop.arm-cuts": "Kol Kesimleri",
+    "add.prop.arm-cuts.desc": (
+        "Eldivenlerin yapıldığı kollar: üstlerinizin birlikte giyildiği kolları işaretleyin. İşaretlenen her kol "
+        "kesimi kendi eldiven kıyafeti olur"
+    ),
     "add.result.gloves-added": "{name}, {count} kol kesimi için projeye eklendi.",
     "add.result.gloves-added.one": "{name}, {count} kol kesimi için projeye eklendi.",
-    "add.result.gloves-some-added": "Eklenen kol kesimleri: {added}. Eklenmeyen: {failed}. Nedenleri aşağıda.",
-    "add.result.gloves-none-added": "Hiçbir kol kesimi eklenmedi (denenen: {count}). Nedenleri aşağıda.",
     "add.result.gloves-cut-failed": "Kollar {cut}: {reason}",
+    "add.result.gloves-none-added": "Hiçbir kol kesimi eklenmedi (denenen: {count}). Nedenleri aşağıda.",
     "add.result.gloves-not-an-arm-cut": (
-        "Durty Cloth Tool'da bu cinsiyet için böyle bir kol kesimi yok, bu yüzden bu eldivenler eklenmedi. Bu "
-        "eklentiyi ve Durty Cloth Tool'u birlikte güncelleyin."
+        "Durty Cloth Tool bu kol kesimi için eldivenleri kabul etmedi: açık proje Blender'dan bu şekilde kıyafet "
+        "almıyor ya da bu kol kesimi bu cinsiyet için yok. Tekrar olursa bu eklentiyi ve Durty Cloth Tool'u birlikte "
+        "güncelleyin."
     ),
+    "add.result.gloves-some-added": "Eklenen kol kesimleri: {added}. Eklenmeyen: {failed}. Nedenleri aşağıda.",
+    "add.result.gloves-stopped": "{reason} Öncesinde eklenen kol kesimleri: {added} / {total}.",
+    "add.why.no-arm-cut": "Eldivenler için en az bir kol kesimi işaretleyin.",
 }

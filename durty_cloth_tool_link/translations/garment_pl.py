@@ -962,24 +962,26 @@ TEXT = {
         "Rękawiczki nie są dwiema osobnymi częściami, po jednej z każdej strony ciała. Rozdziel lewą i prawą "
         "rękawiczkę, aby każda trafiła na swoją dłoń."
     ),
-    "add.prop.arm-cuts": "Kroje ramion",
-    "add.prop.arm-cuts.desc": (
-        "Ramiona, dla których zrobiono rękawiczki: zaznacz ramiona, z którymi noszone są twoje góry. Każdy zaznaczony "
-        "krój ramion staje się osobnym ubraniem z rękawiczkami"
-    ),
     "add.arm-cut": "Ramiona {cut}",
     "add.arm-cuts.subtext": (
         "Każdy zaznaczony krój ramion staje się w Durty Cloth Tool osobnym ubraniem z rękawiczkami, z tego samego "
-        "dopasowania. Zaznacz ramiona, z którymi noszone są twoje góry."
+        "dopasowania. Zaznacz ramiona, z którymi noszone są twoje górne części ubrania."
     ),
-    "add.why.no-arm-cut": "Zaznacz co najmniej jeden krój ramion dla rękawiczek.",
+    "add.prop.arm-cuts": "Kroje ramion",
+    "add.prop.arm-cuts.desc": (
+        "Ramiona, dla których zrobiono rękawiczki: zaznacz ramiona, z którymi noszone są twoje górne części ubrania. "
+        "Każdy zaznaczony krój ramion staje się osobnym ubraniem z rękawiczkami"
+    ),
     "add.result.gloves-added": "Dodano {name} do projektu dla krojów ramion: {count}.",
     "add.result.gloves-added.one": "Dodano {name} do projektu dla krojów ramion: {count}.",
-    "add.result.gloves-some-added": "Dodane kroje ramion: {added}. Niedodane: {failed}. Powody są poniżej.",
-    "add.result.gloves-none-added": "Nie dodano żadnego kroju ramion (próby: {count}). Powody są poniżej.",
     "add.result.gloves-cut-failed": "Ramiona {cut}: {reason}",
+    "add.result.gloves-none-added": "Nie dodano żadnego kroju ramion (próby: {count}). Powody są poniżej.",
     "add.result.gloves-not-an-arm-cut": (
-        "Durty Cloth Tool nie ma takiego kroju ramion dla tej płci, więc tych rękawiczek nie dodano. Zaktualizuj ten "
+        "Durty Cloth Tool nie przyjęło rękawiczek dla tego kroju ramion: otwarty projekt nie przyjmuje w ten sposób "
+        "ubrań z Blendera albo ten krój ramion nie istnieje dla tej płci. Jeśli to się powtarza, zaktualizuj ten "
         "dodatek i Durty Cloth Tool razem."
     ),
+    "add.result.gloves-some-added": "Dodane kroje ramion: {added}. Niedodane: {failed}. Powody są poniżej.",
+    "add.result.gloves-stopped": "{reason} Wcześniej dodane kroje ramion: {added} z {total}.",
+    "add.why.no-arm-cut": "Zaznacz co najmniej jeden krój ramion dla rękawiczek.",
 }

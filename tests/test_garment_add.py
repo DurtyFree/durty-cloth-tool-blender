@@ -537,6 +537,7 @@ def test_gloves_durty_cloth_tool_refuses_say_why_in_every_language(tmp_path, dct
     status = ctrl.item_add.status
     assert (status.level, status.message.key) == ("ERROR", key)
     assert linked == [] and ctrl.item_add.added is None
+    assert ctrl.item_add.cut_failures == []  # one arm cut keeps the messages of any other add: said once
     for language in translations.LOCALES:
         assert translations.table(language)[key] not in ("", strings.EN[key]), language
     ctrl.disconnect()
@@ -624,17 +625,132 @@ def test_when_no_arm_cut_is_added_the_message_says_so(tmp_path, dct, api):
     ctrl.disconnect()
 
 
-def test_a_cancelled_arm_cut_stops_the_ones_after_it(tmp_path, dct, api):
-    """The user chose Cancel in Durty Cloth Tool's dialog for the first cut: the remaining cuts are not sent."""
+def finished(ctrl, dct, adds):
+    """Drives the add until ``adds`` item.adds went out and the last answer is in."""
+    drive(ctrl, lambda: len(dct.item_adds) == adds and not ctrl.item_add.adding)
+    drive(ctrl, lambda: ctrl.item_add.status is not None and ctrl.item_add.status.message.key != "add.waiting")
+    time.sleep(0.2)  # nothing more goes out
+    assert len(dct.item_adds) == adds
+
+
+GLOVES_04 = {"clothId": "4a4a4a4a-0000-4000-8000-000000000004", "textureId": "4b4b4b4b-0000-4000-8000-000000000004"}
+
+
+def test_a_cancelled_arm_cut_stops_the_ones_after_it_and_keeps_its_own_message(tmp_path, dct, api):
+    """The user chose Cancel in Durty Cloth Tool's dialog for the first cut: the remaining cuts are not sent, and the
+    panel says what Cancel means, not that cuts failed."""
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
     dct.add_result = {"ok": False, "code": "request-denied", "findings": []}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
+    finished(ctrl, dct, 1)
+    assert (ctrl.item_add.status.level, ctrl.item_add.status.message.key) == ("INFO", "add.result.denied")
+    assert ctrl.item_add.cut_failures == []
+    ctrl.disconnect()
+
+
+def test_a_cancel_after_an_added_cut_says_how_many_were_added_before(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    linked = []
+    dct.fail_arm_skins = {"004": "request-denied"}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"],
+                        on_added=linked.append)
+    finished(ctrl, dct, 2)
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("INFO", "add.result.gloves-stopped")
+    assert strings.english(status.message).endswith("Arm cuts added before that: 1 of 3.")
+    assert linked == [dict(ADDED_BINDING)] and ctrl.item_add.cut_failures == []
+    ctrl.disconnect()
+
+
+def test_a_refused_first_cut_and_an_added_second_link_the_second_cloth(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    linked = []
+    dct.fail_arm_skins = {"000": "game-required"}
+    dct.arm_skin_bindings = {"004": GLOVES_04}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"],
+                        on_added=linked.append)
+    finished(ctrl, dct, 2)
+    assert linked == [GLOVES_04] and ctrl.item_add.added["binding"] == GLOVES_04
+    assert ctrl.item_add.status.message.key == "add.result.gloves-some-added"
+    assert [strings.english(f)[:9] for f in ctrl.item_add.cut_failures] == ["Arms 00: "]
+    ctrl.disconnect()
+
+
+def test_the_first_added_cut_is_the_one_blender_links(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    linked = []
+    dct.arm_skin_bindings = {"004": GLOVES_04}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["004", "000"],
+                        on_added=linked.append)
+    finished(ctrl, dct, 2)
+    assert linked == [GLOVES_04]
+    ctrl.disconnect()
+
+
+def test_a_cloth_blender_could_not_link_is_still_said_at_the_end(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+
+    def broken(_binding):
+        raise RuntimeError("the garment was removed meanwhile")
+
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"], on_added=broken)
+    finished(ctrl, dct, 2)
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("WARNING", "add.result.gloves-added")
+    assert ctrl.item_add.cut_failures[0].key == "add.result.added-unlinked"
+    ctrl.disconnect()
+
+
+@pytest.mark.parametrize("code, key", [("item-limit", "add.result.item-limit"), ("no-project", None),
+                                       ("busy", "add.result.busy")])
+def test_an_answer_for_the_whole_project_stops_the_remaining_cuts(tmp_path, dct, api, code, key):
+    """Durty Cloth Tool would answer every further cut the same way: one message, not one line per cut."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.fail["item.add"] = code
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
+    finished(ctrl, dct, 1)
+    if key is not None:
+        assert ctrl.item_add.status.message.key == key
+    assert ctrl.item_add.status.message.key != "add.result.gloves-none-added" and ctrl.item_add.cut_failures == []
+    ctrl.disconnect()
+
+
+def test_a_withdrawn_cut_stops_the_ones_after_it(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.hold_adds = True
     ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
-    drive(ctrl, lambda: len(dct.item_adds) == 1 and not ctrl.item_add.adding)
-    drive(ctrl, lambda: ctrl.item_add.status is not None and ctrl.item_add.status.message.key != "add.waiting")
-    time.sleep(0.2)
-    assert len(dct.item_adds) == 1
-    assert ctrl.item_add.status.message.key == "add.result.gloves-none-added"
+    drive(ctrl, lambda: len(dct.item_adds) == 1)
+    assert ctrl.item_add.cancel()
+    finished(ctrl, dct, 1)
+    assert ctrl.item_add.status.message.key == "add.result.withdrawn" and ctrl.item_add.cut_failures == []
+    ctrl.disconnect()
+
+
+def test_a_cut_that_cannot_be_sent_ends_the_add_with_why(tmp_path, dct, api, monkeypatch):
+    """The second cut cannot go out (here dct_link refuses it): the panel says why and counts the added cut, and
+    no add stays waiting."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    session = ctrl.ready_session()
+    send = session.add_item
+
+    def refuse_the_second(*args, arm_skin=None, **kwargs):
+        if arm_skin == "004":
+            raise ValueError("refused here")
+        return send(*args, arm_skin=arm_skin, **kwargs)
+
+    monkeypatch.setattr(session, "add_item", refuse_the_second)
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    finished(ctrl, dct, 1)
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("ERROR", "add.result.gloves-stopped") and not ctrl.item_add.adding
     ctrl.disconnect()
 
 

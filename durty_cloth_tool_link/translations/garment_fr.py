@@ -1692,28 +1692,30 @@ TEXT = {
         "Les gants ne sont pas deux pièces séparées, une de chaque côté du corps. Séparez le gant gauche et le gant "
         "droit pour que chacun aille sur sa main."
     ),
-    "add.prop.arm-cuts": "Coupes de bras",
-    "add.prop.arm-cuts.desc": (
-        "Les bras pour lesquels les gants sont faits : cochez les bras avec lesquels vos hauts sont portés. Chaque "
-        "coupe de bras cochée devient un vêtement de gants à part entière"
-    ),
     "add.arm-cut": "Bras {cut}",
     "add.arm-cuts.subtext": (
         "Chaque coupe de bras cochée devient un vêtement de gants à part entière dans Durty Cloth Tool, à partir du "
         "même ajustement. Cochez les bras avec lesquels vos hauts sont portés."
     ),
-    "add.why.no-arm-cut": "Cochez au moins une coupe de bras pour les gants.",
+    "add.prop.arm-cuts": "Coupes de bras",
+    "add.prop.arm-cuts.desc": (
+        "Les bras pour lesquels les gants sont faits : cochez les bras avec lesquels vos hauts sont portés. Chaque "
+        "coupe de bras cochée devient un vêtement de gants à part entière"
+    ),
     "add.result.gloves-added": "{name} a été ajouté au projet pour {count} coupes de bras.",
     "add.result.gloves-added.one": "{name} a été ajouté au projet pour {count} coupe de bras.",
-    "add.result.gloves-some-added": (
-        "Coupes de bras ajoutées : {added}. Non ajoutées : {failed}. Les raisons sont ci-dessous."
-    ),
+    "add.result.gloves-cut-failed": "Bras {cut} : {reason}",
     "add.result.gloves-none-added": (
         "Aucune coupe de bras n'a été ajoutée (essayées : {count}). Les raisons sont ci-dessous."
     ),
-    "add.result.gloves-cut-failed": "Bras {cut} : {reason}",
     "add.result.gloves-not-an-arm-cut": (
-        "Durty Cloth Tool n'a pas cette coupe de bras pour ce genre, donc ces gants n'ont pas été ajoutés. Mettez à "
-        "jour cette extension et Durty Cloth Tool ensemble."
+        "Durty Cloth Tool n'a pas accepté les gants pour cette coupe de bras : le projet ouvert n'accepte pas de "
+        "vêtements de Blender de cette façon, ou cette coupe de bras n'existe pas pour ce genre. Mettez à jour cette "
+        "extension et Durty Cloth Tool ensemble si cela se reproduit."
     ),
+    "add.result.gloves-some-added": (
+        "Coupes de bras ajoutées : {added}. Non ajoutées : {failed}. Les raisons sont ci-dessous."
+    ),
+    "add.result.gloves-stopped": "{reason} Coupes de bras ajoutées avant cela : {added} sur {total}.",
+    "add.why.no-arm-cut": "Cochez au moins une coupe de bras pour les gants.",
 }

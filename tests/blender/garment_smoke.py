@@ -1335,6 +1335,20 @@ def gloves_add(package, addon, state, ctrl, dct, check, pump, draw_everything, g
     props.arm_cuts[4] = True
     check("the garment keeps its ticked arm cuts", gloves.get(ui_garment.ARM_CUTS_TAG) == "000,004",
           gloves.get(ui_garment.ARM_CUTS_TAG))
+    # Another garment has its own ticks: choosing it neither takes these nor overwrites its own, and back again.
+    other = gloves.copy()
+    other.data = gloves.data.copy()
+    gloves.users_collection[0].objects.link(other)
+    other[ui_garment.ARM_CUTS_TAG] = "011"
+    choose(other)
+    check("another garment comes back with its own ticks", ui_garment.garment_add.ticked_arm_cuts(
+        tuple(props.arm_cuts), "male") == ["011"] and other.get(ui_garment.ARM_CUTS_TAG) == "011",
+          (tuple(props.arm_cuts), other.get(ui_garment.ARM_CUTS_TAG)))
+    choose(gloves)
+    check("the first garment comes back with its ticks", ui_garment.garment_add.ticked_arm_cuts(
+        tuple(props.arm_cuts), "male") == ["000", "004"] and other.get(ui_garment.ARM_CUTS_TAG) == "011",
+          (tuple(props.arm_cuts), other.get(ui_garment.ARM_CUTS_TAG)))
+    bpy.data.objects.remove(other)
     log = draw_everything(package, state, "gloves with two arm cuts")
     shown = [entry for entry in log if entry[0] == "prop" and entry[1] == "arm_cuts"]
     check("Add to Project offers the male ped's arm cuts", len(shown) == len(ui_garment.garment_add.arm_cuts("male")),
