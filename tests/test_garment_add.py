@@ -806,6 +806,73 @@ def test_a_cut_added_although_its_cancel_was_sent_counts_as_added(tmp_path, dct,
     ctrl.disconnect()
 
 
+@pytest.mark.parametrize("code, reason", [("item-limit", "add.result.item-limit"),
+                                          ("request-denied", "add.result.denied")])
+def test_a_last_cut_that_ends_the_add_still_says_why_below_the_count(tmp_path, dct, api, code, reason):
+    """The last ticked cut is refused for the whole project or cancelled after a cut was added: the count says the
+    reason is below, and it is."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.fail_arm_skins = {"004": code}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    finished(ctrl, dct, 2)
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("WARNING", "add.result.gloves-some-added")
+    failures = ctrl.item_add.cut_failures
+    assert len(failures) == 1 and failures[0].key == "add.result.gloves-cut-failed"
+    assert failures[0].fields["cut"] == "04" and failures[0].fields["reason"].key == reason
+    ctrl.disconnect()
+
+
+def test_a_cut_withdrawn_for_want_of_an_answer_is_not_called_cancelled(tmp_path, dct, api, monkeypatch):
+    """dct_link withdraws an add itself once it waited too long: the rest stop as for a lost link, not a cancel."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    answers = {"000": Answered(), "004": Answered(code="timeout", withdrawn=True)}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004", "011"])
+    assert ctrl.item_add.status.message.key == "add.result.gloves-stopped-link"
+    ctrl.disconnect()
+
+
+class Refused(Answered):
+    """A cut Durty Cloth Tool answered as refused, with its checks."""
+
+    def __init__(self, code, findings):
+        super().__init__()
+        self._result = type("R", (), {"ok": False, "binding": None, "findings": findings, "code": code})()
+
+
+def test_a_later_cut_refused_for_its_checks_shows_them(tmp_path, dct, api, monkeypatch):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    warning = {"code": "uv-outside", "severity": "warning"}
+    error = {"code": "rig-invalid", "severity": "error"}
+    added = Answered()
+    added._result.findings = [warning]
+    answers = {"000": added, "004": Refused("model-rejected", [warning, error])}
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: answers[arm_skin])
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    assert ctrl.item_add.status.message.key == "add.result.gloves-some-added"
+    assert ctrl.item_add.findings == [error, warning]  # the refused cut's error first, each finding once
+    ctrl.disconnect()
+
+
+def test_the_first_cloth_of_gloves_added_late_is_the_added_cloth(tmp_path, dct, api, monkeypatch):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    withdrawn = Answered(code="timeout", withdrawn=True)
+    monkeypatch.setattr(ctrl.ready_session(), "add_item", lambda *a, arm_skin=None, **k: withdrawn)
+    linked = []
+    adder = ctrl.item_add
+    adder.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"], on_added=linked.append)
+    assert adder.added is None and len(adder._late) == 1
+    adder.on_late(withdrawn, type("R", (), {"ok": True, "binding": dict(GLOVES_04), "findings": []})())
+    assert linked == [GLOVES_04] and adder.added["binding"] == GLOVES_04
+    assert adder.status.message.key == "add.result.gloves-late"
+    ctrl.disconnect()
+
+
 def test_a_late_answer_never_takes_over_a_newer_add(tmp_path, dct, api):
     """An old add Durty Cloth Tool answers late, while a new one waits: the new one keeps its state and is linked
     when it is added."""

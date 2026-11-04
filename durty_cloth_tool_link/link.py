@@ -1179,10 +1179,10 @@ class ItemAdd:
         # Why the cuts after this one are not sent: the user stopped the add, the link went away, or Durty Cloth Tool
         # would answer every further cut the same way.
         stop: Optional[str] = None
-        if withdrawn or code in ("request-denied", "cancelled"):
+        if code in ("disconnected", "timeout"):
+            stop = "link"  # also dct_link's own withdrawal after TIMEOUT: nobody cancelled
+        elif withdrawn or code in ("request-denied", "cancelled"):
             stop = "cancelled"
-        elif code in ("disconnected", "timeout"):
-            stop = "link"
         elif not ok and code in self.STOP_CODES:
             stop = "refused"
         elif len(results) < len(cuts) and not self.controller.ready:
@@ -1191,7 +1191,8 @@ class ItemAdd:
         # otherwise it is the message itself.
         refused_here = several and not ok and not withdrawn and code not in (
             "request-denied", "cancelled", "disconnected", "timeout")
-        if refused_here and stop in (None, "link"):
+        listed = refused_here and stop in (None, "link")
+        if listed:
             self.cut_failures.append(garment_add.gloves_cut_failure(cut, code))
         send_error: Optional[Msg] = None
         if len(results) < len(cuts) and stop is None:
@@ -1220,6 +1221,11 @@ class ItemAdd:
         elif stop is not None and added == 0:
             pass  # nothing is in the project: the stop's own message stays
         else:
+            if not ok and not listed:
+                # The last cut ended the add (a refusal for every cut, a cancel, the link): the count says its reason
+                # is below, which is this cut's own message until now.
+                self.cut_failures.append(msg("add.result.gloves-cut-failed", cut=garment_add.arm_cut_label(cut),
+                                             reason=self.status.message if self.status else msg("error.generic")))
             self.status = Notice(*garment_add.gloves_outcome(results, plan.get("name") or ""))
         unlinked = plan.get("unlinked")
         if unlinked is not None:  # the first cloth is in the project, but Blender could not link it
@@ -1274,6 +1280,10 @@ class ItemAdd:
             # A newer add is under way, or this was one cut of gloves on several: its state and message stay. The
             # cloth is still linked in Blender when it was the first one added.
             if on_added is not None:
+                if several and self.added is None and not self.adding and request is self.request:
+                    # The first cloth of these gloves after all (a newer add keeps its own state).
+                    self.added = {"name": plan.get("name"), "slot": plan.get("slot"),
+                                  "binding": dict(result.binding or {})}
                 try:
                     on_added(dict(result.binding or {}))
                 except Exception:  # noqa: BLE001 - the cloth is added; only the link in Blender failed
@@ -1311,6 +1321,11 @@ class ItemAdd:
         result = request.result()
         if result.ok or not several or not self.added:
             self.findings = garment_add.sorted_findings(result.findings)
+        elif result.findings:
+            # A later cut refused with its own checks: they say why, beside the added cut's, each finding once.
+            known = {tuple(sorted(f.items())) for f in self.findings}
+            self.findings = garment_add.sorted_findings(
+                self.findings + [f for f in result.findings if tuple(sorted(f.items())) not in known])
         if result.ok:
             if self.added is None:
                 self._on_added = None

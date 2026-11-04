@@ -1586,11 +1586,6 @@ TEXT = {
         "Cada corte de braços marcado vira uma roupa de luvas própria no Durty Cloth Tool, a partir do mesmo ajuste. "
         "Marque os braços com que suas partes de cima são usadas."
     ),
-    "add.arm-cut": "Braços {cut}",
-    "add.arm-cuts.subtext": (
-        "Cada corte de braços marcado vira uma roupa de luvas própria no Durty Cloth Tool, a partir do mesmo ajuste. "
-        "Marque os braços com que suas partes de cima são usadas."
-    ),
     "add.prop.arm-cuts": "Cortes de braços",
     "add.prop.arm-cuts.desc": (
         "Os braços para os quais as luvas são feitas: marque os braços com que suas partes de cima são usadas. Cada "
