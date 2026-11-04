@@ -1493,11 +1493,6 @@ EN: Dict[str, str] = {
         "Each ticked arm cut becomes a glove cloth of its own in Durty Cloth Tool, from the same fit. Tick the arms "
         "your tops are worn with."
     ),
-    "add.arm-cut": "Arms {cut}",
-    "add.arm-cuts.subtext": (
-        "Each ticked arm cut becomes a glove cloth of its own in Durty Cloth Tool, from the same fit. Tick the arms "
-        "your tops are worn with."
-    ),
     "add.prop.arm-cuts": "Arm Cuts",
     "add.prop.arm-cuts.desc": (
         "The arms the gloves are made for: tick the arms your tops are worn with. Each ticked arm cut becomes a glove "

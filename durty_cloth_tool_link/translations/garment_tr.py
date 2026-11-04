@@ -955,11 +955,6 @@ TEXT = {
         "İşaretlenen her kol kesimi, aynı uyarlamadan Durty Cloth Tool'da kendi eldiven kıyafeti olur. Üstlerinizin "
         "birlikte giyildiği kolları işaretleyin."
     ),
-    "add.arm-cut": "Kollar {cut}",
-    "add.arm-cuts.subtext": (
-        "İşaretlenen her kol kesimi, aynı uyarlamadan Durty Cloth Tool'da kendi eldiven kıyafeti olur. Üstlerinizin "
-        "birlikte giyildiği kolları işaretleyin."
-    ),
     "add.prop.arm-cuts": "Kol Kesimleri",
     "add.prop.arm-cuts.desc": (
         "Eldivenlerin yapıldığı kollar: üstlerinizin birlikte giyildiği kolları işaretleyin. İşaretlenen her kol "

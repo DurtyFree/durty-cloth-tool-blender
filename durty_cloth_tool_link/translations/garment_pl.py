@@ -967,11 +967,6 @@ TEXT = {
         "Każdy zaznaczony krój ramion staje się w Durty Cloth Tool osobnym ubraniem z rękawiczkami, z tego samego "
         "dopasowania. Zaznacz ramiona, z którymi noszone są twoje górne części ubrania."
     ),
-    "add.arm-cut": "Ramiona {cut}",
-    "add.arm-cuts.subtext": (
-        "Każdy zaznaczony krój ramion staje się w Durty Cloth Tool osobnym ubraniem z rękawiczkami, z tego samego "
-        "dopasowania. Zaznacz ramiona, z którymi noszone są twoje górne części ubrania."
-    ),
     "add.prop.arm-cuts": "Kroje ramion",
     "add.prop.arm-cuts.desc": (
         "Ramiona, dla których zrobiono rękawiczki: zaznacz ramiona, z którymi noszone są twoje górne części ubrania. "

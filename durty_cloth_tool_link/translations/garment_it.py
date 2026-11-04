@@ -961,11 +961,6 @@ TEXT = {
         "Ogni taglio delle braccia spuntato diventa un capo di guanti a sé in Durty Cloth Tool, dallo stesso "
         "adattamento. Spunta le braccia con cui si indossano i tuoi capi superiori."
     ),
-    "add.arm-cut": "Braccia {cut}",
-    "add.arm-cuts.subtext": (
-        "Ogni taglio delle braccia spuntato diventa un capo di guanti a sé in Durty Cloth Tool, dallo stesso "
-        "adattamento. Spunta le braccia con cui si indossano i tuoi capi superiori."
-    ),
     "add.prop.arm-cuts": "Tagli delle braccia",
     "add.prop.arm-cuts.desc": (
         "Le braccia per cui sono fatti i guanti: spunta le braccia con cui si indossano i tuoi capi superiori. Ogni "
