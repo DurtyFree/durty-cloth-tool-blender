@@ -799,7 +799,8 @@ class Connection:
                 files.append((entry["name"], payload[offset : offset + entry["length"]]))
                 offset += entry["length"]
             server.item_adds.append((header, files))
-            code = server.fail.get("item.add") or server.refusal("item.add")
+            code = (server.fail.get("item.add") or server.fail_arm_skins.get(str(header.get("armSkin")))
+                    or server.refusal("item.add"))
             if code is not None:  # busy, rate-limited, no-project ...: an error that answers the add
                 self.send({"type": "error", "id": "e" + secrets.token_hex(3), "re": header["id"], "code": code})
             elif server.hold_adds:
@@ -843,6 +844,8 @@ class FakeDct:
         #: add_result, an item.addCancel with request-denied.
         self.hold_adds = False
         self.item_adds: List[Any] = []  # (header, [(name, data)]) per item.add received
+        #: item.add answered with an error code for one arm cut (armSkin) only, as DCT refuses a cut it cannot make.
+        self.fail_arm_skins: Dict[str, str] = {}
         #: Message types the fake answers as unknown, as a DCT older than the add-on does.
         self.unknown_types: set = set()
         #: Leave item.addCancel (and the ped.addCancel of a waiting ped.add) unanswered (DCT already adds the cloth or

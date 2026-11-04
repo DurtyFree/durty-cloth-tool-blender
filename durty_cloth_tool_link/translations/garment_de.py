@@ -1720,4 +1720,26 @@ TEXT = {
         "Die Handschuhe sind nicht zwei getrennte Teile, je eines auf jeder Seite des Körpers. Trenne den linken und "
         "den rechten Handschuh, damit jeder auf seine Hand kommt."
     ),
+    "add.prop.arm-cuts": "Armschnitte",
+    "add.prop.arm-cuts.desc": (
+        "Die Arme, für die die Handschuhe gemacht sind: Hake die Arme an, mit denen deine Oberteile getragen werden. "
+        "Jeder angehakte Armschnitt wird ein eigenes Handschuh-Kleidungsstück"
+    ),
+    "add.arm-cut": "Arme {cut}",
+    "add.arm-cuts.subtext": (
+        "Jeder angehakte Armschnitt wird in Durty Cloth Tool ein eigenes Handschuh-Kleidungsstück, aus derselben "
+        "Anpassung. Hake die Arme an, mit denen deine Oberteile getragen werden."
+    ),
+    "add.why.no-arm-cut": "Hake mindestens einen Armschnitt für die Handschuhe an.",
+    "add.result.gloves-added": "{name} wurde für {count} Armschnitte zum Projekt hinzugefügt.",
+    "add.result.gloves-added.one": "{name} wurde für {count} Armschnitt zum Projekt hinzugefügt.",
+    "add.result.gloves-some-added": (
+        "Hinzugefügte Armschnitte: {added}. Nicht hinzugefügt: {failed}. Die Gründe stehen unten."
+    ),
+    "add.result.gloves-none-added": "Kein Armschnitt wurde hinzugefügt (versucht: {count}). Die Gründe stehen unten.",
+    "add.result.gloves-cut-failed": "Arme {cut}: {reason}",
+    "add.result.gloves-not-an-arm-cut": (
+        "Durty Cloth Tool hat diesen Armschnitt für dieses Geschlecht nicht, daher wurden diese Handschuhe nicht "
+        "hinzugefügt. Aktualisiere dieses Add-on und Durty Cloth Tool zusammen."
+    ),
 }

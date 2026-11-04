@@ -504,10 +504,10 @@ def test_gloves_ask_durty_cloth_tool_for_the_bare_arms_skin(tmp_path, dct, api):
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
     ctrl.item_add.start("uppr", "female", True, "Leather Gloves", variations, files,
-                        arm_skin=garment_add.arm_skin("gloves"))
+                        arm_skins=[garment_add.arm_skin("gloves")])
     drive(ctrl, lambda: not ctrl.item_add.adding)
     header, _ = dct.item_adds[-1]
-    assert (header["drawableType"], header["skin"], header["armSkin"]) == ("uppr", True, "base")
+    assert (header["drawableType"], header["skin"], header["armSkin"]) == ("uppr", True, "000")
     assert ctrl.item_add.status.message.key == "add.result.added"
     ctrl.disconnect()
 
@@ -518,26 +518,123 @@ def test_no_other_type_asks_for_an_arm_skin(tmp_path, dct, api, slot, skin, cate
     assert garment_add.arm_skin(category) is None
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
-    ctrl.item_add.start(slot, "male", skin, "Cloth", variations, files, arm_skin=garment_add.arm_skin(category))
+    ctrl.item_add.start(slot, "male", skin, "Cloth", variations, files)
     drive(ctrl, lambda: not ctrl.item_add.adding)
     assert "armSkin" not in dct.item_adds[-1][0]
     ctrl.disconnect()
 
 
 @pytest.mark.parametrize("code, key", [("game-required", "add.result.gloves-game-required"),
+                                       ("item-refused", "add.result.gloves-not-an-arm-cut"),
                                        ("invalid-message", "add.result.gloves-refused")])
 def test_gloves_durty_cloth_tool_refuses_say_why_in_every_language(tmp_path, dct, api, code, key):
     ctrl = connected(tmp_path, dct, api)
     files, variations = add_files()
     linked = []
     dct.fail["item.add"] = code
-    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skin="base", on_added=linked.append)
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000"], on_added=linked.append)
     drive(ctrl, lambda: not ctrl.item_add.adding)
     status = ctrl.item_add.status
     assert (status.level, status.message.key) == ("ERROR", key)
     assert linked == [] and ctrl.item_add.added is None
     for language in translations.LOCALES:
         assert translations.table(language)[key] not in ("", strings.EN[key]), language
+    ctrl.disconnect()
+
+
+# ---- gloves: arm cuts ------------------------------------------------------------------------------------------------
+
+
+def test_the_arm_cuts_are_the_base_games_arms_with_bare_hands_per_gender():
+    """The dated list (PC Legacy 1.0.3889.0, 2026-10-28): the numbers that hold no arms are never offered."""
+    assert garment_add.arm_cuts("male") == ("000", "001", "002", "004", "005", "006", "008", "011", "012", "014", "015")
+    assert garment_add.arm_cuts("female") == ("000", "001", "002", "003", "004", "005", "006", "007", "009", "011",
+                                              "012", "014", "015")
+    assert garment_add.arm_cuts("neither") == ()
+    assert all(protocol.is_arm_skin(cut) for cuts in garment_add.ARM_CUTS.values() for cut in cuts)
+    assert all(int(cut) < garment_add.ARM_CUT_SLOTS for cuts in garment_add.ARM_CUTS.values() for cut in cuts)
+    assert [garment_add.arm_cut_label(cut) for cut in ("000", "004", "015")] == ["00", "04", "15"]
+
+
+def test_gloves_start_with_the_bare_arms_ticked_and_only_the_genders_cuts_are_sent():
+    ticks = garment_add.default_arm_cut_ticks()
+    assert len(ticks) == garment_add.ARM_CUT_SLOTS and garment_add.ticked_arm_cuts(ticks, "male") == ["000"]
+    assert garment_add.arm_skin("gloves") == garment_add.BARE_ARMS
+    # Arms 03 holds no arms for the male ped: a tick kept from the female garment is not sent for a male one.
+    ticked = tuple(index in (0, 3, 4) for index in range(garment_add.ARM_CUT_SLOTS))
+    assert garment_add.ticked_arm_cuts(ticked, "female") == ["000", "003", "004"]
+    assert garment_add.ticked_arm_cuts(ticked, "male") == ["000", "004"]
+    assert garment_add.ticked_arm_cuts((False,) * garment_add.ARM_CUT_SLOTS, "male") == []
+
+
+@pytest.mark.parametrize("text, ticked", [("000,004", ["000", "004"]), ("004", ["004"]), ("", []),
+                                          (None, ["000"]), (5, ["000"]), (" 011 , 999,x", ["011"])])
+def test_a_garment_keeps_its_ticks_by_number(text, ticked):
+    """The ticks a garment keeps in the .blend are the numbers themselves, so no stored tick moves to another cut;
+    a garment without readable ticks starts with the bare arms."""
+    ticks = garment_add.arm_cut_ticks_from_text(text)
+    assert garment_add.ticked_arm_cuts(ticks, "female") == ticked
+    assert garment_add.arm_cut_ticks_from_text(garment_add.arm_cut_ticks_text(ticks)) == ticks
+
+
+def test_gloves_send_one_add_per_ticked_arm_cut_from_the_same_files(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    linked = []
+    ctrl.item_add.start("uppr", "female", True, "Leather Gloves", variations, files, arm_skins=["000", "004", "011"],
+                        on_added=linked.append)
+    drive(ctrl, lambda: not ctrl.item_add.adding and len(dct.item_adds) == 3)
+    drive(ctrl, lambda: ctrl.item_add.status is not None and ctrl.item_add.status.message.key != "add.waiting")
+    assert [header["armSkin"] for header, _ in dct.item_adds] == ["000", "004", "011"]
+    assert len({tuple(name for name, _ in received) for _, received in dct.item_adds}) == 1  # the same files each time
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("INFO", "add.result.gloves-added")
+    assert strings.english(status.message) == "Added Leather Gloves to the project for 3 arm cuts."
+    assert linked == [dict(ADDED_BINDING)] and ctrl.item_add.cut_failures == []  # Blender links the first cloth
+    ctrl.disconnect()
+
+
+def test_a_refused_arm_cut_is_reported_with_its_number_and_the_others_are_added(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.fail_arm_skins = {"004": "game-required"}
+    ctrl.item_add.start("uppr", "female", True, "Leather Gloves", variations, files, arm_skins=["000", "004", "011"])
+    drive(ctrl, lambda: len(dct.item_adds) == 3 and not ctrl.item_add.adding)
+    drive(ctrl, lambda: ctrl.item_add.status is not None and ctrl.item_add.status.message.key != "add.waiting")
+    assert [header["armSkin"] for header, _ in dct.item_adds] == ["000", "004", "011"]
+    status = ctrl.item_add.status
+    assert (status.level, status.message.key) == ("WARNING", "add.result.gloves-some-added")
+    assert strings.english(status.message).startswith("Arm cuts added: 2. Not added: 1.")
+    failure = ctrl.item_add.cut_failures
+    assert len(failure) == 1 and strings.english(failure[0]).startswith("Arms 04: Durty Cloth Tool could not take")
+    assert ctrl.item_add.added is not None
+    ctrl.disconnect()
+
+
+def test_when_no_arm_cut_is_added_the_message_says_so(tmp_path, dct, api):
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.fail_arm_skins = {"000": "game-required", "005": "item-refused"}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "005"])
+    drive(ctrl, lambda: len(dct.item_adds) == 2 and not ctrl.item_add.adding)
+    drive(ctrl, lambda: ctrl.item_add.status is not None and ctrl.item_add.status.message.key != "add.waiting")
+    assert (ctrl.item_add.status.level, ctrl.item_add.status.message.key) == ("ERROR", "add.result.gloves-none-added")
+    assert [strings.english(f)[:9] for f in ctrl.item_add.cut_failures] == ["Arms 00: ", "Arms 05: "]
+    assert ctrl.item_add.added is None
+    ctrl.disconnect()
+
+
+def test_a_cancelled_arm_cut_stops_the_ones_after_it(tmp_path, dct, api):
+    """The user chose Cancel in Durty Cloth Tool's dialog for the first cut: the remaining cuts are not sent."""
+    ctrl = connected(tmp_path, dct, api)
+    files, variations = add_files()
+    dct.add_result = {"ok": False, "code": "request-denied", "findings": []}
+    ctrl.item_add.start("uppr", "male", True, "Gloves", variations, files, arm_skins=["000", "004"])
+    drive(ctrl, lambda: len(dct.item_adds) == 1 and not ctrl.item_add.adding)
+    drive(ctrl, lambda: ctrl.item_add.status is not None and ctrl.item_add.status.message.key != "add.waiting")
+    time.sleep(0.2)
+    assert len(dct.item_adds) == 1
+    assert ctrl.item_add.status.message.key == "add.result.gloves-none-added"
     ctrl.disconnect()
 
 

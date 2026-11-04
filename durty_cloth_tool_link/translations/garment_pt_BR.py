@@ -1581,4 +1581,28 @@ TEXT = {
         "As luvas não são duas peças separadas, uma de cada lado do corpo. Separe a luva esquerda e a direita para "
         "que cada uma vá para a sua mão."
     ),
+    "add.prop.arm-cuts": "Cortes de braços",
+    "add.prop.arm-cuts.desc": (
+        "Os braços para os quais as luvas são feitas: marque os braços com que suas partes de cima são usadas. Cada "
+        "corte de braços marcado vira uma roupa de luvas própria"
+    ),
+    "add.arm-cut": "Braços {cut}",
+    "add.arm-cuts.subtext": (
+        "Cada corte de braços marcado vira uma roupa de luvas própria no Durty Cloth Tool, a partir do mesmo ajuste. "
+        "Marque os braços com que suas partes de cima são usadas."
+    ),
+    "add.why.no-arm-cut": "Marque pelo menos um corte de braços para as luvas.",
+    "add.result.gloves-added": "{name} foi adicionado ao projeto para {count} cortes de braços.",
+    "add.result.gloves-added.one": "{name} foi adicionado ao projeto para {count} corte de braços.",
+    "add.result.gloves-some-added": (
+        "Cortes de braços adicionados: {added}. Não adicionados: {failed}. Os motivos estão abaixo."
+    ),
+    "add.result.gloves-none-added": (
+        "Nenhum corte de braços foi adicionado (tentados: {count}). Os motivos estão abaixo."
+    ),
+    "add.result.gloves-cut-failed": "Braços {cut}: {reason}",
+    "add.result.gloves-not-an-arm-cut": (
+        "O Durty Cloth Tool não tem esse corte de braços para este gênero, então estas luvas não foram adicionadas. "
+        "Atualize este add-on e o Durty Cloth Tool juntos."
+    ),
 }
