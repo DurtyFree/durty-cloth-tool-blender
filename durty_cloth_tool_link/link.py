@@ -1125,9 +1125,9 @@ class ItemAdd:
               on_added: Optional[Callable[[Dict[str, str]], None]] = None) -> Request:
         """Sends the add. ``arm_skins`` makes it gloves: DCT merges the arm skin of each of these arm cuts from the
         user's game files (``item.add``'s ``armSkin``), one ``item.add`` per cut, one after the other, from the same
-        files; a cut DCT does not add is kept in :attr:`cut_failures` and the next one is sent. ``on_added(binding)``
-        runs once, for the first cloth DCT added. Raises :class:`strings.UserError` when it cannot be sent now, with
-        what to do."""
+        files; with several cuts, a cut DCT does not add is kept in :attr:`cut_failures` and the next one is sent,
+        unless the answer ends them all (:data:`STOP_CODES`). ``on_added(binding)`` runs once, for the first cloth DCT
+        added. Raises :class:`strings.UserError` when it cannot be sent now, with what to do."""
         problem = self.problem()
         if problem is not None:
             raise UserError(problem)
@@ -1135,53 +1135,75 @@ class ItemAdd:
         plan: Dict[str, Any] = {"name": name, "slot": drawable_type, "gender": gender, "arm_skin": bool(cuts),
                                 "cuts": cuts, "results": [],
                                 "send": (drawable_type, gender, skin, name, variations, files)}
-        request = self._send(plan)
+        request = self._send(plan)  # raises before anything changed when it cannot be sent
+        # Everything the answer reads is set before the answer can arrive: a request that failed at once runs its
+        # callback as soon as it is attached.
         self._plan = plan
         self._on_added = on_added
         self.findings = []
         self.added = None
         self.cut_failures = []
         self.status = Notice("INFO", msg("add.waiting"))
+        self.request = request
+        request.add_done_callback(self._on_done)
         self.controller.touch()
         return request
 
+    #: Answers that end the remaining arm cuts of gloves: the user or the link stopped the add, or Durty Cloth Tool
+    #: would answer every further cut the same way (the project, the licence, the version, a full queue).
+    STOP_CODES = frozenset({"cancelled", "timeout", "disconnected", "request-denied", "no-project", "item-limit",
+                            "needs-license", "needs-ultimate", "invalid-message", "unknown-message-type", "busy",
+                            "rate-limited"})
+
     def _send(self, plan: Dict[str, Any]) -> Request:
-        """Sends the plan's add for its next arm cut (or the one add of any other cloth)."""
+        """Sends the plan's add for its next arm cut (or the one add of any other cloth). The caller keeps the
+        request and attaches :meth:`_on_done` once its own state is set."""
         session = self.controller.ready_session()
         cuts, done = plan["cuts"], len(plan["results"])
         try:
-            request = session.add_item(*plan["send"], timeout=self.TIMEOUT,
-                                       arm_skin=cuts[done] if cuts else None)
+            return session.add_item(*plan["send"], timeout=self.TIMEOUT, arm_skin=cuts[done] if cuts else None)
         except ValueError as exc:
             raise UserError(msg("add.invalid", detail=str(exc))) from exc
-        self.request = request
-        request.add_done_callback(self._on_done)
-        return request
 
-    def _next_cut(self, plan: Dict[str, Any], ok: bool, code: Optional[str], withdrawn: bool) -> bool:
-        """Records the answer for the plan's current arm cut and sends the next one. True when one was sent; False
-        when the plan is done (or stopped: a withdrawn add, or a link that went away, ends the remaining cuts too),
-        and then the panel's message counts the cuts when there were several."""
+    def _next_cut(self, plan: Dict[str, Any], ok: bool, code: Optional[str], withdrawn: bool) -> None:
+        """Records the answer for the plan's current arm cut, whose message is the panel's status now, and sends
+        the next cut. With several cuts, a refused one goes to :attr:`cut_failures`; once the cuts are done the
+        message counts them, and when they stop early (:data:`STOP_CODES`, a withdrawal, a link that went away) the
+        reason stays the message, with how many were added before. One cut keeps the messages of any other add."""
         cuts, results = plan["cuts"], plan["results"]
+        if len(results) >= len(cuts):
+            return  # answered already (an answer that came twice)
         cut = cuts[len(results)]
         results.append((cut, ok))
-        if not ok:
+        several = len(cuts) > 1
+        stopped = withdrawn or (not ok and code in self.STOP_CODES)
+        reason = self.status
+        if ok and len(results) < len(cuts) and not self.controller.ready:
+            stopped, reason = True, Notice(*garment_add.failure_message("disconnected", arm_skin=True))
+        if several and not ok and not stopped:
             self.cut_failures.append(garment_add.gloves_cut_failure(cut, code))
-        stopped = withdrawn or code in ("cancelled", "timeout", "disconnected", "request-denied")
-        if len(results) < len(cuts) and not stopped and self.controller.ready:
-            try:
-                self._send(plan)
-            except UserError as exc:
-                self.status = Notice("ERROR", exc.message)
-                return False
+        if len(results) < len(cuts) and not stopped:
             self.status = Notice("INFO", msg("add.waiting"))
-            return True
-        if len(cuts) > 1:
-            name = plan.get("name") or ""
-            if stopped:
-                results.extend((later, False) for later in cuts[len(results):])
-            self.status = Notice(*garment_add.gloves_outcome(results, name))
-        return False
+            try:
+                request = self._send(plan)
+            except UserError as exc:
+                stopped, reason = True, Notice("ERROR", exc.message)
+            else:
+                self.request = request
+                request.add_done_callback(self._on_done)
+                return
+        if not several:
+            return
+        added = sum(1 for _, done in results if done)
+        if stopped and reason is not None:
+            self.status = reason if added == 0 else Notice(
+                reason.level, msg("add.result.gloves-stopped", reason=reason.message, added=added, total=len(cuts)))
+        else:
+            self.status = Notice(*garment_add.gloves_outcome(results, plan.get("name") or ""))
+        unlinked = plan.get("unlinked")
+        if unlinked is not None:  # the first cloth is in the project, but Blender could not link it
+            self.status = Notice("WARNING" if self.status.level == "INFO" else self.status.level, self.status.message)
+            self.cut_failures.insert(0, unlinked)
 
     def cancel(self) -> bool:
         """Withdraws the add while DCT's dialog is open. DCT answers it as refused, unless the user chose Add at that
@@ -1212,6 +1234,7 @@ class ItemAdd:
                 traceback.print_exc()
                 self.status = Notice("WARNING", msg("add.result.added-unlinked", name=name,
                                                     detail=f"{type(exc).__name__}: {exc}"))
+                plan["unlinked"] = self.status.message  # gloves on several cuts keep saying so at the end
 
     def on_late(self, request: Request, result: Any) -> None:
         """dct_link's ``item-add-late``: DCT answered a withdrawn add after it had failed for want of an answer."""

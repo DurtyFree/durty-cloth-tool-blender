@@ -359,6 +359,8 @@ def _garment_changed(self: Any, context: Any) -> None:
     if obj is not None:
         category, slot, avatar = obj.get(gh.TYPE_TAG), obj.get(gh.SLOT_TAG), obj.get(AVATAR_TAG)
         skin, open_front = obj.get(SKIN_TAG), obj.get(OPEN_FRONT_TAG)
+        # Read before anything is set: each setting below stores every choice on the garment, the ticks included.
+        arm_cuts = garment_add.arm_cut_ticks_from_text(obj.get(ARM_CUTS_TAG))
         # The type sets its usual slot, skin and front; what the garment kept wins over them.
         set_type(self, category if category in garment.CATEGORIES else self.category)
         if slot in garment.slots_for(self.category):
@@ -368,7 +370,7 @@ def _garment_changed(self: Any, context: Any) -> None:
         if open_front is not None:
             self.open_front = bool(open_front)
         # A garment without ticks of its own starts with the bare arms, never with the last garment's cuts.
-        self.arm_cuts = garment_add.arm_cut_ticks_from_text(obj.get(ARM_CUTS_TAG))
+        self.arm_cuts = arm_cuts
         # A garment without an avatar of its own never takes the last one's: its markers would come from elsewhere.
         self.avatar = avatar if avatar in AVATAR_IDS else ("file" if obj.get(gh.AVATAR_MARKERS) else "detect")
         _keep_on_garment(self)
@@ -3564,10 +3566,14 @@ def draw_add(layout: Any, context: Any) -> None:
         # body view, which shows the bare arms the fit places the gloves on.
         layout.separator(factor=GAP_SMALL)
         wrapped(layout, context, t("add.prop.arm-cuts"))
-        grid = layout.grid_flow(row_major=True, columns=4, even_columns=True, align=True)
-        for cut in garment_add.arm_cuts(settings_.gender):
-            grid.prop(settings_, "arm_cuts", index=int(cut), toggle=True,
-                      text=t("add.arm-cut", cut=garment_add.arm_cut_label(cut)))
+        cuts = garment_add.arm_cuts(settings_.gender)
+        labels = [t("add.arm-cut", cut=garment_add.arm_cut_label(cut)) for cut in cuts]
+        # As many toggles side by side as fit their longest label: a cut-off label could hide the number.
+        cell = max((ui._measure(context)(label) for label in labels), default=0) + 16 * ui._scale(context)
+        columns = max(1, min(4, int(ui.content_width(context) // max(cell, 1))))
+        grid = layout.grid_flow(row_major=True, columns=columns, even_columns=True, align=True)
+        for cut, label in zip(cuts, labels):
+            grid.prop(settings_, "arm_cuts", index=int(cut), toggle=True, text=label, translate=False)
         subtext(layout, context, "add.arm-cuts.subtext")
 
     layout.separator(factor=GAP_SMALL)

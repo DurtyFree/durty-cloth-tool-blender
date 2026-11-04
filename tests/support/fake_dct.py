@@ -805,6 +805,9 @@ class Connection:
                 self.send({"type": "error", "id": "e" + secrets.token_hex(3), "re": header["id"], "code": code})
             elif server.hold_adds:
                 self.waiting_adds[header["id"]] = header  # "the user" decides later (release_adds or a cancel)
+            elif str(header.get("armSkin")) in server.arm_skin_bindings:  # each arm cut is a cloth of its own
+                self.answer_add(header["id"], {"ok": True, "binding": dict(server.arm_skin_bindings[header["armSkin"]]),
+                                               "findings": []})
             else:
                 self.answer_add(header["id"])
 
@@ -846,6 +849,8 @@ class FakeDct:
         self.item_adds: List[Any] = []  # (header, [(name, data)]) per item.add received
         #: item.add answered with an error code for one arm cut (armSkin) only, as DCT refuses a cut it cannot make.
         self.fail_arm_skins: Dict[str, str] = {}
+        #: item.add for this arm cut (armSkin) answered with this binding, as DCT adds a cloth of its own per cut.
+        self.arm_skin_bindings: Dict[str, Dict[str, str]] = {}
         #: Message types the fake answers as unknown, as a DCT older than the add-on does.
         self.unknown_types: set = set()
         #: Leave item.addCancel (and the ped.addCancel of a waiting ped.add) unanswered (DCT already adds the cloth or

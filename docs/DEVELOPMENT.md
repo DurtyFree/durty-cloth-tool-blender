@@ -126,13 +126,18 @@ type and slot by their place in those lists. What the type changes, and where:
   with `armSkin` set to its number and `uppr` and `skin` true (`AddJob.arm_cuts`, fixed when the add starts like the
   slot and gender, passed as `arm_skins` to `ItemAdd.start` in `link.py`); no other type sends it. Durty Cloth Tool
   takes that cut's arm skin from the user's own game files and merges it into the gloves; the add-on sends no game
-  data. Durty Cloth Tool answers `item-refused` for a number that is no arm cut of the gender, `game-required` when
-  it cannot read that cut (no GTA V folder, or a game without a usable one) and `invalid-message` when it does not
-  take the field. A refused cut goes to `ItemAdd.cut_failures` with its number and reason
-  (`garment_add.gloves_cut_failure`, in the words for gloves of `GLOVES_RESULT_KEYS`), and the next cut is sent; a
-  cancel, a withdrawal or a lost link stops the cuts after it. Blender links the first cloth Durty Cloth Tool added.
-  With several cuts the final message counts the added and the refused ones (`gloves_outcome`) and the panel lists
-  each refusal below it; one cut keeps the messages of any other add.
+  data. Durty Cloth Tool answers `item-refused` for a number that is no arm cut of the gender (and for a project
+  that takes no clothing this way, so the gloves text names both), `game-required` when it cannot read that cut (no
+  GTA V folder, or a game without a usable one) and `invalid-message` when it does not take the field. With several
+  cuts, a refused cut goes to `ItemAdd.cut_failures` with its number and reason (`garment_add.gloves_cut_failure`,
+  in the words for gloves of `GLOVES_RESULT_KEYS`) and the next cut is sent. An answer in `ItemAdd.STOP_CODES` (the
+  user's Cancel, a withdrawal, a lost link, or one Durty Cloth Tool would give every cut, such as `item-limit` or
+  `busy`) stops the cuts after it, and so does a cut that cannot be sent; its own message stays, with how many cuts
+  were added before (`add.result.gloves-stopped`). Blender links the first cloth Durty Cloth Tool added; when that
+  fails, the final message stays a warning and lists it. Otherwise the final message counts the added and the
+  refused cuts (`gloves_outcome`) and the panel lists each refusal below it. One cut keeps the messages of any other
+  add. The state an answer reads is set before each add is sent, and the answer's callback is attached last,
+  because a request that failed at once answers as soon as it is attached.
 
 ### Texts
 
