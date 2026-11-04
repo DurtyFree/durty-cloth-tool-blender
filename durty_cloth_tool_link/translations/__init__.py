@@ -5,8 +5,12 @@
 Each language has three modules, ``<language>`` (the link), ``garment_<language>`` (the garment fitting tools) and
 ``ped_<language>`` (Custom Ped), each holding ``TEXT``; together they have the keys of :data:`strings.EN`. Blender looks texts up by their English
 text in the add-on's own translation context (:data:`strings.CONTEXT`), so Blender's translations
-of common words never replace the add-on's wording. The module names follow Blender's locale codes; Blender
-falls back from a full locale (``de_DE``) to its language (``de``), so one table serves every country variant.
+of common words never replace the add-on's wording. Tooltips are the exception: Blender looks property and operator
+descriptions and enum item descriptions up in its default context (:data:`DEFAULT_CONTEXT`) whatever context the
+property has, so every description text (a key ending in :data:`DESCRIPTION`) is registered there as well. The
+descriptions are sentences of the add-on's own, so one equal to a tooltip of Blender's is unlikely. The module
+names follow Blender's locale codes; Blender falls back from a full locale (``de_DE``) to its language (``de``), so
+one table serves every country variant.
 Portuguese from Portugal gets the Brazilian table, as Durty Cloth Tool does; Traditional Chinese gets English.
 Nothing here imports Blender.
 """
@@ -17,6 +21,11 @@ import importlib
 from typing import Dict, Mapping, Tuple
 
 from ..strings import CONTEXT, EN
+
+#: Blender's default translation context (``bpy.app.translations.contexts.default``), where it looks tooltips up.
+DEFAULT_CONTEXT = "*"
+#: The ending of every key whose text is a tooltip: a property's or an enum item's description or ``bl_description``.
+DESCRIPTION = ".desc"
 
 #: Translation modules and the Blender locales each one is registered for.
 LOCALES: Dict[str, Tuple[str, ...]] = {
@@ -47,11 +56,17 @@ def table(language: str) -> Mapping[str, str]:
 
 
 def blender_tables() -> Dict[str, Dict[Tuple[str, str], str]]:
-    """The dictionary ``bpy.app.translations.register`` takes: locale to ``{(context, English): translation}``."""
+    """The dictionary ``bpy.app.translations.register`` takes: locale to ``{(context, English): translation}``.
+
+    Every text is registered in the add-on's own context; description texts also in Blender's default context, where
+    Blender looks tooltips up.
+    """
     tables: Dict[str, Dict[Tuple[str, str], str]] = {}
     for language, locales in LOCALES.items():
         text = table(language)
         entries = {(CONTEXT, english): text[key] for key, english in EN.items() if text.get(key)}
+        entries.update({(DEFAULT_CONTEXT, english): text[key] for key, english in EN.items()
+                        if key.endswith(DESCRIPTION) and text.get(key)})
         for locale in locales:
             tables[locale] = entries
     return tables

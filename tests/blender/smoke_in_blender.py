@@ -694,6 +694,12 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
                   and strings.tt("op.live-start.desc").startswith("Dieses Bild"), strings.t("panel.live"))
             check("Blender translates the add-on's labels in its own context",
                   bpy.app.translations.pgettext_iface("Start Live Preview", strings.CONTEXT) == "Live-Vorschau starten")
+            # Blender looks tooltips up in its default context: an enum item's description is the one tooltip lookup
+            # Python can see, and a property's description goes through the same default context.
+            item_tip = bpy.types.UILayout.enum_item_description(bpy.context.scene.dct_link, "target", "diffuse")
+            check("Blender translates the add-on's tooltips", item_tip == "Die Farbtextur des Kleidungsstücks"
+                  and bpy.app.translations.pgettext_tip(strings.EN["prop.map.desc"]).startswith("Welche Map"),
+                  item_tip)
             draw_everything(package, state, "German")
         finally:
             view.language, view.use_translate_interface, view.use_translate_tooltips = before

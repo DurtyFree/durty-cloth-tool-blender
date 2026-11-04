@@ -36,7 +36,7 @@ modules that do not import Blender, so plain Python and pytest can test it, and 
 |---|---|
 | `settings.py` | The version, public addresses, the extension repository per channel, limits, and the mapping from codes to texts |
 | `strings.py`, `ped_strings.py` | Every English text (`EN`), the `Msg` type (a key plus fields) and the plural forms |
-| `translations/` | The other shipped languages, three modules each (`<locale>`, `garment_<locale>`, `ped_<locale>`), registered in the add-on's own translation context |
+| `translations/` | The other shipped languages, three modules each (`<locale>`, `garment_<locale>`, `ped_<locale>`), registered in the add-on's own translation context; description texts (keys ending in `.desc`) also in Blender's default context `*`, where Blender looks every tooltip up |
 | `link.py` | `LinkController`: connecting, sign-in, Live Preview, Texture Checks, model pushes, what Durty Cloth Tool opens in Blender, the linked cloth's picture, temporary folders |
 | `pixels.py` | Reading Blender's float pixels into RGBA8 rows, change detection and dirty rectangles, in small steps per timer tick |
 | `bundle.py` | Collecting a Sollumz export (one `*.ydd.xml` and its `*.dds` files) into a model push |
@@ -125,6 +125,17 @@ type and slot by their place in those lists. What the type changes, and where:
 Logic never stores or compares displayed text. It passes keys and `Msg` values, and the panels render them in
 Blender's interface language when they draw. Logs, the system console and Copy Diagnostics stay English. The rules for
 keys, plural forms and translations are in [CONTRIBUTING.md](/CONTRIBUTING.md#-texts-and-translations).
+
+Blender translates labels in a property's `translation_context`, but it looks tooltips up in its default context `*`,
+whatever context the property or operator has: property descriptions, enum item descriptions and `bl_description`
+(checked in Blender's source on 4.2 and `main`, and with Blender 5.2 in German on 2026-10-31). Therefore
+`translations.blender_tables` registers every text in the add-on's context `DurtyClothTool` and every description
+text, the keys ending in `.desc`, in `*` as well. Labels and messages stay out of `*`, so Blender's translations of
+common words never replace them. Every `description=`, `bl_description` and enum item description takes an
+`EN["....desc"]` key (an empty item description shows no tooltip); `tests/test_translations.py` scans the add-on's
+source for one outside that convention. A description whose English text equals one of Blender's own tooltips would
+now also translate Blender's. The add-on's descriptions are its own sentences, so that is unlikely, but it has not
+been checked against Blender's catalogue; a short generic description ("Not shown") is the likeliest to match.
 
 ## How the add-on talks to Durty Cloth Tool
 

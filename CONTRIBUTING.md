@@ -113,6 +113,9 @@ the default and fallback. Every shipped language has all three translation table
   tests fail when a key is missing, when its `{fields}` differ from the English text, or when a protected name such
   as Durty Cloth Tool, Creator Link, gta.clothing, Blender or Sollumz is translated.
 - If you cannot translate a language, say so in the pull request, and we will fill it in before merging.
+- A tooltip (a `description=`, an enum item's description or an operator's `bl_description`) takes a key ending
+  in `.desc`. Blender looks tooltips up outside the add-on's own translation context, and only `.desc` keys are
+  registered there; a test fails on a tooltip without such a key.
 - A text that counts things (`{count} vertex groups ...`) can have a second key ending in `.one` for exactly one
   thing (`{count} vertex group ...`); the add-on shows it when `count` is 1. Translate both. Where your language has
   more plural forms, word the other form so that it reads right with any number (`Groups: {count}`).
