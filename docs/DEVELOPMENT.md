@@ -204,26 +204,34 @@ Cloth Tool answers with. The rules, all in `link.py` and tested in `tests/test_l
   (`link_problem`, `model.block.not-linked`). A model opened from Durty Cloth Tool is linked when it is imported; a
   model made in Blender is linked once with **Link to DCT**: **Link to the Cloth Selected in DCT** stores the cloth and
   variation focused in Durty Cloth Tool (`LinkController.focused_link`) on the Drawable Dictionary and pushes it, and
-  **Add as New Cloth** opens its mesh in Garment Fitting, whose Add to Project adds it and links it. The link is kept
-  in the .blend file with the object.
+  **Add as New Cloth** opens its mesh in Garment Fitting, whose Add to Project adds it and links it. Garment Fitting
+  works on one garment, so a Drawable Dictionary with several meshes hands over the first by name, and the panel says
+  which one (`model.link.one-mesh`); join the meshes first to add them as one cloth. The link is kept in the .blend
+  file with the object.
 - **Live by default from Durty Cloth Tool.** Opening a model from Durty Cloth Tool, and Link to the Cloth Selected in
   DCT, turn Push Automatically on in that scene (`turn_on_auto_push`) unless the user set it there before: the
   scene's `auto_push_chosen` records a change the user made, and that choice is kept.
 - **Debounced and coalesced.** An edit of the pushed model sets the time of the next push (`schedule`, the delay in
   the add-on preferences, 1.5 seconds by default). Edits while a push runs move that time on; once the push ended,
-  exactly one push follows with every change, never a queue. The panel says Updating Durty Cloth Tool (a push
-  runs), Changes waiting or Up to date (`ModelPush.live_state`).
+  exactly one push follows with every change, never a queue. Every change the watcher sees also marks the model as
+  changed (`ModelPush.changed`, `dirty`), also while no automatic push follows (Push Automatically off or paused,
+  a save running, the first push still on its way); a push whose export began after the last change clears it. The
+  panel says Updating Durty Cloth Tool (a push runs), Changes waiting (a change is not on the ped yet) or Up to date
+  (`ModelPush.live_state`), never Up to date while a change waits.
 - **Textures only when they changed.** Each push hashes the export's `*.dds` files (SHA-256). When they equal what
   Durty Cloth Tool has for the lease, only the `*.ydd.xml` is sent with `keepTextures`, and Durty Cloth Tool keeps
-  the textures of the lease's previous push. When Durty Cloth Tool no longer has the lease, the push is sent again
-  with its textures.
-- **Timing.** Every push Durty Cloth Tool showed writes one line to the system console, for example
+  the textures of the lease's previous push. When Durty Cloth Tool answers `lease-not-found` (dct_link then forgets
+  the lease), the model is sent again with its textures as the first push of its binding.
+- **Timing.** The timing counts the model push itself: Sollumz's export and the push until Durty Cloth Tool showed it,
+  starting again after a discard that takes another cloth's model off the ped and for a push sent again with its
+  textures. Every push Durty Cloth Tool showed writes one line to the system console, for example
   `Durty Cloth Tool Link: model push took 3.40 s (export 1.10 s, until shown 2.30 s, textures kept)`, so real
   timings are easy to record. A push slower than `settings.AUTO_PUSH_SLOW_SECONDS` (10 seconds) pauses automatic
-  pushes, and the panel says to push by hand (`model.slow`); a quicker push by hand resumes them.
+  pushes, and the panel says to push by hand (`model.slow`); a quicker push by hand resumes them. Changes made
+  meanwhile stay marked, and an Update from Blender that waits still runs once.
 - **Update from Blender.** Durty Cloth Tool's 3D Preview can ask for the lease's model again
-  (`model.pushRequested`). It is pushed like Push Model, also with Push Automatically off, once no push runs; a
-  request for another lease is ignored.
+  (`model.pushRequested`). It is pushed like Push Model, also with Push Automatically off or turned off while it
+  waits (Edit Mode, a running tool), once no push runs; a request for another lease is ignored.
 
 The export runs in the add-on's timer step on Blender's main thread, as every Sollumz call must; the push itself
 and its answer go through the connection's own thread.
