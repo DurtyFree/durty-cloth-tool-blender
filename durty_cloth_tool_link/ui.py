@@ -802,6 +802,9 @@ def draw_model_link(layout: Any, context: Any) -> None:
             layout.separator(factor=GAP_SMALL)
             wrapped(layout, context, t("model.block.not-linked"), "UNLINKED")
             layout.menu("DCTLINK_MT_model_link", text=t("op.model-link"), icon="LINKED", translate=False)
+            meshes = _model_meshes(root)
+            if len(meshes) > 1:  # Garment Fitting works on one garment: say which one Add as New Cloth takes
+                subtext(layout, context, "model.link.one-mesh", indent=True, name=meshes[0].name, count=len(meshes))
         return
     layout.separator(factor=GAP_SMALL)
     name = state.get().cloth_label(binding) or host.stored_cloth_name(root) or t("linked.unknown")
@@ -897,8 +900,9 @@ def draw_help_menu(layout: Any) -> None:
 
 def _auto_push_changed(self: Any, context: Any) -> None:
     self.auto_push_chosen = True  # the add-on sets it back when it turned the setting on (link.turn_on_auto_push)
-    if state.controller is not None and not self.auto_push:
-        state.controller.model.due_at = None
+    model = state.controller.model if state.controller is not None else None
+    if model is not None and not self.auto_push and not model.requested:
+        model.due_at = None  # an Update from Blender that waits (Edit Mode, a tool) still runs once it can
 
 
 class DCTLINK_PG_scene(PropertyGroup):
@@ -1631,20 +1635,26 @@ class DCTLINK_OT_model_add_new(_Op):
         # Add to Project in Garment Fitting adds it as a new cloth and links it (the existing add of a garment).
         context.scene.dct_garment.garment = mesh
         context.scene.dct_link.workspace = "GARMENT"
-        self.report({"INFO"}, t("model.link.add-hint"))
+        self.report({"INFO"}, t("model.link.add-hint", name=mesh.name))
         host.redraw()
         return {"FINISHED"}
 
 
-def _model_mesh(root: Optional[Any]) -> Optional[Any]:
-    """The first mesh of a Drawable Dictionary (by name), the garment Add to Project adds, or ``None``."""
+def _model_meshes(root: Optional[Any]) -> List[Any]:
+    """The meshes of a Drawable Dictionary, by name."""
     if root is None:
-        return None
+        return []
     try:
-        meshes = [obj for obj in root.children_recursive if obj.type == "MESH"]
+        return sorted((obj for obj in root.children_recursive if obj.type == "MESH"), key=lambda obj: obj.name)
     except ReferenceError:
-        return None
-    return min(meshes, key=lambda obj: obj.name) if meshes else None
+        return []
+
+
+def _model_mesh(root: Optional[Any]) -> Optional[Any]:
+    """The mesh Add as New Cloth hands Garment Fitting: the first by name (Garment Fitting works on one garment; the
+    panel says which one when there are several), or ``None``."""
+    meshes = _model_meshes(root)
+    return meshes[0] if meshes else None
 
 
 class DCTLINK_MT_model_link(bpy.types.Menu):
