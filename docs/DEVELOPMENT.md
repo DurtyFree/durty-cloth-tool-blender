@@ -195,6 +195,39 @@ plugins. Its modules describe themselves in their docstrings; in short:
   same gender and category; it uses none of the day's fits, and without the statistics Check Tears leaves its
   comparison out.
 
+### Model pushes and live updates
+
+`link.ModelPush` sends a Sollumz export to Durty Cloth Tool's 3D Preview (`model.push`) and keeps the lease Durty
+Cloth Tool answers with. The rules, all in `link.py` and tested in `tests/test_link.py`:
+
+- **Linked first.** Only a Drawable Dictionary linked to a cloth is pushed, by hand or automatically
+  (`link_problem`, `model.block.not-linked`). A model opened from Durty Cloth Tool is linked when it is imported; a
+  model made in Blender is linked once with **Link to DCT**: **Link to the Cloth Selected in DCT** stores the cloth and
+  variation focused in Durty Cloth Tool (`LinkController.focused_link`) on the Drawable Dictionary and pushes it, and
+  **Add as New Cloth** opens its mesh in Garment Fitting, whose Add to Project adds it and links it. The link is kept
+  in the .blend file with the object.
+- **Live by default from Durty Cloth Tool.** Opening a model from Durty Cloth Tool, and Link to the Cloth Selected in
+  DCT, turn Push Automatically on in that scene (`turn_on_auto_push`) unless the user set it there before: the
+  scene's `auto_push_chosen` records a change the user made, and that choice is kept.
+- **Debounced and coalesced.** An edit of the pushed model sets the time of the next push (`schedule`, the delay in
+  the add-on preferences, 1.5 seconds by default). Edits while a push runs move that time on; once the push ended,
+  exactly one push follows with every change, never a queue. The panel says Updating Durty Cloth Tool (a push
+  runs), Changes waiting or Up to date (`ModelPush.live_state`).
+- **Textures only when they changed.** Each push hashes the export's `*.dds` files (SHA-256). When they equal what
+  Durty Cloth Tool has for the lease, only the `*.ydd.xml` is sent with `keepTextures`, and Durty Cloth Tool keeps
+  the textures of the lease's previous push. When Durty Cloth Tool no longer has the lease, the push is sent again
+  with its textures.
+- **Timing.** Every push Durty Cloth Tool showed writes one line to the system console, for example
+  `Durty Cloth Tool Link: model push took 3.40 s (export 1.10 s, until shown 2.30 s, textures kept)`, so real
+  timings are easy to record. A push slower than `settings.AUTO_PUSH_SLOW_SECONDS` (10 seconds) pauses automatic
+  pushes, and the panel says to push by hand (`model.slow`); a quicker push by hand resumes them.
+- **Update from Blender.** Durty Cloth Tool's 3D Preview can ask for the lease's model again
+  (`model.pushRequested`). It is pushed like Push Model, also with Push Automatically off, once no push runs; a
+  request for another lease is ignored.
+
+The export runs in the add-on's timer step on Blender's main thread, as every Sollumz call must; the push itself
+and its answer go through the connection's own thread.
+
 `durty_cloth_tool_link/dct_link/VENDORED.md` records the dct_link version, the Creator Link protocol version and the
 SHA-256 of every file. The package is developed in the Durty Cloth Tool repository together with Creator Link's
 shared protocol package, and copied here with `tools/sync_dct_link.py`. Never edit the vendored files by hand:
