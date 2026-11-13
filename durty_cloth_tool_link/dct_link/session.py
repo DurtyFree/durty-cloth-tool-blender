@@ -1743,7 +1743,8 @@ class LinkSession:
     ``open-model(HostOpenModel)`` (answer both through the :class:`HostRequest`),
     ``live-status(surface, message)``, ``live-save-progress(surface, message)``, ``live-closed(surface, reason)``,
     ``live-error(surface, LinkError)``,
-    ``model-applied(message)``, ``model-closed(message)``, ``incompatible(message)`` (``updateUrl`` only when it
+    ``model-applied(message)``, ``model-closed(message)``, ``model-push-requested(message)`` (DCT's user asked
+    for the held model lease to be pushed again now), ``incompatible(message)`` (``updateUrl`` only when it
     is a trusted link), ``signed-out()`` (the user signed out; call :meth:`sign_in` when they want to sign in
     again), ``dct-signed-out()`` (DCT itself is signed out; the session keeps trying, waiting 30 seconds and then
     longer, up to about five minutes, and connects once DCT is signed in again, or at once after :meth:`start`),
@@ -1841,7 +1842,7 @@ class LinkSession:
         self._refusal_epoch = -1
         self._model_lease: Optional[str] = None
         self._push_request: Optional[Request] = None
-        self._push_waiting: Optional[Tuple[ModelBundle, Optional[Dict[str, str]], Request]] = None
+        self._push_waiting: Optional[Tuple[ModelBundle, Optional[Dict[str, str]], Request, bool]] = None
         # Service requests waiting for a slot: a text message, or the send of a binary one (garment.check).
         self._service_queue: "collections.deque[Tuple[Request, Union[Dict[str, Any], Callable[[], Any]]]]" = (
             collections.deque())
@@ -2945,6 +2946,11 @@ class LinkSession:
         self._model_lease = message["lease"]
         self._emit("model-applied", message)
 
+    def _on_model_push_requested(self, message: Dict[str, Any]) -> None:
+        # Only for the lease this session holds; a request for an ended model changes nothing.
+        if self._model_lease is not None and self._model_lease == message["lease"]:
+            self._emit("model-push-requested", message)
+
     def _on_model_closed(self, message: Dict[str, Any]) -> None:
         if self._model_lease == message["lease"]:
             self._model_lease = None
@@ -3770,19 +3776,31 @@ class LinkSession:
     # ---- models (Blender) ----------------------------------------------------------------------------
 
     def push_model(
-        self, bundle: ModelBundle, binding: Optional[Dict[str, str]] = None, timeout: Optional[float] = 120.0
+        self,
+        bundle: ModelBundle,
+        binding: Optional[Dict[str, str]] = None,
+        timeout: Optional[float] = 120.0,
+        keep_textures: bool = False,
     ) -> Request:
         """``model.push``: resolves with ``model.applied``. The first push of a session may name a
         ``binding``; later pushes reuse the lease DCT returned. One push is in flight at a time (until DCT
         answers it); a newer push waits, and a newer one still replaces the waiting one (which then fails with
         ``superseded``), so DCT always gets the latest model and never a backlog. A waiting push does not time out
-        before it is sent; its ``timeout`` counts from then."""
+        before it is sent; its ``timeout`` counts from then.
+
+        ``keep_textures``: the bundle is the ``*.ydd.xml`` alone and DCT keeps the textures of the lease's previous
+        push (``keepTextures``). It needs the lease: when the session holds none as the push goes out (DCT ended the
+        model meanwhile), the push fails with ``lease-not-found`` and nothing is sent, so the host pushes again with
+        its textures. Raises ``ValueError`` for a bundle that is not a ``*.ydd.xml`` alone."""
+        if keep_textures and (bundle.format != protocol.MODEL_YDD_XML or any(
+                name.lower().endswith(".dds") for name, _ in bundle.files)):
+            raise ValueError("a push that keeps the textures carries the *.ydd.xml alone")
         with self._lock:
             request = self._register("model.push", timeout)
             del self._pending[request.id]  # registered when it is actually sent
             if self._push_waiting is not None:
                 self._finish_request(self._push_waiting[2], error=LinkError("superseded", "a newer model replaced it"))
-            self._push_waiting = (bundle, binding, request)
+            self._push_waiting = (bundle, binding, request, bool(keep_textures))
             self._pump_services()
         self._run_calls()
         return request
@@ -3791,11 +3809,17 @@ class LinkSession:
         """Sends the waiting push; :meth:`_pump_services` calls it when a service slot is free."""
         if self._push_busy() or self._push_waiting is None:
             return
-        bundle, binding, request = self._push_waiting
+        bundle, binding, request, keep_textures = self._push_waiting
         self._push_waiting = None
         header: Dict[str, Any] = {"type": "model.push", "id": request.id, "format": bundle.format, "files": bundle.entries()}
         if self._model_lease is not None:
             header["lease"] = self._model_lease
+            if keep_textures:
+                header["keepTextures"] = True
+        elif keep_textures:
+            # The textures DCT would keep belonged to a lease that ended: the host sends them again.
+            self._finish_request(request, error=LinkError("lease-not-found", "no model lease to keep the textures of"))
+            return
         elif binding is not None:
             header["binding"] = binding
         ws = self._ws
@@ -3903,6 +3927,7 @@ _EVENT_HANDLERS: Dict[str, Callable[[LinkSession, Dict[str, Any]], None]] = {
     "live.closed": LinkSession._on_live_closed,
     "model.applied": LinkSession._on_model_applied,
     "model.closed": LinkSession._on_model_closed,
+    "model.pushRequested": LinkSession._on_model_push_requested,
     "ped.rig.accepted": LinkSession._on_ped_rig_accepted,
     "ped.rig.progress": LinkSession._on_ped_rig_progress,
 }
