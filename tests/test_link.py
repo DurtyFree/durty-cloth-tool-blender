@@ -12,6 +12,7 @@ import json
 import os
 import pathlib
 import time
+import types
 from typing import Callable, Dict, List, Optional
 
 import numpy as np
@@ -487,13 +488,13 @@ class Export:
 
 def test_model_push_save_and_discard(tmp_path, dct, api, stores):
     ctrl = ready_controller(tmp_path, dct, api, stores)
-    ctrl.model.push(Export(), "jbib_003_u")
+    ctrl.model.push(Export(), "jbib_003_u", binding=BINDING)
     drive(ctrl, lambda: ctrl.model.lease is not None)
     header, files = dct.pushes[0]
     assert header["format"] == "ydd-xml" and "lease" not in header
     assert files == {"jbib_003_u.ydd.xml": b"<DrawableDictionary />", "jbib_diff_003_a_uni.dds": b"DDS 1"}
 
-    ctrl.model.push(Export(b"DDS 2"), "jbib_003_u")
+    ctrl.model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)
     drive(ctrl, lambda: len(dct.pushes) == 2 and not ctrl.model.pushing)
     assert dct.pushes[1][0]["lease"] == ctrl.model.lease
     assert ctrl.model.revision == 2
@@ -506,7 +507,7 @@ def test_model_push_save_and_discard(tmp_path, dct, api, stores):
     assert ctrl.model.status.text == "Discarded the model in Durty Cloth Tool."
 
     with pytest.raises(ValueError, match="did not export a model"):
-        ctrl.model.push(lambda folder: None, "nothing")
+        ctrl.model.push(lambda folder: None, "nothing", binding=BINDING)
     assert len(dct.pushes) == 2
 
 
@@ -514,11 +515,11 @@ def test_saving_waits_for_the_newest_push_and_retries_while_dct_is_busy(tmp_path
     ctrl = ready_controller(tmp_path, dct, api, stores)
     model = ctrl.model
     model.SAVE_RETRY_DELAY = 0.05
-    model.push(Export(), "jbib_003_u")
+    model.push(Export(), "jbib_003_u", binding=BINDING)
     with pytest.raises(ValueError, match="Push a model first"):
         model.save()
     drive(ctrl, lambda: model.lease is not None and not model.pushing)
-    model.push(Export(b"DDS 2"), "jbib_003_u")
+    model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)
     assert model.save_blocker.key == "model.block.pushing"  # saving now would store the model shown before it
     drive(ctrl, lambda: not model.pushing)
     model.due_at = time.monotonic() + 30  # an automatic push is about to run
@@ -541,14 +542,14 @@ def test_saving_waits_for_the_newest_push_and_retries_while_dct_is_busy(tmp_path
 def test_automatic_push_after_changes_and_its_pause_after_warnings(tmp_path, dct, api, stores):
     ctrl = ready_controller(tmp_path, dct, api, stores)
     exports = [Export(), Export(warnings=True)]
-    ctrl.model.on_auto_push = lambda: ctrl.model.push(exports.pop(0), "jbib_003_u", automatic=True)
+    ctrl.model.on_auto_push = lambda: ctrl.model.push(exports.pop(0), "jbib_003_u", automatic=True, binding=BINDING)
     enabled = {"on": True}
     ctrl.model.auto_enabled = lambda: enabled["on"]
     ctrl.model.delay = 0.5
     ctrl.model.schedule(time.monotonic())
     ctrl.poll()
     assert dct.pushes == []  # nothing pushed yet: automatic pushes start after the first push
-    ctrl.model.push(Export(), "jbib_003_u")
+    ctrl.model.push(Export(), "jbib_003_u", binding=BINDING)
     drive(ctrl, lambda: ctrl.model.lease is not None)
     ctrl.model.schedule(time.monotonic())
     ctrl.model.schedule(time.monotonic())  # a burst of changes gives one push
@@ -568,7 +569,7 @@ def test_automatic_push_after_changes_and_its_pause_after_warnings(tmp_path, dct
     assert "paused" in ctrl.model.note.text
     ctrl.model.schedule(time.monotonic())
     assert ctrl.model.due_at is None
-    ctrl.model.push(Export(), "jbib_003_u")  # pushing by hand resumes them
+    ctrl.model.push(Export(), "jbib_003_u", binding=BINDING)  # pushing by hand resumes them
     drive(ctrl, lambda: len(dct.pushes) == 4 and not ctrl.model.pushing)
     assert not ctrl.model.paused
 
@@ -720,6 +721,8 @@ class FakeDocuments:
         self.imports: List[Dict[str, object]] = []
         self.discarded: List[str] = []
         self.warnings = False
+        #: The settings of the scene models are imported into (Push Automatically and whether the user set it).
+        self.scene = types.SimpleNamespace(auto_push=False, auto_push_chosen=False)
         #: Runs while the request is handled, before DCT is answered (for example: the link goes away meanwhile).
         self.meanwhile: Optional[Callable[[], None]] = None
 
@@ -751,7 +754,8 @@ class FakeDocuments:
         self.imports.append({"folder": folder, "model": model_file, "binding": binding, "files": files,
                              "opened": opened})
         name = opened.name
-        return link.ImportedModel(name, lambda: self.ctrl.model.push(Export(), name, binding=binding), self.warnings)
+        return link.ImportedModel(name, lambda: self.ctrl.model.push(Export(), name, binding=binding), self.warnings,
+                                  self.scene)
 
 
 def documents_controller(tmp_path, dct, api, stores) -> tuple:
@@ -997,7 +1001,7 @@ def test_a_model_is_called_by_its_cloth_then_by_the_name_dct_gave_it(tmp_path, d
 
 def test_a_model_for_another_cloth_replaces_the_one_on_the_ped(tmp_path, dct, api, stores):
     ctrl, documents = documents_controller(tmp_path, dct, api, stores)
-    ctrl.model.push(Export(), "smoke_ydd")  # the user's own model, on the focused cloth
+    ctrl.model.push(Export(), "smoke_ydd", binding=BINDING)  # the user's own model, on the focused cloth
     drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
     old = ctrl.model.lease
     dct.open_model(model_files(), binding=OTHER)
@@ -1021,7 +1025,7 @@ def test_a_model_without_sollumz_is_refused_with_what_to_install(tmp_path, dct, 
 def test_a_model_is_refused_while_another_is_pushed(tmp_path, dct, api, stores):
     ctrl, documents = documents_controller(tmp_path, dct, api, stores)
     dct.push_delay = 1.0
-    ctrl.model.push(Export(), "smoke_ydd")
+    ctrl.model.push(Export(), "smoke_ydd", binding=BINDING)
     request_id = dct.open_model(model_files())
     drive(ctrl, lambda: dct.host_result(request_id) is not None)
     assert dct.host_result(request_id)["code"] == "busy" and ctrl.model.open_notice.message.key == "open.model-busy"
@@ -1184,3 +1188,169 @@ def test_a_model_opens_from_a_deep_blender_user_folder(tmp_path, dct, api, store
     assert ctrl.model.open_notice.message == strings.msg("open.model-failed", name="jbib_003_u",
                                                          detail=strings.msg("notice.path-too-long"))
     ctrl.shutdown()
+
+
+# ---- live updates of a linked model (DEV-2382) -----------------------------------------------------------------------
+
+
+def test_opening_a_model_from_dct_turns_live_updates_on_unless_the_user_turned_them_off(tmp_path, dct, api, stores):
+    ctrl, documents = documents_controller(tmp_path, dct, api, stores)
+    scene = documents.scene
+    ctrl.model.auto_enabled = lambda: scene.auto_push  # what Blender reads from the scene
+    exports = []
+    ctrl.model.on_auto_push = lambda: exports.append(ctrl.model.push(Export(b"DDS 2"), "jbib_003_u", automatic=True,
+                                                                     binding=BINDING))
+    ctrl.model.delay = 0.5
+    dct.open_model(model_files())
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert scene.auto_push is True and scene.auto_push_chosen is False  # on, and not as the user's own choice
+    ctrl.model.schedule(time.monotonic())  # an edit of the opened model is sent again by itself
+    drive(ctrl, lambda: len(exports) == 1 and not ctrl.model.pushing)
+    assert len(dct.pushes) == 2
+
+    # The user turns it off in this scene: the next model opened from DCT keeps that choice.
+    scene.auto_push, scene.auto_push_chosen = False, True
+    ctrl.model.discard()
+    drive(ctrl, lambda: ctrl.model.lease is None)
+    dct.open_model(model_files())
+    drive(ctrl, lambda: len(documents.imports) == 2 and ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert scene.auto_push is False
+
+
+def test_turning_live_updates_on_keeps_what_the_user_set():
+    assert link.turn_on_auto_push(types.SimpleNamespace(auto_push=False, auto_push_chosen=False)) is True
+    assert link.turn_on_auto_push(types.SimpleNamespace(auto_push=False, auto_push_chosen=True)) is False
+    assert link.turn_on_auto_push(types.SimpleNamespace(auto_push=True, auto_push_chosen=True)) is True
+
+
+def test_a_model_made_in_blender_is_linked_before_it_is_pushed(tmp_path, dct, api, stores):
+    ctrl, _ = documents_controller(tmp_path, dct, api, stores)
+    assert link.link_problem(None).key == "model.block.not-linked" and link.link_problem(BINDING) is None
+    with pytest.raises(strings.UserError) as refused:
+        ctrl.model.push(Export(), "my_jacket")  # not linked: neither Push Model nor an automatic push sends it
+    assert refused.value.message.key == "model.block.not-linked" and dct.pushes == []
+    with pytest.raises(strings.UserError):
+        ctrl.model.push(Export(), "my_jacket", automatic=True)
+    ctrl.model.schedule(time.monotonic())
+    assert ctrl.model.due_at is None and dct.pushes == []  # nothing pushed, nothing to update live
+
+    # Link to the Cloth Selected in DCT: the focused cloth and its variation.
+    assert ctrl.focused_link() == (BINDING, None)
+    ctrl.model.push(Export(), "my_jacket", binding=ctrl.focused_link()[0])
+    drive(ctrl, lambda: ctrl.model.lease is not None and not ctrl.model.pushing)
+    assert dct.pushes[0][0]["binding"] == BINDING
+
+    no_variation = dict(FOCUSED)
+    del no_variation["selectedTextureId"]
+    dct.broadcast({"type": "event.selection", "id": "sel9", "focused": no_variation})
+    drive(ctrl, lambda: ctrl.focused is not None and "selectedTextureId" not in ctrl.focused)
+    assert ctrl.focused_link() == (None, strings.msg("model.link.no-variation"))
+    dct.broadcast({"type": "event.selection", "id": "sel10", "focused": None})
+    drive(ctrl, lambda: not ctrl.focused)
+    assert ctrl.focused_link() == (None, strings.msg("notice.select-cloth"))
+    ctrl.disconnect()
+    drive(ctrl, lambda: not ctrl.ready)
+    assert ctrl.focused_link()[1].key == "notice.connect-first"
+
+
+def test_changes_made_while_a_push_runs_give_exactly_one_follow_up_push(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    model.auto_enabled = lambda: True
+    model.delay = 0.5
+    model.on_auto_push = lambda: model.push(Export(b"DDS auto"), "jbib_003_u", automatic=True, binding=BINDING)
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+    assert model.live_state == link.LIVE_UP_TO_DATE
+
+    dct.push_delay = 1.5  # DCT converts for a while
+    model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)
+    assert model.live_state == link.LIVE_UPDATING
+    for _ in range(5):  # edits while the push runs
+        model.schedule(time.monotonic())
+        ctrl.poll()
+        time.sleep(0.1)
+    assert model.pushing and len(dct.pushes) == 2
+    drive(ctrl, lambda: not model.pushing)
+    assert model.live_state == link.LIVE_WAITING  # the edits wait for the delay
+    drive(ctrl, lambda: len(dct.pushes) == 3 and not model.pushing)
+    dct.push_delay = 0.0
+    deadline = time.monotonic() + 1.5
+    while time.monotonic() < deadline:  # nothing else is queued behind it
+        ctrl.poll()
+        time.sleep(0.05)
+    assert len(dct.pushes) == 3 and model.due_at is None and model.live_state == link.LIVE_UP_TO_DATE
+
+
+def test_unchanged_textures_stay_in_dct_and_only_the_model_is_sent(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+    assert "keepTextures" not in dct.pushes[0][0]
+
+    model.push(Export(), "jbib_003_u", binding=BINDING)  # only the geometry changed
+    drive(ctrl, lambda: len(dct.pushes) == 2 and not model.pushing)
+    header, files = dct.pushes[1]
+    assert header["keepTextures"] is True and header["lease"] == model.lease
+    assert files == {"jbib_003_u.ydd.xml": b"<DrawableDictionary />"}
+    assert model.status.message.key == "model.previewing" and model.timing.textures_kept
+
+    model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)  # a texture changed: everything is sent
+    drive(ctrl, lambda: len(dct.pushes) == 3 and not model.pushing)
+    assert "keepTextures" not in dct.pushes[2][0] and dct.pushes[2][1]["jbib_diff_003_a_uni.dds"] == b"DDS 2"
+
+    # DCT ended the lease just before the push left: the model is sent again with its textures.
+    ctrl.session._model_lease = None
+    model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: len(dct.pushes) == 4 and not model.pushing and model.lease is not None)
+    header, files = dct.pushes[3]
+    assert "keepTextures" not in header and header["binding"] == BINDING and len(files) == 2
+
+    model.on_closed({"lease": model.lease, "reason": "closed"})
+    assert model.texture_digests is None  # a new lease starts with every texture
+
+
+def test_a_slow_push_stops_automatic_pushes_until_a_quick_push_by_hand(tmp_path, dct, api, stores, monkeypatch,
+                                                                       capsys):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    model.auto_enabled = lambda: True
+    model.on_auto_push = lambda: model.push(Export(), "jbib_003_u", automatic=True, binding=BINDING)
+    monkeypatch.setattr(settings, "AUTO_PUSH_SLOW_SECONDS", 0.0)
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+    assert model.slow_seconds == 1  # every push is slow now
+    assert "Durty Cloth Tool Link: model push took" in capsys.readouterr().out  # the line to record real timings
+    assert model.timing.total == model.timing.export + model.timing.applied
+    assert strings.english(strings.msg("model.slow", seconds=12)) == "Push manually, this model takes 12 s."
+    model.schedule(time.monotonic())
+    assert model.due_at is None  # automatic pushes are paused
+
+    monkeypatch.setattr(settings, "AUTO_PUSH_SLOW_SECONDS", 10.0)
+    model.push(Export(), "jbib_003_u", binding=BINDING)  # quick again, by hand
+    drive(ctrl, lambda: len(dct.pushes) == 2 and not model.pushing)
+    assert model.slow_seconds is None
+    model.schedule(time.monotonic())
+    assert model.due_at is not None
+
+
+def test_update_from_blender_in_dct_pushes_the_lease_once_the_running_push_ended(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    requested = []
+    model.auto_enabled = lambda: False  # Push Automatically off: Update from Blender still pushes
+    model.on_requested_push = lambda: requested.append(model.push(Export(b"DDS 3"), "jbib_003_u", binding=BINDING))
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+
+    dct.broadcast({"type": "model.pushRequested", "id": "mp1", "lease": "M9"})  # not this add-on's model
+    dct.push_delay = 1.0
+    model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)  # a push runs when DCT asks
+    dct.broadcast({"type": "model.pushRequested", "id": "mp2", "lease": model.lease})
+    drive(ctrl, lambda: model.requested)
+    assert model.live_state == link.LIVE_UPDATING and requested == []
+    drive(ctrl, lambda: len(requested) == 1 and not model.pushing)
+    dct.push_delay = 0.0
+    assert len(dct.pushes) == 3 and dct.pushes[2][1]["jbib_diff_003_a_uni.dds"] == b"DDS 3"
+    assert not model.requested and model.live_state == link.LIVE_UP_TO_DATE

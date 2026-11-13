@@ -58,6 +58,8 @@ MAX_TEXTURE_EDGE = protocol.MAX_TEXTURE_EDGE
 AUTO_PUSH_DELAY_DEFAULT = 1.5
 AUTO_PUSH_DELAY_MIN = 0.5
 AUTO_PUSH_DELAY_MAX = 30.0
+#: A push (export and until Durty Cloth Tool shows it) slower than this stops automatic pushes: Push Model still works.
+AUTO_PUSH_SLOW_SECONDS = 10.0
 
 
 def normalize_channel(channel: Optional[str]) -> str:
