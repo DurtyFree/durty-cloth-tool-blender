@@ -22,6 +22,6 @@ Do not edit these files by hand. Change dct_link upstream, then run
 | `fit.py` | `fbdc432c9e415b3ea3ac59f18f37a2ae335b00caf9ac120132b9c0029fb27bc8` |
 | `ped.py` | `1fc7514bc97dc5a432c580327cfca2739d57236999dbe1e65303319ddebd4c64` |
 | `protocol.py` | `3824157b65ed5a770b6a19c3b970a08e54b4bb460f44569deb2f2292b3958836` |
-| `session.py` | `a242762666af37e19d7f9d4faa1ffc8ff891a0c7f9c9004be4656b043a8c51fe` |
+| `session.py` | `a56b2fe274af7ab7f8e4094b97262c59f37fde2332f6e4a80c1ff39e700f8c27` |
 | `tokens.py` | `428a1fc987065afcfab7f6e4908f51efdb839ddf134d4d51c91a7a95d95c6cd1` |
 | `ws.py` | `3ae992c0ca9c97711d310f0ba001c797b0f75db9d59decace7017b7787823b05` |
