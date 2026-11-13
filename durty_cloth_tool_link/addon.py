@@ -207,6 +207,7 @@ def register() -> None:
         open_url=_open_url,
     )
     ctrl.model.on_auto_push = state.auto_push
+    ctrl.model.on_requested_push = state.requested_push
     ctrl.model.auto_enabled = state.scene_auto_push
     ctrl.documents = state.BlenderDocuments()
     ctrl.linked_binding = state.linked_binding
