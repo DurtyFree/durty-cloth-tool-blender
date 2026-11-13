@@ -760,16 +760,29 @@ def draw_model(layout: Any, context: Any) -> None:
         operator(layout, "dct_link.model_push", "op.model-push", "EXPORT")
     else:
         primary(layout, "dct_link.model_push", "op.model-push", "EXPORT")
-        reason_text(layout, context, _push_reason())
+        reason_text(layout, context, _push_reason(context))
         draw_notice(layout, context, model.status)
 
     layout.separator(factor=GAP)
     props = context.scene.dct_link
-    checkbox(layout, context, props, "auto_push", "prop.auto-push")
+    unlinked = _link_reason(context)
+    row = layout.row()
+    row.enabled = unlinked is None  # a model that is not linked to a cloth yet is linked once first (Link to DCT)
+    checkbox(row, context, props, "auto_push", "prop.auto-push")
     subtext(layout, context, "model.subtext")
+    reason_text(layout, context, unlinked)
+    live = model.live_state
+    if live is not None:
+        wrapped(layout, context, t(f"model.live.{live}"), LIVE_ICONS[live])
+    if model.slow_seconds is not None and props.auto_push:
+        wrapped(layout, context, t("model.slow", seconds=model.slow_seconds), "INFO")
     if model.waiting is not None and model.due_at is not None:
         wrapped(layout, context, strings.text(model.waiting), "TIME")
     draw_notice(layout, context, model.note)
+
+
+#: The icon beside each live update state (:attr:`link.ModelPush.live_state`).
+LIVE_ICONS = {link.LIVE_UPDATING: "FILE_REFRESH", link.LIVE_WAITING: "TIME", link.LIVE_UP_TO_DATE: "CHECKMARK"}
 
 
 def model_root(context: Any) -> Optional[Any]:
@@ -784,6 +797,11 @@ def draw_model_link(layout: Any, context: Any) -> None:
     root = model_root(context)
     binding = host.stored_binding(root)
     if binding is None:
+        if root is not None:
+            # A model made in Blender: linked once, then pushed and updated live like one opened from DCT.
+            layout.separator(factor=GAP_SMALL)
+            wrapped(layout, context, t("model.block.not-linked"), "UNLINKED")
+            layout.menu("DCTLINK_MT_model_link", text=t("op.model-link"), icon="LINKED", translate=False)
         return
     layout.separator(factor=GAP_SMALL)
     name = state.get().cloth_label(binding) or host.stored_cloth_name(root) or t("linked.unknown")
@@ -878,6 +896,7 @@ def draw_help_menu(layout: Any) -> None:
 
 
 def _auto_push_changed(self: Any, context: Any) -> None:
+    self.auto_push_chosen = True  # the add-on sets it back when it turned the setting on (link.turn_on_auto_push)
     if state.controller is not None and not self.auto_push:
         state.controller.model.due_at = None
 
@@ -903,6 +922,8 @@ class DCTLINK_PG_scene(PropertyGroup):
         description=EN["prop.auto-push.desc"],
         translation_context=CONTEXT,
     )
+    # Whether the user set Push Automatically in this scene: opening a model from Durty Cloth Tool then keeps it.
+    auto_push_chosen: BoolProperty(default=False, options={"HIDDEN"})
     # The stored numbers stay as they were saved: Linked Cloth 0 (it was "Clothing"), Custom Ped 1, Garment Fitting 2.
     workspace: EnumProperty(
         name=EN["workspace.prop"],
@@ -1524,7 +1545,13 @@ class DCTLINK_OT_check_again(_Op):
         return _run(self, lambda: state.get().stream.check_texture())
 
 
-def _push_reason() -> Optional[Msg]:
+def _link_reason(context: Any) -> Optional[Msg]:
+    """Why the model the panel talks about cannot be pushed: it is not linked to a cloth yet (``None`` without one)."""
+    root = model_root(context) if context is not None else None
+    return link.link_problem(host.stored_binding(root)) if root is not None else None
+
+
+def _push_reason(context: Any = None) -> Optional[Msg]:
     reason = _ready_reason()
     if reason is not None:
         return reason
@@ -1537,7 +1564,7 @@ def _push_reason() -> Optional[Msg]:
         return problem
     if ctrl.model.pushing:
         return msg("notice.pushing")
-    return None
+    return _link_reason(context)
 
 
 class DCTLINK_OT_model_push(_Op):
@@ -1547,11 +1574,91 @@ class DCTLINK_OT_model_push(_Op):
 
     @classmethod
     def poll(cls, context):
-        return _refuse(cls, _push_reason())
+        return _refuse(cls, _push_reason(context))
 
     def execute(self, context):
         objects = list(context.selected_objects) or ([context.active_object] if context.active_object else [])
         return _run(self, lambda: state.push_model(host.drawable_root(objects)))
+
+
+def _unlinked_root(context: Any) -> "tuple[Optional[Any], Optional[Msg]]":
+    """The Drawable Dictionary Link to DCT links, or why there is none (nothing selected, already linked)."""
+    root = model_root(context)
+    if root is None:
+        return None, msg("model.select")
+    if host.stored_binding(root) is not None:
+        return None, msg("model.link.already")
+    return root, None
+
+
+class DCTLINK_OT_model_link_focused(_Op):
+    bl_idname = "dct_link.model_link_focused"
+    bl_label = EN["op.model-link-focused"]
+    bl_description = EN["op.model-link-focused.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        reason = _push_reason()  # connected, Sollumz, the feature, no push on its way
+        if reason is None:
+            reason = _unlinked_root(context)[1] or state.get().focused_link()[1]
+        return _refuse(cls, reason)
+
+    def execute(self, context):
+        root, _ = _unlinked_root(context)
+        ctrl = state.get()
+        binding, _ = ctrl.focused_link()
+        if root is None or binding is None:
+            return {"CANCELLED"}
+        return _run(self, lambda: state.link_model(root, binding, ctrl.cloth_label(binding), context.scene))
+
+
+class DCTLINK_OT_model_add_new(_Op):
+    bl_idname = "dct_link.model_add_new"
+    bl_label = EN["op.model-add-new"]
+    bl_description = EN["op.model-add-new.desc"]
+
+    @classmethod
+    def poll(cls, context):
+        reason = _unlinked_root(context)[1]
+        if reason is None and _model_mesh(model_root(context)) is None:
+            reason = msg("model.link.no-mesh")
+        return _refuse(cls, reason)
+
+    def execute(self, context):
+        mesh = _model_mesh(model_root(context))
+        if mesh is None:
+            return {"CANCELLED"}
+        # Add to Project in Garment Fitting adds it as a new cloth and links it (the existing add of a garment).
+        context.scene.dct_garment.garment = mesh
+        context.scene.dct_link.workspace = "GARMENT"
+        self.report({"INFO"}, t("model.link.add-hint"))
+        host.redraw()
+        return {"FINISHED"}
+
+
+def _model_mesh(root: Optional[Any]) -> Optional[Any]:
+    """The first mesh of a Drawable Dictionary (by name), the garment Add to Project adds, or ``None``."""
+    if root is None:
+        return None
+    try:
+        meshes = [obj for obj in root.children_recursive if obj.type == "MESH"]
+    except ReferenceError:
+        return None
+    return min(meshes, key=lambda obj: obj.name) if meshes else None
+
+
+class DCTLINK_MT_model_link(bpy.types.Menu):
+    """Link to DCT: the two ways a model made in Blender is linked to a cloth before it is pushed."""
+
+    bl_idname = "DCTLINK_MT_model_link"
+    bl_label = EN["op.model-link"]
+    bl_description = EN["op.model-link.desc"]
+    bl_translation_context = CONTEXT
+
+    def draw(self, context):
+        layout = self.layout
+        operator(layout, "dct_link.model_link_focused", "op.model-link-focused", "RESTRICT_SELECT_OFF")
+        operator(layout, "dct_link.model_add_new", "op.model-add-new", "ADD")
 
 
 class DCTLINK_OT_model_save(_Op):
@@ -1745,6 +1852,9 @@ CLASSES = (
     DCTLINK_OT_model_push,
     DCTLINK_OT_model_save,
     DCTLINK_OT_model_discard,
+    DCTLINK_OT_model_link_focused,
+    DCTLINK_OT_model_add_new,
+    DCTLINK_MT_model_link,
     DCTLINK_PT_main,
     DCTLINK_PT_details,
     DCTLINK_PT_setup,

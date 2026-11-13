@@ -806,7 +806,26 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
     bpy.ops.object.select_all(action="DESELECT")
     part.select_set(True)
     bpy.context.view_layer.objects.active = part
-    check("Push Model runs", "FINISHED" in bpy.ops.dct_link.model_push(), ctrl.model.status)
+    # A model made in Blender is linked once before it is pushed (Link to DCT), here to the cloth selected in DCT.
+    from tests.support.fake_dct import BINDING
+    link = sys.modules[package + ".link"]
+    check("a model that is not linked to a cloth is not pushed",
+          (refused(bpy.ops.dct_link.model_push, "Link this model") or refused(bpy.ops.dct_link.model_push, "poll()"))
+          and not dct.pushes)
+    check("the Link to DCT menu is shown for it", ("menu", "DCTLINK_MT_model_link")
+          in draw_everything(package, state, "model not linked"))
+    dct.broadcast({"type": "event.selection", "id": "smoke-sel-model", "focused": {
+        "clothId": BINDING["clothId"], "name": "jbib_003_u", "selectedTextureId": BINDING["textureId"],
+        "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni"}],
+        "targets": ["diffuse", "normal", "specular"]}})
+    pump(addon, lambda: ctrl.focused is not None, what="the selection to link the model to")
+    scene.dct_link.auto_push, scene.dct_link.auto_push_chosen = False, False
+    check("Link to the Cloth Selected in DCT links and pushes the model",
+          "FINISHED" in bpy.ops.dct_link.model_link_focused() and link.same_binding(host.stored_binding(root), BINDING),
+          ctrl.model.status)
+    check("linking turns Push Automatically on", scene.dct_link.auto_push and not scene.dct_link.auto_push_chosen)
+    scene.dct_link.auto_push = False
+    check("switching Push Automatically in the scene counts as the user's choice", scene.dct_link.auto_push_chosen)
     pump(addon, lambda: ctrl.model.lease is not None, what="model.applied")
     log = draw_everything(package, state, "model pushed")
     check("the model save button is shown", ("operator", "dct_link.model_save") in log)
@@ -867,6 +886,8 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
 
     # A skinned model: the export switches its armature to the rest pose and back, which must not count as an edit.
     skinned_root, skinned_part = skinned_model(bool(args.sollumz))
+    host.store_binding(skinned_root, {"clothId": "0d9e8f7a-6b5c-4d3e-8f1a-2b3c4d5e6f70",
+                                      "textureId": "1e2d3c4b-5a69-4788-9a0b-1c2d3e4f5a6b"}, name="smoke skinned")
     bpy.ops.object.select_all(action="DESELECT")
     skinned_part.select_set(True)
     bpy.context.view_layer.objects.active = skinned_part
@@ -926,6 +947,8 @@ def smoke(args, repo, repo_dir, package, addon, state, preferences, ctrl, dct, a
 
     # Edit in connected app (protocol 2): a normal map DCT sends opens as an image linked to its cloth and its live
     # preview starts at once; a model DCT sends is imported with Sollumz, linked and pushed back bound to its cloth.
+    # The switches above count as the user's own choice, which a model opened from Durty Cloth Tool keeps: start over.
+    scene.dct_link.auto_push, scene.dct_link.auto_push_chosen = False, False
     open_from_dct(args, addon, state, package, ctrl, dct, scene, rng)
     scene = bpy.context.scene  # undo steps there replace the data blocks
 

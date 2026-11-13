@@ -147,14 +147,37 @@ class BlenderDocuments:
         window = host.window_for(root)
         scene = window.scene if window is not None else current_scene()
         if scene is not None:
-            scene.dct_link.auto_push = True  # each change is sent again, as for a model pushed by hand
             scene.dct_link.workspace = "CLOTHING"  # the DCT tab shows it in Linked Cloth
         host.push_undo("Open Model from Durty Cloth Tool")
-        return link.ImportedModel(model_label(root) or opened.name, lambda: push_model(root), warnings)
+        # The controller turns Push Automatically on in that scene (unless the user set it there).
+        return link.ImportedModel(model_label(root) or opened.name, lambda: push_model(root), warnings,
+                                  scene.dct_link if scene is not None else None)
+
+
+def link_model(root: Any, binding: Dict[str, str], name: Optional[str], scene: Optional[Any]) -> None:
+    """Links a Drawable Dictionary to a cloth (Link to the Cloth Selected in DCT), stored in the .blend file with the
+    object, turns Push Automatically on in its scene (unless the user set it there) and pushes it once. A copy linked to
+    the same cloth is unlinked: each cloth takes one model. Raises ``ValueError`` with a message for the user."""
+    host.store_binding(root, binding, name=name)
+    for other in host.others_linked_alike(root):
+        host.clear_binding(other)
+    if scene is not None and getattr(scene, "dct_link", None) is not None:
+        link.turn_on_auto_push(scene.dct_link)
+    host.push_undo("Link Model to Durty Cloth Tool")
+    push_model(root)
+
+
+def requested_push() -> None:
+    """Durty Cloth Tool asked for the pushed model again (Update from Blender): pushed like Push Model."""
+    _push_watched(automatic=False)
 
 
 def auto_push() -> None:
     """Called by the controller when the pushed model changed and stayed unchanged for the delay."""
+    _push_watched(automatic=True)
+
+
+def _push_watched(automatic: bool) -> None:
     ctrl = get()
     root = watcher.root()
     if root is None:
@@ -163,10 +186,12 @@ def auto_push() -> None:
         return
     blocker = host.auto_push_blocker(root)
     if blocker is not None:
+        if not automatic:
+            ctrl.model.requested = True  # still asked for: it runs once the tool ends or Object Mode is back
         ctrl.model.postpone(time.monotonic(), blocker)  # not while a tool runs or outside Object Mode
         return
     try:
-        push_model(root, automatic=True)
+        push_model(root, automatic=automatic)
     except UserError as exc:
         ctrl.model.status = link.Notice("ERROR", exc.message)
         ctrl.touch()
