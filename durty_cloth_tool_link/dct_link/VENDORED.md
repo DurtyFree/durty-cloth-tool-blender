@@ -12,7 +12,7 @@ Do not edit these files by hand. Change dct_link upstream, then run
 - Source: the `dct_link` package and its `LICENSE` in the Durty Cloth Tool repository
 - dct_link version: 0.1.0
 - Creator Link protocol: 2.2
-- Synced: 2026-11-04
+- Synced: 2026-11-13
 
 | File | SHA-256 |
 |---|---|
@@ -21,7 +21,7 @@ Do not edit these files by hand. Change dct_link upstream, then run
 | `auth.py` | `d5039c4a6b13910b3a943b3c2199a14c57dc5c5845d7df8050608872e8722eee` |
 | `fit.py` | `fbdc432c9e415b3ea3ac59f18f37a2ae335b00caf9ac120132b9c0029fb27bc8` |
 | `ped.py` | `1fc7514bc97dc5a432c580327cfca2739d57236999dbe1e65303319ddebd4c64` |
-| `protocol.py` | `1486edf58aee73fd563b18313af0bfc99ef975db4d303408639730e8cf89872b` |
-| `session.py` | `55a760fd89cdaeb4146645e54d6927e93f69dfdd6ea6130bf361800edc069167` |
+| `protocol.py` | `3824157b65ed5a770b6a19c3b970a08e54b4bb460f44569deb2f2292b3958836` |
+| `session.py` | `a242762666af37e19d7f9d4faa1ffc8ff891a0c7f9c9004be4656b043a8c51fe` |
 | `tokens.py` | `428a1fc987065afcfab7f6e4908f51efdb839ddf134d4d51c91a7a95d95c6cd1` |
 | `ws.py` | `3ae992c0ca9c97711d310f0ba001c797b0f75db9d59decace7017b7787823b05` |

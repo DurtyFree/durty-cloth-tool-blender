@@ -1192,8 +1192,12 @@ def _live_frame(m: Mapping[str, Any]) -> Optional[str]:
     return None if m["payloadLength"] == w * h * 4 else FRAME_SIZE_MISMATCH
 
 
-def model_push_problem(fmt: Any, files: Any, lease: Any = None, binding: Any = None) -> Optional[str]:
-    """Checks a model push's file list. Returns ``None`` or ``invalid-message``; shared with the encoder."""
+def model_push_problem(
+    fmt: Any, files: Any, lease: Any = None, binding: Any = None, keep_textures: Any = None
+) -> Optional[str]:
+    """Checks a model push's file list. Returns ``None`` or ``invalid-message``; shared with the encoder.
+    ``keep_textures`` (``keepTextures``) true needs a lease and ``ydd-xml`` and allows no ``*.dds``: DCT keeps the
+    textures of the lease's previous push."""
     if (
         (lease is not None and not is_id(lease))
         or (binding is not None and not _binding_ok(binding))
@@ -1201,6 +1205,12 @@ def model_push_problem(fmt: Any, files: Any, lease: Any = None, binding: Any = N
         or not _one_of(fmt, MODEL_FORMATS)
     ):
         return INVALID_MESSAGE
+    if keep_textures is True:
+        if lease is None or fmt != MODEL_YDD_XML:
+            return INVALID_MESSAGE
+        if any(isinstance(entry, Mapping) and str(entry.get("name") or "").lower().endswith(".dds")
+               for entry in files or ()):
+            return INVALID_MESSAGE
     return model_files_problem(fmt, files)
 
 
@@ -1234,7 +1244,7 @@ def _model_push(m: Mapping[str, Any]) -> Optional[str]:
     if not _payload_in(m, 1):
         return INVALID_MESSAGE
     files = m.get("files")
-    problem = model_push_problem(m.get("format"), files, m.get("lease"), m.get("binding"))
+    problem = model_push_problem(m.get("format"), files, m.get("lease"), m.get("binding"), m.get("keepTextures"))
     if problem is not None:
         return problem
     total = sum(entry["length"] for entry in files)
@@ -2079,7 +2089,7 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
     "body.glb": _text(TO_DCT, {"gender": _STR}, lambda m: _check(_one_of(m.get("gender"), GENDERS))),
     "model.push": _binary(
         TO_DCT,
-        {"lease": _STR, "binding": _BINDING, "format": _STR, "files": _MODEL_FILES},
+        {"lease": _STR, "binding": _BINDING, "format": _STR, "files": _MODEL_FILES, "keepTextures": _BOOL},
         _model_push,
     ),
     "model.save": _text(TO_DCT, {"lease": _STR}, lambda m: _check(is_id(m.get("lease")))),
@@ -2306,6 +2316,8 @@ _DEFS: Dict[str, Tuple[str, str, Dict[str, Kind], Validator]] = {
         {"lease": _STR, "reason": _STR},
         lambda m: _check(is_id(m.get("lease")) and _one_of(m.get("reason"), MODEL_CLOSE_REASONS)),
     ),
+    # DCT's user chose Update from Blender: push the model of this lease again (an event, answered by model.push).
+    "model.pushRequested": _text(TO_CLIENT, {"lease": _STR}, lambda m: _check(is_id(m.get("lease")))),
     "host.openTexture": _binary(
         TO_CLIENT,
         {"binding": _BINDING, "target": _STR, "name": _STR, "width": _INT32, "height": _INT32, "format": _STR},
