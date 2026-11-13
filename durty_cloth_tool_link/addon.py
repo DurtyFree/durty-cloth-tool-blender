@@ -175,10 +175,12 @@ def _on_undo_redo(*_args) -> None:
 def _on_depsgraph_update(scene, depsgraph) -> None:
     ctrl = state.controller
     try:
-        if ctrl is None or ctrl.model.lease is None or not state.scene_auto_push(scene):
+        if ctrl is None or (ctrl.model.lease is None and not ctrl.model.pushing):
             return
         if state.watcher.relevant(depsgraph):
-            ctrl.model.schedule(time.monotonic())
+            # Marked even when no automatic push follows (Push Automatically off or paused, a save running), so the
+            # panel never says Up to Date for a model that changed; schedule() reads Push Automatically itself.
+            ctrl.model.changed(time.monotonic())
     except Exception:  # noqa: BLE001 - never let a handler problem repeat on every update
         traceback.print_exc()
 

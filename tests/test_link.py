@@ -1300,12 +1300,14 @@ def test_unchanged_textures_stay_in_dct_and_only_the_model_is_sent(tmp_path, dct
     drive(ctrl, lambda: len(dct.pushes) == 3 and not model.pushing)
     assert "keepTextures" not in dct.pushes[2][0] and dct.pushes[2][1]["jbib_diff_003_a_uni.dds"] == b"DDS 2"
 
-    # DCT ended the lease just before the push left: the model is sent again with its textures.
-    ctrl.session._model_lease = None
+    # DCT ended the lease meanwhile and answers lease-not-found: the model goes out again as the first push of its
+    # binding, with its textures, and its timing starts with that push.
+    dct.refuse_push = "lease-not-found"
     model.push(Export(b"DDS 2"), "jbib_003_u", binding=BINDING)
     drive(ctrl, lambda: len(dct.pushes) == 4 and not model.pushing and model.lease is not None)
     header, files = dct.pushes[3]
-    assert "keepTextures" not in header and header["binding"] == BINDING and len(files) == 2
+    assert "keepTextures" not in header and "lease" not in header and header["binding"] == BINDING
+    assert len(files) == 2 and not model.timing.textures_kept and model.status.message.key == "model.previewing"
 
     model.on_closed({"lease": model.lease, "reason": "closed"})
     assert model.texture_digests is None  # a new lease starts with every texture
@@ -1354,3 +1356,91 @@ def test_update_from_blender_in_dct_pushes_the_lease_once_the_running_push_ended
     dct.push_delay = 0.0
     assert len(dct.pushes) == 3 and dct.pushes[2][1]["jbib_diff_003_a_uni.dds"] == b"DDS 3"
     assert not model.requested and model.live_state == link.LIVE_UP_TO_DATE
+
+
+def test_the_panel_says_up_to_date_only_when_no_change_waits(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    auto = {"on": False}
+    model.auto_enabled = lambda: auto["on"]
+    model.on_auto_push = lambda: model.push(Export(), "jbib_003_u", automatic=True, binding=BINDING)
+    model.changed(time.monotonic())  # nothing pushed: nothing to be up to date with
+    assert not model.dirty and model.live_state is None
+
+    dct.push_delay = 0.5
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    model.changed(time.monotonic())  # an edit during the first push, before there is a lease
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+    dct.push_delay = 0.0
+    assert model.dirty and model.live_state == link.LIVE_WAITING and model.due_at is None  # Push Automatically is off
+
+    model.push(Export(), "jbib_003_u", binding=BINDING)  # a push begun after the edit carries it
+    drive(ctrl, lambda: len(dct.pushes) == 2 and not model.pushing)
+    assert not model.dirty and model.live_state == link.LIVE_UP_TO_DATE
+
+    dct.save_busy = 0
+    model.busy = "saving"  # a save runs: schedule() waits, but the change is still not on the ped
+    model.changed(time.monotonic())
+    assert model.due_at is None and model.live_state == link.LIVE_WAITING
+    model.busy = None
+
+    auto["on"] = True
+    model.changed(time.monotonic())
+    drive(ctrl, lambda: len(dct.pushes) == 3 and not model.pushing)
+    assert not model.dirty and model.live_state == link.LIVE_UP_TO_DATE
+
+
+def test_a_slow_push_keeps_a_requested_update_and_the_changes_made_meanwhile(tmp_path, dct, api, stores, monkeypatch):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    model.auto_enabled = lambda: True
+    requested = []
+    model.on_requested_push = lambda: requested.append(model.push(Export(), "jbib_003_u", binding=BINDING))
+    model.on_auto_push = lambda: model.push(Export(), "jbib_003_u", automatic=True, binding=BINDING)
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+
+    monkeypatch.setattr(settings, "AUTO_PUSH_SLOW_SECONDS", 0.0)  # the next push is slow
+    dct.push_delay = 0.5
+    model.push(Export(), "jbib_003_u", automatic=True, binding=BINDING)
+    model.changed(time.monotonic())  # edited while it runs
+    dct.broadcast({"type": "model.pushRequested", "id": "mp1", "lease": model.lease})  # and Update from Blender
+    drive(ctrl, lambda: model.requested)
+    drive(ctrl, lambda: len(requested) == 1)  # the requested push still runs once, after the slow one
+    drive(ctrl, lambda: not model.pushing)
+    dct.push_delay = 0.0
+    assert model.slow_seconds is not None and not model.requested
+
+    model.changed(time.monotonic())  # paused: no automatic push, but the panel says changes wait
+    assert model.due_at is None and model.dirty and model.live_state == link.LIVE_WAITING
+    pushes = len(dct.pushes)
+    deadline = time.monotonic() + 1.0
+    while time.monotonic() < deadline:
+        ctrl.poll()
+        time.sleep(0.05)
+    assert len(dct.pushes) == pushes
+
+
+def test_a_requested_update_that_waits_runs_once_push_automatically_is_off(tmp_path, dct, api, stores):
+    ctrl = ready_controller(tmp_path, dct, api, stores)
+    model = ctrl.model
+    model.auto_enabled = lambda: False
+    model.push(Export(), "jbib_003_u", binding=BINDING)
+    drive(ctrl, lambda: model.lease is not None and not model.pushing)
+    blocked = {"on": True}
+    requested = []
+
+    def run_requested() -> None:  # what state.requested_push does while Edit Mode or a tool blocks the export
+        if blocked["on"]:
+            model.requested = True
+            model.postpone(time.monotonic(), strings.msg("model.wait.tool"))
+            return
+        requested.append(model.push(Export(), "jbib_003_u", binding=BINDING))
+
+    model.on_requested_push = run_requested
+    dct.broadcast({"type": "model.pushRequested", "id": "mp1", "lease": model.lease})
+    drive(ctrl, lambda: model.waiting is not None)
+    assert model.requested and model.due_at is not None
+    blocked["on"] = False
+    drive(ctrl, lambda: len(requested) == 1 and not model.pushing)
+    assert not model.requested and len(dct.pushes) == 2

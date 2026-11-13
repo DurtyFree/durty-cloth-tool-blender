@@ -736,6 +736,10 @@ class Connection:
             if "id" in header:
                 reply["re"] = header["id"]
             self.send(reply)
+        elif header["type"] == "model.push" and server.refuse_push:
+            # DCT refuses the next push (``refuse_push`` is the code, once), for example a lease it ended meanwhile.
+            code, server.refuse_push = server.refuse_push, None
+            self.send({"type": "error", "id": "mr%d" % len(server.pushes), "re": header["id"], "code": code})
         elif header["type"] == "model.push":
             files, offset = {}, 0
             for entry in header["files"]:
@@ -897,6 +901,7 @@ class FakeDct:
         self.held: List[Any] = []
         self.refuse_assertions = 0
         self.push_delay = 0.0
+        self.refuse_push: Optional[str] = None
         self.lease_numbers = itertools.count(1)
         self.unknown_lease_frames = 0
         self.signed_out_auths = 0

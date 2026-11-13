@@ -783,6 +783,11 @@ class ModelPush:
         self.requested = False
         self.on_requested_push: Optional[Callable[[], None]] = None
         self._applied_ok = False
+        #: The pushed model changed after the last push Durty Cloth Tool showed began (also while automatic pushes do
+        #: not run): the panel then never says Up to Date. ``_edits`` counts the changes; a push that began after the
+        #: last one clears it.
+        self.dirty = False
+        self._edits = 0
 
     @property
     def pushing(self) -> bool:
@@ -796,9 +801,20 @@ class ModelPush:
             return LIVE_UPDATING
         if self.lease is None:
             return None
-        if self.due_at is not None or self.requested:
+        if self.due_at is not None or self.requested or self.dirty:
             return LIVE_WAITING
         return LIVE_UP_TO_DATE if self._applied_ok else None
+
+    def changed(self, now: float) -> None:
+        """The watcher saw a change of the pushed model: it is not up to date any more, whether or not an automatic
+        push is scheduled for it (Push Automatically off or paused, a save running, the first push still on its way)."""
+        if self.lease is None and not self.pushing:
+            return
+        self._edits += 1
+        if not self.dirty:
+            self.dirty = True
+            self.controller.touch()
+        self.schedule(now)
 
     @property
     def open_notice(self) -> Optional[Notice]:
@@ -848,6 +864,7 @@ class ModelPush:
         if self._switch is not None:
             raise UserError(msg("model.block.waiting"))
         started = time.monotonic()
+        edits = self._edits  # every change counted until now is in this export
         folder = tempfile.mkdtemp(prefix="dct_link_")
         try:
             result = export(folder)
@@ -877,7 +894,7 @@ class ModelPush:
                              else msg("model.sending", name=name, count=len(collected.textures)))
         self._sent = {"digests": digests, "bundle": model_bundle, "binding": dict(binding) if binding else None,
                       "at": time.monotonic(), "export": export_seconds, "automatic": automatic, "keep": keep,
-                      "textures": 0 if keep else len(collected.textures)}
+                      "textures": 0 if keep else len(collected.textures), "edits": edits}
         if switching:
             # The model on the ped belongs to another cloth: DCT ends it first, then this one is pushed bound.
             request = session.discard_model()
@@ -914,6 +931,8 @@ class ModelPush:
             self.controller.touch()
             return
         bundle, binding = switch
+        if self._sent is not None:
+            self._sent["at"] = time.monotonic()  # the timing counts the push itself, not the discard before it
         pushed = session.push_model(bundle, binding=binding)
         self.pending = pushed
         pushed.add_done_callback(self._on_pushed)
@@ -936,9 +955,14 @@ class ModelPush:
         self._applied(request.result())
 
     def _resend_full(self, sent: Dict[str, Any]) -> None:
+        """The lease is gone in Durty Cloth Tool (dct_link forgot it too): the model goes out again as the first push
+        of its binding, with its textures. Its timing starts again."""
+        self.lease = None
+        self.lease_binding = None
         self.texture_digests = None
         sent["keep"] = False
         sent["textures"] = len(texture_digests(sent["bundle"]))
+        sent["at"] = time.monotonic()
         session = self.controller.session
         if session is None or not self.controller.ready:
             self._sent = None
@@ -961,6 +985,8 @@ class ModelPush:
         sent, self._sent = self._sent, None
         if sent is not None:  # measured once: the answer and the event both report the same push
             self.texture_digests = sent["digests"]
+            if sent["edits"] == self._edits:
+                self.dirty = False  # nothing changed since this push's export began
             self._measured(PushTiming(sent["export"], time.monotonic() - sent["at"], sent["textures"], sent["keep"]),
                            automatic=sent["automatic"])
         self.controller.touch()
@@ -972,7 +998,9 @@ class ModelPush:
         print(timing.log_line())
         if timing.total > settings.AUTO_PUSH_SLOW_SECONDS:
             self.slow_seconds = int(math.ceil(timing.total))
-            self.due_at = None
+            if not self.requested:
+                # Edits made meanwhile stay marked (dirty) for a push by hand; an Update from Blender still runs once.
+                self.due_at = None
         elif not automatic:
             self.slow_seconds = None
 
@@ -984,6 +1012,7 @@ class ModelPush:
         self.texture_digests = None
         self.requested = False
         self._applied_ok = False
+        self.dirty = False
 
     def on_applied(self, message: Dict[str, Any]) -> None:
         """``model.applied`` as an event (also after the request finished, which changes nothing)."""
