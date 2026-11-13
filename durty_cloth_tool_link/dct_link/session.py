@@ -2764,6 +2764,10 @@ class LinkSession:
         if kind == "error":
             if request is not None:
                 self._pending.pop(re_id, None)
+                if request.type == "model.push" and message["code"] == "lease-not-found":
+                    # DCT no longer holds the lease the push named: the next push is a first push again, which may
+                    # name its binding.
+                    self._model_lease = None
                 refusal = _REFUSALS.get(request.type)
                 if refusal is not None:
                     # DCT refused the picture, the skeleton or the add: an answer, not a failure of the request.
