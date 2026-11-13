@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import collections
 import errno
+import hashlib
+import math
 import os
 import pathlib
 import shutil
@@ -43,6 +45,7 @@ from .dct_link.session import (
     LinkError,
     LinkSession,
     LiveSurface,
+    ModelBundle,
     PluginInfo,
     Request,
     SignInPrompt,
@@ -676,9 +679,63 @@ def _close_quietly(surface: LiveSurface) -> None:
 # Model pushes
 # --------------------------------------------------------------------------------------------------
 
+#: What the panel says about a linked model's live updates (:attr:`ModelPush.live_state`).
+LIVE_UPDATING = "updating"  # a push runs
+LIVE_WAITING = "waiting"  # an edit (or Update from Blender in DCT) waits for the delay or the running push
+LIVE_UP_TO_DATE = "up-to-date"  # the last push is shown in DCT and nothing waits
+
+
+def texture_digests(model_bundle: ModelBundle) -> Dict[str, str]:
+    """The SHA-256 of each texture of an export, by its name in lower case: equal digests mean DCT already has these
+    textures from the lease's previous push."""
+    return {name.lower(): hashlib.sha256(data).hexdigest() for name, data in model_bundle.files
+            if name.lower().endswith(bundle.TEXTURE_SUFFIX)}
+
+
+def model_only(model_bundle: ModelBundle) -> ModelBundle:
+    """The export without its textures: the ``*.ydd.xml`` alone, for a push that keeps the textures DCT has."""
+    return ModelBundle(model_bundle.format, [(name, data) for name, data in model_bundle.files
+                                             if name.lower().endswith(bundle.MODEL_SUFFIX)])
+
+
+class PushTiming(NamedTuple):
+    """How long one push took (seconds): Sollumz's export, then sending until DCT showed it (``model.applied``)."""
+
+    export: float
+    applied: float
+    textures_sent: int
+    textures_kept: bool
+
+    @property
+    def total(self) -> float:
+        return self.export + self.applied
+
+    def log_line(self) -> str:
+        """One English line for the system console, so real timings are easy to record."""
+        textures = "kept" if self.textures_kept else f"sent {self.textures_sent}"
+        return (f"Durty Cloth Tool Link: model push took {self.total:.2f} s (export {self.export:.2f} s, "
+                f"until shown {self.applied:.2f} s, textures {textures})")
+
+
+def turn_on_auto_push(scene_settings: Any) -> bool:
+    """Push Automatically for a scene where Durty Cloth Tool opened a model, or where the user linked one: on, unless
+    the user set it in that scene before (``auto_push_chosen``), whose choice is kept. Returns whether it is on."""
+    if getattr(scene_settings, "auto_push_chosen", False):
+        return bool(getattr(scene_settings, "auto_push", False))
+    scene_settings.auto_push = True
+    scene_settings.auto_push_chosen = False  # the add-on set it, not the user (the scene's update marks it chosen)
+    return True
+
+
+def link_problem(binding: Optional[Dict[str, str]]) -> Optional[Msg]:
+    """Why a model cannot be pushed, by hand or automatically: it is not linked to a cloth yet (Link to DCT)."""
+    return None if binding is not None else msg("model.block.not-linked")
+
 
 class ModelPush:
-    """Pushes models exported by Sollumz to DCT's preview, then saves or discards them there."""
+    """Pushes models exported by Sollumz to DCT's preview, then saves or discards them there. Only a model linked to a
+    cloth is pushed. A push whose textures did not change since the lease's previous push sends the model alone and
+    DCT keeps the textures (``keepTextures``)."""
 
     SAVE_RETRIES = 5
     SAVE_RETRY_DELAY = 1.0
@@ -713,10 +770,35 @@ class ModelPush:
         self._saved = False
         self._save_tries = 0
         self._save_retry_at: Optional[float] = None
+        #: The texture digests DCT has for the lease (from the last push it showed), or ``None``.
+        self.texture_digests: Optional[Dict[str, str]] = None
+        #: The push on its way: its digests, its full bundle (sent again if keeping the textures fails), its binding,
+        #: when it was sent, how long its export took and whether it was automatic.
+        self._sent: Optional[Dict[str, Any]] = None
+        #: The last push DCT showed: how long it took.
+        self.timing: Optional[PushTiming] = None
+        #: Automatic pushes stopped because a push took this many seconds (a push by hand that is quick resumes them).
+        self.slow_seconds: Optional[int] = None
+        #: Durty Cloth Tool asked for a push of the lease (Update from Blender); it runs once nothing else does.
+        self.requested = False
+        self.on_requested_push: Optional[Callable[[], None]] = None
+        self._applied_ok = False
 
     @property
     def pushing(self) -> bool:
         return self.pending is not None and not self.pending.done
+
+    @property
+    def live_state(self) -> Optional[str]:
+        """Updating (a push runs), Changes Waiting (an edit waits for the delay or the push) or Up to Date (the last
+        push shows in DCT and nothing waits); ``None`` without a pushed model."""
+        if self.pushing or self._switch is not None:
+            return LIVE_UPDATING
+        if self.lease is None:
+            return None
+        if self.due_at is not None or self.requested:
+            return LIVE_WAITING
+        return LIVE_UP_TO_DATE if self._applied_ok else None
 
     @property
     def open_notice(self) -> Optional[Notice]:
@@ -754,20 +836,26 @@ class ModelPush:
         pushes use the lease DCT returned. When the model shown now belongs to another cloth, DCT is asked to take
         it off the ped first, and the push follows once it did.
 
+        A model that is not linked to a cloth (``binding`` is ``None``) is refused (:func:`link_problem`). When every
+        texture of the export equals what DCT has for the lease, the model is sent alone and DCT keeps its textures.
+
         Raises :class:`strings.UserError` (or another ``ValueError``) with a message for the user.
         """
         session = self.controller.ready_session()
-        problem = self.controller.feature_problem(settings.FEATURE_MODEL)
+        problem = self.controller.feature_problem(settings.FEATURE_MODEL) or link_problem(binding)
         if problem:
             raise UserError(problem)
         if self._switch is not None:
             raise UserError(msg("model.block.waiting"))
+        started = time.monotonic()
         folder = tempfile.mkdtemp(prefix="dct_link_")
         try:
             result = export(folder)
             model_bundle, collected = bundle.build_bundle(folder)
         finally:
             shutil.rmtree(folder, ignore_errors=True)
+        export_seconds = time.monotonic() - started
+        self._applied_ok = False
         self.root_name = root_name
         self._saved = False
         self.note = None
@@ -781,14 +869,25 @@ class ModelPush:
                 self.note = Notice("WARNING", msg("model.warnings"))
         if not automatic:
             self.paused = False
-        self.status = Notice("INFO", msg("model.sending", name=root_name or collected.model.name,
-                                         count=len(collected.textures)))
-        if binding is not None and self.lease is not None and not same_binding(self.lease_binding, binding):
+        digests = texture_digests(model_bundle)
+        switching = binding is not None and self.lease is not None and not same_binding(self.lease_binding, binding)
+        keep = bool(digests) and not switching and self.lease is not None and digests == self.texture_digests
+        name = root_name or collected.model.name
+        self.status = Notice("INFO", msg("model.sending-kept", name=name) if keep
+                             else msg("model.sending", name=name, count=len(collected.textures)))
+        self._sent = {"digests": digests, "bundle": model_bundle, "binding": dict(binding) if binding else None,
+                      "at": time.monotonic(), "export": export_seconds, "automatic": automatic, "keep": keep,
+                      "textures": 0 if keep else len(collected.textures)}
+        if switching:
             # The model on the ped belongs to another cloth: DCT ends it first, then this one is pushed bound.
             request = session.discard_model()
             self._switch = (model_bundle, dict(binding))
             self.pending = request
             request.add_done_callback(self._on_switched)
+        elif keep:
+            request = session.push_model(model_only(model_bundle), binding=binding, keep_textures=True)
+            self.pending = request
+            request.add_done_callback(self._on_pushed)
         else:
             request = session.push_model(model_bundle, binding=binding)
             self.pending = request
@@ -824,11 +923,32 @@ class ModelPush:
         if request is self.pending:
             self.pending = None
         if request.error is not None:
+            sent = self._sent
+            if sent is not None and sent.get("keep") and request.error.code in ("lease-not-found", "binding-not-found"):
+                # DCT no longer has the lease the textures were kept for: send the model again with its textures.
+                self._resend_full(sent)
+                return
+            self._sent = None
             if request.error.code != "superseded":
                 self.status = _error_notice(request.error.code)
                 self.controller.touch()
             return
         self._applied(request.result())
+
+    def _resend_full(self, sent: Dict[str, Any]) -> None:
+        self.texture_digests = None
+        sent["keep"] = False
+        sent["textures"] = len(texture_digests(sent["bundle"]))
+        session = self.controller.session
+        if session is None or not self.controller.ready:
+            self._sent = None
+            self.status = Notice("WARNING", settings.describe_close_reason("disconnected"))
+            self.controller.touch()
+            return
+        request = session.push_model(sent["bundle"], binding=sent["binding"])
+        self.pending = request
+        request.add_done_callback(self._on_pushed)
+        self.controller.touch()
 
     def _applied(self, message: Dict[str, Any]) -> None:
         self.lease = message.get("lease")
@@ -837,17 +957,47 @@ class ModelPush:
         self.revision = message.get("revision")
         self.findings = list(message.get("findings") or [])
         self.status = Notice("INFO", msg("model.previewing"))
+        self._applied_ok = True
+        sent, self._sent = self._sent, None
+        if sent is not None:  # measured once: the answer and the event both report the same push
+            self.texture_digests = sent["digests"]
+            self._measured(PushTiming(sent["export"], time.monotonic() - sent["at"], sent["textures"], sent["keep"]),
+                           automatic=sent["automatic"])
         self.controller.touch()
+
+    def _measured(self, timing: PushTiming, automatic: bool) -> None:
+        """Keeps and logs a push's timing. A push slower than :data:`settings.AUTO_PUSH_SLOW_SECONDS` stops automatic
+        pushes (each would keep Durty Cloth Tool busy longer than the user waits); a quick push by hand resumes them."""
+        self.timing = timing
+        print(timing.log_line())
+        if timing.total > settings.AUTO_PUSH_SLOW_SECONDS:
+            self.slow_seconds = int(math.ceil(timing.total))
+            self.due_at = None
+        elif not automatic:
+            self.slow_seconds = None
 
     def _forget_lease(self) -> None:
         self.lease = None
         self.lease_binding = None
         self.revision = None
         self.findings = []
+        self.texture_digests = None
+        self.requested = False
+        self._applied_ok = False
 
     def on_applied(self, message: Dict[str, Any]) -> None:
         """``model.applied`` as an event (also after the request finished, which changes nothing)."""
         self._applied(message)
+
+    def on_push_requested(self, message: Dict[str, Any]) -> None:
+        """``model.pushRequested``: the user chose Update from Blender in Durty Cloth Tool. The lease's model is pushed
+        like Push Model, once no push runs; a request for another lease is ignored."""
+        if self.lease is None or message.get("lease") != self.lease:
+            return
+        self.requested = True
+        now = time.monotonic()
+        self.due_at = now if self.due_at is None else min(self.due_at, now)
+        self.controller.touch()
 
     def save(self) -> Request:
         session = self.controller.ready_session()
@@ -950,6 +1100,7 @@ class ModelPush:
             self.controller.release_model_files()
         self._forget_lease()
         self._switch = None
+        self._sent = None
         self.pending = None
         self.busy = None
         self.due_at = None
@@ -959,8 +1110,11 @@ class ModelPush:
     # ---- automatic pushes ----------------------------------------------------------------------------
 
     def schedule(self, now: float) -> None:
-        """Something in the pushed model changed: push again once it stays unchanged for ``delay`` seconds."""
-        if self.paused or self.lease is None or self.busy is not None or not self.auto_enabled():
+        """Something in the pushed model changed: push again once it stays unchanged for ``delay`` seconds. Changes
+        made while a push runs move this time on; once the push ended, exactly one push follows with every change
+        (never a queue of pushes)."""
+        if (self.paused or self.slow_seconds is not None or self.lease is None or self.busy is not None
+                or not self.auto_enabled()):
             return
         self.due_at = now + settings.clamp_auto_push_delay(self.delay)
 
@@ -990,7 +1144,15 @@ class ModelPush:
         if self.waiting is not None:
             self.waiting = None
             self.controller.touch()
-        if not self.paused and self.lease is not None and self.on_auto_push is not None and self.auto_enabled():
+        if self.requested:
+            # Update from Blender: a push like Push Model, whatever Push Automatically says.
+            self.requested = False
+            if self.lease is not None and self.on_requested_push is not None:
+                self.on_requested_push()
+            self.controller.touch()
+            return
+        if (not self.paused and self.slow_seconds is None and self.lease is not None and self.on_auto_push is not None
+                and self.auto_enabled()):
             self.on_auto_push()
 
 
@@ -1464,6 +1626,9 @@ class ImportedModel(NamedTuple):
     push: Callable[[], Any]
     #: Sollumz logged warnings during the import (its Info log has them).
     warnings: bool = False
+    #: The settings of the scene the model went into (``auto_push``, ``auto_push_chosen``): a model opened from Durty
+    #: Cloth Tool turns Push Automatically on there (:func:`turn_on_auto_push`).
+    scene_settings: Any = None
 
 
 class _ModelImport(NamedTuple):
@@ -1749,6 +1914,7 @@ class LinkController:
                 ("live-error", self.stream.on_live_error),
                 ("model-applied", self.model.on_applied),
                 ("model-closed", self.model.on_closed),
+                ("model-push-requested", self.model.on_push_requested),
                 ("item-add-late", self.item_add.on_late),
                 ("open-texture", self._on_open_texture),
                 ("open-model", self._on_open_model),
@@ -1937,6 +2103,19 @@ class LinkController:
         if info is None or not info.name:
             return None
         return f"{info.name} {info.letter}" if info.letter else info.name
+
+    def focused_link(self) -> "tuple[Optional[Dict[str, str]], Optional[Msg]]":
+        """Link to the Cloth Selected in DCT: the binding of the cloth and variation focused in Durty Cloth Tool, or
+        ``None`` and why there is none (not connected, nothing selected, no variation selected)."""
+        if not self.ready:
+            return None, msg("notice.connect-first")
+        info = self.focus_info()
+        if info is None or not info.binding.get("clothId"):
+            return None, msg("notice.select-cloth")
+        binding = binding_of(info.binding.get("clothId"), info.binding.get("textureId"))
+        if binding is None:
+            return None, msg("model.link.no-variation")
+        return binding, None
 
     def focus_label(self) -> Optional[str]:
         """The focused cloth and its variation, as in "jbib_003_u B"."""
@@ -2388,6 +2567,10 @@ class LinkController:
             return
         self.model.open_notice = (Notice("WARNING", msg("open.model-warnings", name=imported.name))
                                   if imported.warnings else Notice("INFO", msg("open.opened", name=imported.name)))
+        if imported.scene_settings is not None:
+            # Editing that starts from Durty Cloth Tool is live: each change is sent again, unless the user turned
+            # Push Automatically off in this scene before.
+            turn_on_auto_push(imported.scene_settings)
         try:
             imported.push()
         except UserError as exc:
