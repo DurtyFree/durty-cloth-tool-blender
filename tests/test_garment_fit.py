@@ -275,6 +275,21 @@ def test_a_fit_that_does_not_work_out_says_why(tmp_path, api, outcome, keys):
         assert run.state == "failed" and [line.key for _, line in run.lines] == keys
 
 
+@pytest.mark.parametrize("outcome", [None, "notOnBody"])
+def test_a_server_writing_pascal_case_values_fits_the_same(tmp_path, api, outcome):
+    # gta.clothing writes Queued, Running, NeedsReview, NotOnBody and the other values in PascalCase.
+    api.fit.pascal_case = True
+    api.fit.outcome = outcome
+    ctrl = signed_in(tmp_path, api)
+    ended = Ended()
+    ctrl.fitting.on_ended = ended
+    upload, mesh = garment_upload()
+    run = ctrl.fitting.start("fit", request(mesh=mesh), upload, ("Scene", 7))
+    until(ctrl, lambda: bool(ended.runs))
+    assert run.state == "done" and run.result.outcome == (outcome or "fitted")
+    assert (run.result.positions is None) == (outcome == "notOnBody")
+
+
 def test_refusals_before_the_upload_are_worded_for_a_beginner(tmp_path, api):
     ctrl = signed_in(tmp_path, api)
     ended = Ended()

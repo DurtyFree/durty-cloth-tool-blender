@@ -890,7 +890,10 @@ def _validate_tokens(body: Dict[str, Any], now: float) -> Dict[str, Any]:
     if type(expires) is not int or not 1 <= expires <= 86400:
         raise AuthError("invalid-response", "the token lifetime is invalid", retryable=True)
     user = body.get("user") if isinstance(body.get("user"), dict) else {}
-    entitlement = body.get("entitlement") if isinstance(body.get("entitlement"), dict) else {}
+    entitlement = dict(body.get("entitlement")) if isinstance(body.get("entitlement"), dict) else {}
+    if isinstance(entitlement.get("tier"), str):
+        # gta.clothing writes the tier in PascalCase (``None``, ``Advanced``), older servers in lower case.
+        entitlement["tier"] = entitlement["tier"].lower()
     expires_at = body.get("refreshSessionExpiresAtUtc")
     session_id = body.get("sessionId")
     return {

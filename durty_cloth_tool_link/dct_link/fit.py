@@ -286,6 +286,19 @@ class FitAllowance(NamedTuple):
 # ---- the request and the mesh ---------------------------------------------------------------------------------
 
 
+def _canonical(value: Any, known: Tuple[str, ...]) -> Optional[str]:
+    """``value`` as this module spells it (an entry of ``known``), read without regard to letter case, or ``None``.
+
+    gta.clothing writes these values in PascalCase (``Queued``, ``NeedsReview``, ``Male``), older servers as
+    :data:`STATES`, :data:`OUTCOMES` and the other tuples spell them. Both read the same, and the value handed on is
+    always this module's spelling.
+    """
+    if not isinstance(value, str):
+        return None
+    folded = value.casefold()
+    return next((entry for entry in known if entry.casefold() == folded), None)
+
+
 def _number(value: Any) -> bool:
     return type(value) in (int, float) and math.isfinite(value)
 
@@ -519,20 +532,20 @@ def parse_status(status: int, headers: Dict[str, str], payload: bytes,
     if media == RESULT_TYPE:
         return parse_result(payload, expected_vertices)
     body = _json_object(payload)
-    state = body.get("state")
+    state = _canonical(body.get("state"), STATES)
     job_id = body.get("jobId")
-    if state not in STATES or not isinstance(job_id, str) or not _JOB_ID.fullmatch(job_id):
+    if state is None or not isinstance(job_id, str) or not _JOB_ID.fullmatch(job_id):
         raise FitError("invalid-response", "not a job state")
     progress = body.get("progress", 0)
     progress = min(1.0, max(0.0, float(progress))) if _number(progress) else 0.0
-    stage = body.get("stage")
+    stage = _canonical(body.get("stage"), STAGES)
     position = body.get("queuePosition")
     code = body.get("failureCode")
     refunded = body.get("refunded")
     return FitStatus(
         job_id=job_id,
         state=state,
-        stage=stage if stage in STAGES else None,
+        stage=stage,
         progress=progress,
         queue_position=position if type(position) is int and 0 <= position <= 100000 else None,
         failure_code=code if isinstance(code, str) and _CODE.fullmatch(code) else (
@@ -565,9 +578,9 @@ def parse_result(data: bytes, expected_vertices: Optional[int] = None) -> FitRes
         raise bad("the result header is not JSON") from None
     if not isinstance(header, dict) or header.get("format") != "dct-fit-result" or header.get("version") != 1:
         raise bad("not a fit result of version 1")
-    outcome, operation = header.get("outcome"), header.get("operation")
+    outcome, operation = _canonical(header.get("outcome"), OUTCOMES), _canonical(header.get("operation"), OPERATIONS)
     vertices, triangles, job_id = header.get("vertexCount"), header.get("triangleCount"), header.get("jobId")
-    if outcome not in OUTCOMES or operation not in OPERATIONS or not isinstance(job_id, str) \
+    if outcome is None or operation is None or not isinstance(job_id, str) \
             or not _JOB_ID.fullmatch(job_id):
         raise bad("the result header is incomplete")
     if type(vertices) is not int or not 0 < vertices <= MAX_VERTICES or type(triangles) is not int \
@@ -631,9 +644,9 @@ def parse_reference(payload: bytes) -> FitReference:
     """The answer of ``fit/reference``: the percentiles per body region and, when the service has them, the game's
     stretch statistics of the category."""
     body = _json_object(payload)
-    version, gender, category, regions = (body.get("bodyVersion"), body.get("gender"), body.get("category"),
-                                           body.get("regions"))
-    if not isinstance(version, str) or not _BODY_VERSION.fullmatch(version) or gender not in GENDERS \
+    version, gender, category, regions = (body.get("bodyVersion"), _canonical(body.get("gender"), GENDERS),
+                                           body.get("category"), body.get("regions"))
+    if not isinstance(version, str) or not _BODY_VERSION.fullmatch(version) or gender is None \
             or not isinstance(category, str) or not _CATEGORY.fullmatch(category) or not isinstance(regions, dict) \
             or len(regions) > 64:
         raise FitError("invalid-response", "not a fit reference")
@@ -773,8 +786,9 @@ class FitClient:
         if response.status != 202:
             raise failure(response.status, response.headers, response.payload)
         body = _json_object(response.payload)
-        job_id, state, remaining = body.get("jobId"), body.get("state", "queued"), body.get("remainingToday")
-        if not isinstance(job_id, str) or not _JOB_ID.fullmatch(job_id) or state not in STATES:
+        job_id, remaining = body.get("jobId"), body.get("remainingToday")
+        state = _canonical(body.get("state", "queued"), STATES)
+        if not isinstance(job_id, str) or not _JOB_ID.fullmatch(job_id) or state is None:
             raise FitError("invalid-response", "the upload's answer names no job", uploaded=True)
         return FitSubmitted(job_id, state, remaining if type(remaining) is int and remaining >= 0 else None)
 
