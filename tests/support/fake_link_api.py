@@ -339,6 +339,10 @@ def bone_of(x: float, z: float) -> int:
     return 4 if z > 0.1 else 1
 
 
+#: The answer members that hold an enum value.
+_ENUM_KEYS = frozenset({"state", "stage", "operation", "outcome", "gender"})
+
+
 class FakeFitService:
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -351,6 +355,9 @@ class FakeFitService:
         self.used = 0
         #: How the next jobs end, when not fitted (one of :data:`OUTCOMES`).
         self.outcome: Optional[str] = None
+        #: Write the enum values in PascalCase (``Queued``, ``NeedsReview``, ``Male``), as newer gta.clothing
+        #: servers do; lower case (camelCase for compound words) otherwise, as older servers do.
+        self.pascal_case = False
         #: The hosted body version the fitting runs on (a request for another is refused).
         self.body_version = BODY_VERSION
         self.jobs: Dict[str, Dict[str, Any]] = {}
@@ -372,11 +379,17 @@ class FakeFitService:
 
     # ---- helpers ------------------------------------------------------------------------------------------
 
-    @staticmethod
-    def _json(status: int, body: Any, headers: Optional[Dict[str, str]] = None) -> Answer:
+    def _spelled(self, body: Any) -> Any:
+        """``body`` with its enum values in the casing this service writes."""
+        if not self.pascal_case or not isinstance(body, dict):
+            return body
+        return {key: value[:1].upper() + value[1:] if key in _ENUM_KEYS and isinstance(value, str) else value
+                for key, value in body.items()}
+
+    def _json(self, status: int, body: Any, headers: Optional[Dict[str, str]] = None) -> Answer:
         out = {"Content-Type": "application/json", "Cache-Control": "no-store"}
         out.update(headers or {})
-        return status, out, json.dumps(body).encode()
+        return status, out, json.dumps(self._spelled(body)).encode()
 
     def _fail(self, status: int, code: str, errors: Optional[List[Dict[str, str]]] = None, retry: Optional[int] = None,
               **extra: Any) -> Answer:
@@ -691,7 +704,7 @@ class FakeFitService:
                        "unweightedVertices": 0,
                        "warnings": [] if not_on_body else [{"code": code, "message": code} for code in self.warnings]},
         }
-        text = json.dumps(header)
+        text = json.dumps(self._spelled(header))
         text += " " * (-len(text) % 4)
         head = text.encode()
         payload = b"" if not_on_body else struct.pack(f"<{vertices * 3}f", *positions) + bytes(bones) + bytes(weights)
