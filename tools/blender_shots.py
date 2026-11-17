@@ -89,7 +89,7 @@ def launch(argv=None) -> int:
     parser.add_argument("--scale", type=float, default=0.0,
                         help="Blender's interface resolution scale for the run (default: Blender's own)")
     parser.add_argument("--content", type=pathlib.Path,
-                        help="a content.json naming the project, the cloth, its picture, paint and model to show")
+                        help="a content.json naming the project, the cloth, its picture and paint to show")
     parser.add_argument("--body", type=pathlib.Path,
                         help="a folder with a locally built hosted body (freemode_*.glb, freemode_joints.json)")
     parser.add_argument("--garment", type=pathlib.Path, help="a .glb, .gltf or .fbx garment for Garment Fitting")
@@ -98,6 +98,9 @@ def launch(argv=None) -> int:
                         help="write only the documentation figures, under their documentation file names")
     parser.add_argument("--timeout", type=float, default=420.0)
     args = parser.parse_args(argv)
+    if args.docs and args.scenario not in ("link", "garment"):
+        print("error: --docs makes figures only with the link and garment scenarios")
+        return 1
     if args.size is None:
         args.size = "1280x2100" if args.docs else "1280x1600"
     for path in (args.content, args.body, args.garment):
@@ -442,7 +445,8 @@ class Shots:
 
     def load_content(self):
         """The cloth of ``--content`` (the content.json of Durty Cloth Tool's panel figure recipe): its project and
-        cloth names, picture (``thumbnailRgba``), paint (a texture variation as PNG) and model (GLB), or ``None``."""
+        cloth names, picture (``thumbnailRgba``), texture size (``size``) and paint (a texture variation as PNG), or
+        ``None``. The model comes from ``--garment``."""
         import json
 
         if not self.args.content:
@@ -512,6 +516,7 @@ class Shots:
             bpy.ops.import_scene.gltf(filepath=str(path))
         added = [obj for obj in bpy.data.objects if obj not in before]
         meshes = [obj for obj in added if obj.type == "MESH"]
+        others = [obj for obj in added if obj.type != "MESH"]  # named before the join frees the merged meshes
         if not meshes:
             raise RuntimeError(f"{path.name} holds no mesh")
         for obj in bpy.context.view_layer.objects:
@@ -520,10 +525,11 @@ class Shots:
         if len(meshes) > 1:
             self.operator(lambda: bpy.ops.object.join())
         garment = bpy.context.view_layer.objects.active
-        for obj in added:
-            if obj is not garment and obj.name in bpy.data.objects and obj.type != "MESH":
-                bpy.data.objects.remove(obj)
+        world = garment.matrix_world.copy()  # a scaled or turned root node keeps the garment where it was
         garment.parent = None
+        garment.matrix_world = world
+        for obj in others:
+            bpy.data.objects.remove(obj)
         garment.name = garment.data.name = name
         for material in garment.data.materials:  # the colour texture only: a normal map in a .glb is no DDS file
             tree = material.node_tree if material is not None and material.use_nodes else None
