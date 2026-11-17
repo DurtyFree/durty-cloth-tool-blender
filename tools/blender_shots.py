@@ -5,7 +5,8 @@
 
     python tools/blender_shots.py --blender <path to blender> --out <folder>
         [--source <add-on source folder>] [--prefix after] [--expanded] [--language de_DE] [--theme light]
-        [--scenario garment|gloves|ped] [--text-size 14]
+        [--scenario garment|gloves|ped] [--text-size 14] [--scale 1.5]
+        [--content content.json] [--body <folder>] [--garment <file> --garment-type hoodie] [--docs]
 
 Builds the extension from ``--source`` (default: this repository's ``durty_cloth_tool_link``), starts a Blender
 window with a throw-away user folder (``BLENDER_USER_RESOURCES``), installs the build, and walks the add-on through
@@ -25,7 +26,9 @@ to be applied, the rigged character with its checks, and the project Durty Cloth
 ``<prefix>-<NN>-<state>.png`` in ``--out``, cropped to the sidebar. ``--expanded`` opens every collapsed
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run;
 ``--text-size`` sets the interface text size in points (Blender's is 11): larger text in the same sidebar shows what
-a narrower sidebar cuts off or wraps (14 points is about a sidebar a fifth narrower). Blender
+a narrower sidebar cuts off or wraps (14 points is about a sidebar a fifth narrower). ``--content``, ``--body`` and
+``--garment`` show a real cloth, body and garment instead of the stand-ins, and ``--docs`` writes the figures of the
+public documentation under their file names (docs/DEVELOPMENT.md, "Screenshots"). Blender
 quits by itself at the end (and is ended after ``--timeout`` seconds otherwise). Your Blender settings and
 extensions are never touched, and nothing is sent to gta.clothing.
 
@@ -51,6 +54,17 @@ except ImportError:  # outside Blender: the launcher
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
 DEFAULT_SOURCE = REPO_ROOT / "durty_cloth_tool_link"
+#: With --docs, the documentation figures that show part of the sidebar: the rows (top, bottom) in pixels from its top,
+#: at Blender's default interface scale on a 175 % display. They follow the layout of the current panels and content:
+#: look at each figure after a change and move the rows when the panels moved.
+DOCS_ROWS = {
+    "garment-fit-check": (650, 1505),
+    "garment-transfer-weights": (805, 1065),
+    "garment-add": (680, 1150),
+    "garment-add-problems": (1180, 1420),
+    "garment-add-waiting": (1030, 1262),
+    "garment-add-added": (1140, 1435),
+}
 
 
 # --------------------------------------------------------------------------------------------------
@@ -67,13 +81,29 @@ def launch(argv=None) -> int:
     parser.add_argument("--expanded", action="store_true", help="open every collapsed panel and group")
     parser.add_argument("--language", help="Blender's interface language for the run, for example de_DE")
     parser.add_argument("--theme", choices=("dark", "light"), default="dark")
-    parser.add_argument("--size", default="1280x1600", help="the window size, WIDTHxHEIGHT")
+    parser.add_argument("--size", help="the window size, WIDTHxHEIGHT (default 1280x1600, with --docs 1280x2100)")
     parser.add_argument("--scenario", choices=("link", "garment", "gloves", "ped"), default="link",
                         help="which states to walk")
     parser.add_argument("--text-size", type=float, default=0.0,
                         help="the interface text size in points (default: Blender's own)")
+    parser.add_argument("--scale", type=float, default=0.0,
+                        help="Blender's interface resolution scale for the run (default: Blender's own)")
+    parser.add_argument("--content", type=pathlib.Path,
+                        help="a content.json naming the project, the cloth, its picture, paint and model to show")
+    parser.add_argument("--body", type=pathlib.Path,
+                        help="a folder with a locally built hosted body (freemode_*.glb, freemode_joints.json)")
+    parser.add_argument("--garment", type=pathlib.Path, help="a .glb, .gltf or .fbx garment for Garment Fitting")
+    parser.add_argument("--garment-type", default="tshirt", help="the Garment Type of --garment, for example hoodie")
+    parser.add_argument("--docs", action="store_true",
+                        help="write only the documentation figures, under their documentation file names")
     parser.add_argument("--timeout", type=float, default=420.0)
     args = parser.parse_args(argv)
+    if args.size is None:
+        args.size = "1280x2100" if args.docs else "1280x1600"
+    for path in (args.content, args.body, args.garment):
+        if path is not None and not path.exists():
+            print(f"error: {path} does not exist")
+            return 1
     args.out.mkdir(parents=True, exist_ok=True)
     sys.path.insert(0, str(REPO_ROOT))
     from tools.blender_smoke import isolated_environment  # never the real Blender profile
@@ -93,7 +123,10 @@ def launch(argv=None) -> int:
             return 1
         width, height = (int(v) for v in args.size.lower().split("x"))
         command = [args.blender, "--factory-startup", "--online-mode", "--window-geometry", "0", "0", str(width),
-                   str(height), "--python", str(pathlib.Path(__file__).resolve()), "--", "--zip", str(archives[-1]),
+                   str(height)]
+        if args.docs:
+            command.append("--enable-event-simulate")  # to close a dialog after its figure; ignores real input
+        command += ["--python", str(pathlib.Path(__file__).resolve()), "--", "--zip", str(archives[-1]),
                    "--out", str(args.out.resolve()), "--prefix", args.prefix, "--theme", args.theme,
                    "--scenario", args.scenario]
         if args.expanded:
@@ -102,6 +135,14 @@ def launch(argv=None) -> int:
             command += ["--language", args.language]
         if args.text_size:
             command += ["--text-size", str(args.text_size)]
+        if args.scale:
+            command += ["--scale", str(args.scale)]
+        for option, path in (("--content", args.content), ("--body", args.body), ("--garment", args.garment)):
+            if path is not None:
+                command += [option, str(path.resolve())]
+        command += ["--garment-type", args.garment_type]
+        if args.docs:
+            command.append("--docs")
         process = subprocess.Popen(command, cwd=REPO_ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True, encoding="utf-8", errors="replace")
         try:
@@ -166,35 +207,145 @@ class Shots:
                 for region in area.regions:
                     region.tag_redraw()
 
-    def shot(self, name: str, whole: bool = False):
-        """Saves the sidebar (``whole``: the whole 3D view with its sidebar) as a numbered picture."""
+    def capture(self, window_too: bool = False):
+        """The 3D view (``window_too``: the whole window, with any open popup) as float RGBA rows, bottom row first."""
         import numpy as np
 
-        window, area, region = self.view()
-        self.count += 1
-        full = self.scratch / f"full-{self.count:02d}.png"
+        window, area, _ = self.view()
+        full = self.scratch / f"full-{self.count:02d}-{len(os.listdir(self.scratch))}.png"
         with bpy.context.temp_override(window=window, screen=window.screen, area=area):
-            bpy.ops.screen.screenshot_area(filepath=str(full), check_existing=False)
+            if window_too:
+                bpy.ops.screen.screenshot(filepath=str(full), check_existing=False)
+            else:
+                bpy.ops.screen.screenshot_area(filepath=str(full), check_existing=False)
         image = bpy.data.images.load(str(full))
         try:
             width, height = image.size
             pixels = np.empty(width * height * 4, np.float32)
             image.pixels.foreach_get(pixels)
-            rows = pixels.reshape(height, width, 4)
-            x0 = 0 if whole else max(0, region.x - area.x)
-            y0 = 0 if whole else max(0, region.y - area.y)
-            w, h = (area.width, area.height) if whole else (region.width, region.height)
-            crop = np.ascontiguousarray(rows[y0:y0 + h, x0:x0 + w])
-            out = bpy.data.images.new(f"shot_{self.count}", crop.shape[1], crop.shape[0], alpha=True)
-            out.pixels.foreach_set(crop.reshape(-1))
-            path = self.out / f"{self.args.prefix}-{self.count:02d}-{name}.png"
-            out.filepath_raw = str(path)
-            out.file_format = "PNG"
-            out.save()
-            bpy.data.images.remove(out)
-            print(f"SHOT {path.name}")
+            return pixels.reshape(height, width, 4).copy()
         finally:
             bpy.data.images.remove(image)
+
+    def save(self, rows, path: pathlib.Path):
+        import numpy as np
+
+        rows = np.ascontiguousarray(rows)
+        out = bpy.data.images.new(f"shot_{self.count}", rows.shape[1], rows.shape[0], alpha=True)
+        out.pixels.foreach_set(rows.reshape(-1))
+        out.filepath_raw = str(path)
+        out.file_format = "PNG"
+        out.save()
+        bpy.data.images.remove(out)
+        print(f"SHOT {path.name}")
+
+    def target(self, name: str, docs: "str | None") -> "pathlib.Path | None":
+        """Where a shot goes: numbered by its state, or with ``--docs`` under its documentation name (``None``: a
+        shot the documentation does not use, not written)."""
+        self.count += 1
+        if self.args.docs:
+            return self.out / f"{docs}.png" if docs else None
+        return self.out / f"{self.args.prefix}-{self.count:02d}-{name}.png"
+
+    def shot(self, name: str, whole: bool = False, docs: "str | None" = None, rows: "tuple | None" = None,
+             box: "tuple | None" = None):
+        """Saves the sidebar (``whole``: the whole 3D view with its sidebar) as a numbered picture, or with ``--docs``
+        as the documentation figure ``docs``: the sidebar down to the end of its panels, ``rows`` (top, bottom) of it
+        in pixels from its top, or ``box`` (left, top, width, height) of the whole 3D view."""
+        path = self.target(name, docs)
+        if path is None:
+            return
+        window, area, region = self.view()
+        pixels = self.capture()
+        x0 = 0 if whole else max(0, region.x - area.x)
+        y0 = 0 if whole else max(0, region.y - area.y)
+        w, h = (area.width, area.height) if whole else (region.width, region.height)
+        crop = pixels[y0:y0 + h, x0:x0 + w]
+        if self.args.docs and box is not None:
+            left, top, bw, bh = box
+            crop = crop[max(0, crop.shape[0] - top - bh):crop.shape[0] - top, left:left + bw]
+        elif self.args.docs and rows is not None:
+            top, bottom = rows
+            tabs = int(crop.shape[1] * 0.075)  # the category tabs on the right belong to the whole sidebar
+            crop = crop[max(0, crop.shape[0] - bottom):crop.shape[0] - top, :crop.shape[1] - tabs]
+        elif self.args.docs and not whole:
+            crop = self.trim(self.whole_sidebar(crop, name), name)
+        self.save(crop, path)
+
+    @staticmethod
+    def empty_rows(crop):
+        """Rows (bottom row first) that equal the sidebar's plain background (Region Overlap is off with ``--docs``):
+        the colour of each column in its bottom rows."""
+        import numpy as np
+
+        reference = crop[2:3, :, :3]  # the lowest rows can carry the region's edge
+        return np.all(np.abs(crop[:, :, :3] - reference) < 0.004, axis=(1, 2))
+
+    def trim(self, crop, name: str):
+        """The sidebar without the empty space under its panels, apart from a small margin."""
+        import numpy as np
+
+        used = np.nonzero(~self.empty_rows(crop)[2:])[0]
+        if used.size == 0:
+            return crop
+        margin = int(8 * bpy.context.preferences.system.ui_scale)
+        return crop[max(0, used[0] + 2 - margin):]
+
+    def whole_sidebar(self, crop, name: str):
+        """The sidebar with all of its panels: when they reach its end, it is scrolled down a page at a time and the
+        pictures are joined where they overlap (matched by the rows' brightness, away from the tabs on the right)."""
+        import numpy as np
+
+        if self.empty_rows(crop)[2:12].all():
+            return crop  # room to spare under the panels
+        window, area, region = self.view()
+        tabs = int(48 * bpy.context.preferences.system.ui_scale)
+        joined = crop[::-1]  # top row first from here on
+        last = joined
+        for _ in range(12):
+            self.scroll(1)
+            with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
+                bpy.ops.wm.redraw_timer(type="DRAW_WIN_SWAP", iterations=1)
+            pixels = self.capture()
+            x0, y0 = max(0, region.x - area.x), max(0, region.y - area.y)
+            piece = pixels[y0:y0 + region.height, x0:x0 + region.width][::-1]
+            height = min(piece.shape[0], last.shape[0])
+            a = last[-height:, :-tabs:3, :3].mean(axis=2)
+            b = piece[:height, :-tabs:3, :3].mean(axis=2)
+            best, shift = None, 0
+            for d in range(0, height - 40):  # the shift that lines last's lower rows up with piece's upper rows
+                error = float(np.abs(a[d:] - b[:height - d]).mean())
+                if best is None or error < best - 1e-6:
+                    best, shift = error, d
+            if shift == 0:
+                break  # the sidebar did not move: its end
+            joined = np.concatenate([joined, piece[height - shift:]])
+            last = piece
+            if self.empty_rows(piece[::-1])[2:12].all():
+                break
+        else:
+            print(f"CHECK {name} may be cut off: the sidebar did not end after 12 pages")
+        self.scroll(-40)
+        return np.ascontiguousarray(joined[::-1])
+
+    def popup_shot(self, name: str, docs: str, before, margin: int = 0):
+        """Saves the popup (a dialog or an open menu) that appeared since ``before`` (a ``capture(True)``): the box
+        of the pixels that changed, ``margin`` pixels wider."""
+        import numpy as np
+
+        path = self.target(name, docs)
+        if path is None:
+            return
+        after = self.capture(window_too=True)
+        if after.shape != before.shape:
+            raise RuntimeError(f"the window changed its size while {name} opened")
+        changed = np.any(np.abs(after[:, :, :3] - before[:, :, :3]) > 0.004, axis=2)
+        ys, xs = np.nonzero(changed)
+        if ys.size == 0:
+            raise RuntimeError(f"no popup appeared for {name}")
+        y0, y1 = max(0, ys.min() - margin), min(after.shape[0], ys.max() + 1 + margin)
+        x0, x1 = max(0, xs.min() - margin), min(after.shape[1], xs.max() + 1 + margin)
+        self.save(after[y0:y1, x0:x1], path)
 
     # ---- the run -----------------------------------------------------------------------------------
 
@@ -208,6 +359,12 @@ class Shots:
         if args.text_size:
             for style in prefs.ui_styles:
                 style.widget.points = style.panel_title.points = args.text_size
+        if args.scale:
+            prefs.view.ui_scale = args.scale
+        if args.docs:
+            # A plain sidebar background, so a figure ends where the panels end (see trim).
+            prefs.system.use_region_overlap = False
+        self.content = self.load_content()
         if args.theme == "light":
             presets = pathlib.Path(bpy.utils.resource_path("LOCAL")) / "scripts" / "presets" / "interface_theme"
             bpy.ops.script.execute_preset(filepath=str(presets / "Blender_Light.xml"),
@@ -267,7 +424,9 @@ class Shots:
         ctrl.auth_base_url = api.base_url
         new = hasattr(link.LinkController, "open_map")
         try:
-            if args.scenario == "garment":
+            if args.scenario == "garment" and args.docs:
+                yield from self.garment_docs_states(package, ctrl, dct, api, ui, sollumz_stub)
+            elif args.scenario == "garment":
                 yield from self.garment_states(package, ctrl, dct, api, ui, sollumz_stub)
             elif args.scenario == "gloves":
                 yield from self.gloves_states(package, ctrl, dct, api, sollumz_stub)
@@ -278,6 +437,157 @@ class Shots:
         finally:
             dct.stop()
             api.stop()
+
+    # ---- real content (--content, --body, --garment) ---------------------------------------------------
+
+    def load_content(self):
+        """The cloth of ``--content`` (the content.json of Durty Cloth Tool's panel figure recipe): its project and
+        cloth names, picture (``thumbnailRgba``), paint (a texture variation as PNG) and model (GLB), or ``None``."""
+        import json
+
+        if not self.args.content:
+            return None
+        path = pathlib.Path(self.args.content)
+        content = json.loads(path.read_text(encoding="utf-8"))
+        content["folder"] = path.parent
+        return content
+
+    def content_model(self) -> str:
+        """The drawable's name, for example ``jbib_016_u``."""
+        c = self.content
+        return f"{c['drawableType']}_{int(c['number']):03d}_u"
+
+    def content_focused(self, binding):
+        """The cloth selected in the fake Durty Cloth Tool, as context.get and event.selection report it: the
+        content's last texture variation is selected, which is the one ``paint`` shows."""
+        import re
+
+        c = self.content
+        textures = []
+        for index, name in enumerate(c["textures"]):
+            last = index == len(c["textures"]) - 1
+            texture_id = binding["textureId"] if last else f"0000000{index}-1111-4222-8333-444455556666"
+            textures.append({"textureId": texture_id, "name": name, "width": c["size"], "height": c["size"]})
+        return {"clothId": binding["clothId"], "name": c["cloth"], "selectedTextureId": binding["textureId"],
+                "textures": textures, "targets": ["diffuse", "normal"], "drawableType": c["drawableType"],
+                "gender": c["gender"], "collection": re.sub(r"^mp_[mf]_freemode_01_", "", c["collection"]),
+                "number": int(c["number"])}
+
+    def content_thumbnail(self):
+        c = self.content
+        size = int(c["thumbnailSize"])
+        return {"width": size, "height": size, "rgba": (c["folder"] / c["thumbnailRgba"]).read_bytes()}
+
+    def content_paint(self):
+        """The content's paint as a Blender image named after its texture variation."""
+        c = self.content
+        image = bpy.data.images.load(str(c["folder"] / c["paint"]), check_existing=False)
+        image.name = c["textures"][-1]
+        return image
+
+    @staticmethod
+    def rgba_rows(image) -> bytes:
+        """A Blender image as RGBA8 rows, top row first (what host.openTexture carries)."""
+        import numpy as np
+
+        width, height = image.size
+        pixels = np.empty(width * height * 4, np.float32)
+        image.pixels.foreach_get(pixels)
+        rows = pixels.reshape(height, width, 4)[::-1]
+        return (np.clip(rows, 0.0, 1.0) * 255.0 + 0.5).astype(np.uint8).tobytes()
+
+    def body_files(self):
+        """The files of ``--body`` as the fake gta.clothing serves them for its body version."""
+        folder = pathlib.Path(self.args.body)
+        return {path.name: path.read_bytes() for path in sorted(folder.iterdir())
+                if path.name.startswith("freemode") and path.suffix in (".glb", ".json")}
+
+    def import_garment(self, name: str):
+        """The garment of ``--garment`` imported as one mesh object called ``name``."""
+        path = pathlib.Path(self.args.garment)
+        before = set(bpy.data.objects)
+        if path.suffix.lower() == ".fbx":
+            bpy.ops.import_scene.fbx(filepath=str(path))
+        else:
+            bpy.ops.import_scene.gltf(filepath=str(path))
+        added = [obj for obj in bpy.data.objects if obj not in before]
+        meshes = [obj for obj in added if obj.type == "MESH"]
+        if not meshes:
+            raise RuntimeError(f"{path.name} holds no mesh")
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj in meshes)
+        bpy.context.view_layer.objects.active = meshes[0]
+        if len(meshes) > 1:
+            self.operator(lambda: bpy.ops.object.join())
+        garment = bpy.context.view_layer.objects.active
+        for obj in added:
+            if obj is not garment and obj.name in bpy.data.objects and obj.type != "MESH":
+                bpy.data.objects.remove(obj)
+        garment.parent = None
+        garment.name = garment.data.name = name
+        for material in garment.data.materials:  # the colour texture only: a normal map in a .glb is no DDS file
+            tree = material.node_tree if material is not None and material.use_nodes else None
+            for node in [n for n in tree.nodes if n.type == "NORMAL_MAP"] if tree is not None else ():
+                for link in list(node.inputs["Color"].links):
+                    tree.nodes.remove(link.from_node)
+                tree.nodes.remove(node)
+        return garment
+
+    def view_shot(self, name: str, docs: str, objects, size=(1030, 1100), zoom=1.1, lift=-0.1):
+        """The 3D view alone, looking at ``objects`` from the front, as the documentation figure ``docs`` (a box of
+        ``size`` pixels in its middle)."""
+        window, area, _ = self.view()
+        space = area.spaces.active
+        space.show_region_ui = False
+        space.overlay.show_floor = space.overlay.show_axis_x = space.overlay.show_axis_y = False
+        space.overlay.show_cursor = False
+        main = next(r for r in area.regions if r.type == "WINDOW")
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj in objects)
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=main):
+            bpy.ops.view3d.view_axis(type="FRONT")
+            bpy.ops.view3d.view_selected()
+        for obj in objects:
+            obj.select_set(False)
+        r3d = space.region_3d
+        r3d.view_perspective = "PERSP"
+        r3d.view_distance *= zoom
+        r3d.view_location.z += lift
+        yield from self.wait(lambda: True, 5)
+        width, height = min(size[0], main.width), min(size[1], main.height)
+        self.shot(name, whole=True, docs=docs,
+                  box=((area.width - width) // 2, (area.height - height) // 2, width, height))
+        space.show_region_ui = True
+        space.overlay.show_floor = space.overlay.show_axis_x = space.overlay.show_axis_y = True
+        space.overlay.show_cursor = True
+        yield from self.wait(lambda: True, 5)
+
+    def work_on_shot(self):
+        """The Work On list opened by a click on it (with --docs only, which can simulate the click)."""
+        window, area, region = self.view()
+        scale = bpy.context.preferences.system.ui_scale
+        print(f"CHECK the interface scale is {scale:.2f}")
+        # Work On is the third row of the Durty Cloth Tool panel: its list button sits at 59 % of the sidebar's
+        # width, 103 interface units below its top.
+        x = region.x + int(region.width * 0.59)
+        y = region.y + region.height - int(103.4 * scale)
+        window.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x, y=y)
+        yield from self.wait(lambda: True, 3)
+        window.event_simulate(type="LEFTMOUSE", value="PRESS", x=x, y=y)
+        window.event_simulate(type="LEFTMOUSE", value="RELEASE", x=x, y=y)
+        yield 0.5
+        self.redraw()
+        yield 0.5
+        self.shot("work-on", docs="blender-work-on", rows=(0, int(188 * scale)))
+        self.press("ESC")
+        window.event_simulate(type="MOUSEMOVE", value="NOTHING", x=area.x + 20, y=area.y + 20)
+        yield from self.wait(lambda: True, 3)
+
+    def press(self, key: str):
+        """A key press in the window (needs Blender started with --enable-event-simulate, as --docs does)."""
+        window = bpy.context.window_manager.windows[0]
+        window.event_simulate(type=key, value="PRESS")
+        window.event_simulate(type=key, value="RELEASE")
 
     def expand(self, ui):
         """Opens every collapsed panel and settings group (they are created closed only at their first draw)."""
@@ -551,6 +861,191 @@ class Shots:
         self.shot("garment-ready")
         yield from self.garment_add_states(garment_ui, ctrl, dct, tpose, props)
 
+    def garment_docs_states(self, package, ctrl, dct, api, ui, stub):
+        """``--docs --scenario garment``: the Garment Fitting figures of the documentation, on the garment of
+        ``--garment`` (or the synthetic T-shirt) and the body of ``--body`` (or the synthetic one), one garment from
+        Setup to Add to Project."""
+        from tests.blender import garment_smoke
+        from tests.support import synthetic
+        from tests.support.fake_dct import ADDED_BINDING
+
+        garment_ui = sys.modules[package + ".ui_garment"]
+        gh = sys.modules[package + ".garment_host"]
+        stub.register()
+        ctrl.shutdown()
+        ctrl.port_override = dct.port
+        dct.on_assist = api.approve
+        dct.focused = None
+        if self.content is not None:
+            dct.project_name = self.content["project"]
+        ctrl.connect()
+        yield from self.wait(lambda: ctrl.state == "signing-in" or ctrl.ready, 30, "the sign-in")
+        if not ctrl.ready:
+            ctrl.sign_in()
+        yield from self.wait(lambda: ctrl.ready, 30, "the connection")
+        scene = bpy.context.scene
+        for obj in list(scene.objects):
+            bpy.data.objects.remove(obj)  # the default cube, camera and light
+        props = scene.dct_garment
+        space = self.view()[1].spaces.active
+        space.shading.type = "SOLID"
+        space.shading.color_type = "TEXTURE"  # the garment's own colours
+
+        # Setup: the garment and the hosted body.
+        gender = self.content["gender"] if self.content is not None else "female"
+        if self.args.garment:
+            name = self.content_model() if self.content is not None else pathlib.Path(self.args.garment).stem
+            garment = self.import_garment(name)
+        else:
+            garment = garment_smoke.panel_garment("tshirt_md", "short", 45.0)
+        props.garment = garment
+        props.gender = gender
+        if self.args.body:
+            api.body_files = self.body_files()
+        else:
+            folder = pathlib.Path(tempfile.mkdtemp(prefix="dct_shots_garment_",
+                                                   dir=os.environ["BLENDER_USER_RESOURCES"]))
+            api.body_files = {f"freemode_{gender}.glb": garment_smoke.body_glb(folder).read_bytes(),
+                              **garment_smoke.synthetic_pack.body_files((gender,))}  # no game data
+        garment_ui.BODY_ORIGIN["url"] = api.base_url
+        api.fit.per_day = 10
+        props.category = self.args.garment_type
+        self.operator(lambda: bpy.ops.dct_link.fit_add_body())
+        yield from self.wait(lambda: garment_ui.RUNTIME.download is None and props.body is not None, 60,
+                             "the hosted body")
+        self.show_garment(garment_ui, "setup")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-setup", docs="garment-setup")
+
+        # Fit: the markers placed and aligned to the body. A garment made for the freemode body (a real cloth from a
+        # Durty Cloth Tool project) sits on it already: the elbow and wrist markers, which Auto Markers places in the
+        # middle of a loose sleeve, are moved onto the body's joints, as the panel asks a user to check them, so Align
+        # to Body keeps the sleeves on the arms.
+        self.operator(lambda: bpy.ops.dct_link.fit_auto_markers())
+        if self.args.body and self.args.garment:
+            body_joints, _ = garment_ui.joints(bpy.context)
+            markers = gh.read_markers(scene, garment)
+            bones = sys.modules[package + ".garment"].MARKER_JOINTS
+            moved = {name: tuple(body_joints[bones[name]]) for name in markers
+                     if name.startswith(("elbow", "wrist")) and body_joints and bones.get(name) in body_joints}
+            gh.write_markers(scene, {**markers, **moved}, props.marker_size, garment)
+            print(f"CHECK {len(moved)} of {len(markers)} markers moved onto the body's joints")
+        self.operator(lambda: bpy.ops.dct_link.fit_align())
+        yield from self.wait(lambda: garment_ui.RUNTIME.job is None and gh.flag(garment, "dct_aligned"), 60,
+                             "the alignment")
+        self.show_garment(garment_ui, "fit")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fit-aligned", docs="garment-fit")
+
+        # Fit on gta.clothing: the question before the first upload, then the fit on its way.
+        sys.modules[package + ".state"].preferences().fit_upload_consent = False
+        api.fit.body_version = props.body.get(gh.BODY_VERSION)
+        api.fit.warnings = []  # the markers sit on the body's joints
+        api.fit.queued_polls = 0
+        before = self.capture(window_too=True)
+        window, area, region = self.view()
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
+            bpy.ops.dct_link.fit_service_fit("INVOKE_DEFAULT")
+        yield from self.wait(lambda: True, 5)
+        self.popup_shot("garment-fit-consent", "garment-fit-consent", before)
+        self.press("ESC")
+        yield from self.wait(lambda: True, 5)
+        sys.modules[package + ".state"].preferences().fit_upload_consent = True
+        self.operator(lambda: bpy.ops.dct_link.fit_service_fit())
+        yield from self.wait(lambda: ctrl.fitting.busy, 30, "the fit to start")
+        self.show_garment(garment_ui, "fit")
+        yield from self.wait(lambda: True, 3)
+        self.shot("garment-fit-running", docs="garment-fit-service")
+        yield from self.wait(lambda: not ctrl.fitting.busy and garment_ui.RUNTIME.fit_lines, 60, "the fit")
+
+        # Fix: the fit check, the problem colours on the garment, Push Out of Body.
+        self.operator(lambda: bpy.ops.dct_link.fit_check())
+        self.operator(lambda: bpy.ops.dct_link.fit_show_problems())
+        self.show_garment(garment_ui, "fix", sections=("problems",))
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fix-check", docs="garment-fix")
+        yield from self.view_shot("garment-problems", "garment-problems", [garment])
+        self.operator(lambda: bpy.ops.dct_link.fit_push_out())
+        self.operator(lambda: bpy.ops.dct_link.fit_check())
+        self.show_garment(garment_ui, "fix", sections=("problems",))
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fit-check", docs="garment-fit-check", rows=DOCS_ROWS["garment-fit-check"])
+        if gh.problems_shown(garment):
+            self.operator(lambda: bpy.ops.dct_link.fit_show_problems())  # off again
+        space.shading.color_type = "TEXTURE"  # the garment's own colours
+        yield from self.view_shot("garment-fit-view", "garment-fit-view", [garment])
+
+        # Fix by hand: a sculpt session.
+        self.operator(lambda: bpy.ops.dct_link.fit_sculpt_start())
+        yield from self.wait(lambda: gh.sculpting(garment), 5, "the sculpt session")
+        self.show_garment(garment_ui, "fix")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-fix-sculpting", docs="garment-sculpting")
+        self.operator(lambda: bpy.ops.dct_link.fit_sculpt_accept())
+        yield from self.wait(lambda: not gh.sculpting(garment), 5, "the end of the session")
+
+        # Game Ready: prepare and combine materials, the Durty Cloth Tool skeleton and Transfer Weights, levels of
+        # detail, validate.
+        dct.skeleton_files = {g: [(synthetic.skeleton_template_file(g), synthetic.skeleton_template_xml(g))]
+                              for g in ("male", "female")}
+
+        def run(call):
+            try:
+                self.operator(call)
+            except RuntimeError:
+                pass  # an operator that reports why it refused (the panel shows it)
+
+        self.operator(lambda: bpy.ops.dct_link.fit_prepare())
+        self.operator(lambda: bpy.ops.dct_link.fit_combine_materials())
+        if not ctrl.ready:  # the long steps before can outlast the connection; it comes back by itself
+            ctrl.connect()
+            yield from self.wait(lambda: ctrl.ready and ctrl.project is not None, 30, "the connection")
+        run(lambda: bpy.ops.dct_link.fit_use_skeleton())
+        yield from self.wait(lambda: garment_ui.RUNTIME.job is None and garment.parent is not None
+                             and garment.parent.get("dct_skeleton"), 30, "the skeleton")
+        run(lambda: bpy.ops.dct_link.fit_service_weights())
+        yield from self.wait(lambda: not ctrl.fitting.busy, 60, "the weights")
+        self.operator(lambda: bpy.ops.dct_link.fit_lods())
+        self.operator(lambda: bpy.ops.dct_link.fit_validate())
+        self.show_garment(garment_ui, "ready")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-ready", docs="garment-game-ready")
+        self.shot("garment-weights", docs="garment-transfer-weights", rows=DOCS_ROWS["garment-transfer-weights"])
+        self.show_garment(garment_ui, "none")
+        yield from self.wait(lambda: True, 5)
+        self.shot("garment-stages", docs="garment-stages")
+        yield from self.garment_docs_add(garment_ui, ctrl, dct, garment, props, ADDED_BINDING, run)
+
+    def garment_docs_add(self, garment_ui, ctrl, dct, garment, props, added_binding, run):
+        """The Add to Project figures."""
+        props.item_name = self.content["cloth"] if self.content is not None else "Top 2 T-shirt"
+
+        def show(name, docs):
+            self.show_garment(garment_ui, "add", sections=("variations",))
+            yield from self.wait(lambda: True, 5)
+            self.shot(name, docs=docs, rows=DOCS_ROWS.get(docs))
+
+        # What blocks an add: a vertex group that is no bone, a colour variation without an image.
+        stray = garment.vertex_groups.new(name="Group")
+        props.variations.add()
+        run(lambda: bpy.ops.dct_link.fit_add_to_dct())
+        yield from show("garment-add-problems", "garment-add-problems")
+        garment.vertex_groups.remove(stray)
+        props.variations.remove(0)  # the garment's own texture is the only colour variation
+        props.first_title = self.content.get("colour", "") if self.content is not None else "Black"
+        ctrl.item_add.forget()  # the refused add's list goes once the problems are fixed and the add is asked again
+        yield from show("garment-add", "garment-add")
+        # Durty Cloth Tool shows the cloth and asks; then the user chooses Add to project.
+        dct.hold_adds = True
+        run(lambda: bpy.ops.dct_link.fit_add_to_dct())
+        yield from self.wait(lambda: bool(dct.item_adds) and ctrl.item_add.adding, 30, "the waiting add")
+        yield from show("garment-add-waiting", "garment-add-waiting")
+        dct.release_adds({"ok": True, "binding": dict(added_binding),
+                          "findings": []})
+        yield from self.wait(lambda: not ctrl.item_add.adding, 20, "the added cloth")
+        yield from show("garment-add-added", "garment-add-added")
+        dct.hold_adds = False
+
     def garment_add_states(self, garment_ui, ctrl, dct, coat, props):
         """Add to Project, the last stage, against the fake Durty Cloth Tool."""
         from tests.blender import garment_smoke
@@ -812,7 +1307,7 @@ class Shots:
         ctrl.connect()
         yield from self.wait(lambda: ctrl.sign_in_prompt is not None and bool(dct.assisted_codes), 30,
                              "the sign-in request")
-        self.shot("sign-in-asked-in-dct")
+        self.shot("sign-in-asked-in-dct", docs="blender-get-connected")
 
         # 3. Durty Cloth Tool declines: the browser code is what is left.
         answer["ok"] = False
@@ -824,7 +1319,13 @@ class Shots:
         # 4. Approved: connected, the focused cloth in the Linked Cloth panel.
         api.approve(dct.assisted_codes[-1])
         dct.on_assist = api.approve
-        dct.focused = {"clothId": "3f2b8c1e-7a4d-4e8b-9c1f-2d6e5a7b8c90", "name": "jbib_003_u",
+        from tests.support.fake_dct import BINDING
+
+        if self.content is not None:
+            dct.project_name = self.content["project"]
+            dct.thumbnail_reply = self.content_thumbnail()
+            dct.texture_findings = []  # the real paint has the sizes the game expects
+        dct.focused = self.content_focused(BINDING) if self.content is not None else {"clothId": "3f2b8c1e-7a4d-4e8b-9c1f-2d6e5a7b8c90", "name": "jbib_003_u",
                        "selectedTextureId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
                        "textures": [{"textureId": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d", "name": "jbib_diff_003_a_uni",
                                      "width": 2048, "height": 2048},
@@ -834,16 +1335,24 @@ class Shots:
         yield from self.wait(lambda: ctrl.ready and ctrl.focused is not None, 30, "the connection")
         yield 1.0  # the thumbnail
         self.shot("connected")
+        if self.args.docs:
+            yield from self.work_on_shot()
 
-        # 5. Live preview with the texture checks.
+        # 5. Live preview with the texture checks (with --docs, Sollumz is installed already, so the Model panel shows
+        #    what a user with Sollumz sees).
+        if self.args.docs:
+            stub.register()
         scene = bpy.context.scene
-        image = bpy.data.images.new("jacket_paint", 512, 512, alpha=True)
+        if self.content is not None:
+            image = self.content_paint()
+        else:
+            image = bpy.data.images.new("jacket_paint", 512, 512, alpha=True)
         scene.dct_link.image = image
         scene.dct_link.target = "diffuse"
         self.operator(lambda: bpy.ops.dct_link.live_start())
         yield from self.wait(lambda: ctrl.stream.live_state == "attached" and ctrl.stream.findings is not None,
                              30, "the live preview")
-        self.shot("live")
+        self.shot("live", docs="blender-live-preview")
 
         # 6. Saving, then saved.
         dct.hold_types = {"live.save"}
@@ -857,13 +1366,22 @@ class Shots:
         self.operator(lambda: bpy.ops.dct_link.live_stop())
         yield from self.wait(lambda: not ctrl.stream.active, 10, "the stop")
 
-        # 7. A model pushed with Sollumz (the stand-in).
-        stub.register()
+        # 7. A model made with Sollumz (the stand-in): not linked to a cloth yet, then linked to the cloth selected in
+        #    Durty Cloth Tool, which pushes it.
+        if not self.args.docs:
+            stub.register()
         root, part = stub.scene()
+        if self.content is not None:
+            root.name = self.content_model()
         bpy.ops.object.select_all(action="DESELECT")
         part.select_set(True)
         bpy.context.view_layer.objects.active = part
-        self.operator(lambda: bpy.ops.dct_link.model_push())
+        if hasattr(bpy.ops.dct_link, "model_link_focused"):
+            yield from self.wait(lambda: True, 5)
+            self.shot("model-not-linked")
+            self.operator(lambda: bpy.ops.dct_link.model_link_focused())
+        else:  # a version without Link to DCT pushes any model
+            self.operator(lambda: bpy.ops.dct_link.model_push())
         yield from self.wait(lambda: ctrl.model.lease is not None, 20, "the model push")
         self.shot("model-pushed")
         self.operator(lambda: bpy.ops.dct_link.model_discard())
@@ -871,18 +1389,25 @@ class Shots:
 
         if new:
             # 8. A normal map opened from Durty Cloth Tool ("Edit in connected app").
-            rgba = bytes((x * 7) % 256 for x in range(256 * 256 * 4))
-            dct.open_texture(rgba, 256, 256, target="normal", name="jbib_normal_003")
+            if self.content is not None:  # the paint as the diffuse map, as Edit in connected app sends it
+                paint = self.content_paint()
+                dct.open_texture(self.rgba_rows(paint), *paint.size, target="diffuse", name=paint.name)
+                bpy.data.images.remove(paint)
+            else:
+                rgba = bytes((x * 7) % 256 for x in range(256 * 256 * 4))
+                dct.open_texture(rgba, 256, 256, target="normal", name="jbib_normal_003")
             yield from self.wait(lambda: ctrl.stream.live_state == "attached", 20, "the opened texture")
             self.shot("opened-texture")
             self.operator(lambda: bpy.ops.dct_link.live_stop())
             yield from self.wait(lambda: not ctrl.stream.active, 10, "the stop")
 
             # 9. A model opened from Durty Cloth Tool.
-            dct.open_model([("jbib_003_u.ydd.xml", b"<DrawableDictionary />"),
-                            ("jbib_diff_003_a_uni.dds", b"DDS " + bytes(124))])
+            model, texture = ((self.content_model(), self.content["textures"][-1]) if self.content is not None
+                              else ("jbib_003_u", "jbib_diff_003_a_uni"))
+            dct.open_model([(f"{model}.ydd.xml", b"<DrawableDictionary />"), (f"{texture}.dds", b"DDS " + bytes(124))],
+                           name=model)
             yield from self.wait(lambda: ctrl.model.lease is not None and not ctrl.model.pushing, 30, "the opened model")
-            self.shot("opened-model")
+            self.shot("opened-model", docs="blender-opened-from-dct")
             self.operator(lambda: bpy.ops.dct_link.model_discard())
             yield from self.wait(lambda: ctrl.model.lease is None, 20, "the model discard")
         else:
@@ -942,6 +1467,12 @@ def run_inside_blender() -> None:
     parser.add_argument("--theme", default="dark")
     parser.add_argument("--scenario", default="link")
     parser.add_argument("--text-size", type=float, default=0.0)
+    parser.add_argument("--scale", type=float, default=0.0)
+    parser.add_argument("--content")
+    parser.add_argument("--body")
+    parser.add_argument("--garment")
+    parser.add_argument("--garment-type", default="tshirt")
+    parser.add_argument("--docs", action="store_true")
     args = parser.parse_args(argv)
     view = bpy.context.preferences.view
     view.show_splash = False

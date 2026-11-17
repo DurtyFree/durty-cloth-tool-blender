@@ -527,7 +527,7 @@ class Connection:
                                          "textures": [{"textureId": BINDING["textureId"], "name": "jbib_diff_003_a_uni",
                                                        "width": 2048, "height": 2048}],
                                          "targets": ["diffuse", "normal", "specular"]}
-            self.reply(m, {"type": "context.snapshot", "project": {"name": "Sample Clothing"}, "focused": focused})
+            self.reply(m, {"type": "context.snapshot", "project": {"name": server.project_name}, "focused": focused})
         elif kind == "host.result":
             server.host_results.append(m)  # the answer to host.openTexture or host.openModel; nothing goes back
         elif kind == "ped.templates":
@@ -589,7 +589,8 @@ class Connection:
             height = reply.get("height") or max(1, width // 2)
             header = {"type": "item.thumbnail.data", "binding": reply.get("binding") or m.get("binding") or BINDING,
                       "width": width, "height": height, "format": "rgba8", "re": m["id"]}
-            self.send_binary(header, bytes(i % 251 for i in range(width * height * 4)))
+            rgba = reply.get("rgba")
+            self.send_binary(header, rgba if rgba is not None else bytes(i % 251 for i in range(width * height * 4)))
         elif kind == "live.open":
             lease = "L%d" % next(server.lease_numbers)  # unique on the server, like DCT's opaque ids
             self.leases[lease] = {"width": m["width"], "height": m["height"],
@@ -625,7 +626,7 @@ class Connection:
             self.send_binary(header, bytes(i % 251 for i in range(width * height * 4)))
         elif kind == "texture.validate":
             self.reply(m, {"type": "texture.findings", "binding": BINDING, "target": m["target"],
-                           "findings": [{"code": "non-power-of-two", "severity": "warning"}]})
+                           "findings": list(server.texture_findings)})
         elif kind == "uv.layout":
             size = m["size"]
             header = {"type": "uv.layout.image", "binding": BINDING, "width": size, "height": size, "format": "rgba8",
@@ -839,7 +840,12 @@ class FakeDct:
         self.major_one = False
         #: The focused item context.get reports (default: one without the optional metadata).
         self.focused: Optional[Dict[str, Any]] = None
-        #: Answer item.thumbnail with a picture of this width, height or binding, whatever was asked for.
+        #: What texture.validate finds in any picture.
+        self.texture_findings: List[Dict[str, Any]] = [{"code": "non-power-of-two", "severity": "warning"}]
+        #: The project name context.get reports.
+        self.project_name = "Sample Clothing"
+        #: Answer item.thumbnail with a picture of this width, height or binding, whatever was asked for, and with
+        #: these RGBA8 rows (``rgba``, top to bottom) instead of a pattern.
         self.thumbnail_reply: Optional[Dict[str, Any]] = None
         #: The files skeleton.template answers with, per gender (``None``: a stand-in without bones). An error answer
         #: (game-required, busy) goes through ``fail`` like any other request.
