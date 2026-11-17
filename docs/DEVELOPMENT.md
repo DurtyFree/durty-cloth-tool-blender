@@ -347,9 +347,27 @@ python tools/blender_shots.py --blender "C:\Program Files\Blender Foundation\Ble
 
 `--scenario garment`, `--scenario gloves` or `--scenario ped` walks Garment Fitting, the Gloves type or Custom Ped,
 `--expanded` opens every collapsed panel, `--language de_DE` and `--theme light` give variants, and `--text-size 14`
-shows what a narrow sidebar cuts or wraps. The fakes sign in as "Durty", the name the screenshots show. Tooltips are
-off for the run, so the pointer never covers the sidebar, and a state with an opened section is scrolled only after
-it has drawn.
+shows what a narrow sidebar cuts or wraps; `--scale` sets Blender's interface resolution scale. The fakes sign in as
+"Durty", the name the screenshots show. Tooltips are off for the run, so the pointer never covers the sidebar, and a
+state with an opened section is scrolled only after it has drawn. A model made in Blender is linked with Link to the
+Cloth Selected in DCT before it is pushed, as a user does.
+
+Real content instead of the stand-ins: `--content <content.json>` names the project, the cloth (name, drawable type,
+gender, collection, number, texture variations, texture `size`), its picture as RGBA rows (`thumbnailRgba`, `thumbnailSize`), a texture
+variation as PNG (`paint`) and optionally a colour name (`colour`); the fake Durty Cloth Tool then shows them, and the
+paint is the live preview's image and the map Edit in connected app opens. `--body <folder>` serves a locally built
+hosted body (`freemode_*.glb`, `freemode_joints.json`) instead of the synthetic one, and `--garment <file>` (`.glb`,
+`.gltf` or `.fbx`) with `--garment-type` is the garment of Garment Fitting. Keep such files outside the repository.
+
+`--docs` writes only the figures of the public Blender documentation, each under its documentation file name
+(`blender-live-preview.png`, `garment-setup.png`...): the link figures with the default scenario, the Garment Fitting
+figures with `--scenario garment`. The window is 1280 by 2100 pixels unless `--size` says otherwise, Region Overlap is
+off so a figure ends where the panels end, and a sidebar taller than the window is scrolled a page at a time and
+joined. Figures that show part of the sidebar take the rows in `DOCS_ROWS`, measured at the default interface scale on a
+175 % display; look at them after a panel changes or with another scale. Dialogs
+and the Work On list are opened through Blender's event simulation, so the run ignores real input. With `--body` and a
+garment made for the freemode body, the elbow and wrist markers are moved onto the body's joints before Align to Body.
+`--docs` refuses the gloves and ped scenarios, which make no documentation figures.
 
 ### Measuring an avatar
 
