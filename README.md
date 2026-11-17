@@ -16,7 +16,7 @@
 
 </div>
 
-<img src="docs/images/blender-garment-fitting.webp" alt="Blender with a black T-shirt fitted on the freemode body and its joint markers, next to the DCT tab showing the Garment Fitting stages Setup, Fit, Fix and Game Ready done and Add to Project as the next step" width="100%">
+<img src="docs/images/blender-garment-fitting.webp" alt="Blender's 3D view with a burgundy hoodie aligned to the freemode body and its joint markers joined by green lines, beside the DCT tab at the Fit stage: Setup done, all 11 markers placed, Align to Body done and Fit on gta.clothing as the next step" width="100%">
 
 **Durty Cloth Tool Link** is the free, open-source Blender add-on for [Durty Cloth Tool](https://gta.clothing/), the
 Windows app for making GTA V clothing packs for FiveM and singleplayer. As one of Durty Cloth Tool's Creator Link
@@ -26,7 +26,7 @@ freemode ped, and a character you made becomes a custom ped.
 
 ## ✨ What it does
 
-<img src="docs/images/blender-live-preview.webp" alt="The DCT tab in Blender's sidebar during a live preview: the linked T-shirt from the open project, the image painted live on the ped, two Texture Checks and the Save to Cloth button" width="230" align="right">
+<img src="docs/images/blender-live-preview.webp" alt="The DCT tab in Blender's sidebar during a live preview: the linked hoodie Male 16 top from the project Forge Studio Test, Live on the ped, the texture checks with no problems found, Save to Cloth, and the Model panel with Push Model" width="230" align="right">
 
 - 🧱 **Push your model to the ped.** Select your Sollumz Drawable Dictionary and choose **Push Model**: it replaces
   the selected cloth's model in Durty Cloth Tool's 3D Preview. **Push Automatically** sends it again a moment after
@@ -51,7 +51,7 @@ freemode ped, and a character you made becomes a custom ped.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/blender-fit-problems.webp" alt="A T-shirt on the freemode body coloured by Show Problems: blue where a shoulder floats, purple stretched parts and yellow where it is too close to the body, with the body showing through where the T-shirt is still inside it"></td>
+    <td width="50%"><img src="docs/images/blender-fit-problems.webp" alt="A hoodie on the freemode body coloured by Show Problems: blue where it floats, purple stretched parts and yellow where it is too close to the body, with the body showing through at the shoulders where the hoodie is still inside it"></td>
     <td width="50%"><img src="docs/images/blender-custom-ped.webp" alt="A character in shorts in Blender with its 19 joint markers placed, left side blue and right side orange, next to the Custom Ped panel"></td>
   </tr>
   <tr>
