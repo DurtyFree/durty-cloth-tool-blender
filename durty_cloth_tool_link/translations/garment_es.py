@@ -267,6 +267,12 @@ TEXT = {
     "garment.body.network": (
         "No se pudo contactar con gta.clothing. Comprueba la conexión a internet o usa un archivo de cuerpo."
     ),
+    "garment.body.no-channel": (
+        "Aún no hay ninguna versión del complemento publicada en el canal de actualización {channel}, así que no "
+        "se puede cargar el cuerpo freemode. Elige otro canal de actualización: arrastra a Blender su enlace de "
+        "instalación de la página de plugins de gta.clothing, como explica Actualizaciones en las preferencias "
+        "del complemento."
+    ),
     "garment.body.no-body": (
         "gta.clothing aún no tiene un cuerpo freemode para este canal. Usa un archivo de cuerpo por ahora."
     ),

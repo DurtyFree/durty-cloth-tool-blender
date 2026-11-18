@@ -272,6 +272,12 @@ TEXT = {
     "garment.body.network": (
         "gta.clothing n'a pas pu être joint. Vérifiez la connexion Internet, ou utilisez un fichier de corps."
     ),
+    "garment.body.no-channel": (
+        "Aucune version de l'extension n'est encore publiée sur le canal de mise à jour {channel}, le corps "
+        "freemode ne peut donc pas être chargé. Choisissez un autre canal de mise à jour : glissez son lien "
+        "d'installation de la page des plugins de gta.clothing sur Blender, comme l'explique Mises à jour dans "
+        "les préférences de l'extension."
+    ),
     "garment.body.no-body": (
         "gta.clothing n'a pas encore de corps freemode pour ce canal. Utilisez un fichier de corps pour l'instant."
     ),

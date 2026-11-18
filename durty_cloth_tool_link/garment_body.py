@@ -29,6 +29,8 @@ import urllib.request
 from typing import Any, Callable, Dict, List, NamedTuple, Optional, Tuple
 
 from . import garment_reference
+from .settings import CHANNEL_IDS
+from .strings import Msg, msg
 
 #: The origin that serves the hosted body and its tickets.
 LINK_ORIGIN = "https://link.gta.clothing"
@@ -62,6 +64,17 @@ class BodyError(Exception):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+def failure_message(code: str, channel: str) -> Msg:
+    """What the add-on says about a body download that ended with ``code`` on ``channel``. ``no-channel`` (no add-on
+    release is published on that update channel) names the channel by its shown name; without a known channel to
+    name it says ``no-body`` instead, never a guessed channel. Logic binds to the code, never to the text."""
+    if code == "no-channel":
+        if channel not in CHANNEL_IDS:
+            return msg("garment.body.no-body")
+        return msg("garment.body.no-channel", channel=msg(f"channel.{channel}"))
+    return msg(f"garment.body.{code}")
 
 
 class BodyResult(NamedTuple):
@@ -336,7 +349,9 @@ class BodyDownload:
                 raise
             return self._with_pack(kept)
         if status == 404:
-            raise BodyError("no-body")
+            # No add-on release is published on this update channel: not "no body". Raised before any kept body or
+            # withdrawal is looked at, since the kept bodies are not split by channel and one would hide this.
+            raise BodyError("no-channel")
         if status != 200:
             raise self._failure(status, payload)
         manifest = self._json(payload)

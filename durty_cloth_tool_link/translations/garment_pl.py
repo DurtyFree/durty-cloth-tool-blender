@@ -240,6 +240,11 @@ TEXT = {
     "garment.body.hosted": "Ciało freemode: {gender}, wersja {version}",
     "garment.body.invalid": "gta.clothing wysłało dane, które nie są ciałem. Spróbuj ponownie później.",
     "garment.body.network": "Nie udało się połączyć z gta.clothing. Sprawdź połączenie internetowe lub użyj pliku ciała.",
+    "garment.body.no-channel": (
+        "Na kanale aktualizacji {channel} nie opublikowano jeszcze żadnego wydania dodatku, więc nie można "
+        "wczytać ciała freemode. Wybierz inny kanał aktualizacji: przeciągnij jego link instalacyjny ze strony "
+        "wtyczek gta.clothing do Blender, jak wyjaśnia sekcja Aktualizacje w preferencjach dodatku."
+    ),
     "garment.body.no-body": "gta.clothing nie ma jeszcze ciała freemode dla tego kanału. Na razie użyj pliku ciała.",
     "garment.body.not-entitled": "Twoje konto nie może pobierać ciała freemode.",
     "garment.body.object": "Ciało: {name}",

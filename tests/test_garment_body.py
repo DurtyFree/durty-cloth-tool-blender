@@ -6,7 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from durty_cloth_tool_link import garment_body, garment_reference
+from durty_cloth_tool_link import garment_body, garment_reference, strings, translations
+from durty_cloth_tool_link.strings import EN
 from durty_cloth_tool_link.dct_link import auth
 from tests.support import synthetic_pack
 from tests.support.synthetic_pack import served
@@ -122,7 +123,7 @@ def test_a_kept_body_is_used_when_gta_clothing_cannot_be_reached(api, tmp_path):
 
 
 @pytest.mark.parametrize("change, code", [
-    (lambda api: setattr(api, "manifest", None), "no-body"),
+    (lambda api: setattr(api, "manifest", None), "no-channel"),
     (lambda api: api.manifest.pop("body"), "no-body"),
     (lambda api: setattr(api, "body_entitled", False), "not-entitled"),
     (lambda api: api.body_files.clear(), "no-body"),
@@ -132,6 +133,45 @@ def test_refusals_become_messages(api, tmp_path, change, code):
     change(api)
     assert download(api, tmp_path).error == code
     assert not (tmp_path / "body").exists() or not any((tmp_path / "body").rglob("*.glb"))
+
+
+def test_a_channel_without_a_manifest_is_no_channel_and_no_kept_body_stands_in(api, tmp_path):
+    """A 404 on the channel manifest means no add-on release is published on that update channel: the kept bodies are
+    not split by channel, so neither a kept body nor a withdrawal of its pack may hide it."""
+    api.body_files.update(synthetic_pack.body_files())
+    kept = download(api, tmp_path)
+    assert kept.result is not None and kept.result.reference is not None
+    bodies = sorted((tmp_path / garment_body.CACHE_FOLDER).rglob("*"))
+    api.manifest = None
+    asked = len(api.paths())
+    for token in ("valid", None):  # signed in or not: a kept body is never the answer
+        assert download(api, tmp_path, token=token).error == "no-channel"
+    assert sorted((tmp_path / garment_body.CACHE_FOLDER).rglob("*")) == bodies  # nothing withdrawn or replaced
+    assert api.paths()[asked:] == ["GET /link/manifest/experimental.json"] * 2  # no ticket, no body asked for
+
+
+def test_a_manifest_that_names_no_body_version_stays_no_body(api, tmp_path):
+    api.manifest["body"] = {"version": "not a version"}
+    assert download(api, tmp_path).error == "no-body"
+
+
+def test_the_no_channel_message_names_the_update_channel():
+    for channel, name in (("release", "Release"), ("experimental", "Experimental")):
+        message = garment_body.failure_message("no-channel", channel)
+        assert message.key == "garment.body.no-channel"
+        text = strings.english(message)
+        assert f"the {name} update channel" in text and "preferences" in text, text
+    german = translations.table("de")
+    by_english = {EN[key]: text for key, text in german.items()}
+    strings.set_translators(lambda text: by_english.get(text, text))
+    try:
+        assert "Update-Kanal Experimental" in strings.text(garment_body.failure_message("no-channel", "experimental"))
+    finally:
+        strings.set_translators(None)
+    # Without a known channel to name, the message never guesses one.
+    assert garment_body.failure_message("no-channel", "nightly").key == "garment.body.no-body"
+    assert garment_body.failure_message("no-body", "release").key == "garment.body.no-body"
+    assert garment_body.failure_message("offline", "release").key == "garment.body.offline"
 
 
 def test_without_a_sign_in_no_ticket_is_asked_for(api, tmp_path):

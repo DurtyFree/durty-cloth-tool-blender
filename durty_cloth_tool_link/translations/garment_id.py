@@ -241,6 +241,11 @@ TEXT = {
     "garment.body.hosted": "Tubuh freemode: {gender}, versi {version}",
     "garment.body.invalid": "gta.clothing mengirim data yang bukan tubuh. Coba lagi nanti.",
     "garment.body.network": "gta.clothing tidak dapat dihubungi. Periksa koneksi internet atau gunakan file tubuh.",
+    "garment.body.no-channel": (
+        "Belum ada rilis add-on yang diterbitkan di kanal pembaruan {channel}, sehingga tubuh freemode tidak "
+        "dapat dimuat. Pilih kanal pembaruan lain: seret tautan instalasinya dari halaman plugin pada "
+        "gta.clothing ke Blender, seperti dijelaskan Pembaruan di preferensi add-on."
+    ),
     "garment.body.no-body": "gta.clothing belum menyediakan tubuh freemode untuk saluran ini. Gunakan file tubuh untuk sementara.",
     "garment.body.not-entitled": "Akun Anda tidak dapat mengunduh tubuh freemode.",
     "garment.body.object": "Tubuh: {name}",

@@ -210,6 +210,9 @@ TEXT = {
         "Blender 的在线访问已关闭，且之前没有下载过身体。请允许在线访问，或使用身体文件。"
     ),
     "garment.body.network": "无法连接 gta.clothing。请检查网络连接，或使用身体文件。",
+    "garment.body.no-channel": (
+        "更新通道 {channel} 上尚未发布此插件的任何版本，因此无法加载 freemode 身体。请选择其他更新通道：把该通道的安装链接从 gta.clothing 插件页面拖到 Blender 中，插件偏好设置中的“更新”有相关说明。"
+    ),
     "garment.body.no-body": "gta.clothing 尚未为此通道提供 freemode 身体。目前请使用身体文件。",
     "garment.body.signed-out": "登录已失效。请重新登录，然后添加身体。",
     "garment.body.not-entitled": "你的账号无法下载 freemode 身体。",
