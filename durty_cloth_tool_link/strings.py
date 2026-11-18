@@ -849,6 +849,11 @@ EN: Dict[str, str] = {
         "Blender's online access is off and no body was downloaded before. Allow online access, or use a body file."
     ),
     "garment.body.network": "gta.clothing could not be reached. Check the internet connection, or use a body file.",
+    "garment.body.no-channel": (
+        "No add-on release is published on the {channel} update channel yet, so the freemode body cannot be "
+        "loaded. Choose another update channel: drag its install link from the plugins page on gta.clothing onto "
+        "Blender, as the Updates section of the add-on's preferences explains."
+    ),
     "garment.body.no-body": "gta.clothing has no freemode body for this channel yet. Use a body file for now.",
     "garment.body.signed-out": "The sign-in is no longer valid. Sign in again, then add the body.",
     "garment.body.not-entitled": "Your account cannot download the freemode body.",

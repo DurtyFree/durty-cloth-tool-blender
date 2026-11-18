@@ -789,7 +789,7 @@ def _failure_message(exc: BaseException) -> Msg:
     if isinstance(exc, garment.MarkerError):
         return msg(f"garment.marker-error.{exc.code}")
     if isinstance(exc, garment_body.BodyError):
-        return msg(f"garment.body.{exc.code}")
+        return garment_body.failure_message(exc.code, addon_settings.CHANNEL)
     if isinstance(exc, UserError):
         return exc.message
     if link.path_too_long(exc):
@@ -959,7 +959,7 @@ def body_tick() -> Optional[float]:
         if download.cancelled:
             notify("INFO", msg("garment.body.cancelled"))
         elif download.error is not None or download.result is None:
-            notify("ERROR", msg(f"garment.body.{download.error or 'invalid'}"))
+            notify("ERROR", garment_body.failure_message(download.error or "invalid", download.channel))
         elif scene is not None:
             finish_body_import(scene, download.result)
     except EXPECTED as exc:

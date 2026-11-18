@@ -241,6 +241,12 @@ TEXT = {
     "garment.body.hosted": "Corpo freemode: {gender}, versione {version}",
     "garment.body.invalid": "gta.clothing ha inviato dati che non corrispondono a un corpo. Riprova più tardi.",
     "garment.body.network": "Non è stato possibile contattare gta.clothing. Controlla la connessione a Internet o usa un file del corpo.",
+    "garment.body.no-channel": (
+        "Sul canale di aggiornamento {channel} non è ancora pubblicata nessuna versione dell'add-on, quindi il "
+        "corpo freemode non può essere caricato. Scegli un altro canale di aggiornamento: trascina su Blender il "
+        "suo collegamento di installazione dalla pagina dei plugin su gta.clothing, come spiega Aggiornamenti "
+        "nelle preferenze dell'add-on."
+    ),
     "garment.body.no-body": "gta.clothing non ha ancora un corpo freemode per questo canale. Per ora usa un file del corpo.",
     "garment.body.not-entitled": "Il tuo account non può scaricare il corpo freemode.",
     "garment.body.object": "Corpo: {name}",

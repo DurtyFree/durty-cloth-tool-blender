@@ -240,6 +240,9 @@ TEXT = {
     "garment.body.hosted": "ร่างกาย freemode: {gender} เวอร์ชัน {version}",
     "garment.body.invalid": "gta.clothing ส่งข้อมูลที่ไม่ใช่ร่างกาย ลองอีกครั้งภายหลัง",
     "garment.body.network": "ติดต่อ gta.clothing ไม่ได้ ตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือใช้ไฟล์ร่างกาย",
+    "garment.body.no-channel": (
+        "ช่องทางอัปเดต {channel} ยังไม่มีรุ่นของส่วนเสริมที่เผยแพร่ จึงโหลดร่างกาย freemode ไม่ได้ เลือกช่องทางอัปเดตอื่น: ลากลิงก์ติดตั้งของช่องทางนั้นจากหน้าปลั๊กอินบน gta.clothing ลง Blender ตามที่ อัปเดต ในการตั้งค่าของส่วนเสริมอธิบายไว้"
+    ),
     "garment.body.no-body": "gta.clothing ยังไม่มีร่างกาย freemode สำหรับช่องทางนี้ ใช้ไฟล์ร่างกายไปก่อน",
     "garment.body.not-entitled": "บัญชีไม่มีสิทธิ์ดาวน์โหลดร่างกาย freemode",
     "garment.body.object": "ร่างกาย: {name}",

@@ -271,7 +271,11 @@ Files the add-on keeps:
   and the add-on's record of every file's size and SHA-256 (`.kept.json`); a file that no longer matches the record
   makes the add-on treat the pack as missing. A version without the pack gets a `no-reference` marker, so it is not
   asked again. Each body download with online access deletes every pack the current body version does not list
-  (a withdrawal), also when the body itself is kept or the user is signed out;
+  (a withdrawal), also when the body itself is kept or the user is signed out. A channel manifest that is missing
+  (404) means no add-on release is published on that update channel yet: the download ends with `no-channel`,
+  whose message names the channel, before any kept body or withdrawal is looked at, since the kept bodies are not
+  split by channel. `no-body` stays for a manifest that names no valid body version and a body version without a
+  file for this Blender;
 - for a model push, a `dct_link_<random>` folder in the system's temporary folder that holds the Sollumz export only
   until it is read, and is deleted straight away;
 - folders named `dct-<kind>-<random>` in the system's temporary folder for a model opened from Durty Cloth Tool
@@ -394,7 +398,10 @@ Install the result with **Install from Disk** to try it in your own Blender. `di
 Releases are made by the maintainers. Creating or moving a tag is a release action that needs the owner's explicit go.
 
 - The version lives in `blender_manifest.toml` and in `VERSION` in `settings.py` (the tests check that they match):
-  `X.Y.Z`, or `X.Y.Z-experimental.N` for an Experimental build. The channel follows from the version.
+  `X.Y.Z`, or `X.Y.Z-experimental.N` for an Experimental build. The channel follows from the version, and so does
+  the channel manifest the body download asks for. No tool here stamps a version: `tools/blender_smoke.py` and a
+  local build carry the committed version unchanged, so a build of `dev` asks Experimental as long as `dev` carries
+  an Experimental version.
 - The manifest's listing values (id, name, tagline, maintainer, type, website, tags, licence, platforms, permissions)
   must equal the listing in gta.clothing's extension repository; `tools/check_manifest.py` checks them and Blender's
   rules for taglines and permission texts.

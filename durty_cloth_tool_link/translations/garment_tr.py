@@ -240,6 +240,12 @@ TEXT = {
     "garment.body.hosted": "Freemode bedeni: {gender}, sürüm {version}",
     "garment.body.invalid": "gta.clothing beden olmayan bir şey gönderdi. Daha sonra yeniden deneyin.",
     "garment.body.network": "gta.clothing sitesine ulaşılamadı. İnternet bağlantısını kontrol edin veya beden dosyası kullanın.",
+    "garment.body.no-channel": (
+        "{channel} güncelleme kanalında henüz eklentinin hiçbir sürümü yayımlanmadı, bu yüzden freemode bedeni "
+        "yüklenemiyor. Başka bir güncelleme kanalı seçin: eklentinin tercihlerindeki Güncellemeler bölümünün "
+        "anlattığı gibi, o kanalın yükleme bağlantısını gta.clothing eklentiler sayfasından Blender üzerine "
+        "sürükleyin."
+    ),
     "garment.body.no-body": "gta.clothing henüz bu kanal için freemode bedeni sunmuyor. Şimdilik beden dosyası kullanın.",
     "garment.body.not-entitled": "Hesabınız freemode bedenini indiremiyor.",
     "garment.body.object": "Beden: {name}",
