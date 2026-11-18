@@ -997,7 +997,7 @@ class ModelPush:
         self.timing = timing
         print(timing.log_line())
         if timing.total > settings.AUTO_PUSH_SLOW_SECONDS:
-            self.slow_seconds = int(math.ceil(timing.total))
+            self.slow_seconds = max(1, int(math.ceil(timing.total)))
             if not self.requested:
                 # Edits made meanwhile stay marked (dirty) for a push by hand; an Update from Blender still runs once.
                 self.due_at = None

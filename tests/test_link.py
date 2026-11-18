@@ -1319,7 +1319,8 @@ def test_a_slow_push_stops_automatic_pushes_until_a_quick_push_by_hand(tmp_path,
     model = ctrl.model
     model.auto_enabled = lambda: True
     model.on_auto_push = lambda: model.push(Export(), "jbib_003_u", automatic=True, binding=BINDING)
-    monkeypatch.setattr(settings, "AUTO_PUSH_SLOW_SECONDS", 0.0)
+    # Below zero: the clock can measure a push as exactly 0.0 s on Windows, which is not slower than 0.0.
+    monkeypatch.setattr(settings, "AUTO_PUSH_SLOW_SECONDS", -1.0)
     model.push(Export(), "jbib_003_u", binding=BINDING)
     drive(ctrl, lambda: model.lease is not None and not model.pushing)
     assert model.slow_seconds == 1  # every push is slow now
