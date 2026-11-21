@@ -361,11 +361,19 @@ gender, collection, number, texture variations, texture `size`), its picture as 
 variation as PNG (`paint`) and optionally a colour name (`colour`); the fake Durty Cloth Tool then shows them, and the
 paint is the live preview's image and the map Edit in connected app opens. `--body <folder>` serves a locally built
 hosted body (`freemode_*.glb`, `freemode_joints.json`) instead of the synthetic one, and `--garment <file>` (`.glb`,
-`.gltf` or `.fbx`) with `--garment-type` is the garment of Garment Fitting. Keep such files outside the repository.
+`.gltf` or `.fbx`) with `--garment-type` is the garment of Garment Fitting. `--prop <file>` adds a hat after the
+garment: it is stood up and turned to the front when it is a game prop (a `p_` model from Durty Cloth Tool, which comes
+in its anchor bone's space), then snapped to its anchor. `--character <file>` (`.glb`, `.gltf`, `.fbx` or `.blend`) with
+`--character-name` is the character of Custom Ped instead of the mannequin: its meshes go into a collection of that
+name, and the shots click the first fix of each check, as a user does. Keep such files outside the repository.
 
 `--docs` writes only the figures of the public Blender documentation, each under its documentation file name
 (`blender-live-preview.png`, `garment-setup.png`...): the link figures with the default scenario, the Garment Fitting
-figures with `--scenario garment`. The window is 1280 by 2100 pixels unless `--size` says otherwise, Region Overlap is
+figures with `--scenario garment` (with `--prop`, also `garment-prop-snapped.png`), the Custom Ped figures with
+`--scenario ped` and `--character`. With `--docs`, the fake Durty Cloth Tool lists real ambient ped names as templates
+(`DOCS_PED_TEMPLATES`; it still rigs on its made-up skeleton, whose bones the Check figure hides), and the template
+search is opened by a click at `DOCS_TEMPLATE_BUTTON`, measured like `DOCS_ROWS`. The window is 1280 by 2100 pixels
+(1280 by 1950 for Custom Ped) unless `--size` says otherwise, Region Overlap is
 off so a figure ends where the panels end, and a sidebar taller than the window is scrolled a page at a time and
 joined. Figures that show part of the sidebar take the rows in `DOCS_ROWS`, measured at the default interface scale on a
 175 % display; look at them after a panel changes or with another scale. Dialogs

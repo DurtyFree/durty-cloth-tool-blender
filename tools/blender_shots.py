@@ -6,7 +6,8 @@
     python tools/blender_shots.py --blender <path to blender> --out <folder>
         [--source <add-on source folder>] [--prefix after] [--expanded] [--language de_DE] [--theme light]
         [--scenario garment|gloves|ped] [--text-size 14] [--scale 1.5]
-        [--content content.json] [--body <folder>] [--garment <file> --garment-type hoodie] [--docs]
+        [--content content.json] [--body <folder>] [--garment <file> --garment-type hoodie] [--prop <file>]
+        [--character <file> --character-name Theo] [--docs]
 
 Builds the extension from ``--source`` (default: this repository's ``durty_cloth_tool_link``), starts a Blender
 window with a throw-away user folder (``BLENDER_USER_RESOURCES``), installs the build, and walks the add-on through
@@ -27,8 +28,9 @@ to be applied, the rigged character with its checks, and the project Durty Cloth
 panel and settings group first; ``--language`` and ``--theme light`` change Blender's interface for the run;
 ``--text-size`` sets the interface text size in points (Blender's is 11): larger text in the same sidebar shows what
 a narrower sidebar cuts off or wraps (14 points is about a sidebar a fifth narrower). ``--content``, ``--body`` and
-``--garment`` show a real cloth, body and garment instead of the stand-ins, and ``--docs`` writes the figures of the
-public documentation under their file names (docs/DEVELOPMENT.md, "Screenshots"). Blender
+``--garment`` show a real cloth, body and garment instead of the stand-ins, ``--prop`` adds a real prop snapped to its
+anchor, ``--character`` is the character of Custom Ped instead of the mannequin, and ``--docs`` writes the figures of
+the public documentation under their file names (docs/DEVELOPMENT.md, "Screenshots"). Blender
 quits by itself at the end (and is ended after ``--timeout`` seconds otherwise). Your Blender settings and
 extensions are never touched, and nothing is sent to gta.clothing.
 
@@ -38,6 +40,7 @@ The same file runs inside Blender (Blender starts it with ``--python``). Standar
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import pathlib
 import shutil
@@ -65,6 +68,29 @@ DOCS_ROWS = {
     "garment-add-waiting": (1030, 1262),
     "garment-add-added": (1140, 1435),
 }
+
+#: With --docs --scenario ped, the Choose a Template button's middle and how far above it the figure starts, in
+#: interface units from the sidebar's top with the Rig stage open (measured like DOCS_ROWS).
+DOCS_TEMPLATE_BUTTON = 420
+#: With --docs --prop, how much farther than the hat alone the view looks from, and how far (metres) below it.
+DOCS_PROP_ZOOM = 1.9
+DOCS_PROP_LIFT = 0.12
+DOCS_TEMPLATE_ABOVE = 110
+#: With --docs --scenario ped, how far the view looks from the character after View Selected (a fraction).
+DOCS_PED_ZOOM = 0.62
+#: With --docs --scenario ped, the templates the fake Durty Cloth Tool lists: real ambient peds' model names, as a
+#: user's game lists them (only the names; the fake rigs on its made-up skeleton).
+DOCS_PED_TEMPLATES = [
+    {"model": model, "gender": gender, "pedType": "CIVMALE" if gender == "male" else "CIVFEMALE", "layout": "packed",
+     "group": "ambient", "recommended": recommended}
+    for model, gender, recommended in (
+        ("a_m_m_skater_01", "male", True), ("a_m_y_skater_01", "male", True), ("a_m_y_skater_02", "male", True),
+        ("a_m_y_beach_01", "male", True), ("a_m_y_hipster_01", "male", True), ("a_m_y_runner_01", "male", True),
+        ("a_m_y_genstreet_01", "male", True), ("a_m_m_business_01", "male", False),
+        ("a_m_y_business_01", "male", False), ("a_m_m_tourist_01", "male", False),
+        ("a_f_y_skater_01", "female", True), ("a_f_y_beach_01", "female", True), ("a_f_y_hipster_01", "female", True),
+        ("a_f_y_runner_01", "female", True), ("a_f_y_tourist_01", "female", False))
+]
 
 
 # --------------------------------------------------------------------------------------------------
@@ -94,16 +120,21 @@ def launch(argv=None) -> int:
                         help="a folder with a locally built hosted body (freemode_*.glb, freemode_joints.json)")
     parser.add_argument("--garment", type=pathlib.Path, help="a .glb, .gltf or .fbx garment for Garment Fitting")
     parser.add_argument("--garment-type", default="tshirt", help="the Garment Type of --garment, for example hoodie")
+    parser.add_argument("--prop", type=pathlib.Path,
+                        help="a .glb, .gltf or .fbx hat snapped to its anchor after the garment (--scenario garment)")
+    parser.add_argument("--character", type=pathlib.Path,
+                        help="a .glb, .gltf, .fbx or .blend character for Custom Ped (--scenario ped)")
+    parser.add_argument("--character-name", help="the character's name in the panel (default: the file's name)")
     parser.add_argument("--docs", action="store_true",
                         help="write only the documentation figures, under their documentation file names")
     parser.add_argument("--timeout", type=float, default=420.0)
     args = parser.parse_args(argv)
-    if args.docs and args.scenario not in ("link", "garment"):
-        print("error: --docs makes figures only with the link and garment scenarios")
+    if args.docs and args.scenario not in ("link", "garment", "ped"):
+        print("error: --docs makes figures only with the link, garment and ped scenarios")
         return 1
     if args.size is None:
-        args.size = "1280x2100" if args.docs else "1280x1600"
-    for path in (args.content, args.body, args.garment):
+        args.size = ("1280x1950" if args.scenario == "ped" else "1280x2100") if args.docs else "1280x1600"
+    for path in (args.content, args.body, args.garment, args.prop, args.character):
         if path is not None and not path.exists():
             print(f"error: {path} does not exist")
             return 1
@@ -140,10 +171,13 @@ def launch(argv=None) -> int:
             command += ["--text-size", str(args.text_size)]
         if args.scale:
             command += ["--scale", str(args.scale)]
-        for option, path in (("--content", args.content), ("--body", args.body), ("--garment", args.garment)):
+        for option, path in (("--content", args.content), ("--body", args.body), ("--garment", args.garment),
+                             ("--prop", args.prop), ("--character", args.character)):
             if path is not None:
                 command += [option, str(path.resolve())]
         command += ["--garment-type", args.garment_type]
+        if args.character_name:
+            command += ["--character-name", args.character_name]
         if args.docs:
             command.append("--docs")
         process = subprocess.Popen(command, cwd=REPO_ROOT, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -251,10 +285,11 @@ class Shots:
         return self.out / f"{self.args.prefix}-{self.count:02d}-{name}.png"
 
     def shot(self, name: str, whole: bool = False, docs: "str | None" = None, rows: "tuple | None" = None,
-             box: "tuple | None" = None):
+             box: "tuple | None" = None, headers: bool = True):
         """Saves the sidebar (``whole``: the whole 3D view with its sidebar) as a numbered picture, or with ``--docs``
         as the documentation figure ``docs``: the sidebar down to the end of its panels, ``rows`` (top, bottom) of it
-        in pixels from its top, or ``box`` (left, top, width, height) of the whole 3D view."""
+        in pixels from its top, or ``box`` (left, top, width, height) of the whole 3D view; ``headers=False`` leaves
+        the 3D view's headers out of a whole shot."""
         path = self.target(name, docs)
         if path is None:
             return
@@ -264,6 +299,9 @@ class Shots:
         y0 = 0 if whole else max(0, region.y - area.y)
         w, h = (area.width, area.height) if whole else (region.width, region.height)
         crop = pixels[y0:y0 + h, x0:x0 + w]
+        if self.args.docs and whole and box is None and not headers:
+            main = next(r for r in area.regions if r.type == "WINDOW")
+            box = (0, area.y + area.height - (main.y + main.height), area.width, main.height)
         if self.args.docs and box is not None:
             left, top, bw, bh = box
             crop = crop[max(0, crop.shape[0] - top - bh):crop.shape[0] - top, left:left + bw]
@@ -331,9 +369,12 @@ class Shots:
         self.scroll(-40)
         return np.ascontiguousarray(joined[::-1])
 
-    def popup_shot(self, name: str, docs: str, before, margin: int = 0):
+    def popup_shot(self, name: str, docs: str, before, margin: int = 0, reach: "tuple | None" = None,
+                   dense: bool = False):
         """Saves the popup (a dialog or an open menu) that appeared since ``before`` (a ``capture(True)``): the box
-        of the pixels that changed, ``margin`` pixels wider."""
+        of the pixels that changed, ``margin`` pixels wider, and widened to take in the window point ``reach`` (x, y
+        from the window's bottom left), so the button that opened it shows too. ``dense``: only the rows and
+        columns where most pixels changed (the popup's own box, not a redraw elsewhere), above the status bar."""
         import numpy as np
 
         path = self.target(name, docs)
@@ -343,11 +384,17 @@ class Shots:
         if after.shape != before.shape:
             raise RuntimeError(f"the window changed its size while {name} opened")
         changed = np.any(np.abs(after[:, :, :3] - before[:, :, :3]) > 0.004, axis=2)
+        if dense:
+            changed[:self.view()[1].y] = False  # the status bar shows the popup's keys
+            rows_, cols_ = changed.sum(axis=1), changed.sum(axis=0)
+            changed &= (rows_ > 0.6 * rows_.max())[:, None] & (cols_ > 0.6 * cols_.max())[None, :]
         ys, xs = np.nonzero(changed)
         if ys.size == 0:
             raise RuntimeError(f"no popup appeared for {name}")
         y0, y1 = max(0, ys.min() - margin), min(after.shape[0], ys.max() + 1 + margin)
         x0, x1 = max(0, xs.min() - margin), min(after.shape[1], xs.max() + 1 + margin)
+        if reach is not None:
+            x0, y1 = min(x0, max(0, reach[0])), max(y1, min(after.shape[0], reach[1]))
         self.save(after[y0:y1, x0:x1], path)
 
     # ---- the run -----------------------------------------------------------------------------------
@@ -506,9 +553,9 @@ class Shots:
         return {path.name: path.read_bytes() for path in sorted(folder.iterdir())
                 if path.name.startswith("freemode") and path.suffix in (".glb", ".json")}
 
-    def import_garment(self, name: str):
-        """The garment of ``--garment`` imported as one mesh object called ``name``."""
-        path = pathlib.Path(self.args.garment)
+    def import_garment(self, name: str, path: "pathlib.Path | None" = None):
+        """The garment of ``--garment`` (or ``path``) imported as one mesh object called ``name``."""
+        path = pathlib.Path(path or self.args.garment)
         before = set(bpy.data.objects)
         if path.suffix.lower() == ".fbx":
             bpy.ops.import_scene.fbx(filepath=str(path))
@@ -1021,6 +1068,60 @@ class Shots:
         yield from self.wait(lambda: True, 5)
         self.shot("garment-stages", docs="garment-stages")
         yield from self.garment_docs_add(garment_ui, ctrl, dct, garment, props, ADDED_BINDING, run)
+        if self.args.prop:
+            yield from self.garment_docs_prop(garment_ui, garment, props)
+
+    def garment_docs_prop(self, garment_ui, garment, props):
+        """``--prop``: a hat snapped to its anchor on the body's head, the garment hidden."""
+        name = self.content.get("propModel", "p_head_000") if self.content is not None else "p_head_000"
+        for obj in [garment, garment.parent]:
+            if obj is not None:
+                obj.hide_set(True)
+        hat = self.import_garment(name, self.args.prop)
+        if name.startswith("p_"):
+            # A game prop comes in the space of its anchor bone, which points up along its X axis: stood up and
+            # turned to face the front, as a hat made in Blender comes.
+            from mathutils import Matrix
+
+            turn = Matrix.Rotation(math.pi, 4, "Z") @ Matrix.Rotation(-math.pi / 2, 4, "Y")
+            hat.matrix_world = turn @ hat.matrix_world
+            hat.location.z += 1.6  # above the body's head, where a user drops it in
+        props.garment = hat
+        props.category = "hat"
+        self.operator(lambda: bpy.ops.dct_link.fit_snap_anchor())
+        self.show_garment(garment_ui, "fit")
+        window, area, _ = self.view()
+        main = next(r for r in area.regions if r.type == "WINDOW")
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj == hat)
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=main):
+            bpy.ops.view3d.view_axis(type="FRONT")
+            bpy.ops.view3d.view_orbit(angle=0.45, type="ORBITRIGHT")
+            bpy.ops.view3d.view_orbit(angle=0.12, type="ORBITUP")
+            bpy.ops.view3d.view_selected()
+        hat.select_set(False)
+        space = area.spaces.active
+        r3d = space.region_3d
+        r3d.view_perspective = "PERSP"
+        r3d.view_distance *= DOCS_PROP_ZOOM
+        r3d.view_location.z -= DOCS_PROP_LIFT
+        overlay = space.overlay
+        overlay.show_text = overlay.show_floor = overlay.show_axis_x = overlay.show_axis_y = False
+        overlay.show_cursor = overlay.show_relationship_lines = overlay.show_bones = space.show_gizmo_navigate = False
+        others = [obj for obj in bpy.context.view_layer.objects
+                  if obj.visible_get() and obj not in (hat, props.body) and obj.type != "MESH"]
+        print("CHECK hidden for the prop figure: " + ", ".join(f"{obj.type} {obj.name}" for obj in others))
+        for obj in others:
+            obj.hide_set(True)
+        yield from self.wait(lambda: True, 5)
+        top = area.y + area.height - (main.y + main.height)  # the 3D view under its headers
+        width, height = min(1670, area.width - 60), min(1200, main.height)
+        self.shot("garment-prop-snapped", whole=True, docs="garment-prop-snapped",
+                  box=(area.width - width, top, width, height))
+        overlay.show_text = overlay.show_floor = overlay.show_axis_x = overlay.show_axis_y = True
+        overlay.show_cursor = overlay.show_relationship_lines = overlay.show_bones = space.show_gizmo_navigate = True
+        for obj in others:
+            obj.hide_set(False)
 
     def garment_docs_add(self, garment_ui, ctrl, dct, garment, props, added_binding, run):
         """The Add to Project figures."""
@@ -1206,6 +1307,8 @@ class Shots:
         ctrl.shutdown()
         ctrl.port_override = dct.port
         dct.on_assist = api.approve
+        if self.args.docs:
+            dct.ped_templates = [dict(entry) for entry in DOCS_PED_TEMPLATES]
         ctrl.connect()
         yield from self.wait(lambda: ctrl.state == "signing-in" or ctrl.ready, 30, "the sign-in")
         if not ctrl.ready:
@@ -1218,23 +1321,43 @@ class Shots:
         yield from self.wait(lambda: True, 5, "the empty scene")
         self.shot("ped-start")
 
-        holder = bpy.data.collections.new("Hero")
-        scene.collection.children.link(holder)
-        _, objects, _ = ped_smoke.build_character(holder)
+        if self.args.character:
+            objects = self.import_character()
+            space = self.view()[1].spaces.active
+            space.shading.type = "SOLID"
+            space.shading.color_type = "MATERIAL"  # the character's own colours (its file brings no images)
+            space.overlay.show_text = False
+        else:
+            holder = bpy.data.collections.new("Hero")
+            scene.collection.children.link(holder)
+            _, objects, _ = ped_smoke.build_character(holder)
         ped_smoke.select_only(objects)
         self.operator(lambda: bpy.ops.dct_link.ped_use_selected())
-        self.frame_all()
+        self.frame_character()
         yield from self.wait(lambda: True, 5, "the character")
-        self.shot("ped-checks")
+        self.shot("ped-checks", docs="ped-character")
 
-        for call in (lambda: bpy.ops.dct_link.ped_apply_transforms(), lambda: bpy.ops.dct_link.ped_remove_old_rig(),
-                     lambda: bpy.ops.dct_link.ped_scale(factor=0.01),
-                     lambda: bpy.ops.dct_link.ped_turn(axis="Z", degrees=-90.0),
-                     lambda: bpy.ops.dct_link.ped_confirm_facing(), lambda: bpy.ops.dct_link.ped_auto_markers()):
-            self.operator(call)
-        self.frame_all()
+        if self.args.character:
+            # The fixes the checks offer, the first of each row, as a user clicks them (facing: It Faces the Front).
+            for _ in range(12):
+                rows = ui_ped.character_checks(bpy.context, scene.dct_ped.character)
+                fix = next((row.fixes[0] for row in rows if row.level != "ok" and row.fixes), None)
+                if fix is None:
+                    break
+                module, name = fix[0].split(".")
+                print(f"CHECK the character's checks: {fix[0]} {fix[1]}")
+                self.operator(lambda: getattr(getattr(bpy.ops, module), name)(**fix[1]))
+            self.operator(lambda: bpy.ops.dct_link.ped_auto_markers())
+        else:
+            for call in (lambda: bpy.ops.dct_link.ped_apply_transforms(),
+                         lambda: bpy.ops.dct_link.ped_remove_old_rig(),
+                         lambda: bpy.ops.dct_link.ped_scale(factor=0.01),
+                         lambda: bpy.ops.dct_link.ped_turn(axis="Z", degrees=-90.0),
+                         lambda: bpy.ops.dct_link.ped_confirm_facing(), lambda: bpy.ops.dct_link.ped_auto_markers()):
+                self.operator(call)
+        self.frame_character()
         yield from self.wait(lambda: True, 5, "the markers")
-        self.shot("ped-markers", whole=True)
+        self.shot("ped-markers", whole=True, docs="ped-markers", headers=False)
 
         # Started from its button in the sidebar, as a user starts it: the clicks still land in the 3D view.
         window, area, region = self.view()
@@ -1263,7 +1386,7 @@ class Shots:
                 guide.points[name] = markers[name]
             guide.preview = markers["shoulderR"]
         yield from self.wait(lambda: True, 5, "the click guide")
-        self.shot("ped-guide", whole=True)
+        self.shot("ped-guide", whole=True, docs="ped-click-guide", headers=False)
         if guide is not None:
             ui_ped.RUNTIME.guide = None
             ui_ped._guide_handlers(False)
@@ -1272,24 +1395,141 @@ class Shots:
             except (AttributeError, TypeError):
                 pass
 
+        if self.args.docs:
+            scene.dct_ped.gender = "male"
         self.operator(lambda: bpy.ops.dct_link.ped_refresh_templates())
         yield from self.wait(lambda: ctrl.peds.templates is not None, 30, "the templates")
-        self.operator(lambda: bpy.ops.dct_link.ped_use_template(model="a_m_y_tester_01"))
+        if self.args.docs:
+            template, suggestion = "a_m_y_skater_01", "a_m_m_skater_01"
+            yield from self.template_search_shot()
+        else:
+            template, suggestion = "a_m_y_tester_01", "a_m_m_tester_02"
+        self.operator(lambda: bpy.ops.dct_link.ped_use_template(model=template))
         dct.ped_rig_warnings = [{"code": "marker_offset", "count": 2, "value": 31.0, "markers": ["elbowL", "elbowR"]}]
-        dct.ped_rig_suggestion = "a_m_m_tester_02"
+        dct.ped_rig_suggestion = suggestion
         dct.ped_rig_outcome = "needsReview"
+        if self.args.docs:  # the rights notice, asked once per character
+            window, area, region = self.view()
+            # The dialog opens under the pointer: in the middle of the 3D view, clear of the window's edges.
+            window.event_simulate(type="MOUSEMOVE", value="NOTHING", x=area.x + (area.width - region.width) // 2,
+                                  y=area.y + area.height // 2)
+            yield from self.wait(lambda: True, 2)
+            before = self.capture(window_too=True)
+            with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=region):
+                bpy.ops.dct_link.ped_rig("INVOKE_DEFAULT")
+            yield from self.wait(lambda: True, 5)
+            self.popup_shot("ped-rights", "ped-rights", before, dense=True)
+            self.press("ESC")
+            yield from self.wait(lambda: True, 3)
         self.operator(lambda: bpy.ops.dct_link.ped_rig(agree=True))
         yield from self.wait(lambda: ctrl.peds.rig is not None, 30, "the rig")
-        self.shot("ped-rig-waiting", whole=True)
+        self.frame_character(front=True)
+        yield from self.wait(lambda: True, 3)
+        self.shot("ped-rig-waiting", whole=True, docs="ped-rig", headers=False)
 
         self.operator(lambda: bpy.ops.dct_link.ped_apply_rig())
         self.operator(lambda: bpy.ops.dct_link.ped_run_checks())
+        self.frame_character(front=True)
+        overlay = self.view()[1].spaces.active.overlay
+        if self.args.docs:
+            # The Check stage with its result, not the Create stage the panel moved on to. The fake's made-up
+            # skeleton puts its small bones (fingers, face) all over a real character, where they read as broken
+            # geometry: its bones stay hidden, and the markers show the rig.
+            scene.dct_ped.open_check, scene.dct_ped.open_create = True, False
+            overlay.show_bones = False
+            self.redraw()
         yield from self.wait(lambda: True, 5, "the rigged character")
-        self.shot("ped-checked", whole=True)
+        self.shot("ped-checked", whole=True, docs="ped-check", headers=False)
+        if self.args.docs:
+            scene.dct_ped.open_check, scene.dct_ped.open_create = False, True
+            overlay.show_bones = True
 
         self.operator(lambda: bpy.ops.dct_link.ped_send())
         yield from self.wait(lambda: ctrl.peds.created is not None, 60, "the created project")
-        self.shot("ped-created")
+        self.shot("ped-created", docs="ped-create")
+
+    def import_character(self):
+        """The meshes of ``--character`` in a collection named ``--character-name`` (an armature and empties stay
+        where the file put them, as after an import by hand)."""
+        path = pathlib.Path(self.args.character)
+        before = set(bpy.data.objects)
+        suffix = path.suffix.lower()
+        if suffix == ".fbx":
+            bpy.ops.import_scene.fbx(filepath=str(path))
+        elif suffix == ".blend":
+            with bpy.data.libraries.load(str(path), link=False) as (_source, target):
+                target.objects = list(_source.objects)
+            for obj in target.objects:
+                if obj is not None:
+                    bpy.context.scene.collection.objects.link(obj)
+        else:
+            bpy.ops.import_scene.gltf(filepath=str(path))
+        meshes = [obj for obj in bpy.data.objects if obj not in before and obj.type == "MESH"]
+        if not meshes:
+            raise RuntimeError(f"{path.name} holds no mesh")
+        name = self.args.character_name or path.stem
+        holder = bpy.data.collections.new(name)
+        bpy.context.scene.collection.children.link(holder)
+        for obj in meshes:
+            for old in list(obj.users_collection):
+                old.objects.unlink(obj)
+            holder.objects.link(obj)
+        print(f"CHECK the character {name} has {len(meshes)} meshes")
+        return meshes
+
+    def frame_character(self, front: bool = False):
+        """With --docs, the 3D view on the character's meshes (``front``: from the front); otherwise on everything,
+        keeping the view of the states."""
+        if not self.args.docs:
+            if not front:
+                self.frame_all()
+            return
+        collection = bpy.context.scene.dct_ped.character
+        meshes = [obj for obj in collection.all_objects if obj.type == "MESH"] if collection is not None else []
+        selected = [obj for obj in bpy.context.view_layer.objects if obj.select_get()]
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj in meshes)
+        window, area, _ = self.view()
+        main = next(r for r in area.regions if r.type == "WINDOW")
+        with bpy.context.temp_override(window=window, screen=window.screen, area=area, region=main):
+            if front:
+                bpy.ops.view3d.view_axis(type="FRONT")
+            bpy.ops.view3d.view_selected()
+        area.spaces.active.region_3d.view_distance *= DOCS_PED_ZOOM  # View Selected leaves a wide margin
+        for obj in bpy.context.view_layer.objects:
+            obj.select_set(obj in selected)
+
+    def type_text(self, text: str):
+        """Letters typed in the window (needs Blender started with --enable-event-simulate, as --docs does)."""
+        window = bpy.context.window_manager.windows[0]
+        for letter in text:
+            window.event_simulate(type=letter.upper(), value="PRESS", unicode=letter)
+            window.event_simulate(type=letter.upper(), value="RELEASE")
+
+    def template_search_shot(self):
+        """The template search opened by a click on Choose a Template under Rig, with part of a name typed."""
+        window, area, region = self.view()
+        bpy.context.scene.dct_ped.open_rig = True
+        self.redraw()
+        yield from self.wait(lambda: True, 3)
+        scale = bpy.context.preferences.system.ui_scale
+        x = region.x + int(region.width * 0.45)
+        y = region.y + region.height - int(DOCS_TEMPLATE_BUTTON * scale)
+        window.event_simulate(type="MOUSEMOVE", value="NOTHING", x=x, y=y)
+        yield from self.wait(lambda: True, 2)
+        before = self.capture(window_too=True)
+        window.event_simulate(type="LEFTMOUSE", value="PRESS", x=x, y=y)
+        window.event_simulate(type="LEFTMOUSE", value="RELEASE", x=x, y=y)
+        yield 0.5
+        self.type_text("skater")
+        yield 0.5
+        self.redraw()
+        yield 0.5
+        self.popup_shot("ped-template-search", "ped-template-search", before,
+                        reach=(region.x, y + int(DOCS_TEMPLATE_ABOVE * scale)), dense=True)
+        self.press("ESC")
+        window.event_simulate(type="MOUSEMOVE", value="NOTHING", x=area.x + 20, y=area.y + 20)
+        yield from self.wait(lambda: True, 3)
 
     def states(self, ctrl, dct, api, ui, link, stub, new, dead_port):
         # 1. Durty Cloth Tool is not running: the add-on keeps looking.
@@ -1478,6 +1718,9 @@ def run_inside_blender() -> None:
     parser.add_argument("--body")
     parser.add_argument("--garment")
     parser.add_argument("--garment-type", default="tshirt")
+    parser.add_argument("--prop")
+    parser.add_argument("--character")
+    parser.add_argument("--character-name")
     parser.add_argument("--docs", action="store_true")
     args = parser.parse_args(argv)
     view = bpy.context.preferences.view

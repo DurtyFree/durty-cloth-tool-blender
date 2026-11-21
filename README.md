@@ -52,7 +52,7 @@ freemode ped, and a character you made becomes a custom ped.
 <table>
   <tr>
     <td width="50%"><img src="docs/images/blender-fit-problems.webp" alt="A hoodie on the freemode body coloured by Show Problems: blue where it floats, purple stretched parts and yellow where it is too close to the body, with the body showing through at the shoulders where the hoodie is still inside it"></td>
-    <td width="50%"><img src="docs/images/blender-custom-ped.webp" alt="A character in shorts in Blender with its 19 joint markers placed, left side blue and right side orange, next to the Custom Ped panel"></td>
+    <td width="50%"><img src="docs/images/blender-custom-ped.webp" alt="A character in a shirt in Blender with its 19 joint markers placed, left side blue and right side orange, next to the Custom Ped panel"></td>
   </tr>
   <tr>
     <td><b>Garment Fitting:</b> Show Problems colours the cloth: blue where a shoulder floats, purple where it is stretched and yellow where it sits too close to the body.</td>
