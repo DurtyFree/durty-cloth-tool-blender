@@ -361,10 +361,10 @@ gender, collection, number, texture variations, texture `size`), its picture as 
 variation as PNG (`paint`) and optionally a colour name (`colour`); the fake Durty Cloth Tool then shows them, and the
 paint is the live preview's image and the map Edit in connected app opens. `--body <folder>` serves a locally built
 hosted body (`freemode_*.glb`, `freemode_joints.json`) instead of the synthetic one, and `--garment <file>` (`.glb`,
-`.gltf` or `.fbx`) with `--garment-type` is the garment of Garment Fitting. `--prop <file>` adds a hat after the
-garment: it is stood up and turned to the front when it is a game prop (a `p_` model from Durty Cloth Tool, which comes
+`.gltf` or `.fbx`) with `--garment-type` is the garment of Garment Fitting. With `--docs`, `--prop <file>` adds a hat
+after the garment: it is stood up and turned to the front when it is a game prop (a `p_` model from Durty Cloth Tool, which comes
 in its anchor bone's space), then snapped to its anchor. `--character <file>` (`.glb`, `.gltf`, `.fbx` or `.blend`) with
-`--character-name` is the character of Custom Ped instead of the mannequin: its meshes go into a collection of that
+`--character-name` is the character of Custom Ped instead of the mannequin (`--docs --scenario ped` needs one): its meshes go into a collection of that
 name, and the shots click the first fix of each check, as a user does. Keep such files outside the repository.
 
 `--docs` writes only the figures of the public Blender documentation, each under its documentation file name

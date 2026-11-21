@@ -69,13 +69,14 @@ DOCS_ROWS = {
     "garment-add-added": (1140, 1435),
 }
 
-#: With --docs --scenario ped, the Choose a Template button's middle and how far above it the figure starts, in
-#: interface units from the sidebar's top with the Rig stage open (measured like DOCS_ROWS).
+#: With --docs --scenario ped, the Choose a Template button's middle in interface units from the sidebar's top with
+#: the Rig stage open (measured like DOCS_ROWS).
 DOCS_TEMPLATE_BUTTON = 420
+#: How far above that button the template search figure starts, in interface units.
+DOCS_TEMPLATE_ABOVE = 110
 #: With --docs --prop, how much farther than the hat alone the view looks from, and how far (metres) below it.
 DOCS_PROP_ZOOM = 1.9
 DOCS_PROP_LIFT = 0.12
-DOCS_TEMPLATE_ABOVE = 110
 #: With --docs --scenario ped, how far the view looks from the character after View Selected (a fraction).
 DOCS_PED_ZOOM = 0.62
 #: With --docs --scenario ped, the templates the fake Durty Cloth Tool lists: real ambient peds' model names, as a
@@ -131,6 +132,15 @@ def launch(argv=None) -> int:
     args = parser.parse_args(argv)
     if args.docs and args.scenario not in ("link", "garment", "ped"):
         print("error: --docs makes figures only with the link, garment and ped scenarios")
+        return 1
+    if args.prop and not (args.docs and args.scenario == "garment"):
+        print("error: --prop works with --docs --scenario garment")
+        return 1
+    if args.character and args.scenario != "ped":
+        print("error: --character works with --scenario ped")
+        return 1
+    if args.docs and args.scenario == "ped" and not args.character:
+        print("error: --docs --scenario ped needs --character (the docs figures show a real character)")
         return 1
     if args.size is None:
         args.size = ("1280x1950" if args.scenario == "ped" else "1280x2100") if args.docs else "1280x1600"
@@ -1072,8 +1082,9 @@ class Shots:
             yield from self.garment_docs_prop(garment_ui, garment, props)
 
     def garment_docs_prop(self, garment_ui, garment, props):
-        """``--prop``: a hat snapped to its anchor on the body's head, the garment hidden."""
-        name = self.content.get("propModel", "p_head_000") if self.content is not None else "p_head_000"
+        """``--prop``: a hat snapped to its anchor on the body's head, the garment hidden. It leaves the scene and the
+        view changed (the garment hidden, the hat the current garment), so it stays the run's last step."""
+        name = (self.content or {}).get("propModel") or pathlib.Path(self.args.prop).stem
         for obj in [garment, garment.parent]:
             if obj is not None:
                 obj.hide_set(True)
@@ -1347,6 +1358,8 @@ class Shots:
                 module, name = fix[0].split(".")
                 print(f"CHECK the character's checks: {fix[0]} {fix[1]}")
                 self.operator(lambda: getattr(getattr(bpy.ops, module), name)(**fix[1]))
+            else:
+                raise RuntimeError("the character's checks did not clear after 12 fixes")
             self.operator(lambda: bpy.ops.dct_link.ped_auto_markers())
         else:
             for call in (lambda: bpy.ops.dct_link.ped_apply_transforms(),
